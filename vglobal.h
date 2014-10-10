@@ -47,6 +47,7 @@ struct vdht_dec_ops dht_dec_ops;
 #define malloc
 #define realloc
 #define strlen
+#define strcpy
 #define strncpy
 #define snprintf
 #define free
@@ -54,6 +55,8 @@ struct vdht_dec_ops dht_dec_ops;
 #define memcpy
 #define strcmp
 #define strtol
+#define time_t
+#define uint32_t
 #endif
 
 #endif

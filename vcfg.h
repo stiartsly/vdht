@@ -7,3 +7,4 @@ struct vcfg_ops {
 };
 
 #endif
+

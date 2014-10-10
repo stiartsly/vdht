@@ -5,15 +5,17 @@
 #include "vsys.h"
 
 enum {
-    VDHT_RESVERED,
-    VMSG_DHT_PING,
-    VMSG_DHT_PING_REPLY,
-    VMSG_DHT_FIND_NODE,
-    VMSG_DHT_FIND_NODE_REPLY,
-    VMSG_DHT_GET_PEERS,
-    VMSG_DHT_GET_PEERS_REPLY,
-    VMSG_DHT_FIND_CLOSEST_NODES,
-    VMSG_DHT_FIND_CLOSEST_NODES_REPLY,
+    VDHT_RSRVD,
+    VDHT_PING,
+    VDHT_PING_RSP,
+    VDHT_FIND_NODE,
+    VDHT_FIND_NODE_RSP,
+    VDHT_GET_PEERS,
+    VDHT_GET_PEERS_RSP,
+    VDHT_ANNOUNCE_HASH,
+    VDHT_FIND_CLOSEST_NODES,
+    VDHT_FIND_CLOSEST_NODES_RSP,
+    VDHT_BUTT,
 
     VMSG_STUN  = 50,
     VMSG_RELAY = 70,
@@ -21,6 +23,8 @@ enum {
 
     VMSG_BUTT
 };
+
+#define VDHT_MSG(msgId) (msgId >= VDHT_RSRVD && msgId < VDHT_BUTT)
 
 struct vmsg_usr {
     struct sockaddr_in* addr;

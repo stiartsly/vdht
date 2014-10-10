@@ -148,18 +148,22 @@ struct vhost_ops host_ops = {
 static
 int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
 {
+    struct vmsg_sys* ms = NULL;
     vassert(cookie);
     vassert(um);
     vassert(*sm);
 
+    if (VDHT_MSG(um->msgId)) {
+        SET_UINT32(um->data, DHT_MAGIC);
+        SET_INT32(OFF_UINT32(um->data), um->msgId);
 
-    if (IS_DHT_MSG(_UINT32(um->data))){
-        *sm = vmsg_sys_alloc(0);
-        retE((!*sm));
-        vmsg_sys_init(*sm, um->addr, um->len, um->data);
+        ms = vmsg_sys_alloc(0);
+        vlog_cond((!ms), elog_vmsg_sys_alloc);
+        retE((!ms));
+        vmsg_sys_init(ms, um->addr, um->len, um->data);
+        *sm = ms;
         return 0;
     }
-
     //todo;
     return 0;
 }
@@ -177,8 +181,8 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
     vassert(sm);
     vassert(um);
 
-    if (IS_DHT_MSG(_UINT32(sm->data))) {
-        int msgId = _INT32(sm->data + 4);
+    if (IS_DHT_MSG(UINT32(sm->data))) {
+        int msgId = INT32(OFF_UINT32(sm->data));
         vmsg_usr_init(um, msgId, &sm->addr, sm->len, sm->data);
         return 0;
     }

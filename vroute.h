@@ -13,21 +13,21 @@
 #define NBUCKETS    ((int)10)
 
 enum {
-    VDHT_UNREACHABLE     = 0x00000000,
-    VDHT_PING            = 0x00000001,
-    VDHT_PING_REPLY      = 0x00000002,
-    VDHT_FIND_NODE       = 0x00000004,
-    VDHT_FIND_NODE_REPLY = 0x00000008,
-    VDHT_GET_PEERS       = 0x00000010,
-    VDHT_GET_PEERS_REPLY = 0x00000020,
-    VDHT_FIND_CLOSEST_NODES       = 0x00000040,
-    VDHT_FIND_CLOSEST_NODES_REPLY = 0x00000080,
+    PROP_UNREACHABLE     = 0x00000000,
+    PROP_PING            = 0x00000001,
+    PROP_PING_RSP        = 0x00000002,
+    PROP_FIND_NODE       = 0x00000004,
+    PROP_FIND_NODE_RSP   = 0x00000008,
+    PROP_GET_PEERS       = 0x00000010,
+    PROP_GET_PEERS_RSP   = 0x00000020,
+    PROP_FIND_CLOSEST_NODES     = 0x00000040,
+    PROP_FIND_CLOSEST_NODES_RSP = 0x00000080,
 
-    VDHT_VERSION         = 0x00000100,
-    VDHT_STUN            = 0x00001000,
-    VDHT_RELAY           = 0x00002000,
-    VDHT_VPN             = 0x00004000,
-    VDHT_APP             = 0x00010000
+    PROP_VER             = 0x00000100,
+    PROP_STUN            = 0x00001000,
+    PROP_RELAY           = 0x00002000,
+    PROP_VPN             = 0x00004000,
+    PROP_APP             = 0x00010000
 };
 
 struct vpeer{
@@ -99,14 +99,14 @@ struct vroute {
     struct vroute_ops* ops;
     struct vroute_cb_ops*  cb_ops;
     struct vroute_dht_ops* dht_ops;
-    struct vdht_enc_ops*   dht_enc_ops;
-    struct vdht_dec_ops*   dht_dec_ops;
+    struct vdht_enc_ops*   enc_ops;
+    struct vdht_dec_ops*   dec_ops;
 
     struct vbucket bucket[NBUCKETS];
     struct vlock   lock;
 
     struct vmsger*  msger;
-    struct vmem_aux msg_buf_caches;
+    struct vmem_aux mbuf_cache;
 #if 0
     struct varray queries;
     struct vlock  query_lock;
