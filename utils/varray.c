@@ -23,7 +23,6 @@ int varray_init(struct varray* array, int first_capc)
 void varray_deinit(struct varray* array)
 {
     vassert(array);
-    vassert(array->items);
 
     if (array->items) {
     	free(array->items);

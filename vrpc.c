@@ -362,9 +362,10 @@ int _aux_fdsets_cb(void* item, void* cookie)
     wt->maxfd = (fd >= wt->maxfd) ? fd + 1: wt->maxfd;
 
     FD_SET(fd, &wt->rfds);
-    FD_SET(fd, &wt->wfds);
     FD_SET(fd, &wt->efds);
-
+    if (rpc->msger->ops->popable(rpc->msger)) {
+        FD_SET(fd, &wt->wfds);
+    }
     return 0;
 }
 

@@ -31,7 +31,7 @@ struct vpeer* vpeer_alloc(void)
  */
 void vpeer_free(struct vpeer* peer)
 {
-    vassert(vpeer);
+    vassert(peer);
     vmem_aux_free(&peer_cache, peer);
     return ;
 }

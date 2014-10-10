@@ -101,8 +101,8 @@ int _vhost_loop(struct vhost* host)
             }
             waiter->ops->add(waiter, rpc);
             break;
-        default:
-            vassert(0);
+        default: //means select timeout.
+            continue;
         }
     }
     return 0;

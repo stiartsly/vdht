@@ -209,6 +209,24 @@ int _vmsger_push(struct vmsger* msger, struct vmsg_usr* mu)
 }
 
 /*
+ *  to check whether msger has msg to send.
+ *
+ * @msger:
+ */
+static
+int _vmsger_popable(struct vmsger* msger)
+{
+    int ret = 0;
+    vassert(msger);
+
+    vlock_enter(&msger->lock_msgs);
+    ret = !vlist_is_empty(&msger->msgs);
+    vlock_leave(&msger->lock_msgs);
+
+    return ret;
+}
+
+/*
  *  msg will be send by rpc as soon as rpc turns to be writeable.
  *  rpc fetch a msg from mapping msger to send.
  *  fecth policy: FIFO
@@ -278,12 +296,13 @@ int _vmsger_dump(struct vmsger* msger)
 
 static
 struct vmsger_ops msger_ops = {
-    .dsptch = _vmsger_dsptch,
-    .add_cb = _vmsger_add_cb,
-    .push   = _vmsger_push,
-    .pop    = _vmsger_pop,
-    .clear  = _vmsger_clear,
-    .dump   = _vmsger_dump
+    .dsptch  = _vmsger_dsptch,
+    .add_cb  = _vmsger_add_cb,
+    .push    = _vmsger_push,
+    .popable = _vmsger_popable,
+    .pop     = _vmsger_pop,
+    .clear   = _vmsger_clear,
+    .dump    = _vmsger_dump
 };
 
 int vmsger_init(struct vmsger* msger)

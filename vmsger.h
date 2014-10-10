@@ -70,12 +70,13 @@ void  vmsg_cb_init(struct vmsg_cb*, int, vmsg_cb_t, void*);
  */
 struct vmsger;
 struct vmsger_ops {
-    int (*dsptch)(struct vmsger*, struct vmsg_sys*);
-    int (*add_cb)(struct vmsger*, void*, vmsg_cb_t, int);
-    int (*push)  (struct vmsger*, struct vmsg_usr* );
-    int (*pop )  (struct vmsger*, struct vmsg_sys**);
-    int (*clear) (struct vmsger*);
-    int (*dump)  (struct vmsger*);
+    int (*dsptch) (struct vmsger*, struct vmsg_sys*);
+    int (*add_cb) (struct vmsger*, void*, vmsg_cb_t, int);
+    int (*push)   (struct vmsger*, struct vmsg_usr* );
+    int (*popable)(struct vmsger*);
+    int (*pop )   (struct vmsger*, struct vmsg_sys**);
+    int (*clear)  (struct vmsger*);
+    int (*dump)   (struct vmsger*);
 };
 
 typedef int (*vmsger_pack_t  )(void*, struct vmsg_usr*, struct vmsg_sys**);
