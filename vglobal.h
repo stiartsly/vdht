@@ -53,7 +53,7 @@ struct vdht_dec_ops dht_dec_ops;
 #define memset
 #define memcpy
 #define strcmp
-#define strtoll
+#define strtol
 #endif
 
 #endif

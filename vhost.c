@@ -1,11 +1,15 @@
 #include "vglobal.h"
 #include "vhost.h"
 
-#define _UINT32(data) (*(uint32_t*)data)
-#define _INT32(data)  (*(int*)data)
+#define INT32(data)           (*(long*)data)
+#define SET_INT32(data, val)  ((*(long*)data) = (long)val)
+#define OFF_INT32(data)       ((long*)data + 1)
+#define UNOFF_INT32(data)     ((long*)data - 1)
 
-#define _SET_UINT32(data, val) ((*(uint32_t*)data) = val)
-#define _SET_INT32 (data, val) ((*(int*)data) = val)
+#define UINT32(data)          (*(uint32_t*)data)
+#define SET_UINT32(data, val) ((*(uint32_t*)data) = (uint32_t)val)
+#define OFF_UINT32(data)      ((uint32_t*)data + 1)
+#define UNOFF_UINT32(data)    ((uint32_t*)data - 1)
 
 static
 int _vhost_start(struct vhost* host)
