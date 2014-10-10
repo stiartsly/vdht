@@ -173,8 +173,7 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 
     if (IS_DHT_MSG(UINT32(sm->data))) {
         int msgId = INT32(OFF_UINT32(sm->data));
-        // truncate magic and msgId.
-        vmsg_usr_init(um, msgId, &sm->addr, sm->len - 8, sm->data + 8);
+        vmsg_usr_init(um, msgId, &sm->addr, sm->len, sm->data);
         return 0;
     }
 

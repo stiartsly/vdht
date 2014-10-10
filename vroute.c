@@ -1086,7 +1086,9 @@ static
 int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
     struct vroute* route = (struct vroute*)cookie;
-    struct vdht_dec_ops* dec_ops = NULL;
+    struct vdht_dec_ops* dec_ops = route->dec_ops;
+    void* buf = mu->data + 8; // truncate padding of magic and msgId.
+    int   len = mu->len  - 8;
     vnodeAddr addr;
     vtoken token;
     int ret = 0;
@@ -1094,12 +1096,11 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     vassert(route);
     vassert(mu);
 
-    dec_ops = route->dec_ops;
     vsockaddr_copy(&addr.addr, mu->addr);
 
     switch(mu->msgId) {
     case VDHT_PING: {
-        ret = dec_ops->ping(mu->data, mu->len, &token, &addr.id);
+        ret = dec_ops->ping(buf, len, &token, &addr.id);
         retE((ret < 0));
         ret = route->cb_ops->ping(route, &token, &addr);
         retE((ret < 0));
@@ -1107,7 +1108,7 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     }
     case VDHT_PING_RSP: {
         vnodeInfo info;
-        ret = dec_ops->ping_rsp(mu->data, mu->len, &token, &addr.id, &info);
+        ret = dec_ops->ping_rsp(buf, len, &token, &addr.id, &info);
         retE((ret < 0));
         ret = route->cb_ops->ping_rsp(route, &addr, &info);
         retE((ret < 0));
@@ -1115,7 +1116,7 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     }
     case VDHT_FIND_NODE: {
         vnodeId targetId;
-        ret = dec_ops->find_node(mu->data, mu->len, &token, &addr.id, &targetId);
+        ret = dec_ops->find_node(buf, len, &token, &addr.id, &targetId);
         retE((ret < 0));
         vsockaddr_copy(&addr.addr, mu->addr);
         ret = route->cb_ops->find_node(route, &token, &addr, &targetId);
@@ -1124,7 +1125,7 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     }
     case VDHT_FIND_NODE_RSP: {
         vnodeInfo info;
-        ret = dec_ops->find_node_rsp(mu->data, mu->len, &token, &addr.id, &info);
+        ret = dec_ops->find_node_rsp(buf, len, &token, &addr.id, &info);
         retE((ret < 0));
         ret = route->cb_ops->find_node_rsp(route, &addr, &info);
         retE((ret < 0));
@@ -1133,7 +1134,7 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
 
     case VDHT_GET_PEERS: {
         vnodeHash hash;
-        ret = dec_ops->get_peers(mu->data, mu->len, &token, &addr.id, &hash);
+        ret = dec_ops->get_peers(buf, len, &token, &addr.id, &hash);
         retE((ret < 0));
         ret = route->cb_ops->get_peers(route, &token, &addr, &hash);
         retE((ret < 0));
@@ -1142,7 +1143,7 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     case VDHT_GET_PEERS_RSP: {
         struct varray peers;
         varray_init(&peers, MAX_CAPC);
-        ret = dec_ops->get_peers_rsp(mu->data, mu->len, &token, &addr.id, &peers);
+        ret = dec_ops->get_peers_rsp(buf, len, &token, &addr.id, &peers);
         retE((ret < 0));
         ret = route->cb_ops->get_peers_rsp(route, &addr, &peers);
         varray_zero(&peers, _aux_vnodeInfo_free, NULL);
@@ -1152,7 +1153,7 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     }
     case VDHT_FIND_CLOSEST_NODES: {
         vnodeId targetId;
-        ret = dec_ops->find_closest_nodes(mu->data, mu->len, &token, &addr.id, &targetId);
+        ret = dec_ops->find_closest_nodes(buf, len, &token, &addr.id, &targetId);
         retE((ret < 0));
         ret = route->cb_ops->find_closest_nodes(route, &token, &addr, &targetId);
         retE((ret < 0));
@@ -1161,7 +1162,7 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     case VDHT_FIND_CLOSEST_NODES_RSP: {
         struct varray closest;
         varray_init(&closest, MAX_CAPC);
-        ret = dec_ops->find_closest_nodes_rsp(mu->data, mu->len, &token, &addr.id, &closest);
+        ret = dec_ops->find_closest_nodes_rsp(buf, len, &token, &addr.id, &closest);
         retE((ret < 0));
         ret = route->cb_ops->find_closest_nodes_rsp(route, &addr, &closest);
         varray_zero(&closest, _aux_vnodeInfo_free, NULL);
