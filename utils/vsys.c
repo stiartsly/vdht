@@ -30,7 +30,7 @@ void vlock_deinit(struct vlock* lock)
 }
 
 /*
- * for pthread condition 
+ * for pthread condition
  */
 int vcond_init(struct vcond* cond)
 {
@@ -43,7 +43,7 @@ int vcond_init(struct vcond* cond)
 }
 
 int vcond_wait(struct vcond* cond, struct vlock* lock)
-{    
+{
     int res = 0;
     vassert(cond);
     vassert(lock);
@@ -54,7 +54,7 @@ int vcond_wait(struct vcond* cond, struct vlock* lock)
 }
 
 int vcond_signal(struct vcond* cond)
-{ 
+{
     int res = 0;
     vassert(cond);
 
@@ -104,46 +104,101 @@ void vthread_deinit(struct vthread* thread)
  * for vtimer
  */
 
+static
+void timer_thread(union sigval sv)
+{
+    struct vtimer* timer = (struct vtimer*)(sv.sival_int);
+    vassert(timer);
+
+    (void)timer->cb(timer->cookie);
+    return ;
+}
+
 int vtimer_init(struct vtimer* timer, vtimer_cb_t cb, void* cookie)
 {
+    struct sigevent evp;
+    int ret = 0;
+
     vassert(timer);
     vassert(cb);
 
+    timer->id = (timer_t)-1;
     timer->cb = cb;
     timer->cookie = cookie;
-    // use system api @timer_create .
-    //todo;
+
+    memset(&evp, 0, sizeof(evp));
+    evp.sigev_value.sival_int = (int)timer;
+    evp.sigev_notify = SIGEV_THREAD;
+    evp.sigev_notify_function = timer_thread;
+
+    ret = timer_create(CLOCK_REALTIME, &evp, &timer->id);
+    vlog_cond((ret < 0), elog_timer_create);
+    retE((ret < 0));
     return 0;
 }
 
 int vtimer_start(struct vtimer* timer, int timeout)
 {
+    struct itimerspec tmo;
+    int ret = 0;
+
     vassert(timer);
     vassert(timeout > 0);
-    //todo;
+    vassert(timer->id > 0);
+
+    tmo.it_interval.tv_sec = timeout;
+    tmo.it_interval.tv_nsec = 0;
+    tmo.it_value.tv_sec = timeout;
+    tmo.it_value.tv_nsec = 0;
+
+    ret = timer_settime(timer->id, 0, &tmo, NULL);
+    vlog_cond((ret < 0), elog_timer_settime);
+    retE((ret < 0));
     return 0;
 }
 
 int vtimer_restart(struct vtimer* timer, int timeout)
 {
+    struct itimerspec tmo;
+    int ret = 0;
+
     vassert(timer);
     vassert(timeout > 0);
-    //todo;
+    vassert(timer->id > 0);
+
+    tmo.it_interval.tv_sec = timeout;
+    tmo.it_interval.tv_nsec = 0;
+    tmo.it_value.tv_sec = timeout;
+    tmo.it_value.tv_nsec = 0;
+
+    ret = timer_settime(timer->id, 0, &tmo, NULL);
+    vlog_cond((ret < 0), elog_timer_settime);
+    retE((ret < 0));
     return 0;
 }
 
 int vtimer_stop(struct vtimer* timer)
 {
+    int ret = 0;
     vassert(timer);
-    //todo;
+    vassert(timer->id > 0);
+
+    ret = timer_delete(timer->id);
+    vlog_cond((ret < 0), elog_timer_delete);
+    retE((ret < 0));
+    timer->id = (timer_t)-1;
     return 0;
 }
 
 void vtimer_deinit(struct vtimer* timer)
 {
     vassert(timer);
-    // use @timer_delete api .
-    //todo;
+
+    //should call "stop" before "deinit".
+    if (timer->id > 0) {
+        timer_delete(timer->id);
+        timer->id = (timer_t)-1;
+    }
     return ;
 }
 

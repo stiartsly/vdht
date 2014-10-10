@@ -87,6 +87,9 @@
 #define elog_pselect        perror("[pselect]")
 #define elog_recvfrom       perror("[recvfrom]")
 #define elog_sendto         perror("[sendto]")
+#define elog_timer_create   perror("[timer_create]")
+#define elog_timer_settime  perror("[timer_settime]")
+#define elog_timer_delete   perror("[timer_delete]")
 
 #define elog_malloc         vlog(printf("malloc"))
 #define elog_realloc        vlog(printf("realloc]"))

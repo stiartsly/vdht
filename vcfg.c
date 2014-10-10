@@ -15,7 +15,9 @@ struct vcfg_item {
     int   nval;
 };
 
-static struct vlist gcfg;
+static struct vlist VLIST_HEAD(gcfg);
+
+static
 int _vcfg_get_int(const char* key, int* value)
 {
     struct vcfg_item* item = NULL;
@@ -33,6 +35,7 @@ int _vcfg_get_int(const char* key, int* value)
     return ret;
 }
 
+static
 int _vcfg_get_str(const char* key, char* value, int sz)
 {
     struct vcfg_item* item = NULL;
@@ -52,17 +55,11 @@ int _vcfg_get_str(const char* key, char* value, int sz)
     return ret;
 }
 
-struct vcfg_ops cfg_ops = {
-    .get_int = _vcfg_get_int,
-    .get_str = _vcfg_get_str
-};
-
-int vcfg_open(const char* cfg_file)
+static
+int _vcfg_open(const char* cfg_file)
 {
     struct vcfg_item* item = NULL;
     vassert(cfg_file);
-
-    vlist_init(&gcfg);
 
 #if _STUB
     item = (struct vcfg_item*)malloc(sizeof(*item));
@@ -80,7 +77,8 @@ int vcfg_open(const char* cfg_file)
     return 0;
 }
 
-void vcfg_close()
+static
+void _vcfg_close()
 {
     struct vcfg_item* item = NULL;
     struct vlist* node = NULL;
@@ -92,4 +90,11 @@ void vcfg_close()
     }
     return ;
 }
+
+struct vcfg_ops cfg_ops = {
+    .open    = _vcfg_open,
+    .close   = _vcfg_close,
+    .get_int = _vcfg_get_int,
+    .get_str = _vcfg_get_str
+};
 
