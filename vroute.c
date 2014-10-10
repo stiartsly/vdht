@@ -142,7 +142,7 @@ int _vroute_add(struct vroute* route, vnodeAddr* node, int flags)
         }
     } else { // be addable for new one.
         peer = vpeer_alloc();
-        vcall_cond((!peer), elog_vpeer_alloc);
+        vlog_cond((!peer), elog_vpeer_alloc);
         ret2E((!peer), vlock_leave(&route->lock));
 
         vpeer_init(peer, node, 0, now, flags);
@@ -235,7 +235,7 @@ int _vroute_load(struct vroute* route, const char* file)
 
     sprintf(sql_buf, "select * from %s", VPEER_TB);
     ret = sqlite3_exec(db, sql_buf, _aux_load_cb, route, &err);
-    vcall_cond((ret && err), printf("db err:%s\n", err));
+    vlog_cond((ret && err), printf("db err:%s\n", err));
     sqlite3_close(db);
     vlog_cond((ret), elog_sqlite3_exec);
     retE((ret));
@@ -352,12 +352,12 @@ int _aux_tick_cb(void* item, void* cookie)
     vassert(peer);
     vassert(now);
 
-    if (VDHT_UNREACHABLE == peer->flags) {
+    if (PROP_UNREACHABLE== peer->flags) {
         return 0;
     }
     if ((peer->snd_ts)&&
         (peer->ntries = MAX_SND_TIMES)) {
-        peer->flags = VDHT_UNREACHABLE;
+        peer->flags = PROP_UNREACHABLE;
         return 0;
     }
 
@@ -420,7 +420,7 @@ int _vroute_find(struct vroute* route, vnodeId* targetId, vnodeInfo* info)
     }
     if (found) {
         vnodeInfo_init(info, targetId, &peer->extId.addr, peer->flags, &peer->ver);
-        info->flags &= ~VDHT_VERSION;
+        info->flags &= ~PROP_VER;
     }
     vlock_leave(&route->lock);
     return (found) ? 0 : -1;
@@ -504,7 +504,7 @@ int _vroute_find_closest_nodes(struct vroute* route, vnodeId* targetId, struct v
         peers = &route->bucket[track->bucket_idx].peers;
         item  = (struct vpeer*)varray_get(peers, track->item_idx);
         info  = vnodeInfo_alloc();
-        flags = item->flags & ~VDHT_VERSION;
+        flags = item->flags & ~PROP_VER;
         vnodeInfo_init(info, &item->extId.id, &item->extId.addr, flags, &item->ver);
         varray_add_tail(closest, info);
     }
@@ -525,7 +525,7 @@ struct vroute_ops route_ops = {
     .dump   = _vroute_dump,
     .tick   = _vroute_tick,
 
-    .get_peers = _vroute_get_peers,
+    .get_peers          = _vroute_get_peers,
     .find_closest_nodes = _vroute_find_closest_nodes
 };
 

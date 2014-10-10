@@ -25,8 +25,9 @@ struct vmem_aux {
         0, \
         ((!first_capc) ? VMEM_FIRST_CAPC : first_capc ), \
         NULL, \
-        NULL }
-        
+        NULL  \
+    }
+
 int   vmem_aux_init  (struct vmem_aux*, int, int);
 void* vmem_aux_alloc (struct vmem_aux*);
 void  vmem_aux_free  (struct vmem_aux*, void*);

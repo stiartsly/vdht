@@ -90,6 +90,7 @@
 #define elog_vpeer_alloc    vlog(printf("vpeer_alloc"))
 #define elog_vtick_cb_alloc vlog(printf("vtick_cb_alloc"))
 
-#define elog_be_alloc
+#define elog_be_alloc       vlog(printf("be_alloc"))
+#define elog_be_decode      vlog(printf("be_decode"))
 
 #endif
