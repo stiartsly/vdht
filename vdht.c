@@ -64,7 +64,7 @@ void be_free(be_node *node)
 
     switch (node->type) {
     case BE_STR:
-        free(UNOFF_LL(node->val.s));
+        free(UNOFF_INT32(node->val.s));
         break;
     case BE_INT:
         break;
@@ -79,7 +79,7 @@ void be_free(be_node *node)
     case BE_DICT: {
         int i = 0;
         for (; node->val.d[i].val; i++) {
-            free(UNOFF_LL(node->val.d[i].key));
+            free(UNOFF_INT32(node->val.d[i].key));
             be_free(node->val.d[i].val);
         }
         free(node->val.d);
@@ -274,6 +274,7 @@ static
 be_node *be_create_addr(struct sockaddr_in* addr)
 {
     //todo;
+    vassert(0);
     return NULL;
 }
 
@@ -315,8 +316,8 @@ int be_add_keypair(be_node *dict, const char *str, be_node *node)
     vlog_cond((!s), elog_malloc);
     retE((!s));
 
-    SET_LL(s, len);
-    strncpy(OFF_LL(s), str, len);
+    SET_INT32(s, len);
+    memcpy(OFF_INT32(s), str, len);
 
     for (; dict->val.d[i].val; i++);
     d = (be_dict*)realloc(dict->val.d, (i+2)*sizeof(be_dict));
@@ -325,7 +326,7 @@ int be_add_keypair(be_node *dict, const char *str, be_node *node)
 
 
     dict->val.d = d;
-    dict->val.d[i].key = OFF_LL(s);
+    dict->val.d[i].key = OFF_INT32(s);
     dict->val.d[i].val = node;
     i++;
     dict->val.d[i].val = NULL;
@@ -366,7 +367,7 @@ int be_encode(be_node *node, char *buf, int len)
 
     switch(node->type) {
     case BE_STR:
-        ret = snprintf(buf+off, len-off, "%lli", LL(UNOFF_LL(node->val.s)));
+        ret = snprintf(buf+off, len-off, "%lli", INT32(UNOFF_INT32(node->val.s)));
         retE((ret < 0));
         off += ret;
         ret = snprintf(buf+off, len-off, "%s",   node->val.s);
