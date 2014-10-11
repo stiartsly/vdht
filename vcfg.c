@@ -8,7 +8,7 @@ enum {
 };
 
 struct vcfg_item {
-    struct list list;
+    struct vlist list;
     int   type;
     char* key;
     char* val;
@@ -24,7 +24,7 @@ int _vcfg_get_int(const char* key, int* value)
     struct vlist* node = NULL;
     int ret = -1;
 
-    __vlist_for_each(node, &gcfg.items) {
+    __vlist_for_each(node, &gcfg) {
         item = vlist_entry(node, struct vcfg_item, list);
         if ((!strcmp(item->key, key)) && (item->type == CFG_INT)) {
             *value = item->nval;
@@ -42,7 +42,7 @@ int _vcfg_get_str(const char* key, char* value, int sz)
     struct vlist* node = NULL;
     int ret = -1;
 
-    __vlist_for_each(node, &gcfg.items) {
+    __vlist_for_each(node, &gcfg) {
         item = vlist_entry(node, struct vcfg_item, list);
         if ((!strcmp(item->key, key))
              && (item->type == CFG_STR)
@@ -58,10 +58,12 @@ int _vcfg_get_str(const char* key, char* value, int sz)
 static
 int _vcfg_open(const char* cfg_file)
 {
+#ifdef _STUB
     struct vcfg_item* item = NULL;
+#endif
     vassert(cfg_file);
 
-#if _STUB
+#ifdef _STUB
     item = (struct vcfg_item*)malloc(sizeof(*item));
     vlog_cond((!item), elog_malloc);
     retE((!item));
@@ -69,7 +71,7 @@ int _vcfg_open(const char* cfg_file)
     vlist_init(&item->list);
     item->type = CFG_STR;
     item->key  = "route.db";
-    item->val  = "route.db"
+    item->val  = "route.db";
     item->nval = 0;
 
     vlist_add_tail(&gcfg, &item->list);
@@ -83,7 +85,7 @@ void _vcfg_close()
     struct vcfg_item* item = NULL;
     struct vlist* node = NULL;
 
-    while(!vlist_is_empty(&gcfg);
+    while(!vlist_is_empty(&gcfg)) {
         node = vlist_pop_head(&gcfg);
         item = vlist_entry(node, struct vcfg_item, list);
         free(item);

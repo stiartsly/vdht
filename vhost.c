@@ -187,6 +187,9 @@ struct vhost* vhost_create(const char* hostname, int port)
     vassert(hostname);
     vassert(port > 0);
 
+    ret = cfg_ops.open("vdhtd.conf");
+    retE_p((ret < 0));
+
     ret = vsockaddr_convert(hostname, port, &addr);
     retE_p((ret < 0));
 
@@ -229,6 +232,7 @@ void vhost_destroy(struct vhost* host)
     vticker_deinit(&host->ticker);
     vrpc_deinit   (&host->rpc);
     vmsger_deinit (&host->msger);
+    cfg_ops.close();
 
     free(host);
     return ;

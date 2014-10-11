@@ -39,10 +39,6 @@
 #include "vhost.h"
 #include "vcfg.h"
 
-struct vcfg_ops     cfg_ops;
-struct vdht_enc_ops dht_enc_ops;
-struct vdht_dec_ops dht_dec_ops;
-
 #if 0 
 #define malloc
 #define realloc
@@ -58,6 +54,10 @@ struct vdht_dec_ops dht_dec_ops;
 #define time_t
 #define uint32_t
 #endif
+
+extern struct vcfg_ops cfg_ops;
+extern struct vdht_enc_ops dht_enc_ops;
+extern struct vdht_dec_ops dht_dec_ops;
 
 #endif
 

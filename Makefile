@@ -1,13 +1,15 @@
 CC=gcc
-CFLAGS=-I. -Iutils -I/usr/local/include -g -Wall -std=gnu99
-LDFLAGS=-lpthread -lsqlite3
+CFLAGS=-I. -Iutils -I/usr/local/include -g -Wall -std=gnu99 -D_STUB
+LDFLAGS=-lpthread -lsqlite3 -lrt
 DEPS = 
 
 vdht_objs = \
+    vcfg.o  \
     vhost.o \
     vnode.o \
     vrpc.o  \
     vmsger.o \
+    vdht.o  \
     vroute.o \
     vticker.o \
     vnodeId.o 

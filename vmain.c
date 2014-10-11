@@ -4,8 +4,10 @@ int main(int argc, char** argv)
 {
     struct vhost* host = NULL;
 
-    host = vhost_create("10.0.0.14", 12300);
+    host = vhost_create("10.0.0.15", 12300);
     retE((!host));
+    host->ops->stabilize(host);
+    host->ops->start(host);
 
     host->ops->loop(host);
 
