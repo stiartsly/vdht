@@ -143,7 +143,7 @@ int _vroute_add(struct vroute* route, vnodeAddr* node, int flags)
     } else { // be addable for new one.
         peer = vpeer_alloc();
         vlog_cond((!peer), elog_vpeer_alloc);
-        ret2E((!peer), vlock_leave(&route->lock));
+        ret1E((!peer), vlock_leave(&route->lock));
 
         vpeer_init(peer, node, 0, now, flags);
         varray_add_tail(peers, peer);
@@ -554,7 +554,7 @@ int _out_ping(struct vroute* route, vnodeAddr* dest)
     buf += 8; // reserve padding for magic and msgId.
     len -= 8;
 
-    ret = route->dht_enc_ops->ping(&token, &route->ownId.id, buf, len);
+    ret = route->enc_ops->ping(&token, &route->ownId.id, buf, len);
     {
         struct vmsg_usr msg = {
             .addr  = &dest->addr,
@@ -563,7 +563,7 @@ int _out_ping(struct vroute* route, vnodeAddr* dest)
             .len   = ret + 8
         };
         ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vmem_aux_free(&route->mbuf_caches, _buf));
+        ret1E((ret < 0), vmem_aux_free(&route->mbuf_cache, _buf));
     }
     return 0;
 }
@@ -823,7 +823,7 @@ int _out_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vtoken* t
     vassert(token);
     vassert(closest);
 
-    buf = _buf = vmem_aux_alloc(&route->mbuf_caches);
+    buf = _buf = vmem_aux_alloc(&route->mbuf_cache);
     vlog_cond((!buf), elog_vmem_aux_alloc);
     retE((!buf));
 
@@ -874,7 +874,7 @@ int _in_ping(struct vroute* route, vtoken* token, vnodeAddr* from)
     retE((ret < 0));
 
     vnodeInfo_init(&info, &route->ownId.id, &route->ownId.addr, route->flags, &route->version);
-    ret = route->dht_ops->ping_reply(route, from, token, &info);
+    ret = route->dht_ops->ping_rsp(route, from, token, &info);
     retE((ret < 0));
     return 0;
 }

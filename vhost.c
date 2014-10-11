@@ -187,10 +187,9 @@ struct vhost* vhost_create(const char* hostname, int port)
     struct sockaddr_in addr;
     int ret = 0;
 
-    vassert(host);
+    vassert(hostname);
     vassert(port > 0);
 
-    vassert(host);
     ret = vsockaddr_convert(hostname, port, &addr);
     retE_p((ret < 0));
 

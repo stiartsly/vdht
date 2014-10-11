@@ -11,7 +11,7 @@ struct vtick_cb* vtick_cb_alloc(void)
     struct vtick_cb* tcb = NULL;
     tcb = vmem_aux_alloc(&tcb_cache);
     vlog_cond((!tcb), elog_vmem_aux_alloc);
-    ret1E_p((!tcb));
+    retE_p((!tcb));
     return tcb;
 }
 
@@ -41,9 +41,6 @@ static
 int _vticker_add_cb(struct vticker* ticker, vtick_t cb, void* cookie)
 {
     struct vtick_cb* item = NULL;
-    struct vlist* node = NULL;
-    int found = 0;
-
     vassert(ticker);
     vassert(cb);
     vassert(cookie);

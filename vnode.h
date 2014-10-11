@@ -17,7 +17,7 @@ enum vnode_mode {
     VDHT_TICK,
     VDHT_DOWN,
     VDHT_ERR,
-    VDHT_BUTT
+    VDHT_M_BUTT
 };
 
 //typedef int (*vpeer_cb_t)(void*, vpeer*);

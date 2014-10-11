@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I. -Iutils -g -Wall -std=gnu99
+CFLAGS=-I. -Iutils -I/usr/local/include -g -Wall -std=gnu99
 LDFLAGS=-lpthread -lsqlite3
 DEPS = 
 

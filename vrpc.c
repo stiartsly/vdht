@@ -23,15 +23,15 @@ void* _vrpc_udp_open(struct sockaddr_in* addr)
     udp = (struct vudp*)malloc(sizeof(*udp));
     vlog_cond((!udp), elog_malloc);
     retE_p((!udp));
-    memset(udp, 0, sizeof(udp));
+    memset(udp, 0, sizeof(*udp));
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     vlog_cond((fd < 0), elog_socket);
-    retE_p((fd < 0), _reclaim(udp, fd));
+    ret1E_p((fd < 0), _reclaim(udp, fd));
 
     ret = bind(fd, (struct sockaddr*)addr, sizeof(*addr));
     vlog_cond((ret < 0), elog_bind);
-    retE_p((ret < 0), _reclaim(udp,fd));
+    ret1E_p((ret < 0), _reclaim(udp,fd));
 
     flags = fcntl(fd, F_GETFL, 0);
     ret = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
@@ -94,7 +94,7 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
                (struct sockaddr*)&msg->addr,
                (socklen_t*)&len);
     vlog_cond((ret < 0), elog_recvfrom);
-    retE((ret < 0);
+    retE((ret < 0));
     msg->len = ret;
     return ret;
 }
@@ -203,7 +203,7 @@ int _vrpc_err(struct vrpc* rpc)
     vassert(rpc);
     vassert(rpc->impl);
 
-    rpc->errs++;
+    rpc->nerrs++;
     rpc->base_ops->close(rpc->impl);
     rpc->impl = rpc->base_ops->open(&rpc->addr);
     retE((!rpc->impl));

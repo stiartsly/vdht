@@ -43,7 +43,7 @@ struct vcfg_ops     cfg_ops;
 struct vdht_enc_ops dht_enc_ops;
 struct vdht_dec_ops dht_dec_ops;
 
-#if 1
+#if 0 
 #define malloc
 #define realloc
 #define strlen

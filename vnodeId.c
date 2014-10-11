@@ -211,7 +211,7 @@ int vnodeVer_equal(vnodeVer* ver_a, vnodeVer* ver_b)
  *  for token
  */
 static 
-vtoken global_token = {{[0 ... VNODE_ID_INTLEN] = 0}};
+vtoken gtoken = {{[0 ... VNODE_ID_INTLEN] = 0}};
 void vtoken_make(vtoken* token)
 {
 #define VUINT32_MAX ((uint32_t)0x0ffffffe)
@@ -219,11 +219,10 @@ void vtoken_make(vtoken* token)
     int i = 0;
     vassert(token);
 
-    srand(time(NULL));
-    data = (uint32_t*)token->data;
+    data = (uint32_t*)gtoken.data;
     for (; i < VNODE_ID_INTLEN; i++) {
-        if (a[i]++ >= VUINT32_MAX) {
-            a[i] = 0;
+        if (data[i]++ >= VUINT32_MAX) {
+            data[i] = 0;
         } else {
             break;
         }

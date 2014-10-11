@@ -12,12 +12,12 @@ struct vmsg_sys* vmsg_sys_alloc(int data_sz)
     if (data_sz > 0) {
         ms = (struct vmsg_sys*)malloc(sizeof(*ms) + data_sz);
         vlog_cond((!ms), elog_malloc);
-        retE((!ms));
+        retE_p((!ms));
         ms->data = ms->buf;
     } else {
         ms = (struct vmsg_sys*)vmem_aux_alloc(&ms_cache);
         vlog_cond((!ms), elog_vmem_aux_alloc);
-        retE((!ms));
+        retE_p((!ms));
         ms->data = NULL;
     }
     return ms;;
