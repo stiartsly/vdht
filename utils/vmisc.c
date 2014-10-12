@@ -40,7 +40,7 @@ int vsockaddr_convert(const char* host, int port, struct sockaddr_in* addr)
     vassert(addr);
 
     addr->sin_family = AF_INET;
-    addr->sin_port = htons(port);
+    addr->sin_port = htons((unsigned short)port);
     memset(&addr->sin_zero, 0, 8);
 
     ret = inet_aton(host, (struct in_addr*)&addr->sin_addr);

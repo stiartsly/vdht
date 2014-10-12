@@ -27,16 +27,18 @@
 #define _DEBUG
 #ifdef _DEBUG
 #define vassert(cond)   do { \
-            printf("{assert}[%s:%d]\n", __FUNCTION__,__LINE__); \
-            *((int*)0) = 0; \
+            if (!(cond)) { \
+                printf("{assert}[%s:%d]\n", __FUNCTION__,__LINE__); \
+                *((int*)0) = 0; \
+            } \
         } while(0)
 
 #define vwhere()        do { \
-            printf("{where}[%s:%d]", __FUNCTION__,__LINE__); \
+            printf("{where}[%s:%d]\n", __FUNCTION__,__LINE__); \
         } while(0)
 
 #define vlog_cond(cond,s) do {  \
-            if (cond) {\
+            if ((cond)) {\
                 s; \
                 vwhere(); \
             } \
@@ -52,7 +54,7 @@
 #define vassert()
 #define vwhere()
 #define vlog_cond(cond,s) do {  \
-            if (cond) {\
+            if ((cond)) {\
                 s; \
             } \
         }while(0)
@@ -66,15 +68,15 @@
 
 
 
-#define INT32(data)           (*(long*)data)
-#define SET_INT32(data, val)  (*(long*)data = (long)val)
-#define OFF_INT32(data)       ((long*)data + 1)
-#define UNOFF_INT32(data)     ((long*)data - 1)
+#define INT32(data)           (*(long*)(data))
+#define SET_INT32(data, val)  (*(long*)(data) = (long)(val))
+#define OFF_INT32(data)       ((long*)(data) + 1)
+#define UNOFF_INT32(data)     ((long*)(data) - 1)
 
-#define UINT32(data)          (*(uint32_t*)data)
-#define SET_UINT32(data,val)  (*(uint32_t*)data = (uint32_t)val)
-#define OFF_UINT32(data)      ((uint32_t*)data + 1)
-#define UNOFF_UINT32(data)    ((uint32_t*)data - 1)
+#define UINT32(data)          (*(uint32_t*)(data))
+#define SET_UINT32(data,val)  (*(uint32_t*)(data) = (uint32_t)(val))
+#define OFF_UINT32(data)      ((uint32_t*)(data) + 1)
+#define UNOFF_UINT32(data)    ((uint32_t*)(data) - 1)
 
 
 

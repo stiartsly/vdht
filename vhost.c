@@ -44,9 +44,6 @@ int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
 static
 int _aux_tick_cb(void* cookie)
 {
-    //struct vhost* host = (struct vhost*)cookie;
-    vassert(host);
-
     //todo;
     return 0;
 }
@@ -193,7 +190,6 @@ struct vhost* vhost_create(const char* hostname, int port)
     ret = vsockaddr_convert(hostname, port, &addr);
     retE_p((ret < 0));
 
-    vassert(host);
     host = (struct vhost*)malloc(sizeof(struct vhost));
     ret1E_p((!host), elog_malloc);
     memset(host, 0, sizeof(*host));
@@ -203,13 +199,11 @@ struct vhost* vhost_create(const char* hostname, int port)
     host->myport  = port;
     host->ops     = &host_ops;
 
-    vassert(host);
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, &addr);
     ret += vticker_init(&host->ticker);
     ret += vnode_init  (&host->node, &host->msger, &host->ticker, &addr);
     ret += vwaiter_init(&host->waiter);
-    vassert(host);
     if (ret < 0) {
         vwaiter_deinit(&host->waiter);
         vnode_deinit  (&host->node);
@@ -223,7 +217,6 @@ struct vhost* vhost_create(const char* hostname, int port)
     vmsger_reg_pack_cb  (&host->msger, _aux_msg_pack_cb  , host);
     vmsger_reg_unpack_cb(&host->msger, _aux_msg_unpack_cb, host);
 
-    vwhere();
     return host;
 }
 
