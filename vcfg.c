@@ -65,7 +65,7 @@ int _vcfg_open(const char* cfg_file)
 
 #ifdef _STUB
     item = (struct vcfg_item*)malloc(sizeof(*item));
-    vlog_cond((!item), elog_malloc);
+    vlog((!item), elog_malloc);
     retE((!item));
 
     vlist_init(&item->list);

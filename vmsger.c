@@ -11,12 +11,12 @@ struct vmsg_sys* vmsg_sys_alloc(int data_sz)
     struct vmsg_sys* ms = NULL;
     if (data_sz > 0) {
         ms = (struct vmsg_sys*)malloc(sizeof(*ms) + data_sz);
-        vlog_cond((!ms), elog_malloc);
+        vlog((!ms), elog_malloc);
         retE_p((!ms));
         ms->data = ms->buf;
     } else {
         ms = (struct vmsg_sys*)vmem_aux_alloc(&ms_cache);
-        vlog_cond((!ms), elog_vmem_aux_alloc);
+        vlog((!ms), elog_vmem_aux_alloc);
         retE_p((!ms));
         ms->data = NULL;
     }
@@ -80,7 +80,7 @@ struct vmsg_cb* vmsg_cb_alloc(void)
     struct vmsg_cb* mcb = NULL;
 
     mcb = (struct vmsg_cb*)vmem_aux_alloc(&mcb_cache);
-    vlog_cond((!mcb), elog_vmem_aux_alloc);
+    vlog((!mcb), elog_vmem_aux_alloc);
     retE_p((!mcb));
     return mcb;
 }
@@ -172,7 +172,7 @@ int _vmsger_add_cb(struct vmsger* msger, void* cookie, vmsg_cb_t cb, int id)
     }
     if (!found) {
         mcb = vmsg_cb_alloc();
-        vlog_cond((!mcb), elog_vmsg_cb_alloc);
+        vlog((!mcb), elog_vmsg_cb_alloc);
         ret1E((!mcb), vlock_leave(&msger->lock_cbs));
         vmsg_cb_init(mcb, id, cb, cookie);
         vlist_add_tail(&msger->cbs, &mcb->list);

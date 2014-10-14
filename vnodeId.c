@@ -7,7 +7,7 @@ void vnodeId_make(vnodeId* id)
     int i = 0;
     vassert(id);
 
-    srand(time(NULL));
+    srand(time(NULL)); // TODO: need use mac as srand seed.
     data = (unsigned long*)id->data;
     for (; i < VNODE_ID_INTLEN; i++) {
         data[i] = rand();
@@ -76,8 +76,14 @@ int vnodeId_equal(vnodeId* a, vnodeId* b)
 
 void vnodeId_dump(vnodeId* id)
 {
+    int i = 0;
     vassert(id);
-    //todo;
+    for (; i < VNODE_ID_LEN; i++) {
+        printf("%c", id->data[i] + '0');
+        if (i % 4 == 3) {
+            printf("-");
+        }
+    }   
     return;
 }
 
@@ -95,20 +101,31 @@ void vnodeId_copy(vnodeId* dst, vnodeId* src)
 
 int vnodeId_strlize(vnodeId* id, char* buf, int len)
 {
+    int i = 0;
     vassert(id);
     vassert(buf);
     vassert(len > 0);
 
-    //todo;
+    retE((len + 1 < VNODE_ID_LEN));
+    for (; i < VNODE_ID_LEN; i++) {
+        buf[i] = id->data[i] + '0';
+    }
+    buf[i] = '\0';
     return 0;
 }
 
 int vnodeId_unstrlize(const char* id_str, vnodeId* id)
 {
+    int i = 0;
     vassert(id_str);
     vassert(id);
 
-    //todo;
+    retE((strlen(id_str) != VNODE_ID_LEN));
+    for(; i < VNODE_ID_LEN; i++) {
+        retE((id_str[i] < '0'));
+        retE((id_str[i] > '9'));
+        id->data[i] = id_str[i] - '0';
+    }
     return 0;
 }
 

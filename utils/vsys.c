@@ -71,6 +71,17 @@ void vcond_deinit(struct vcond* cond)
 }
 
 
+static
+void* _aux_entry(void* argv)
+{
+    struct vthread* thread = (struct vthread*)argv;
+    pthread_mutex_lock(&thread->mutex);
+    pthread_mutex_unlock(&thread->mutex);
+
+    thread->entry_cb(thread->cookie);
+    thread->quited = 1;
+    return thread;
+}
 /*
  * for thread
  */
@@ -80,23 +91,42 @@ int vthread_init(struct vthread* thread, vthread_entry_t entry, void* argv)
     vassert(thread);
     vassert(entry);
 
-    //todo;
-    res = pthread_create(&thread->thread, 0, (void* (*)(void*))entry, argv);
-    retE((res));
+    pthread_mutex_init(&thread->mutex, 0);
+    thread->entry_cb = entry;
+    thread->cookie = argv;
+    thread->quited  = 0;
+    thread->started = 0;
+
+    pthread_mutex_lock(&thread->mutex);
+    res = pthread_create(&thread->thread, 0, _aux_entry, thread);
+    vlog((res), elog_pthread_create);
+    if (res) {
+        pthread_mutex_unlock(&thread->mutex);
+        pthread_mutex_destroy(&thread->mutex);
+        return -1;
+    }
     return 0;
 }
 
 int vthread_start(struct vthread* thread)
 {
     vassert(thread);
-    //todo;
+
+    vlog((thread->started), printf("#!thread already started"));
+    retE((thread->started));
+    thread->started = 1;
+    pthread_mutex_unlock(&thread->mutex);
     return 0;
 }
 
 void vthread_deinit(struct vthread* thread)
 {
     vassert(thread);
-    //todo;
+
+    vlog((!thread->started),printf("#!thread not started yet"));
+    vlog((!thread->quited), printf("#!thread not quited yet"));
+    pthread_mutex_destroy(&thread->mutex);
+//    pthread_destroy(&thread->thread);
     return ;
 }
 
@@ -132,7 +162,7 @@ int vtimer_init(struct vtimer* timer, vtimer_cb_t cb, void* cookie)
     evp.sigev_notify_function = timer_thread;
 
     ret = timer_create(CLOCK_REALTIME, &evp, &timer->id);
-    vlog_cond((ret < 0), elog_timer_create);
+    vlog((ret < 0), elog_timer_create);
     retE((ret < 0));
     return 0;
 }
@@ -152,7 +182,7 @@ int vtimer_start(struct vtimer* timer, int timeout)
     tmo.it_value.tv_nsec = 0;
 
     ret = timer_settime(timer->id, 0, &tmo, NULL);
-    vlog_cond((ret < 0), elog_timer_settime);
+    vlog((ret < 0), elog_timer_settime);
     retE((ret < 0));
     return 0;
 }
@@ -172,7 +202,7 @@ int vtimer_restart(struct vtimer* timer, int timeout)
     tmo.it_value.tv_nsec = 0;
 
     ret = timer_settime(timer->id, 0, &tmo, NULL);
-    vlog_cond((ret < 0), elog_timer_settime);
+    vlog((ret < 0), elog_timer_settime);
     retE((ret < 0));
     return 0;
 }
@@ -184,7 +214,7 @@ int vtimer_stop(struct vtimer* timer)
     vassert(timer->id > 0);
 
     ret = timer_delete(timer->id);
-    vlog_cond((ret < 0), elog_timer_delete);
+    vlog((ret < 0), elog_timer_delete);
     retE((ret < 0));
     timer->id = (timer_t)-1;
     return 0;

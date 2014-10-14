@@ -141,11 +141,11 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
     vassert(*sm);
 
     if (VDHT_MSG(um->msgId)) {
-        SET_UINT32(um->data, DHT_MAGIC);
-        SET_INT32(OFF_UINT32(um->data), um->msgId);
+        set_uint32(um->data, DHT_MAGIC);
+        set_int32(offset_addr(um->data, sizeof(unsigned long)), um->msgId);
 
         ms = vmsg_sys_alloc(0);
-        vlog_cond((!ms), elog_vmsg_sys_alloc);
+        vlog((!ms), elog_vmsg_sys_alloc);
         retE((!ms));
         vmsg_sys_init(ms, um->addr, um->len, um->data);
         *sm = ms;
@@ -164,12 +164,13 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
 static
 int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
+    int msgId = 0;
     vassert(cookie);
     vassert(sm);
     vassert(um);
 
-    if (IS_DHT_MSG(UINT32(sm->data))) {
-        int msgId = INT32(OFF_UINT32(sm->data));
+    if (IS_DHT_MSG(get_uint32(sm->data))) {
+        msgId = get_int32(offset_addr(sm->data, sizeof(unsigned long)));
         vmsg_usr_init(um, msgId, &sm->addr, sm->len, sm->data);
         return 0;
     }
@@ -191,10 +192,12 @@ struct vhost* vhost_create(const char* hostname, int port)
     retE_p((ret < 0));
 
     ret = vsockaddr_convert(hostname, port, &addr);
+    vlog((ret < 0), elog_vsockaddr_convert);
     retE_p((ret < 0));
 
     host = (struct vhost*)malloc(sizeof(struct vhost));
-    ret1E_p((!host), elog_malloc);
+    vlog((!host), elog_malloc);
+    retE_p((!host));
     memset(host, 0, sizeof(*host));
 
     strcpy(host->myname, hostname);

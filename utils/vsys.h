@@ -6,7 +6,7 @@
 #include <time.h>
 #include <signal.h>
 
-/* 
+/*
  * vlock
  */
 struct vlock {
@@ -36,9 +36,13 @@ extern void vcond_deinit(struct vcond*);
  */
 typedef int (*vthread_entry_t)(void*);
 struct vthread {
+    pthread_mutex_t mutex;
     pthread_t thread;
     vthread_entry_t entry_cb;
     void* cookie;
+
+    int started;
+    int quited;
 };
 
 extern int  vthread_init  (struct vthread*, vthread_entry_t, void*);

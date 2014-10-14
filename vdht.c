@@ -5,13 +5,13 @@ enum {
     Q_PING,
     Q_FIND_NODE,
     Q_GET_PEERS,
-    Q_ANNONCE_PEER,
+    Q_POST_PEER,
     Q_FIND_CLOSEST_NODES,
     Q_UNKOWN,
     R_PING,
     R_FIND_NODE,
     R_GET_PEERS,
-    R_ANNOUNCE_PEER,
+    R_POST_PEER,
     R_FIND_CLOSEST_NODES,
     R_UNKOWN
 };
@@ -21,7 +21,7 @@ enum {
     BE_INT,
     BE_LIST,
     BE_DICT,
-    BE_BUTT
+    BE_BUT
 };
 
 struct be_node;
@@ -32,6 +32,7 @@ struct be_dict {
 
 struct be_node {
     int type;
+    int capc;
     union {
         char* s;
         long i;
@@ -39,40 +40,38 @@ struct be_node {
         struct be_dict *d;
     }val;
 };
-typedef struct be_node be_node;
-typedef struct be_dict be_dict;
 
+static MEM_AUX_INIT(be_cache, sizeof(struct be_node), 16);
 static
-be_node* be_alloc(int type)
+struct be_node* be_alloc(int type)
 {
-	be_node *node = NULL;
-
+    struct be_node* node = NULL;
     vassert(type >= BE_STR);
-	vassert(type < BE_BUTT);
+    vassert(type <  BE_BUT);
 
-	node = (be_node *) malloc(sizeof(*node));
-	vlog_cond((!node), elog_malloc);
-	retE_p((!node));
+    node = (struct be_node*)vmem_aux_alloc(&be_cache);
+    vlog((!node), elog_vmem_aux_alloc);
+    retE_p((!node));
 
-	memset(node, 0, sizeof(*node));
-	node->type = type;
-	return node;
+    memset(node, 0, sizeof(*node));
+    node->type = type;
+    node->capc = 0;
+    return node;
 }
 
 static
-void be_free(be_node *node)
+void be_free(struct be_node* node)
 {
     vassert(node);
-
-    switch (node->type) {
+    switch(node->type) {
     case BE_STR:
-        free(UNOFF_INT32(node->val.s));
+        free(unoff_addr(node->val.s, sizeof(long)));
         break;
     case BE_INT:
         break;
     case BE_LIST: {
         int i = 0;
-        for (; node->val.l[i]; i++) {
+        for (; i < node->capc; i++) {
             be_free(node->val.l[i]);
         }
         free(node->val.l);
@@ -80,8 +79,8 @@ void be_free(be_node *node)
     }
     case BE_DICT: {
         int i = 0;
-        for (; node->val.d[i].val; i++) {
-            free(UNOFF_INT32(node->val.d[i].key));
+        for (; i < node->capc; i++) {
+            free(unoff_addr(node->val.d[i].key, sizeof(long)));
             be_free(node->val.d[i].val);
         }
         free(node->val.d);
@@ -90,45 +89,53 @@ void be_free(be_node *node)
     default:
         vassert(0);
     }
-	free(node);
+    vmem_aux_free(&be_cache, node);
 }
 
+
 static
-int _be_decode_int(const char** data, int* data_len)
+long _be_decode_int(char** data, int* data_len)
 {
-	char *endp;
-	long ret = strtol(*data, &endp, 10);
-	*data_len -= (endp - *data);
+	char *endp = NULL;
+	long ret = 0;
+
+	ret   = strtol(*data, &endp, 10);
 	*data = endp;
-	return (int)ret;
-}
-
-static
-char *_be_decode_str(const char **data, int *data_len)
-{
-	char* ret = NULL;
-	int len = 0;
-
-    len = _be_decode_int(data, data_len);
-    retE_p((len < 0));
-    retE_p((len < *data_len - 1));
-
-	if (**data == ':') {
-	    char* _ret = (char*) malloc(sizeof(len) + len + 1);
-	    SET_INT32(_ret, len);
-	    ret = (char*)OFF_INT32(_ret);
-	    memcpy(ret, *data + 1, len);
-	    ret[len] = '\0';
-	    *data += len + 1;
-	    *data_len -= len + 1;
-	}
+	*data_len -= (endp - *data);
 	return ret;
 }
 
 static
-be_node *_be_decode(const char **data, int *data_len)
+char* _be_decode_str(char** data, int* data_len)
 {
-	be_node *ret = NULL;
+    long len = 0;
+    char* s = NULL;
+
+    len = _be_decode_int(data, data_len);
+    retE_p((len < 0));
+    retE_p((len > *data_len - 1));
+
+    if (**data == ':') {
+        char* _s = NULL;
+
+        _s = s = (char*)malloc(sizeof(len) + len + 1);
+        vlog((!s), elog_malloc);
+        retE_p((!s));
+
+        set_int32(s, len);
+        s = offset_addr(_s, sizeof(long));
+        memcpy(s, *data + 1, len);
+        s[len] = '\0';
+        *data += len + 1;
+        *data_len -= len -1;
+    }
+    return s;
+}
+
+static
+struct be_node *_be_decode(char **data, int *data_len)
+{
+    struct be_node* node = NULL;
 
 	vassert(*data);
 	vassert(data_len);
@@ -137,176 +144,211 @@ be_node *_be_decode(const char **data, int *data_len)
 	switch (**data) {
 	case 'l': { //list
 		int i = 0;
-		ret = be_alloc(BE_LIST);
+		node = be_alloc(BE_LIST);
+		vlog((!node), elog_be_alloc);
+		retE_p((!node));
 
 		--(*data_len);
 		++(*data);
 		while (**data != 'e') {
-			ret->val.l = (be_node **) realloc(ret->val.l, (i + 2) * sizeof(be_node**));
-			ret->val.l[i] = _be_decode(data, data_len);
-			ret1E_p((!ret->val.l[i]), be_free(ret));
-			++i;
+		    struct be_node** l = NULL;
+            l = (struct be_node**)realloc(node->val.l, (i+2)*sizeof(void*));
+            vlog((!l), elog_realloc);
+            ret1E_p((!l), be_free(node));
+            node->val.l = l;
+
+            node->val.l[i] = _be_decode(data, data_len);
+            ret1E_p((!node->val.l[i]), be_free(node));
+            ++i;
 		}
 		--(*data_len);
 		++(*data);
 
 		/* empty list case. */
 		if (i == 0)	{
-			ret->val.l = (be_node **) realloc(ret->val.l, 1 * sizeof(*ret->val.l));
+		    node->val.l = (struct be_node**)realloc(node->val.l, sizeof(void*));
+		    vlog((!node->val.d), elog_realloc);
+		    ret1E_p((!node->val.l), be_free(node));
 		}
-		ret->val.l[i] = NULL;
-		return ret;
+		node->val.l[i] = NULL;
+		break;
 	}
 	case 'd': { /* dictionaries */
 	    int i = 0;
-		ret = be_alloc(BE_DICT);
+	    node = be_alloc(BE_DICT);
+	    vlog((!node), elog_be_alloc);
+	    retE_p((!node));
 
-		--(*data_len);
-		++(*data);
-		while (**data != 'e') {
-			ret->val.d = (be_dict *) realloc(ret->val.d, (i + 2) * sizeof(*ret->val.d));
-			ret->val.d[i].key = _be_decode_str(data, data_len);
-			ret->val.d[i].val = _be_decode(data, data_len);
-			if ((!ret->val.d[i].key) || (!ret->val.d[i].val)) {
-				/* failed decode - kill decode */
-				be_free(ret);
-				return NULL;
-			}
-			++i;
-		}
-		--(*data_len);
-		++(*data);
+	    --(*data_len);
+	    ++(*data);
+	    while(**data != 'e') {
+	        struct be_dict* d = NULL;
+	        d = (struct be_dict*)realloc(node->val.d, (i+2)*sizeof(struct be_dict));
+	        vlog((!d), elog_realloc);
+	        ret1E_p((!d), be_free(node));
+	        node->val.d = d;
 
-		/* empty dictionary case. */
-		if (i == 0)	{
-			ret->val.d = (be_dict *) realloc(ret->val.d, 1 * sizeof(*ret->val.d));
-		}
-		ret->val.d[i].val = NULL;
-		return ret;
+	        node->val.d[i].key = _be_decode_str(data, data_len);
+	        ret1E_p((!node->val.d[i].key), be_free(node));
+	        node->val.d[i].val = _be_decode(data, data_len);
+	        ret1E_p((!node->val.d[i].val), be_free(node));
+	        ++i;
+	    }
+	    --(*data_len);
+	    ++(*data);
+
+	    if (i == 0) {
+	        node->val.d = (struct be_dict*)realloc(node->val.d, sizeof(struct be_dict));
+	        vlog((!node->val.d), elog_realloc);
+	        ret1E_p((!node->val.d), be_free(node));
+	    }
+	    node->val.d[i].val = NULL;
+	    break;
 	}
 	case 'i': { /* integers */
-		ret = be_alloc(BE_INT);
-		--(*data_len);
-		++(*data);
-		ret->val.i = _be_decode_int(data, data_len);
-		if (**data != 'e') {
-			be_free(ret);
-			return NULL;
-		}
-		--(*data_len);
-		++(*data);
+	    node = be_alloc(BE_INT);
+	    vlog((!node), elog_be_alloc);
+	    retE_p((!node));
 
-		return ret;
-	}
-	case '0'...'9': { /* byte strings */
-		ret = be_alloc(BE_STR);
-		ret->val.s = _be_decode_str(data, data_len);
-		return ret;
-	}
-	default: /* invalid*/
-		return NULL;
+		--(*data_len);
+		++(*data);
+		node->val.i = _be_decode_int(data, data_len);
+		retE_p((**data != 'e'));
+		--(*data_len);
+		++(*data);
 		break;
 	}
+	case '0'...'9': { /* byte strings */
+		node = be_alloc(BE_INT);
+	    vlog((!node), elog_be_alloc);
+	    retE_p((!node));
 
-	return ret;
+		node->val.s = _be_decode_str(data, data_len);
+		ret1E_p((!node->val.s), be_free(node));
+		break;
+	}
+	default: /* invalid*/
+		break;
+	}
+	return node;
 }
 
 static
-be_node *be_decode(const char *data, int len)
+struct be_node *be_decode(char *data, int len)
 {
 	return _be_decode(&data, &len);
 }
 
 static
-be_node *be_decode_str(const char *data)
+struct be_node *be_decode_str(char *data)
 {
 	return be_decode(data, strlen(data));
 }
 
 /* hackish way to create nodes! */
 static
-be_node *be_create_dict()
+struct be_node *be_create_dict()
 {
     return be_decode_str("de");
 }
 
 static
-be_node *be_create_list()
+struct be_node *be_create_list()
 {
     return be_decode_str("le");
 }
 
 static
-be_node *be_create_str(void* str, int len)
+struct be_node* be_create_str(void* str, int len)
 {
-    be_node* n = NULL;
-    char*    s = NULL;
+    struct be_node* node = NULL;
+    char* s = NULL;
     vassert(str);
     vassert(len > 0);
 
+    node = be_alloc(BE_STR);
+    vlog((!node), elog_be_alloc);
+    retE_p((!node));
+
     s = (char*)malloc(sizeof(long) + len + 1);
-    vlog_cond((!s), elog_malloc);
-    retE_p((!s));
+    vlog((!s), elog_malloc);
+    ret1E_p((!s), be_free(node));
 
-    SET_INT32(s, len);
-    memcpy(OFF_INT32(s), str, len);
+    ((long*)s)[0] = len;
+    s = offset_addr(s, sizeof(long));
+    memcpy(s, str, len);
+    s[len]='\0';
 
-    n = be_alloc(BE_STR);
-    vlog_cond((!n), elog_be_alloc);
-    ret1E_p((!n), free(s));
-
-    n->val.s = (char*)OFF_INT32(s);
-    return n;
+    node->val.s = (char*)s;
+    return node;
 }
 
 static
-be_node *be_create_int(long long num)
+struct be_node *be_create_int(int num)
 {
-    be_node *n = NULL;
+    struct be_node* node = NULL;
 
-    n = be_alloc(BE_INT);
-    vlog_cond((!n), elog_be_alloc);
-    retE_p((!n));
+    node = be_alloc(BE_INT);
+    vlog((!node), elog_be_alloc);
+    retE_p((!node));
 
-    n->val.i = num;
-    return n;
+    node->val.i = num;
+    return node;
 }
 
 static
-be_node *be_create_addr(struct sockaddr_in* addr)
+struct be_node *be_create_addr(struct sockaddr_in* addr)
 {
-    //todo;
-    vassert(0);
-    return NULL;
+    struct be_node* node = NULL;
+    char* s = NULL;
+    int len = 2*sizeof(long) + 1;
+    vassert(addr);
+
+    node = be_alloc(BE_STR);
+    vlog((!node), elog_be_alloc);
+    retE_p((!node));
+
+    s = (char*)malloc(len);
+    vlog((!s), elog_malloc);
+    ret1E_p((!s), be_free(node));
+    memset(s, 0, len);
+
+    ((long*)s)[0] = 8;
+    ((long*)s)[2] = (long)addr->sin_port; // store port.
+    ((uint32_t*)s)[1] = (uint32_t)addr->sin_addr.s_addr; // store ip.
+
+    node->val.s = (char*)s + 4;
+    return node;
 }
 
 static
-int be_add_keypair(be_node *dict, const char *str, be_node *node)
+int be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
 {
-    be_dict* d = NULL;
-    char*    s = NULL;
+    struct be_dict* d = NULL;
     int len = strlen(str);
+    char* s = NULL;
     int i = 0;
 
     vassert(dict);
     vassert(str);
     vassert(dict->type == BE_DICT);
 
-    s = (char*)malloc(sizeof(long long) + len + 1);
-    vlog_cond((!s), elog_malloc);
+    s = (char*)malloc(sizeof(long) + len + 1);
+    vlog((!s), elog_malloc);
     retE((!s));
 
-    SET_INT32(s, len);
-    memcpy(OFF_INT32(s), str, len);
+    set_int32(s, len);
+    s = offset_addr(s, sizeof(long));
+    memcpy(s, str, len);
+    s[len] = '\0';
 
     for (; dict->val.d[i].val; i++);
-    d = (be_dict*)realloc(dict->val.d, (i+2)*sizeof(be_dict));
-    vlog_cond((!d), elog_realloc);
-    ret1E((!d), free(s));
-
+    d = (struct be_dict*)realloc(dict->val.d, (i+2)*sizeof(*d));
+    vlog((!d), elog_realloc);
+    ret1E((!d), free(unoff_addr(s, sizeof(long))));
 
     dict->val.d = d;
-    dict->val.d[i].key = (char*)OFF_INT32(s);
+    dict->val.d[i].key = s;
     dict->val.d[i].val = node;
     i++;
     dict->val.d[i].val = NULL;
@@ -314,39 +356,50 @@ int be_add_keypair(be_node *dict, const char *str, be_node *node)
 }
 
 static
-be_node* be_create_info(vnodeInfo* info)
+struct be_node* be_create_info(vnodeInfo* info)
 {
-    be_node* dict = NULL;
-    be_node* node = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    int ret = 0;
 
     dict = be_create_dict();
+    retE_p((!dict));
+
     node = be_create_str(info->id.data, VNODE_ID_LEN);
-    be_add_keypair(dict, "id", node);
+    ret1E_p((!node), be_free(dict));
+    ret = be_add_keypair(dict, "id", node);
+    ret2E_p((ret < 0), be_free(dict), be_free(node));
 
     node = be_create_addr(&info->addr);
-    be_add_keypair(dict, "m", node);
+    ret1E_p((!node), be_free(dict));
+    ret = be_add_keypair(dict, "m", node);
+    ret2E_p((ret < 0), be_free(dict), be_free(node));
 
     node = be_create_str(&info->ver, VNODE_ID_LEN);
-    be_add_keypair(dict, "v", node);
+    ret1E_p((!node), be_free(dict));
+    ret = be_add_keypair(dict, "v", node);
+    ret2E_p((ret < 0), be_free(dict), be_free(node));
 
     node = be_create_int(info->flags);
-    be_add_keypair(dict, "f", node);
+    ret1E_p((!node), be_free(dict));
+    ret = be_add_keypair(dict, "f", node);
+    ret2E_p((ret < 0), be_free(dict), be_free(node));
 
     return dict;
 }
 
 static
-int be_add_list(be_node *list, be_node *node)
+int be_add_list(struct be_node *list, struct be_node *node)
 {
-    be_node** l = NULL;
+    struct be_node** l = NULL;
     int i = 0;
-    vassert(list->type == BE_LIST);
 
     vassert(list);
     vassert(node);
+    vassert(list->type == BE_LIST);
 
-    l = (be_node**)realloc(list->val.l, (i + 2)*sizeof(be_node*));
-    vlog_cond((!l), elog_realloc);
+    l = (struct be_node**)realloc(list->val.l, (i + 2)*sizeof(void*));
+    vlog((!l), elog_realloc);
     retE((!l));
     list->val.l = l;
 
@@ -358,7 +411,7 @@ int be_add_list(be_node *list, be_node *node)
 }
 
 static
-int be_encode(be_node *node, char *buf, int len)
+int be_encode(struct be_node *node, char *buf, int len)
 {
     int off = 0;
     int ret = 0;
@@ -368,16 +421,18 @@ int be_encode(be_node *node, char *buf, int len)
     vassert(len > 0);
 
     switch(node->type) {
-    case BE_STR:
-        ret = snprintf(buf+off, len-off, "%li", INT32(UNOFF_INT32(node->val.s)));
+    case BE_STR: {
+        long _len = get_int32(unoff_addr(node->val.s, sizeof(long)));
+        ret = snprintf(buf+off, len-off, "%li", _len);
         retE((ret < 0));
         off += ret;
-        ret = snprintf(buf+off, len-off, "%s",   node->val.s);
+        ret = snprintf(buf+off, len-off, "%s", node->val.s);
         retE((ret < 0));
         off += ret;
         break;
+    }
     case BE_INT:
-        ret = snprintf(buf+off, len-off, "i%lie", node->val.i);
+        ret = snprintf(buf+off, len-off, "i%li", node->val.i);
         retE((ret < 0));
         off += ret;
         break;
@@ -387,7 +442,7 @@ int be_encode(be_node *node, char *buf, int len)
         retE((ret < 0));
         off += ret;
         for (; node->val.l[i]; i++) {
-            ret = be_encode(node->val.l[i], buf + off, len-off);
+            ret = be_encode(node->val.l[i], buf+off, len-off);
             retE((ret < 0));
             off += ret;
         }
@@ -401,8 +456,13 @@ int be_encode(be_node *node, char *buf, int len)
         retE((ret < 0));
         off += ret;
         for (i = 0; node->val.d[i].val; i++) {
-            char* key = node->val.d[i].key;
-            ret = snprintf(buf + off, len - off, "%i:%s", strlen(key), key);
+            char* _key = node->val.d[i].key;
+            long  _len = get_int32(unoff_addr(_key, sizeof(long)));
+            ret = snprintf(buf + off, len - off, "%li:%s", _len, _key);
+            retE((ret < 0));
+            off += ret;
+
+            ret = be_encode(node->val.d[i].val, buf+off, len-off);
             retE((ret < 0));
             off += ret;
         }
@@ -412,7 +472,7 @@ int be_encode(be_node *node, char *buf, int len)
         break;
     }
     default:
-        vassert(0);
+        return -1;
         break;
     }
     return off;
@@ -434,9 +494,9 @@ int be_encode(be_node *node, char *buf, int len)
 static
 int _enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
 {
-    be_node* dict = NULL;
-    be_node* node = NULL;
-    be_node* id   = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* id   = NULL;
     char* str_q = "q";
     char* ping = "ping";
     int ret = 0;
@@ -488,9 +548,9 @@ int _enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
 static
 int _enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf, int   sz)
 {
-    be_node* dict = NULL;
-    be_node* node = NULL;
-    be_node* rslt = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* rslt = NULL;
     char* str_r = "r";
     int ret = 0;
 
@@ -538,9 +598,9 @@ int _enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf, int
 static
 int _enc_find_node(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* buf,int sz)
 {
-    be_node* dict = NULL;
-    be_node* node = NULL;
-    be_node* a    = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* a    = NULL;
     char* str_q = "q";
     char* query = "find_node";
     int ret = 0;
@@ -595,9 +655,9 @@ int _enc_find_node(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* buf,i
 static
 int _enc_find_node_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, void* buf,int sz)
 {
-    be_node* dict = NULL;
-    be_node* node = NULL;
-    be_node* rslt = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* rslt = NULL;
     char* str_r = "r";
     int ret = 0;
 
@@ -688,9 +748,9 @@ int _enc_get_peers_rsp(
 static
 int _enc_find_closest_nodes(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* buf, int sz)
 {
-    be_node* dict = NULL;
-    be_node* node = NULL;
-    be_node* a    = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* a    = NULL;
     char* str_q = "q";
     char* query = "find_closest_nodes";
     int ret = 0;
@@ -755,10 +815,10 @@ int _enc_find_closest_nodes_rsp(
         void* buf,
         int sz)
 {
-    be_node* dict = NULL;
-    be_node* node = NULL;
-    be_node* rslt = NULL;
-    be_node* list = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* rslt = NULL;
+    struct be_node* list = NULL;
     char* str_r = "r";
     int ret = 0;
     int i   = 0;
@@ -806,7 +866,7 @@ struct vdht_enc_ops dht_enc_ops = {
 };
 
 static
-be_node* be_get_dict(be_node* node, char* key)
+struct be_node* be_get_dict(struct be_node* node, char* key)
 {
     int found = 0;
     int i = 0;
@@ -827,9 +887,9 @@ be_node* be_get_dict(be_node* node, char* key)
 }
 
 static
-be_node* be_get_node(be_node* dict, char* key1, char* key2)
+struct be_node* be_get_node(struct be_node* dict, char* key1, char* key2)
 {
-    be_node* node = NULL;
+    struct be_node* node = NULL;
     vassert(dict);
     vassert(key1);
     vassert(key2);
@@ -844,9 +904,9 @@ be_node* be_get_node(be_node* dict, char* key1, char* key2)
 }
 
 static
-int be_check_mtype(be_node* dict, int type)
+int be_check_mtype(struct be_node* dict, int type)
 {
-    be_node* node = NULL;
+    struct be_node* node = NULL;
     char* query = NULL;
 
     node = be_get_dict(dict, "q");
@@ -891,9 +951,9 @@ int be_check_mtype(be_node* dict, int type)
 }
 
 static
-int be_get_token(be_node* dict, vtoken* token)
+int be_get_token(struct be_node* dict, vtoken* token)
 {
-    be_node* node = NULL;
+    struct be_node* node = NULL;
     int len = 0;
     vassert(node);
     vassert(token);
@@ -902,16 +962,16 @@ int be_get_token(be_node* dict, vtoken* token)
     retE((!node));
     retE((node->type != BE_STR));
 
-    len = INT32(UNOFF_INT32(node->val.s));
+    len = get_int32(unoff_addr(node->val.s, sizeof(long)));
     retE((len != VTOKEN_LEN));
 
     memcpy(&token->data, node->val.s, len);
     return 0;
 }
 
-int be_get_id(be_node* dict, char* key1, char* key2, vnodeId* id)
+int be_get_id(struct be_node* dict, char* key1, char* key2, vnodeId* id)
 {
-    be_node* node = NULL;
+    struct be_node* node = NULL;
     int len = 0;
 
     vassert(dict);
@@ -927,16 +987,16 @@ int be_get_id(be_node* dict, char* key1, char* key2, vnodeId* id)
     retE((!node));
     retE((BE_STR  != node->type));
 
-    len = INT32(UNOFF_INT32(node->val.s));
+    len = get_int32(unoff_addr(node->val.s, sizeof(long)));
     retE((VNODE_ID_LEN != len));
     memcpy(id->data, node->val.s, len);
 
     return 0;
 }
 
-int be_get_info(be_node* dict, vnodeInfo* info)
+int be_get_info(struct be_node* dict, vnodeInfo* info)
 {
-    be_node* node = NULL;
+    struct be_node* node = NULL;
     int len = 0;
     vassert(dict);
     vassert(info);
@@ -944,19 +1004,26 @@ int be_get_info(be_node* dict, vnodeInfo* info)
     node = be_get_dict(dict, "id");
     retE((!node));
     retE((node->type != BE_STR));
-    len = INT32(UNOFF_INT32(node->val.s));
+    len = get_int32(unoff_addr(node->val.s, sizeof(long)));
     retE((len != VNODE_ID_LEN));
-    memcpy(&info->id.data, node->val.s, len);
+    memcpy(info->id.data, node->val.s, len);
 
     node = be_get_dict(dict, "m");
-    //todo;
+    retE((!node));
+    retE((node->type != BE_STR));
+    len = get_int32(unoff_addr(node->val.s, sizeof(long)));
+    retE((len != 8));
+
+    info->addr.sin_family = AF_INET;
+    info->addr.sin_addr.s_addr = get_uint32(node->val.s);
+    info->addr.sin_port = get_int32(unoff_addr(node->val.s, sizeof(uint32_t)));
 
     node = be_get_dict(dict, "v");
     retE((!node));
     retE((node->type != BE_STR));
-    len = INT32(UNOFF_INT32(node->val.s));
+    len = get_int32(unoff_addr(node->val.s, sizeof(long)));
     retE((len != VNODE_ID_LEN));
-    memcpy(&info->ver.data, node->val.s, len);
+    memcpy(info->ver.data, node->val.s, len);
 
     node = be_get_dict(dict, "f");
     retE((!node));
@@ -982,7 +1049,7 @@ int be_get_info(be_node* dict, vnodeInfo* info)
 static
 int _dec_ping(void* buf, int sz, vtoken* token, vnodeId* srcId)
 {
-    be_node* dict = NULL;
+    struct be_node* dict = NULL;
     int ret  = 0;
 
     vassert(buf);
@@ -1024,8 +1091,8 @@ int _dec_ping(void* buf, int sz, vtoken* token, vnodeId* srcId)
 static
 int _dec_ping_rsp(void* buf, int sz, vtoken* token, vnodeId* srcId, vnodeInfo* result)
 {
-    be_node* dict = NULL;
-    be_node* node = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
     int ret = 0;
 
     vassert(buf);
@@ -1035,7 +1102,7 @@ int _dec_ping_rsp(void* buf, int sz, vtoken* token, vnodeId* srcId, vnodeInfo* r
     vassert(result);
 
     dict = be_decode(buf, sz);
-    vlog_cond((!dict), elog_be_decode);
+    vlog((!dict), elog_be_decode);
     retE((!dict));
 
     ret = be_check_mtype(dict, R_PING);
@@ -1064,7 +1131,7 @@ int _dec_ping_rsp(void* buf, int sz, vtoken* token, vnodeId* srcId, vnodeInfo* r
 static
 int _dec_find_node(void* buf, int sz, vtoken* token, vnodeId* srcId, vnodeId* targetId)
 {
-    be_node* dict = NULL;
+    struct be_node* dict = NULL;
     int ret = 0;
 
     vassert(buf);
@@ -1074,7 +1141,7 @@ int _dec_find_node(void* buf, int sz, vtoken* token, vnodeId* srcId, vnodeId* ta
     vassert(targetId);
 
     dict = be_decode(buf, sz);
-    vlog_cond((!dict), elog_be_decode);
+    vlog((!dict), elog_be_decode);
     retE((!dict));
 
     ret = be_check_mtype(dict, Q_FIND_NODE);
@@ -1112,8 +1179,8 @@ int _dec_find_node(void* buf, int sz, vtoken* token, vnodeId* srcId, vnodeId* ta
 static
 int _dec_find_node_rsp(void* buf, int sz,vtoken* token, vnodeId* srcId, vnodeInfo* result)
 {
-    be_node* dict = NULL;
-    be_node* node = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
     int ret = 0;
 
     vassert(buf);
@@ -1123,7 +1190,7 @@ int _dec_find_node_rsp(void* buf, int sz,vtoken* token, vnodeId* srcId, vnodeInf
     vassert(result);
 
     dict = be_decode(buf, sz);
-    vlog_cond((!dict), elog_be_decode);
+    vlog((!dict), elog_be_decode);
     retE((!dict));
 
     ret = be_check_mtype(dict, R_FIND_NODE);
@@ -1192,7 +1259,7 @@ int _dec_get_peers_rsp(void* buf, int sz, vtoken* token, vnodeId* srcId, struct 
 static
 int _dec_find_closest_nodes(void* buf, int sz, vtoken* token, vnodeId* srcId, vnodeId* targetId)
 {
-    be_node* dict = NULL;
+    struct be_node* dict = NULL;
     int ret = 0;
 
     vassert(buf);
@@ -1202,7 +1269,7 @@ int _dec_find_closest_nodes(void* buf, int sz, vtoken* token, vnodeId* srcId, vn
     vassert(targetId);
 
     dict = be_decode(buf, sz);
-    vlog_cond((!dict), elog_be_decode);
+    vlog((!dict), elog_be_decode);
     retE((!dict));
 
     ret = be_check_mtype(dict, Q_FIND_CLOSEST_NODES);
@@ -1229,9 +1296,9 @@ int _dec_find_closest_nodes(void* buf, int sz, vtoken* token, vnodeId* srcId, vn
 static
 int _dec_find_closest_nodes_rsp(void* buf, int sz, vtoken* token, vnodeId* srcId, struct varray* closest)
 {
-    be_node* dict = NULL;
-    be_node* list = NULL;
-    be_node* node = NULL;
+    struct be_node* dict = NULL;
+    struct be_node* list = NULL;
+    struct be_node* node = NULL;
     int ret = 0;
     int i = 0;
 
@@ -1242,7 +1309,7 @@ int _dec_find_closest_nodes_rsp(void* buf, int sz, vtoken* token, vnodeId* srcId
     vassert(closest);
 
     dict = be_decode(buf, sz);
-    vlog_cond((!dict), elog_be_decode);
+    vlog((!dict), elog_be_decode);
     retE((!dict));
 
     ret = be_check_mtype(dict, R_FIND_CLOSEST_NODES);

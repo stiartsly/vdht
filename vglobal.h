@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <netdb.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -39,25 +40,103 @@
 #include "vhost.h"
 #include "vcfg.h"
 
-#if 0 
+#if 0
+#define timer_t
+#define time_t
+#define uint32_t
+#define sockaddr_in
+
 #define malloc
 #define realloc
+#define free
 #define strlen
 #define strcpy
 #define strncpy
 #define snprintf
-#define free
-#define memset
-#define memcpy
 #define strcmp
 #define strtol
-#define time_t
-#define uint32_t
+#define memset
+#define memcpy
+#define memcmp
+#define socket
+#define bind
+#define close
+#define fcntl
+#define setsockopt
+#define sendto
+#define recvfrom
+#define gethostname
+#define gethostbyname
+#define pselect
+#define pthread_sigmask
+#define time
+#define srand
+#define rand
+#define sleep
+
+#define inet_aton
+#define inet_ntoa
+#define ntohs
+#define htons
+
+#define pthread_mutex_init
+#define pthread_mutex_lock
+#define pthread_mutex_unlock
+#define pthread_mutex_destroy
+#define pthread_cond_init
+#define pthread_cond_wait
+#define pthread_cond_signal
+#define pthread_cond_destroy
+#define pthread_create
+#define pthread_destroy
+
+#define timer_create
+#define timer_settime
+#define timer_delete
+
 #endif
 
 extern struct vcfg_ops cfg_ops;
 extern struct vdht_enc_ops dht_enc_ops;
 extern struct vdht_dec_ops dht_dec_ops;
+
+static 
+inline long get_int32(void* addr)
+{
+    return *(long*)addr;
+}
+
+static 
+inline void set_int32(void* addr, long val)
+{
+    *(long*)addr = val;
+    return ;
+};
+
+static 
+inline unsigned long get_uint32(void* addr)
+{
+    return *(uint32_t*)addr;
+}
+
+static 
+inline void set_uint32(void* addr, uint32_t val)
+{
+    *(uint32_t*)addr = val;
+    return ;
+}
+
+static 
+inline char* offset_addr(char* addr, int bytes)
+{
+    return addr + bytes;
+}
+
+static 
+inline char* unoff_addr(char* addr, int bytes)
+{
+    return addr - bytes;
+}
 
 #endif
 

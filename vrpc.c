@@ -21,25 +21,25 @@ void* _vrpc_udp_open(struct sockaddr_in* addr)
     vassert(addr);
 
     udp = (struct vudp*)malloc(sizeof(*udp));
-    vlog_cond((!udp), elog_malloc);
+    vlog((!udp), elog_malloc);
     retE_p((!udp));
     memset(udp, 0, sizeof(*udp));
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
-    vlog_cond((fd < 0), elog_socket);
+    vlog((fd < 0), elog_socket);
     ret1E_p((fd < 0), _reclaim(udp, fd));
 
     ret = bind(fd, (struct sockaddr*)addr, sizeof(*addr));
-    vlog_cond((ret < 0), elog_bind);
+    vlog((ret < 0), elog_bind);
     ret1E_p((ret < 0), _reclaim(udp,fd));
 
     flags = fcntl(fd, F_GETFL, 0);
     ret = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-    vlog_cond((ret < 0), elog_fcntl);
+    vlog((ret < 0), elog_fcntl);
     ret1E_p((ret < 0), _reclaim(udp, fd));
 
     ret = setsockopt(fd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
-    vlog_cond((ret < 0), elog_setsockopt);
+    vlog((ret < 0), elog_setsockopt);
     ret1E_p((ret < 0), _reclaim(udp, fd));
 
     udp->sock_fd = fd;
@@ -67,7 +67,7 @@ int _vrpc_udp_sndto(void* impl, struct vmsg_sys* msg)
                  0,
                 (struct sockaddr*)&msg->addr,
                 sizeof(msg->addr));
-    vlog_cond((ret < 0), elog_sendto);
+    vlog((ret < 0), elog_sendto);
     retE((ret < 0));
     return ret;
 }
@@ -93,7 +93,7 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
                 0,
                (struct sockaddr*)&msg->addr,
                (socklen_t*)&len);
-    vlog_cond((ret < 0), elog_recvfrom);
+    vlog((ret < 0), elog_recvfrom);
     retE((ret < 0));
     msg->len = ret;
     return ret;
@@ -267,7 +267,7 @@ int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct sockaddr_
     rpc->base_ops = rpc_base_ops[mode];
 
     sm = vmsg_sys_alloc(8*1024);
-    vlog_cond((!sm), elog_vmsg_sys_alloc);
+    vlog((!sm), elog_vmsg_sys_alloc);
     retE((!sm));
 
     vlist_init(&sm->list);
@@ -403,9 +403,9 @@ int _vwaiter_select(struct vwaiter* wt, struct vrpc** tgt, int* rwe)
 
         pthread_sigmask(SIG_SETMASK, &sigmask, &origmask);
         fd = pselect(wt->maxfd, &wt->rfds, &wt->wfds, &wt->efds, &tmo, &sigmask);
-        vlog_cond((fd < 0), elog_pselect);
+        vlog((fd < 0), elog_pselect);
         retE((fd < 0));
-        retS((!fd));
+        retS((!fd)); //timeout.
     }
 
     if (FD_ISSET(fd, &wt->rfds)) {

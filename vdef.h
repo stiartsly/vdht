@@ -37,14 +37,14 @@
             printf("{where}[%s:%d]\n", __FUNCTION__,__LINE__); \
         } while(0)
 
-#define vlog_cond(cond,s) do {  \
+#define vlog(cond,s) do {  \
             if ((cond)) {\
                 s; \
                 vwhere(); \
             } \
         }while(0)
 
-#define vlog(s) { \
+#define vlogE(s) { \
             printf("["); \
             (s); \
             printf("] error"); \
@@ -53,31 +53,18 @@
 #else
 #define vassert()
 #define vwhere()
-#define vlog_cond(cond,s) do {  \
+#define vlog(cond,s) do {  \
             if ((cond)) {\
                 s; \
             } \
         }while(0)
 
-#define vlog(s) { \
+#define vlogE(s) { \
             printf("["); \
             (s); \
             printf("] error"); \
         }
 #endif
-
-
-
-#define INT32(data)           (*(long*)(data))
-#define SET_INT32(data, val)  (*(long*)(data) = (long)(val))
-#define OFF_INT32(data)       ((long*)(data) + 1)
-#define UNOFF_INT32(data)     ((long*)(data) - 1)
-
-#define UINT32(data)          (*(uint32_t*)(data))
-#define SET_UINT32(data,val)  (*(uint32_t*)(data) = (uint32_t)(val))
-#define OFF_UINT32(data)      ((uint32_t*)(data) + 1)
-#define UNOFF_UINT32(data)    ((uint32_t*)(data) - 1)
-
 
 
 #define elog_socket         perror("[socket]")
@@ -91,24 +78,31 @@
 #define elog_timer_settime  perror("[timer_settime]")
 #define elog_timer_delete   perror("[timer_delete]")
 
-#define elog_malloc         vlog(printf("malloc"))
-#define elog_realloc        vlog(printf("realloc]"))
-#define elog_inet_aton      vlog(printf("inet_aton"))
-#define elog_inet_ntoa      vlog(printf("inet_ntoa"))
-#define elog_vtimer_init    vlog(printf("vtimer_init"))
-#define elog_vtimer_stop    vlog(printf("vtimer_stop"))
-#define elog_vtimer_start   vlog(printf("vtimer_start"))
-#define elog_vtimer_restart vlog(printf("vtimer_restart"))
-#define elog_pthread_create vlog(printf("pthread_create"))
-#define elog_vmem_aux_alloc vlog(printf("vmem_aux_alloc"))
-#define elog_sqlite3_open   vlog(printf("sqlite3_open"))
-#define elog_sqlite3_exec   vlog(printf("sqlite3_exec"))
-#define elog_vmsg_cb_alloc  vlog(printf("vmsg_cb_alloc"))
-#define elog_vmsg_sys_alloc vlog(printf("vmsg_sys_alloc"))
-#define elog_vpeer_alloc    vlog(printf("vpeer_alloc"))
-#define elog_vtick_cb_alloc vlog(printf("vtick_cb_alloc"))
+#define elog_malloc         vlogE(printf("malloc"))
+#define elog_realloc        vlogE(printf("realloc]"))
+#define elog_inet_aton      vlogE(printf("inet_aton"))
+#define elog_inet_ntoa      vlogE(printf("inet_ntoa"))
+#define elog_gethostname    vlogE(printf("gethostname"))
+#define elog_gethostbyname  vlogE(printf("gethostbyname"))
+#define elog_pthread_create vlogE(printf("pthread_create"))
+#define elog_sqlite3_open   vlogE(printf("sqlite3_open"))
+#define elog_sqlite3_exec   vlogE(printf("sqlite3_exec"))
 
-#define elog_be_alloc       vlog(printf("be_alloc"))
-#define elog_be_decode      vlog(printf("be_decode"))
+#define elog_vtimer_init    vlogE(printf("vtimer_init"))
+#define elog_vtimer_stop    vlogE(printf("vtimer_stop"))
+#define elog_vtimer_start   vlogE(printf("vtimer_start"))
+#define elog_vtimer_restart vlogE(printf("vtimer_restart"))
+#define elog_vmem_aux_alloc vlogE(printf("vmem_aux_alloc"))
+
+#define elog_vsockaddr_convert \
+                            vlogE(printf("vsockaddr_convert"))
+
+#define elog_vmsg_cb_alloc  vlogE(printf("vmsg_cb_alloc"))
+#define elog_vmsg_sys_alloc vlogE(printf("vmsg_sys_alloc"))
+#define elog_vpeer_alloc    vlogE(printf("vpeer_alloc"))
+#define elog_vtick_cb_alloc vlogE(printf("vtick_cb_alloc"))
+
+#define elog_be_alloc       vlogE(printf("be_alloc"))
+#define elog_be_decode      vlogE(printf("be_decode"))
 
 #endif
