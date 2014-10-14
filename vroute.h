@@ -109,11 +109,6 @@ struct vroute {
 
     struct vmsger*  msger;
     struct vmem_aux mbuf_cache;
-#if 0
-    struct varray queries;
-    struct vlock  query_lock;
-
-#endif
 };
 
 int  vroute_init  (struct vroute*, struct vmsger*, vnodeAddr*);
