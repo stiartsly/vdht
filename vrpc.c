@@ -2,6 +2,82 @@
 #include "vrpc.h"
 
 /*
+ * to open a udp socket for unix rpc.
+ * @addr:
+ */
+static
+void* _vrpc_unix_open(struct sockaddr_in* addr)
+{
+    vassert(addr);
+    //todo;
+    return NULL;
+}
+
+/*
+ *  to send a msg for rpc.
+ *
+ * @impl: pointer to struct vudp; handler of udp rpc.
+ * @msg :
+ */
+static
+int _vrpc_unix_sndto(void* impl, struct vmsg_sys* msg)
+{
+    vassert(impl);
+    vassert(msg);
+
+    //todo;
+    return 0;
+}
+
+/* to receive a msg, including from where.
+ *
+ * @impl:
+ * @msg:
+ */
+static
+int _vrpc_unix_rcvfrom(void* impl, struct vmsg_sys* msg)
+{
+    vassert(impl);
+    vassert(msg);
+
+    //todo;
+    return 0;
+}
+
+static
+void _vrpc_unix_close(void* impl)
+{
+    vassert(impl);
+    //todo;
+    return ;
+}
+
+
+/*
+ * to close udp socket.
+ * @impl:
+ */
+static
+int _vrpc_unix_getfd(void* impl)
+{
+    vassert(impl);
+    //todo;
+    return 0;
+}
+
+/*
+ * downword method set for udp mode.
+ */
+static
+struct vrpc_base_ops unix_base_ops = {
+    .open    = _vrpc_unix_open,
+    .sndto   = _vrpc_unix_sndto,
+    .rcvfrom = _vrpc_unix_rcvfrom,
+    .close   = _vrpc_unix_close,
+    .getfd   = _vrpc_unix_getfd
+};
+
+/*
  * to open a udp socket for rpc.
  * @addr:
  */
@@ -144,7 +220,7 @@ struct vrpc_base_ops udp_base_ops = {
  */
 static
 struct vrpc_base_ops* rpc_base_ops[VRPC_MODE_BUTT] = {
-    NULL,
+    &unix_base_ops,
     &udp_base_ops,
     NULL
 };
