@@ -9,8 +9,8 @@
 #define MAX_RCV_PERIOD 1500
 #define MAX_SND_TIMES  10
 
-#define BUCKET_CAPC ((int)160)
-#define NBUCKETS    ((int)10)
+#define BUCKET_CAPC ((int)10)
+#define NBUCKETS    ((int)160)
 
 enum {
     PROP_UNREACHABLE = 0x00000000,
