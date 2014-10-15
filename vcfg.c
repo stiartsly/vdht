@@ -15,16 +15,54 @@ struct vcfg_item {
     int   nval;
 };
 
-static struct vlist VLIST_HEAD(gcfg);
+static
+int _vcfg_parse(struct vconfig* cfg, const char* filename)
+{
+#ifdef _STUB
+    struct vcfg_item* item = NULL;
+#endif
+    vassert(cfg);
+    vassert(filename);
+
+#ifdef _STUB
+    item = (struct vcfg_item*)malloc(sizeof(*item));
+    vlog((!item), elog_malloc);
+    retE((!item));
+
+    vlist_init(&item->list);
+    item->type = CFG_STR;
+    item->key  = "route.db";
+    item->val  = "route.db";
+    item->nval = 0;
+
+    vlist_add_tail(&cfg->items, &item->list);
+#endif
+    return 0;
+}
 
 static
-int _vcfg_get_int(const char* key, int* value)
+int _vcfg_clear(struct vconfig* cfg)
+{
+    struct vcfg_item* item = NULL;
+    struct vlist* node = NULL;
+    vassert(cfg);
+
+    while(!vlist_is_empty(&cfg->items)) {
+        node = vlist_pop_head(&cfg->items);
+        item = vlist_entry(node, struct vcfg_item, list);
+        free(item);
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_int(struct vconfig* cfg, const char* key, int* value)
 {
     struct vcfg_item* item = NULL;
     struct vlist* node = NULL;
     int ret = -1;
 
-    __vlist_for_each(node, &gcfg) {
+    __vlist_for_each(node, &cfg->items) {
         item = vlist_entry(node, struct vcfg_item, list);
         if ((!strcmp(item->key, key)) && (item->type == CFG_INT)) {
             *value = item->nval;
@@ -36,13 +74,13 @@ int _vcfg_get_int(const char* key, int* value)
 }
 
 static
-int _vcfg_get_str(const char* key, char* value, int sz)
+int _vcfg_get_str(struct vconfig* cfg, const char* key, char* value, int sz)
 {
     struct vcfg_item* item = NULL;
     struct vlist* node = NULL;
     int ret = -1;
 
-    __vlist_for_each(node, &gcfg) {
+    __vlist_for_each(node, &cfg->items) {
         item = vlist_entry(node, struct vcfg_item, list);
         if ((!strcmp(item->key, key))
              && (item->type == CFG_STR)
@@ -56,47 +94,27 @@ int _vcfg_get_str(const char* key, char* value, int sz)
 }
 
 static
-int _vcfg_open(const char* cfg_file)
-{
-#ifdef _STUB
-    struct vcfg_item* item = NULL;
-#endif
-    vassert(cfg_file);
-
-#ifdef _STUB
-    item = (struct vcfg_item*)malloc(sizeof(*item));
-    vlog((!item), elog_malloc);
-    retE((!item));
-
-    vlist_init(&item->list);
-    item->type = CFG_STR;
-    item->key  = "route.db";
-    item->val  = "route.db";
-    item->nval = 0;
-
-    vlist_add_tail(&gcfg, &item->list);
-#endif
-    return 0;
-}
-
-static
-void _vcfg_close()
-{
-    struct vcfg_item* item = NULL;
-    struct vlist* node = NULL;
-
-    while(!vlist_is_empty(&gcfg)) {
-        node = vlist_pop_head(&gcfg);
-        item = vlist_entry(node, struct vcfg_item, list);
-        free(item);
-    }
-    return ;
-}
-
-struct vcfg_ops cfg_ops = {
-    .open    = _vcfg_open,
-    .close   = _vcfg_close,
+struct vconfig_ops cfg_ops = {
+    .parse   = _vcfg_parse,
+    .clear   = _vcfg_clear,
     .get_int = _vcfg_get_int,
     .get_str = _vcfg_get_str
 };
+
+int vconfig_init(struct vconfig* cfg)
+{
+    vassert(cfg);
+
+    vlist_init(&cfg->items);
+    cfg->ops = &cfg_ops;
+    return 0;
+}
+
+void vconfig_deinit(struct vconfig* cfg)
+{
+    vassert(cfg);
+
+    cfg->ops->clear(cfg);
+    return ;
+}
 

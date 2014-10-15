@@ -96,43 +96,42 @@
 
 #endif
 
-extern struct vcfg_ops cfg_ops;
 extern struct vdht_enc_ops dht_enc_ops;
 extern struct vdht_dec_ops dht_dec_ops;
 
-static 
+static
 inline long get_int32(void* addr)
 {
     return *(long*)addr;
 }
 
-static 
+static
 inline void set_int32(void* addr, long val)
 {
     *(long*)addr = val;
     return ;
 };
 
-static 
+static
 inline unsigned long get_uint32(void* addr)
 {
     return *(uint32_t*)addr;
 }
 
-static 
+static
 inline void set_uint32(void* addr, uint32_t val)
 {
     *(uint32_t*)addr = val;
     return ;
 }
 
-static 
+static
 inline char* offset_addr(char* addr, int bytes)
 {
     return addr + bytes;
 }
 
-static 
+static
 inline char* unoff_addr(char* addr, int bytes)
 {
     return addr - bytes;

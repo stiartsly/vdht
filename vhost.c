@@ -179,17 +179,15 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
     return 0;
 }
 
-struct vhost* vhost_create(const char* hostname, int port)
+struct vhost* vhost_create(struct vconfig* cfg, const char* hostname, int port)
 {
     struct vhost* host = NULL;
     struct sockaddr_in addr;
     int ret = 0;
 
+    vassert(cfg);
     vassert(hostname);
     vassert(port > 0);
-
-    ret = cfg_ops.open("vdhtd.conf");
-    retE_p((ret < 0));
 
     ret = vsockaddr_convert(hostname, port, &addr);
     vlog((ret < 0), elog_vsockaddr_convert);
@@ -204,11 +202,12 @@ struct vhost* vhost_create(const char* hostname, int port)
     host->to_quit = 0;
     host->myport  = port;
     host->ops     = &host_ops;
+    host->cfg     = cfg;
 
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, &addr);
     ret += vticker_init(&host->ticker);
-    ret += vnode_init  (&host->node, &host->msger, &host->ticker, &addr);
+    ret += vnode_init  (&host->node, host->cfg, &host->msger, &host->ticker, &addr);
     ret += vwaiter_init(&host->waiter);
     if (ret < 0) {
         vwaiter_deinit(&host->waiter);
@@ -235,7 +234,6 @@ void vhost_destroy(struct vhost* host)
     vticker_deinit(&host->ticker);
     vrpc_deinit   (&host->rpc);
     vmsger_deinit (&host->msger);
-    cfg_ops.close();
 
     free(host);
     return ;

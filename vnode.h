@@ -41,14 +41,14 @@ struct vnode {
     int    mode;
     struct vlock lock;  // for mode.
 
+    struct vconfig* cfg;
     struct vmsger*  msger;
     struct vticker* ticker;
 
     struct vnode_ops* ops;
-    struct vcfg_ops*  cfg_ops;
 };
 
-int  vnode_init  (struct vnode*, struct vmsger*, struct vticker*, struct sockaddr_in*);
+int  vnode_init  (struct vnode*, struct vconfig*, struct vmsger*, struct vticker*, struct sockaddr_in*);
 void vnode_deinit(struct vnode*);
 
 #endif

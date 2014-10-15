@@ -99,7 +99,7 @@ int _aux_tick_cb(void* cookie)
         char db[64];
         int ret = 0;
 
-        ret = vnd->cfg_ops->get_str("route.db", db, 64);
+        ret = vnd->cfg->ops->get_str(vnd->cfg, "route.db", db, 64);
         if (ret < 0) {
             vnd->mode = VDHT_ERR;
             break;
@@ -129,7 +129,7 @@ int _aux_tick_cb(void* cookie)
     case VDHT_DOWN: {
         char db[64];
 
-        vnd->cfg_ops->get_str("route.db", db, 64);
+        vnd->cfg->ops->get_str(vnd->cfg, "route.db", db, 64);
         vnd->route.ops->store(&vnd->route, db);
         vnd->mode = VDHT_OFF;
     }
@@ -181,9 +181,10 @@ struct vnode_ops node_ops = {
  * @ticker:
  * @addr:
  */
-int vnode_init(struct vnode* vnd, struct vmsger* msger, struct vticker* ticker, struct sockaddr_in* addr)
+int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vmsger* msger, struct vticker* ticker, struct sockaddr_in* addr)
 {
     vassert(vnd);
+    vassert(cfg);
     vassert(msger);
     vassert(ticker);
     vassert(addr);
@@ -195,10 +196,10 @@ int vnode_init(struct vnode* vnd, struct vmsger* msger, struct vticker* ticker, 
     vlock_init (&vnd->lock);
     vnd->mode  = VDHT_OFF;
 
+    vnd->cfg    = cfg;
     vnd->msger  = msger;
     vnd->ticker = ticker;
     vnd->ops    = &node_ops;
-    vnd->cfg_ops= &cfg_ops;
     return 0;
 }
 
