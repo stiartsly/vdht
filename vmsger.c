@@ -35,7 +35,7 @@ void vmsg_sys_free(struct vmsg_sys* ms)
     return ;
 }
 
-void vmsg_sys_init(struct vmsg_sys* ms, struct sockaddr_in* addr, int len, void* data)
+void vmsg_sys_init(struct vmsg_sys* ms, struct vsockaddr* addr, int len, void* data)
 {
     vassert(ms);
     vassert(addr);
@@ -43,7 +43,7 @@ void vmsg_sys_init(struct vmsg_sys* ms, struct sockaddr_in* addr, int len, void*
     vassert(data);
 
     vlist_init(&ms->list);
-    vsockaddr_copy(&ms->addr, addr);
+    memcpy(&ms->addr, addr, sizeof(*addr));
     ms->len = len;
     if (ms->data == ms->buf) {
         memcpy(ms->buf, data, len);
@@ -56,7 +56,7 @@ void vmsg_sys_init(struct vmsg_sys* ms, struct sockaddr_in* addr, int len, void*
 /*
  * auxiliary func for vmsg_usr.
  */
-void vmsg_usr_init(struct vmsg_usr* mu, int msgId, struct sockaddr_in* addr, int len, void* data)
+void vmsg_usr_init(struct vmsg_usr* mu, int msgId, struct vsockaddr* addr, int len, void* data)
 {
     vassert(mu);
     vassert(msgId >= 0);

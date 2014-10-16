@@ -114,7 +114,7 @@ int _aux_tick_cb(void* cookie)
         break;
     }
     case VDHT_RUN: {
-        if (vnd->ts - now > TICK_INTERVAL) {
+        if (now - vnd->ts > TICK_INTERVAL) {
             vnd->ts = now;
             vnd->mode = VDHT_TICK;
         }

@@ -1,16 +1,41 @@
 #include "vglobal.h"
 #include "vrpc.h"
 
+struct vunix_domain {
+    struct sockaddr_un addr;
+    int sock_fd;
+};
+
 /*
  * to open a udp socket for unix rpc.
  * @addr:
  */
 static
-void* _vrpc_unix_open(struct sockaddr_in* addr)
+void* _vrpc_unix_open(struct vsockaddr* addr)
 {
+    struct sockaddr_un* saddr = (struct sockaddr_un*)&addr->vsun_addr;
+    struct vunix_domain* unx = NULL;
+    int ret = 0;
+    int fd  = 0;
     vassert(addr);
-    //todo;
-    return NULL;
+
+    unx = (struct vunix_domain*)malloc(sizeof(*unx));
+    vlog((!unx), elog_malloc);
+    retE_p((!unix));
+    memset(unx, 0, sizeof(*unx));
+    memcpy(&unx->addr, saddr, sizeof(*saddr));
+
+    fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    vlog((fd < 0), elog_socket);
+    retE_p((fd < 0));
+
+    unlink(saddr->sun_path);
+    ret = bind(fd, (struct sockaddr*)saddr, sizeof(*saddr));
+    vlog((ret < 0), elog_bind);
+    retE_p((ret < 0));
+
+    unx->sock_fd = fd;
+    return unx;
 }
 
 /*
@@ -22,8 +47,21 @@ void* _vrpc_unix_open(struct sockaddr_in* addr)
 static
 int _vrpc_unix_sndto(void* impl, struct vmsg_sys* msg)
 {
-    vassert(impl);
+    struct vunix_domain* unx = (struct vunix_domain*)impl;
+    int ret = 0;
+
+    vassert(unix);
     vassert(msg);
+
+    ret = sendto(unx->sock_fd,
+                 msg->data,
+                 msg->len,
+                 0,
+                (struct sockaddr*)&msg->addr.vsun_addr,
+                sizeof(struct sockaddr_un));
+    vlog((ret < 0), elog_sendto);
+    retE((ret < 0));
+    return ret;
 
     //todo;
     return 0;
@@ -37,18 +75,35 @@ int _vrpc_unix_sndto(void* impl, struct vmsg_sys* msg)
 static
 int _vrpc_unix_rcvfrom(void* impl, struct vmsg_sys* msg)
 {
-    vassert(impl);
+    struct vunix_domain* unx = (struct vunix_domain*)impl;
+    int len = 0;
+    int ret = 0;
+
+    vassert(unx);
     vassert(msg);
 
-    //todo;
-    return 0;
+    ret = recvfrom(unx->sock_fd,
+                msg->data,
+                msg->len,
+                0,
+               (struct sockaddr*)&msg->addr.vsun_addr,
+               (socklen_t*)&len);
+    vlog((ret < 0), elog_recvfrom);
+    retE((ret < 0));
+    msg->len = ret;
+
+    return ret;
 }
 
 static
 void _vrpc_unix_close(void* impl)
 {
-    vassert(impl);
-    //todo;
+    struct vunix_domain *unx = (struct vunix_domain*)impl;
+    vassert(unx);
+
+     if (unx->sock_fd > 0) {
+        close(unx->sock_fd);
+    }
     return ;
 }
 
@@ -60,9 +115,10 @@ void _vrpc_unix_close(void* impl)
 static
 int _vrpc_unix_getfd(void* impl)
 {
-    vassert(impl);
-    //todo;
-    return 0;
+    struct vunix_domain* unx = (struct vunix_domain*)impl;
+    vassert(unx);
+
+    return unx->sock_fd;
 }
 
 /*
@@ -77,18 +133,29 @@ struct vrpc_base_ops unix_base_ops = {
     .getfd   = _vrpc_unix_getfd
 };
 
+
+/*
+ *  for udp rpc
+ */
+struct vudp {
+    struct sockaddr_in addr;
+    int sock_fd;
+    int ttl;
+};
+
 /*
  * to open a udp socket for rpc.
  * @addr:
  */
 static
-void* _vrpc_udp_open(struct sockaddr_in* addr)
+void* _vrpc_udp_open(struct vsockaddr* addr)
 {
     void _reclaim(struct vudp* udp, int fd)
     {
         vcall_cond((fd >= 0), close(fd));
         vcall_cond((!udp)   , free(udp));
     }
+    struct sockaddr_in* saddr = (struct sockaddr_in*)&addr->vsin_addr;
     struct vudp* udp = NULL;
     int flags = 0;
     int fd  = 0;
@@ -100,12 +167,13 @@ void* _vrpc_udp_open(struct sockaddr_in* addr)
     vlog((!udp), elog_malloc);
     retE_p((!udp));
     memset(udp, 0, sizeof(*udp));
+    memcpy(&udp->addr, saddr, sizeof(*saddr));
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     vlog((fd < 0), elog_socket);
     ret1E_p((fd < 0), _reclaim(udp, fd));
 
-    ret = bind(fd, (struct sockaddr*)addr, sizeof(*addr));
+    ret = bind(fd, (struct sockaddr*)saddr, sizeof(*saddr));
     vlog((ret < 0), elog_bind);
     ret1E_p((ret < 0), _reclaim(udp,fd));
 
@@ -141,8 +209,8 @@ int _vrpc_udp_sndto(void* impl, struct vmsg_sys* msg)
                  msg->data,
                  msg->len,
                  0,
-                (struct sockaddr*)&msg->addr,
-                sizeof(msg->addr));
+                (struct sockaddr*)&msg->addr.vsin_addr,
+                sizeof(struct sockaddr_in));
     vlog((ret < 0), elog_sendto);
     retE((ret < 0));
     return ret;
@@ -167,7 +235,7 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
                 msg->data,
                 msg->len,
                 0,
-               (struct sockaddr*)&msg->addr,
+               (struct sockaddr*)&msg->addr.vsin_addr,
                (socklen_t*)&len);
     vlog((ret < 0), elog_recvfrom);
     retE((ret < 0));
@@ -327,7 +395,7 @@ struct vrpc_ops rpc_ops = {
  * @mode :[in];
  * @addr :[in]
  */
-int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct sockaddr_in* addr)
+int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct vsockaddr* addr)
 {
     struct vmsg_sys* sm = NULL;
     vassert(rpc);
@@ -335,7 +403,7 @@ int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct sockaddr_
     vassert(vrpc_mode_ok(mode));
 
     memset(rpc, 0, sizeof(*rpc));
-    vsockaddr_copy(&rpc->addr, addr);
+    memcpy(&rpc->addr, addr, sizeof(*addr));
     rpc->mode = mode;
     rpc->msger= msger;
     rpc->impl = NULL;

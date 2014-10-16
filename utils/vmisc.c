@@ -64,6 +64,19 @@ void vsockaddr_copy(struct sockaddr_in* dst, struct sockaddr_in* src)
     return ;
 }
 
+int vsockaddr_equal(struct sockaddr_in* a, struct sockaddr_in* b)
+{
+    vassert(a);
+    vassert(b);
+
+    if ((a->sin_family != b->sin_family)
+      ||((uint32_t)a->sin_addr.s_addr != (uint32_t)b->sin_addr.s_addr)
+      ||(a->sin_port != b->sin_port)){
+        return 0;
+    }
+    return 1;
+}
+
 int vsockaddr_convert(const char* host, int port, struct sockaddr_in* addr)
 {
     int ret = 0;
@@ -98,18 +111,5 @@ int vsockaddr_unconvert(struct sockaddr_in* addr, char* host, int len, int* port
 
     *port = (int)ntohs(addr->sin_port);
     return 0;
-}
-
-int vsockaddr_equal(struct sockaddr_in* a, struct sockaddr_in* b)
-{
-    vassert(a);
-    vassert(b);
-
-    if ((a->sin_family != b->sin_family)
-      ||((uint32_t)a->sin_addr.s_addr != (uint32_t)b->sin_addr.s_addr)
-      ||(a->sin_port != b->sin_port)){
-        return 0;
-    }
-    return 1;
 }
 

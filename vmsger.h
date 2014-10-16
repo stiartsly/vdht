@@ -27,29 +27,38 @@ enum {
 
 #define VDHT_MSG(msgId) (msgId >= VDHT_RSRVD && msgId < VDHT_BUTT)
 
+struct vsockaddr {
+    union {
+        struct sockaddr_in s_in;
+        struct sockaddr_un s_un;
+    }u_addr;
+#define vsin_addr u_addr.s_in
+#define vsun_addr u_addr.s_un
+};
+
 struct vmsg_usr {
-    struct sockaddr_in* addr;
+    struct vsockaddr* addr;
     int   msgId;
     int   len;
     void* data;
 };
 
-void vmsg_usr_init(struct vmsg_usr*, int, struct sockaddr_in*, int, void*);
+void vmsg_usr_init(struct vmsg_usr*, int, struct vsockaddr*, int, void*);
 
 /*
  * vmsg_sys
  */
 struct vmsg_sys {
     struct vlist list;
-    struct sockaddr_in addr;
+    struct vsockaddr addr;
     int   len;
     void* data;
     char  buf[4];
 };
 
 struct vmsg_sys* vmsg_sys_alloc(int sz);
-void  vmsg_sys_free(struct vmsg_sys*);
-void  vmsg_sys_init(struct vmsg_sys*, struct sockaddr_in*, int, void*);
+void vmsg_sys_free(struct vmsg_sys*);
+void vmsg_sys_init(struct vmsg_sys*, struct vsockaddr*, int, void*);
 
 /*
  * for vmsg callback

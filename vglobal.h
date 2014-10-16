@@ -45,6 +45,8 @@
 #define time_t
 #define uint32_t
 #define sockaddr_in
+#define sockaddr_un
+#define sockaddr
 
 #define malloc
 #define realloc
@@ -73,6 +75,12 @@
 #define srand
 #define rand
 #define sleep
+#define unlink
+#define getopt_long
+#define optarg
+#define optind
+#define exit
+
 
 #define inet_aton
 #define inet_ntoa

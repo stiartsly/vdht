@@ -557,7 +557,7 @@ int _out_ping(struct vroute* route, vnodeAddr* dest)
     ret = route->enc_ops->ping(&token, &route->ownId.id, buf, len);
     {
         struct vmsg_usr msg = {
-            .addr  = &dest->addr,
+            .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VDHT_PING,
             .data  = _buf,
             .len   = ret + 8
@@ -596,7 +596,7 @@ int _out_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, vnodeInf
     ret = route->enc_ops->ping_rsp(token, &dest->id, info, buf, len);
     {
         struct vmsg_usr msg = {
-            .addr  = &dest->addr,
+            .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VDHT_PING_R,
             .data  = _buf,
             .len   = ret + 8
@@ -636,7 +636,7 @@ int _out_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target)
     ret = route->enc_ops->find_node(&token, &route->ownId.id, target, buf, len);
     {
         struct vmsg_usr msg = {
-            .addr  = &dest->addr,
+            .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VDHT_FIND_NODE,
             .data  = _buf,
             .len   = ret + 8
@@ -674,7 +674,7 @@ int _out_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, vno
     ret = route->enc_ops->find_node_rsp(token, &route->ownId.id, info, buf, len);
     {
         struct vmsg_usr msg = {
-            .addr  = &dest->addr,
+            .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VDHT_FIND_NODE_R,
             .data  = _buf,
             .len   = ret + 8
@@ -714,7 +714,7 @@ int _out_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash)
     ret = route->enc_ops->get_peers(&token, &route->ownId.id, hash, buf, len);
     {
         struct vmsg_usr msg = {
-            .addr  = &dest->addr,
+            .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VDHT_GET_PEERS,
             .data  = _buf,
             .len   = ret + 8
@@ -754,7 +754,7 @@ int _out_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, str
     ret = route->enc_ops->get_peers_rsp(token, &route->ownId.id, peers, buf, len);
     {
         struct vmsg_usr msg = {
-            .addr  = &dest->addr,
+            .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VDHT_GET_PEERS_R,
             .data  = _buf,
             .len   = ret + 8
@@ -793,7 +793,7 @@ int _out_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeId* targ
     ret = route->enc_ops->find_closest_nodes(&token, &route->ownId.id, target, buf, len);
     {
         struct vmsg_usr msg = {
-            .addr  = &dest->addr,
+            .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VDHT_FIND_CLOSEST_NODES,
             .data  = _buf,
             .len   = ret + 8
@@ -833,7 +833,7 @@ int _out_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vtoken* t
     ret = route->enc_ops->find_closest_nodes_rsp(token, &route->ownId.id, closest, buf, len);
     {
         struct vmsg_usr msg = {
-            .addr  = &dest->addr,
+            .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VDHT_FIND_CLOSEST_NODES_R,
             .data  = _buf,
             .len   = ret + 8
@@ -1096,7 +1096,7 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     vassert(route);
     vassert(mu);
 
-    vsockaddr_copy(&addr.addr, mu->addr);
+    vsockaddr_copy(&addr.addr, &mu->addr->vsin_addr);
 
     switch(mu->msgId) {
     case VDHT_PING: {
@@ -1118,7 +1118,7 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
         vnodeId targetId;
         ret = dec_ops->find_node(buf, len, &token, &addr.id, &targetId);
         retE((ret < 0));
-        vsockaddr_copy(&addr.addr, mu->addr);
+        vsockaddr_copy(&addr.addr, &mu->addr->vsin_addr);
         ret = route->cb_ops->find_node(route, &token, &addr, &targetId);
         retE((ret < 0));
         break;

@@ -3,7 +3,9 @@
 
 #include <sys/types.h>
 #include <sys/select.h>
+#include <sys/un.h>
 #include <netinet/in.h>
+#include "vmsger.h"
 
 enum {
     VRPC_NUL,
@@ -24,18 +26,10 @@ enum {
 #define vrpc_mode_ok(mode) ((mode >= VRPC_UNIX) && (mode < VRPC_MODE_BUTT))
 
 /*
- *  for udp rpc
- */
-struct vudp {
-    int sock_fd;
-    int ttl;
-};
-
-/*
  * for rpc
  */
 struct vrpc_base_ops {
-    void* (*open)   (struct sockaddr_in*);
+    void* (*open)   (struct vsockaddr*);
     int   (*sndto)  (void*, struct vmsg_sys*);
     int   (*rcvfrom)(void*, struct vmsg_sys*);
     void  (*close)  (void*);
@@ -53,7 +47,7 @@ struct vrpc_ops {
 
 struct vrpc {
     int mode;
-    struct sockaddr_in addr;
+    struct vsockaddr addr;
 
     struct vmsg_sys* rcvm;
     struct vmsg_sys* sndm;
@@ -70,7 +64,7 @@ struct vrpc {
     int snd_sz;
 };
 
-int  vrpc_init  (struct vrpc*, struct vmsger*, int, struct sockaddr_in*);
+int  vrpc_init  (struct vrpc*, struct vmsger*, int, struct vsockaddr*);
 void vrpc_deinit(struct vrpc*);
 
 /*

@@ -182,14 +182,14 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 struct vhost* vhost_create(struct vconfig* cfg, const char* hostname, int port)
 {
     struct vhost* host = NULL;
-    struct sockaddr_in addr;
+    struct vsockaddr addr;
     int ret = 0;
 
     vassert(cfg);
     vassert(hostname);
     vassert(port > 0);
 
-    ret = vsockaddr_convert(hostname, port, &addr);
+    ret = vsockaddr_convert(hostname, port, &addr.vsin_addr);
     vlog((ret < 0), elog_vsockaddr_convert);
     retE_p((ret < 0));
 
@@ -207,7 +207,7 @@ struct vhost* vhost_create(struct vconfig* cfg, const char* hostname, int port)
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, &addr);
     ret += vticker_init(&host->ticker);
-    ret += vnode_init  (&host->node, host->cfg, &host->msger, &host->ticker, &addr);
+    ret += vnode_init  (&host->node, host->cfg, &host->msger, &host->ticker, &addr.vsin_addr);
     ret += vwaiter_init(&host->waiter);
     if (ret < 0) {
         vwaiter_deinit(&host->waiter);
