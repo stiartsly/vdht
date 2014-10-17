@@ -117,6 +117,12 @@ int main(int argc, char** argv)
     int fd = 0;
     int c = 0;
 
+    if (argc <= 1) {
+        printf("Few argument\n");
+        show_usage();
+        exit(-1);
+    }
+
     while(c >= 0) {
 
         c = getopt_long(argc, argv, "U:SdDXa:d:rRtTpPhv", long_options, &opt_idx);
