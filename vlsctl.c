@@ -70,7 +70,7 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
         void* data = NULL;
 
         data = offset_addr(um->data, sizeof(uint32_t));
-        sin.sin_addr.s_addr = (uint32_t)get_uint32(data);
+        sin.sin_addr.s_addr = get_uint32(data);
         data = offset_addr(data, sizeof(uint32_t));
         sin.sin_port   = (short)get_int32(data);
         sin.sin_family = AF_INET;
@@ -99,6 +99,7 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
     case VLSCTL_STUN_DOWN:
     case VLSCTL_VPN_UP:
     case VLSCTL_VPN_DOWN:
+        //todo;
         break;
     default:
         break;
@@ -107,7 +108,7 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
 }
 
 static
-int _aux_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
+int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
     void* data = NULL;
     int  msgId = 0;
@@ -117,43 +118,48 @@ int _aux_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 
     retE(!IS_LSCTL_MAGIC(get_uint32(sm->data)));
 
-    msgId = get_int32(offset_addr(sm->data, sizeof(uint32_t)));
+    data  = offset_addr(sm->data, sizeof(uint32_t));
+    msgId = get_int32(data);
     retE((msgId != VMSG_LSCTL));
 
-    data  = offset_addr(sm->data, 8);
+    data  = offset_addr(data, sizeof(long));
     vmsg_usr_init(um, msgId, &sm->addr, sm->len-8, data);
     return 0;
 }
 
 int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
 {
-    struct vconfig* cfg = host->cfg;
+    struct vconfig_ops* ops = host->cfg->ops;
+    struct sockaddr_un* sun = &ctl->addr.vsun_addr;
+    struct vmsger* msger = &ctl->msger;
+    struct vrpc*   rpc   = &ctl->rpc;
     char unix_path[BUF_SZ];
     int ret = 0;
 
     vassert(ctl);
     vassert(host);
 
-    ret = cfg->ops->get_str(cfg, "lsctl.unix_path", unix_path, BUF_SZ);
+    memset(unix_path, 0, BUF_SZ);
+    ret = ops->get_str(host->cfg, "lsctl.unix_path", unix_path, BUF_SZ);
     retE((ret < 0));
-//    retE((strlen(unix_path) + 1 >= sizeof(ctl->addr.sun_path)));
+    retE((strlen(unix_path) + 1 >= sizeof(sun->sun_path)));
 
-    ctl->addr.vsun_addr.sun_family = AF_UNIX;
-    strcpy(ctl->addr.vsun_addr.sun_path, unix_path);
+    sun->sun_family = AF_UNIX;
+    strcpy(sun->sun_path, unix_path);
     ctl->host   = host;
     ctl->waiter = &host->waiter;
 
-    ret += vmsger_init(&ctl->msger);
-    ret += vrpc_init(&ctl->rpc, &ctl->msger, VRPC_UNIX, &ctl->addr);
+    ret += vmsger_init(msger);
+    ret += vrpc_init(rpc, msger, VRPC_UNIX, &ctl->addr);
     if (ret < 0) {
-        vrpc_deinit(&ctl->rpc);
-        vmsger_deinit(&ctl->msger);
+        vrpc_deinit(rpc);
+        vmsger_deinit(msger);
         return -1;
     }
 
-    ctl->waiter->ops->add(ctl->waiter, &ctl->rpc);
-    vmsger_reg_unpack_cb(&ctl->msger, _aux_unpack_cb, ctl);
-    ctl->msger.ops->add_cb(&ctl->msger, ctl, _aux_msg_parse_cb, VMSG_LSCTL);
+    ctl->waiter->ops->add(ctl->waiter, rpc);
+    vmsger_reg_unpack_cb(msger, _aux_msg_unpack_cb, ctl);
+    msger->ops->add_cb  (msger, ctl, _aux_msg_parse_cb, VMSG_LSCTL);
 
     return 0;
 }
