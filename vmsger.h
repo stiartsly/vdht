@@ -18,10 +18,10 @@ enum {
     VDHT_FIND_CLOSEST_NODES_R,
     VDHT_BUTT,
 
-    VMSG_LSCTL = 45,
-    VMSG_STUN  = 50,
-    VMSG_RELAY = 70,
-    VMSG_VPN   = 90,
+    VMSG_LSCTL = 0x45,
+    VMSG_STUN  = 0x50,
+    VMSG_RELAY = 0x70,
+    VMSG_VPN   = 0x90,
 
     VMSG_BUTT
 };

@@ -15,13 +15,18 @@ vdht_objs = \
     vticker.o \
     vnodeId.o 
 
-.PHONY: vdhtd clean
+.PHONY: all vdhtd vlsctlc clean
 
 %.o: %.c 
 	@$(CC) -c -o $@ $< $(CFLAGS)
 
+all: vdhtd vlsctlc
+
 vdhtd: vmain.o libvdht.a libutils.a
 	@$(CC) -o $@ $^ libutils.a  $(LDFLAGS)
+
+vlsctlc:
+	@cd lsctl && make vlsctlc
 
 libvdht.a: $(vdht_objs)
 	@ar -rv $@ $^
@@ -30,6 +35,7 @@ libutils.a:
 	@cd utils && make libutils.a
 
 clean:
+	@cd lsctl && make clean
 	@cd utils && make clean
 	-rm -f *.o 
 	-rm -f libvdht.a
