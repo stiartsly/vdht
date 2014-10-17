@@ -339,7 +339,6 @@ int main(int argc, char** argv)
         buf += sizeof(long);
     }
 
-
     dest_addr.sun_family = AF_UNIX;
     if (def_unix_path) {
         strcpy(dest_addr.sun_path, "/var/run/vlsctl-server");
