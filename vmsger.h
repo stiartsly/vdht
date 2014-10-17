@@ -18,6 +18,7 @@ enum {
     VDHT_FIND_CLOSEST_NODES_R,
     VDHT_BUTT,
 
+    VMSG_LSCTL = 45,
     VMSG_STUN  = 50,
     VMSG_RELAY = 70,
     VMSG_VPN   = 90,

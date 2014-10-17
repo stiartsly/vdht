@@ -109,6 +109,14 @@ int _vhost_loop(struct vhost* host)
 }
 
 static
+int _vhost_req_quit(struct vhost* host)
+{
+    vassert(host);
+    host->to_quit = 1;
+    return 0;
+}
+
+static
 struct vhost_ops host_ops = {
     .start     = _vhost_start,
     .stop      = _vhost_stop,
@@ -116,6 +124,7 @@ struct vhost_ops host_ops = {
     .drop      = _vhost_drop,
     .stabilize = _vhost_stabilize,
     .loop      = _vhost_loop,
+    .req_quit  = _vhost_req_quit,
     .dump      = _vhost_dump
 };
 

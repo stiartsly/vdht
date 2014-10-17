@@ -5,12 +5,13 @@ DEPS =
 
 vdht_objs = \
     vcfg.o  \
+    vrpc.o  \
+    vdht.o  \
     vhost.o \
     vnode.o \
-    vrpc.o  \
-    vmsger.o \
-    vdht.o  \
-    vroute.o \
+    vmsger.o  \
+    vroute.o  \
+    vlsctl.o  \
     vticker.o \
     vnodeId.o 
 
