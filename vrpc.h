@@ -8,14 +8,6 @@
 #include "vmsger.h"
 
 enum {
-    VRPC_NUL,
-    VRPC_RCV,
-    VRPC_SND,
-    VRPC_ERR,
-    VRPC_METHOD_BUTT
-};
-
-enum {
     VRPC_UNIX,
     VRPC_UDP,
     VRPC_TCP,
@@ -72,10 +64,10 @@ void vrpc_deinit(struct vrpc*);
  */
 struct vwaiter;
 struct vwaiter_ops {
-    int (*add)   (struct vwaiter*, struct vrpc*);
-    int (*remove)(struct vwaiter*, struct vrpc*);
-    int (*select)(struct vwaiter*, struct vrpc**, int*);
-    int (*dump)  (struct vwaiter*);
+    int (*add)    (struct vwaiter*, struct vrpc*);
+    int (*remove) (struct vwaiter*, struct vrpc*);
+    int (*laundry)(struct vwaiter*);
+    int (*dump)   (struct vwaiter*);
 };
 
 struct vwaiter {

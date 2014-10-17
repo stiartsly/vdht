@@ -513,69 +513,61 @@ int _aux_fdsets_cb(void* item, void* cookie)
     return 0;
 }
 
+static
+int _aux_laundry_cb(void* item, void* cookie)
+{
+    struct vwaiter* wt = (struct vwaiter*)cookie;
+    struct vrpc* rpc = (struct vrpc*)item;
+    int fd = 0;
+
+    vassert(wt);
+    vassert(rpc);
+
+    fd = rpc->ops->getId(rpc);
+    if (FD_ISSET(fd, &wt->rfds)){
+        rpc->ops->rcv(rpc);
+    }
+    if (FD_ISSET(fd, &wt->wfds)) {
+        rpc->ops->snd(rpc);
+    }
+    if (FD_ISSET(fd, &wt->efds)) {
+        rpc->ops->err(rpc);
+    }
+    return 0;
+}
+
 /*
  * @wt:
  * @tgt:[out]: which rpc
  * @rwe [out]: type of status change of socket descriptor
  */
 static
-int _vwaiter_select(struct vwaiter* wt, struct vrpc** tgt, int* rwe)
+int _vwaiter_laundry(struct vwaiter* wt)
 {
-    struct vrpc* rpc = NULL;
-    int fd = 0;
-    int i  = 0;
-
     vassert(wt);
-    vassert(rwe);
 
     vlock_enter(&wt->lock);
-    if (wt->reset) {
-        wt->maxfd = 0;
-        FD_ZERO(&wt->rfds);
-        FD_ZERO(&wt->wfds);
-        FD_ZERO(&wt->efds);
-
-        varray_iterate(&wt->rpcs, _aux_fdsets_cb, wt);
-        wt->reset = 0;
-    }
+    FD_ZERO(&wt->rfds);
+    FD_ZERO(&wt->wfds);
+    FD_ZERO(&wt->efds);
+    varray_iterate(&wt->rpcs, _aux_fdsets_cb, wt);
     vlock_leave(&wt->lock);
 
     {
         struct timespec tmo = {0, 5000*1000*100 };
         sigset_t sigmask;
         sigset_t origmask;
+        int ret = 0;
 
         pthread_sigmask(SIG_SETMASK, &sigmask, &origmask);
-        fd = pselect(wt->maxfd, &wt->rfds, &wt->wfds, &wt->efds, &tmo, &sigmask);
-        vlog((fd < 0), elog_pselect);
-        retE((fd < 0));
-        retS((!fd)); //timeout.
+        ret = pselect(wt->maxfd, &wt->rfds, &wt->wfds, &wt->efds, &tmo, &sigmask);
+        vlog((ret < 0), elog_pselect);
+        retE((ret < 0));
+        retS((!ret)); //timeout.
     }
 
-    if (FD_ISSET(fd, &wt->rfds)) {
-        *rwe = VRPC_RCV;
-    } else if (FD_ISSET(fd, &wt->wfds)) {
-        *rwe = VRPC_SND;
-    } else if (FD_ISSET(fd, &wt->efds)) {
-        *rwe = VRPC_ERR;
-    } else {
-        *rwe = VRPC_NUL;
-    }
-
-    i = 0;
     vlock_enter(&wt->lock);
-    for (; i < varray_size(&wt->rpcs); i++) {
-        rpc = (struct vrpc*)varray_get(&wt->rpcs, i);
-        if (fd == rpc->ops->getId(rpc)) {
-            break;
-        }
-    }
-    if (i < varray_size(&wt->rpcs)) {
-        *tgt = rpc;
-    } else {
-        *rwe = VRPC_NUL;
-        *tgt = NULL;
-    }
+    varray_iterate(&wt->rpcs, _aux_laundry_cb, wt);
     vlock_leave(&wt->lock);
     return 0;
 }
@@ -593,10 +585,10 @@ int _vwaiter_dump(struct vwaiter* wt)
 
 static
 struct vwaiter_ops waiter_ops = {
-    .add    = _vwaiter_add,
-    .remove = _vwaiter_remove,
-    .select = _vwaiter_select,
-    .dump   = _vwaiter_dump
+    .add     = _vwaiter_add,
+    .remove  = _vwaiter_remove,
+    .laundry = _vwaiter_laundry,
+    .dump    = _vwaiter_dump
 };
 
 /*

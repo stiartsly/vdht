@@ -74,34 +74,14 @@ static
 int _vhost_loop(struct vhost* host)
 {
     struct vwaiter* waiter = &host->waiter;
-    struct vrpc* rpc = NULL;
     int ret = 0;
-    int rwe = 0;
 
     vassert(host);
     vassert(waiter);
 
     while(!host->to_quit) {
-        ret = waiter->ops->select(waiter, &rpc, &rwe);
+        ret = waiter->ops->laundry(waiter);
         if (ret < 0) {
-            continue;
-        }
-        switch(rwe) {
-        case VRPC_RCV:
-            rpc->ops->rcv(rpc);
-            break;
-        case VRPC_SND:
-            rpc->ops->snd(rpc);
-            break;
-        case VRPC_ERR:
-            waiter->ops->remove(waiter, rpc);
-            ret = rpc->ops->err(rpc);
-            if (ret < 0) {
-                continue;
-            }
-            waiter->ops->add(waiter, rpc);
-            break;
-        default: //means select timeout.
             continue;
         }
     }
