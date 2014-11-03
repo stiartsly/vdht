@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -58,6 +59,8 @@
 #define snprintf
 #define strcmp
 #define strtol
+#define strcat
+#define strncat
 #define memset
 #define memcpy
 #define memcmp
@@ -81,7 +84,9 @@
 #define optarg
 #define optind
 #define exit
-
+#define open
+#define stat
+#define read
 
 #define inet_aton
 #define inet_ntoa

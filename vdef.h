@@ -67,6 +67,9 @@
 #endif
 
 
+#define elog_open           perror("[open]")
+#define elog_stat           perror("[stat]")
+#define elog_read           perror("[read]")
 #define elog_socket         perror("[socket]")
 #define elog_bind           perror("[bind]")
 #define elog_fcntl          perror("[fcntl]")

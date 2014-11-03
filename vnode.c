@@ -99,7 +99,7 @@ int _aux_tick_cb(void* cookie)
         char db[64];
         int ret = 0;
 
-        ret = vnd->cfg->ops->get_str(vnd->cfg, "route.db", db, 64);
+        ret = vnd->cfg->ops->get_str(vnd->cfg, "route.db_file", db, 64);
         if (ret < 0) {
             vnd->mode = VDHT_ERR;
             break;
