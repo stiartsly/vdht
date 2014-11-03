@@ -160,8 +160,8 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
     struct vcfg_item* item = NULL;
     char* cur = (char*)param_ln;
     char* val_pos = NULL;
-    int key_ate = 0;
-    int int_val = 1;
+    int key_aten = 0;
+    int int_val  = 1;
     char* key = NULL;
     char* val = NULL;
     int  nval = 0;
@@ -180,7 +180,7 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
         case '/':
         case '_':
             cur++;
-            if (key_ate) {
+            if (key_aten) {
                 int_val = 0;
             }
             break;
@@ -192,6 +192,7 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
             break;
         case '=': {
             int sz = 0;
+            retE(key_aten);
 
             sz = cur - param_ln;
             sz += 1; // for '\0'
@@ -208,7 +209,7 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
             strncat(key, param_ln, cur-param_ln);
             _strip_underline(key);
 
-            key_ate = 1;
+            key_aten = 1;
             val_pos = ++cur;
             break;
         }
@@ -218,25 +219,22 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
         }
     }
 
-    { // meet '\n'.
-        int sz = 0;
+    { // meet line feed '\n'.
+        char tmp[32];
+        memset(tmp, 0, 32);
+        strncpy(tmp, val_pos, cur - val_pos);
+        _strip_underline(tmp);
 
-        sz = cur - val_pos;
         if (int_val) {
-            char tmp[32];
-            memset(tmp, 0, 32);
-            strncpy(tmp, val_pos, sz);
-            _strip_underline(tmp);
             nval = strtol(tmp, NULL, 10);
         } else {
-            val = malloc(sz + 1);
+            val = malloc(strlen(tmp) + 1);
             vlog((!val), elog_malloc);
             ret1E((!val), free(key));
-            strncpy(val, val_pos, sz);
-            _strip_underline(val);
+            strcpy(val, tmp);
         }
     }
-    cur++;
+    cur++; //skip '\n'
 
     item = vitem_alloc();
     ret2E((!item), free(key), free(val));
@@ -314,7 +312,6 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
     buf = malloc(stat.st_size + 1);
     vlog((!buf), elog_malloc);
     ret1E((!buf), close(fd));
-    memset(buf, 0, stat.st_size + 1);
 
     ret = read(fd, buf, stat.st_size);
     vlog((!buf), elog_read);
