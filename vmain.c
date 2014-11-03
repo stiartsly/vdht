@@ -139,9 +139,9 @@ int main(int argc, char** argv)
         vconfig_deinit(&cfg);
         exit(-1);
     }
+
     host->ops->stabilize(host);
     host->ops->start(host);
-
     host->ops->loop(host);
 
     vhost_destroy(host);

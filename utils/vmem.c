@@ -12,8 +12,8 @@ int vmem_aux_init(struct vmem_aux* aux, int obj_sz, int first_capc)
 {
     vassert(aux);
 
-    retE((obj_sz > 0));
-    retE((first_capc >= 0));
+    retE((obj_sz < 0));
+    retE((first_capc <= 0));
 
     aux->capc   = 0;
     aux->used   = 0;

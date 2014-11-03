@@ -89,7 +89,7 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
         sin.sin_port   = (short)get_int32(data);
         sin.sin_family = AF_INET;
 
-        ret = host->ops->join(host, &sin);
+        ret = host->ops->drop(host, &sin);
         retE((ret < 0));
         break;
     }
@@ -147,7 +147,6 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
     sun->sun_family = AF_UNIX;
     strcpy(sun->sun_path, unix_path);
     ctl->host   = host;
-    ctl->waiter = &host->waiter;
 
     ret += vmsger_init(msger);
     ret += vrpc_init(rpc, msger, VRPC_UNIX, &ctl->addr);
@@ -157,19 +156,18 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
         return -1;
     }
 
-    ctl->waiter->ops->add(ctl->waiter, rpc);
     vmsger_reg_unpack_cb(msger, _aux_msg_unpack_cb, ctl);
     msger->ops->add_cb  (msger, ctl, _aux_msg_parse_cb, VMSG_LSCTL);
 
     return 0;
 }
 
-void lsctl_deinit(struct vlsctl* ctl)
+void vlsctl_deinit(struct vlsctl* ctl)
 {
     vassert(ctl);
 
-    ctl->waiter->ops->remove(ctl->waiter, &ctl->rpc);
     vmsger_deinit(&ctl->msger);
     vrpc_deinit(&ctl->rpc);
     return ;
 }
+

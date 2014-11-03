@@ -198,7 +198,9 @@ struct vhost* vhost_create(struct vconfig* cfg, const char* hostname, int port)
     ret += vticker_init(&host->ticker);
     ret += vnode_init  (&host->node, host->cfg, &host->msger, &host->ticker, &addr.vsin_addr);
     ret += vwaiter_init(&host->waiter);
+    ret += vlsctl_init (&host->lsctl, host);
     if (ret < 0) {
+        vlsctl_deinit (&host->lsctl);
         vwaiter_deinit(&host->waiter);
         vnode_deinit  (&host->node);
         vticker_deinit(&host->ticker);
@@ -208,6 +210,7 @@ struct vhost* vhost_create(struct vconfig* cfg, const char* hostname, int port)
     }
 
     host->waiter.ops->add(&host->waiter, &host->rpc);
+    host->waiter.ops->add(&host->waiter, &host->lsctl.rpc);
     vmsger_reg_pack_cb  (&host->msger, _aux_msg_pack_cb  , host);
     vmsger_reg_unpack_cb(&host->msger, _aux_msg_unpack_cb, host);
 
@@ -218,6 +221,10 @@ void vhost_destroy(struct vhost* host)
 {
     vassert(host);
 
+    host->waiter.ops->remove(&host->waiter, &host->lsctl.rpc);
+    host->waiter.ops->remove(&host->waiter, &host->rpc);
+
+    vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);
     vticker_deinit(&host->ticker);

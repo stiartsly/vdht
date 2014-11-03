@@ -27,7 +27,6 @@ struct vlsctl {
     struct vrpc     rpc;
     struct vmsger   msger;
     struct vhost*   host;
-    struct vwaiter* waiter;
 
     struct vsockaddr addr;
 };

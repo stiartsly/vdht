@@ -211,7 +211,7 @@ void varray_zero(struct varray* array, varray_zero_t zero_cb, void* cookie)
  */
 int vsorted_array_init(struct vsorted_array* sarray, int first_capc, varray_cmp_t cb, void* cookie)
 {
-    vassert(!sarray);
+    vassert(sarray);
 
     retE((!cb));
     varray_init(&sarray->array, first_capc);

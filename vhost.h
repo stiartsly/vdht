@@ -5,6 +5,7 @@
 #include "vnode.h"
 #include "vmsger.h"
 #include "vticker.h"
+#include "vlsctl.h"
 
 #define HOST_SZ ((int)128)
 
@@ -30,6 +31,7 @@ struct vhost {
     struct vwaiter waiter;
     struct vticker ticker;
     struct vnode   node;
+    struct vlsctl  lsctl;
 
     struct vconfig*   cfg;
     struct vhost_ops* ops;
