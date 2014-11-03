@@ -36,7 +36,7 @@ enum {
     VLSCTL_BUTT
 };
 
-static char* cur_unix_path = "/var/run/vlsctl_client";
+static char* cur_unix_path = "/var/run/vdht/lsctl_client";
 static int def_unix_path = 1;
 static char unix_path[1024];
 static int logstdout = 0;
@@ -341,7 +341,7 @@ int main(int argc, char** argv)
 
     dest_addr.sun_family = AF_UNIX;
     if (def_unix_path) {
-        strcpy(dest_addr.sun_path, "/var/run/vlsctl-server");
+        strcpy(dest_addr.sun_path, "/var/run/vdht/lsctl_socket");
     } else {
         strcpy(dest_addr.sun_path, unix_path);
     }
