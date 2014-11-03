@@ -66,6 +66,9 @@
         }
 #endif
 
+#define varg_decl(argv, idx, type, var)  type var = (type)argv[idx]
+#define type_decl(type, var, src)        type var = (type)src
+
 
 #define elog_open           perror("[open]")
 #define elog_stat           perror("[stat]")
@@ -97,7 +100,7 @@
 #define elog_vtimer_restart vlogE(printf("vtimer_restart"))
 #define elog_vmem_aux_alloc vlogE(printf("vmem_aux_alloc"))
 
-#define elog_vsockaddr_convert  vlogE(printf("vsockaddr_convert")) 
+#define elog_vsockaddr_convert  vlogE(printf("vsockaddr_convert"))
 #define elog_vplug_req_alloc    vlogE(printf("vplug_req_alloc"))
 #define elog_vplug_item_alloc   vlogE(printf("vplug_item_alloc"))
 

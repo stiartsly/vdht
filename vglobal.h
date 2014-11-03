@@ -86,7 +86,7 @@
 #define optind
 #define exit
 #define open
-#define stat
+#define fstat
 #define read
 
 #define inet_aton

@@ -313,7 +313,7 @@ struct be_node *be_create_addr(struct sockaddr_in* addr)
     ret1E_p((!s), be_free(node));
     memset(s, 0, len);
 
-    ((long*)s)[0] = 8;
+    ((long*)s)[0] = 8; //size
     ((long*)s)[2] = (long)addr->sin_port; // store port.
     ((uint32_t*)s)[1] = (uint32_t)addr->sin_addr.s_addr; // store ip.
 

@@ -10,9 +10,6 @@
 #define MAX_CAPC ((int)8)
 #define vmin(a, b)   ((a < b) ? a: b)
 
-#define varg_decl(argv, idx, type, var)  type var = (type)argv[idx]
-#define type_decl(type, var, src)        type var = (type)src
-
 /*
  * for vpeer
  */

@@ -70,6 +70,9 @@ void vitem_init_str(struct vcfg_item* item, char* key, char* val)
     return ;
 }
 
+/*
+ * strip underlines '_' from head and tail of string.
+ */
 static
 int _strip_underline(char* str)
 {
@@ -108,11 +111,8 @@ int eat_section_ln(struct vconfig* cfg, char* section_ln)
         switch(*cur) {
         case ' ':
         case '\t':
-            if (section_aten) {
-                cur++;
-            } else {
-                retE(1);
-            }
+            retE((!section_aten));
+            cur++;
             break;
         case ']': {
             retE((section_aten));
@@ -125,17 +125,14 @@ int eat_section_ln(struct vconfig* cfg, char* section_ln)
         case '0'...'9':
         case 'a'...'z':
         case 'A'...'Z':
-            if (!section_aten) {
-                cur++;
-            } else {
-                retE(1);
-            }
+            retE((section_aten));
+            cur++;
             break;
         default:
             retE((1));
         }
     }
-    cur++;
+    cur++; // skip '\n'
     return (cur - section_ln);
 }
 
@@ -161,7 +158,7 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
     char* cur = (char*)param_ln;
     char* val_pos = NULL;
     int key_aten = 0;
-    int int_val  = 1;
+    int is_int   = 1;
     char* key = NULL;
     char* val = NULL;
     int  nval = 0;
@@ -181,7 +178,7 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
         case '_':
             cur++;
             if (key_aten) {
-                int_val = 0;
+                is_int = 0;
             }
             break;
         case ' ':    //change whitepsace and tab to be '_'.
@@ -220,12 +217,13 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
     }
 
     { // meet line feed '\n'.
+      // deal with value.
         char tmp[32];
         memset(tmp, 0, 32);
         strncpy(tmp, val_pos, cur - val_pos);
         _strip_underline(tmp);
 
-        if (int_val) {
+        if (is_int) {
             nval = strtol(tmp, NULL, 10);
         } else {
             val = malloc(strlen(tmp) + 1);
@@ -239,7 +237,7 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
     item = vitem_alloc();
     ret2E((!item), free(key), free(val));
 
-    if (int_val) {
+    if (is_int) {
         vitem_init_int(item, key, nval);
     } else {
         vitem_init_str(item, key, val);
@@ -323,10 +321,7 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
     close(fd);
 
     ret = _aux_parse(cfg, buf);
-    if (ret < 0) {
-        cfg->ops->clear(cfg);
-        close(fd);
-    }
+    ret1E((ret < 0), cfg->ops->clear(cfg));
     return 0;
 }
 

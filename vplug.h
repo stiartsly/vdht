@@ -28,9 +28,10 @@ struct vplug_req {
 
 struct vpluger;
 struct vpluger_c_ops {
-    int (*get_addr)(struct vpluger*, int, get_addr_cb_t,void*);
-    int (*clear)   (struct vpluger*);
-    int (*dump)    (struct vpluger*);
+    int (*req)  (struct vpluger*, int, get_addr_cb_t,void*);
+    int (*rsp)  (struct vpluger*, int, struct sockaddr_in*);
+    int (*clear)(struct vpluger*);
+    int (*dump) (struct vpluger*);
 };
 
 /*
