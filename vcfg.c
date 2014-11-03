@@ -36,6 +36,18 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
     item->nval = 0;
 
     vlist_add_tail(&cfg->items, &item->list);
+
+    item = (struct vcfg_item*)malloc(sizeof(*item));
+    vlog((!item), elog_malloc);
+    retE((!item));
+
+    vlist_init(&item->list);
+    item->type = CFG_STR;
+    item->key  = "lsctl.unix_path";
+    item->val  = "/var/run/vdhtd/lsctl_socket";
+    item->nval = 0;
+    vlist_add_tail(&cfg->items, &item->list);
+
 #endif
     return 0;
 }

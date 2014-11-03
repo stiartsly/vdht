@@ -158,7 +158,6 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
 
     vmsger_reg_unpack_cb(msger, _aux_msg_unpack_cb, ctl);
     msger->ops->add_cb  (msger, ctl, _aux_msg_parse_cb, VMSG_LSCTL);
-
     return 0;
 }
 
