@@ -8,7 +8,7 @@ int vlock_init(struct vlock* lock)
 {
     vassert(lock);
     pthread_mutexattr_init(&lock->attr);
-    pthread_mutexattr_settype(&lock->attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutexattr_settype(&lock->attr, PTHREAD_MUTEX_RECURSIVE_NP);
     return pthread_mutex_init(&lock->mutex, &lock->attr);
 }
 
