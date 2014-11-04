@@ -542,6 +542,8 @@ static
 int _vroute_plug_add(struct vroute* route, int plugId)
 {
     vassert(route);
+    vassert(plugId >= 0);
+    vassert(plugId < PLUG_BUTT);
 
     route->flags |= to_prop[plugId];
     return 0;
@@ -552,6 +554,8 @@ int _vroute_plug_del(struct vroute* route, int plugId)
 {
     uint32_t flags = to_prop[plugId];
     vassert(route);
+    vassert(plugId >= 0);
+    vassert(plugId < PLUG_BUTT);
 
     route->flags &= ~flags;
     return 0;
@@ -563,6 +567,8 @@ int _vroute_plug_get(struct vroute* route, int plugId, vnodeAddr* addr)
     //uint32_t flags = to_prop[plugId];
     vassert(route);
     vassert(addr);
+    vassert(plugId >= 0);
+    vassert(plugId < PLUG_BUTT);
 
     // need to think through the policy to get best dht node.
     // todo;
@@ -575,6 +581,36 @@ struct vroute_plug_ops route_plug_ops = {
     .get = _vroute_plug_get
 };
 
+static
+void* _aux_mbuf_alloc(struct vroute* route)
+{
+    void* mbuf = NULL;
+    vassert(route);
+
+    mbuf = vmem_aux_alloc(&route->mbuf_cache);
+    vlog((!mbuf), elog_vmem_aux_alloc);
+    retE_p((!mbuf));
+
+    //reserve padding for magic and msgId.
+    return mbuf + 8;
+}
+
+static
+int _aux_mbuf_len(void)
+{
+    return (int)(BUF_SZ - 8);
+}
+
+static
+void _aux_mbuf_free(struct vroute* route, void* mbuf)
+{
+    vassert(route);
+    vassert(mbuf);
+
+    vmem_aux_free(&route->mbuf_cache, mbuf - 8);
+    return ;
+}
+
 /*
  * @route:
  * @dest :  the dest sockaddr of target node.
@@ -582,33 +618,29 @@ struct vroute_plug_ops route_plug_ops = {
 static
 int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
 {
-    void* _buf = NULL;
-    void*  buf = NULL;
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
+    void* buf = NULL;
     vtoken token;
-    int len = BUF_SZ;
     int ret = 0;
 
     vassert(route);
     vassert(dest);
 
     vtoken_make(&token);
-    buf = _buf = vmem_aux_alloc(&route->mbuf_cache);
-    vlog((!buf), elog_vmem_aux_alloc);
+    buf = _aux_mbuf_alloc(route);
     retE((!buf));
 
-    buf += 8; // reserve padding for magic and msgId.
-    len -= 8;
-
-    ret = route->enc_ops->ping(&token, &route->ownId.id, buf, len);
+    ret = enc_ops->ping(&token, &route->ownId.id, buf, _aux_mbuf_len());
+    ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
             .addr  = (struct vsockaddr*)&dest->addr,
-            .msgId = VDHT_PING,
-            .data  = _buf,
-            .len   = ret + 8
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
         };
         ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vmem_aux_free(&route->mbuf_cache, _buf));
+        ret1E((ret < 0), _aux_mbuf_free(route, buf));
     }
     return 0;
 }
@@ -621,9 +653,8 @@ int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
 static
 int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, vnodeInfo* info)
 {
-    void* _buf = NULL;
-    void*  buf = NULL;
-    int len = BUF_SZ;
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
+    void* buf = NULL;
     int ret = 0;
 
     vassert(route);
@@ -631,23 +662,20 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
     vassert(token);
     vassert(info);
 
-    buf = _buf = vmem_aux_alloc(&route->mbuf_cache);
-    vlog((!buf), elog_vmem_aux_alloc);
+    buf = _aux_mbuf_alloc(route);
     retE((!buf));
 
-    buf += 8; // reserve padding for magic and msgId.
-    len -= 8;
-
-    ret = route->enc_ops->ping_rsp(token, &dest->id, info, buf, len);
+    ret = enc_ops->ping_rsp(token, &dest->id, info, buf, _aux_mbuf_len());
+    ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
             .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VMSG_DHT,
-            .data  = _buf,
-            .len   = ret + 8
+            .data  = buf,
+            .len   = ret
         };
         ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vmem_aux_free(&route->mbuf_cache, _buf));
+        ret1E((ret < 0), _aux_mbuf_free(route, buf));
     }
     return 0;
 }
@@ -660,10 +688,9 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
 static
 int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target)
 {
-    void* _buf = NULL;
-    void*  buf = NULL;
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
+    void* buf = NULL;
     vtoken token;
-    int len = BUF_SZ;
     int ret = 0;
 
     vassert(route);
@@ -671,23 +698,20 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
     vassert(target);
 
     vtoken_make(&token);
-    buf = _buf = vmem_aux_alloc(&route->mbuf_cache);
-    vlog((!buf), elog_vmem_aux_alloc);
+    buf = _aux_mbuf_alloc(route);
     retE((!buf));
 
-    buf += 8;
-    len -= 8;
-
-    ret = route->enc_ops->find_node(&token, &route->ownId.id, target, buf, len);
+    ret = enc_ops->find_node(&token, &route->ownId.id, target, buf, _aux_mbuf_len());
+    ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
             .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VMSG_DHT,
-            .data  = _buf,
-            .len   = ret + 8
+            .data  = buf,
+            .len   = ret
         };
         ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vmem_aux_free(&route->mbuf_cache, _buf));
+        ret1E((ret < 0), _aux_mbuf_free(route, buf));
     }
     return 0;
 }
@@ -699,9 +723,8 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
 static
 int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, vnodeInfo* info)
 {
-    void* _buf = NULL;
-    void*  buf = NULL;
-    int len = BUF_SZ;
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
+    void* buf = NULL;
     int ret = 0;
 
     vassert(route);
@@ -709,23 +732,20 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     vassert(token);
     vassert(info);
 
-    buf = _buf = vmem_aux_alloc(&route->mbuf_cache);
-    vlog((!buf), elog_vmem_aux_alloc);
+    buf = _aux_mbuf_alloc(route);
     retE((!buf));
 
-    buf += 8;
-    len -= 8;
-
-    ret = route->enc_ops->find_node_rsp(token, &route->ownId.id, info, buf, len);
+    ret = enc_ops->find_node_rsp(token, &route->ownId.id, info, buf, _aux_mbuf_len());
+    ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
             .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VMSG_DHT,
-            .data  = _buf,
-            .len   = ret + 8
+            .data  = buf,
+            .len   = ret
         };
         ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vmem_aux_free(&route->mbuf_cache, _buf));
+        ret1E((ret < 0), _aux_mbuf_free(route, buf));
     }
     return 0;
 }
@@ -738,10 +758,9 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
 static
 int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash)
 {
-    void* _buf = NULL;
-    void*  buf = NULL;
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
+    void* buf = NULL;
     vtoken token;
-    int len = BUF_SZ;
     int ret = 0;
 
     vassert(route);
@@ -749,23 +768,20 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
     vassert(hash);
 
     vtoken_make(&token);
-    buf = _buf = vmem_aux_alloc(&route->mbuf_cache);
-    vlog((!buf), elog_vmem_aux_alloc);
+    buf = _aux_mbuf_alloc(route);
     retE((!buf));
 
-    buf += 8;
-    len -= 8;
-
-    ret = route->enc_ops->get_peers(&token, &route->ownId.id, hash, buf, len);
+    ret = enc_ops->get_peers(&token, &route->ownId.id, hash, buf, _aux_mbuf_len());
+    ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
             .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VMSG_DHT,
-            .data  = _buf,
-            .len   = ret + 8
+            .data  = buf,
+            .len   = ret
         };
         ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vmem_aux_free(&route->mbuf_cache, _buf));
+        ret1E((ret < 0), _aux_mbuf_free(route, buf));
     }
     return 0;
 }
@@ -779,9 +795,8 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
 static
 int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* peers)
 {
-    void* _buf = NULL;
-    void*  buf = NULL;
-    int len = BUF_SZ;
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
+    void* buf = NULL;
     int ret = 0;
 
     vassert(route);
@@ -789,23 +804,20 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     vassert(token);
     vassert(peers);
 
-    buf = _buf = vmem_aux_alloc(&route->mbuf_cache);
-    vlog((!buf), elog_vmem_aux_alloc);
+    buf = _aux_mbuf_alloc(route);
     retE((!buf));
 
-    buf += 8;
-    len -= 8;
-
-    ret = route->enc_ops->get_peers_rsp(token, &route->ownId.id, peers, buf, len);
+    ret = enc_ops->get_peers_rsp(token, &route->ownId.id, peers, buf, _aux_mbuf_len());
+    ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
             .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VMSG_DHT,
-            .data  = _buf,
-            .len   = ret + 8
+            .data  = buf,
+            .len   = ret
         };
         ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vmem_aux_free(&route->mbuf_cache, _buf));
+        ret1E((ret < 0), _aux_mbuf_free(route, buf));
     }
     return 0;
 }
@@ -818,33 +830,29 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
 static
 int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeId* target)
 {
-    void* _buf = NULL;
-    void*  buf = NULL;
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
+    void* buf = NULL;
     vtoken token;
-    int len = BUF_SZ;
     int ret = 0;
 
     vassert(route);
     vassert(dest);
     vassert(target);
 
-    buf = _buf = vmem_aux_alloc(&route->mbuf_cache);
-    vlog((!buf), elog_vmem_aux_alloc);
+    buf = _aux_mbuf_alloc(route);
     retE((!buf));
 
-    buf += 8;
-    len -= 8;
-
-    ret = route->enc_ops->find_closest_nodes(&token, &route->ownId.id, target, buf, len);
+    ret = enc_ops->find_closest_nodes(&token, &route->ownId.id, target, buf, _aux_mbuf_len());
+    ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
             .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VMSG_DHT,
-            .data  = _buf,
-            .len   = ret + 8
+            .data  = buf,
+            .len   = ret
         };
         ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vmem_aux_free(&route->mbuf_cache, _buf));
+        ret1E((ret < 0), _aux_mbuf_free(route, buf));
     }
     return 0;
 }
@@ -858,9 +866,8 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
 static
 int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* closest)
 {
-    void* _buf = NULL;
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
     void*  buf = NULL;
-    int len = BUF_SZ;
     int ret = 0;
 
     vassert(route);
@@ -868,23 +875,20 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vt
     vassert(token);
     vassert(closest);
 
-    buf = _buf = vmem_aux_alloc(&route->mbuf_cache);
-    vlog((!buf), elog_vmem_aux_alloc);
+    buf = _aux_mbuf_alloc(route);
     retE((!buf));
 
-    buf += 8;
-    len -= 8;
-
-    ret = route->enc_ops->find_closest_nodes_rsp(token, &route->ownId.id, closest, buf, len);
+    ret = enc_ops->find_closest_nodes_rsp(token, &route->ownId.id, closest, buf, _aux_mbuf_len());
+    ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
             .addr  = (struct vsockaddr*)&dest->addr,
             .msgId = VMSG_DHT,
-            .data  = _buf,
-            .len   = ret + 8
+            .data  = buf,
+            .len   = ret
         };
         ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vmem_aux_free(&route->mbuf_cache, _buf));
+        ret1E((ret < 0), _aux_mbuf_free(route, buf));
     }
     return 0;
 }

@@ -125,18 +125,25 @@ static
 int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
 {
     struct vmsg_sys* ms = NULL;
+    char* data = NULL;
+    int sz = 0;
     vassert(cookie);
     vassert(um);
     vassert(*sm);
 
     if (VDHT_MSG(um->msgId)) {
-        set_uint32(um->data, DHT_MAGIC);
-        set_int32(offset_addr(um->data, sizeof(unsigned long)), um->msgId);
+        sz += sizeof(long);
+        data = unoff_addr(um->data, sz);
+        set_int32(data, um->msgId);
+
+        sz += sizeof(uint32_t);
+        data = unoff_addr(um->data, sz);
+        set_uint32(data, DHT_MAGIC);
 
         ms = vmsg_sys_alloc(0);
         vlog((!ms), elog_vmsg_sys_alloc);
         retE((!ms));
-        vmsg_sys_init(ms, um->addr, um->len, um->data);
+        vmsg_sys_init(ms, um->addr, um->len + sz, data);
         *sm = ms;
         return 0;
     }
@@ -153,23 +160,29 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
 static
 int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
+    void* data = sm->data;
     uint32_t magic = 0;
     int msgId = 0;
     int sz = 0;
+
     vassert(cookie);
     vassert(sm);
     vassert(um);
 
-    magic = get_uint32(sm->data);
-    msgId = get_int32(offset_addr(sm->data, sizeof(uint32_t)));
-    sz += sizeof(uint32_t) + sizeof(long);
+    magic = get_uint32(data);
+    sz += sizeof(uint32_t);
 
+    data = offset_addr(sm->data, sz);
+    msgId = get_int32(data);
+    sz += sizeof(long);
+
+    data = offset_addr(sm->data, sz);
     if (IS_DHT_MSG(magic)) {
-        vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, sm->data-sz);
+        vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
         return 0;
     }
     if (IS_PLUG_MSG(magic)) {
-        vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, sm->data-sz);
+        vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
         return 0;
     }
 

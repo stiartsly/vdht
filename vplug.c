@@ -477,15 +477,22 @@ int _vpluger_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
     struct vpluger* pluger = (struct vpluger*)cookie;
     struct sockaddr_in addr;
+    void* data = mu->data;
     int plugId = 0;
     int type   = 0;
     int ret = 0;
+    int sz  = 0;
 
     vassert(pluger);
     vassert(mu);
 
-    type   = get_int32(mu->data);
-    plugId = get_int32(mu->data + 4);
+    type = get_int32(data);
+    sz += sizeof(long);
+
+    data = offset_addr(mu->data, sz);
+    plugId = get_int32(data);
+    sz += sizeof(long);
+
     switch(type) {
     case 0: { //means request.
         char buf[64];
@@ -505,8 +512,12 @@ int _vpluger_msg_cb(void* cookie, struct vmsg_usr* mu)
         break;
     }
     case 1: { //means response.
-        addr.sin_port = get_int32(mu->data + 8);
-        addr.sin_addr.s_addr = get_uint32(mu->data + 12);
+        data = offset_addr(mu->data, sz);
+        addr.sin_port = get_int32(data);
+        sz += sizeof(long);
+
+        data = offset_addr(mu->data, sz);
+        addr.sin_addr.s_addr = get_uint32(data);
 
         ret = pluger->c_ops->rsp(pluger, plugId, &addr);
         retE((ret < 0));

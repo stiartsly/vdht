@@ -477,7 +477,7 @@ int be_encode(struct be_node *node, char *buf, int len)
  * bencoded = d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe
  */
 static
-int _enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
+int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -531,7 +531,7 @@ int _enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
  * bencoded = d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe
  */
 static
-int _enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf, int   sz)
+int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf, int   sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -581,7 +581,7 @@ int _enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf, int
  * bencoded = d1:ad2:id20:abcdefghij01234567896:target20:mnopqrstuvwxyz123456e1:q9:find_node1:t2:aa1:y1:qe
  */
 static
-int _enc_find_node(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* buf,int sz)
+int _vdht_enc_find_node(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* buf,int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -638,7 +638,7 @@ int _enc_find_node(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* buf,i
  * bencoded = d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe
  */
 static
-int _enc_find_node_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, void* buf,int sz)
+int _vdht_enc_find_node_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, void* buf,int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -679,7 +679,7 @@ int _enc_find_node_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, void* b
  * @len:
  */
 static
-int _enc_get_peers(vtoken* token,vnodeId* srcId, vnodeHash* hash, void* buf, int sz)
+int _vdht_enc_get_peers(vtoken* token,vnodeId* srcId, vnodeHash* hash, void* buf, int sz)
 {
     vassert(token);
     vassert(srcId);
@@ -698,7 +698,7 @@ int _enc_get_peers(vtoken* token,vnodeId* srcId, vnodeHash* hash, void* buf, int
  * @sz:
  */
 static
-int _enc_get_peers_rsp(
+int _vdht_enc_get_peers_rsp(
         vtoken* token,
         vnodeId* srcId,
         struct varray* result,
@@ -731,7 +731,7 @@ int _enc_get_peers_rsp(
  * bencoded = d1:ad2:id20:abcdefghij01234567896:target20:mnopqrstuvwxyz123456e1:q9:find_node1:t2:aa1:y1:qe
  */
 static
-int _enc_find_closest_nodes(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* buf, int sz)
+int _vdht_enc_find_closest_nodes(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -793,7 +793,7 @@ int _enc_find_closest_nodes(vtoken* token, vnodeId* srcId, vnodeId* targetId, vo
  * bencoded = d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe
  */
 static
-int _enc_find_closest_nodes_rsp(
+int _vdht_enc_find_closest_nodes_rsp(
         vtoken* token,
         vnodeId* srcId,
         struct varray* closest,
@@ -840,14 +840,14 @@ int _enc_find_closest_nodes_rsp(
 }
 
 struct vdht_enc_ops dht_enc_ops = {
-    .ping                   = _enc_ping,
-    .ping_rsp               = _enc_ping_rsp,
-    .find_node              = _enc_find_node,
-    .find_node_rsp          = _enc_find_node_rsp,
-    .get_peers              = _enc_get_peers,
-    .get_peers_rsp          = _enc_get_peers_rsp,
-    .find_closest_nodes     = _enc_find_closest_nodes,
-    .find_closest_nodes_rsp = _enc_find_closest_nodes_rsp
+    .ping                   = _vdht_enc_ping,
+    .ping_rsp               = _vdht_enc_ping_rsp,
+    .find_node              = _vdht_enc_find_node,
+    .find_node_rsp          = _vdht_enc_find_node_rsp,
+    .get_peers              = _vdht_enc_get_peers,
+    .get_peers_rsp          = _vdht_enc_get_peers_rsp,
+    .find_closest_nodes     = _vdht_enc_find_closest_nodes,
+    .find_closest_nodes_rsp = _vdht_enc_find_closest_nodes_rsp
 };
 
 static
@@ -929,6 +929,7 @@ int _aux_get_id(struct be_node* dict, char* key1, char* key2, vnodeId* id)
     return 0;
 }
 
+static
 int _aux_get_info(struct be_node* dict, vnodeInfo* info)
 {
     struct be_node* node = NULL;
@@ -968,6 +969,66 @@ int _aux_get_info(struct be_node* dict, vnodeInfo* info)
     return 0;
 }
 
+static
+int _aux_get_mtype(struct be_node* dict, int* mtype)
+{
+    struct be_node* node = NULL;
+
+    vassert(dict);
+    vassert(mtype);
+
+    node = _aux_get_dict(dict, "y");
+    retE((!node));
+    retE((BE_STR != node->type));
+
+    if (!strcmp(node->val.s, "q")) {
+        node = _aux_get_dict(node, "q");
+        retE((!node));
+        retE((BE_STR != node->type));
+
+        if (!strcmp(node->val.s, "ping")) {
+            *mtype = VDHT_PING;
+        } else if (!strcmp(node->val.s, "find_node")) {
+            *mtype = VDHT_FIND_NODE;
+        } else if (!strcmp(node->val.s, "get_peers")) {
+            *mtype = VDHT_GET_PEERS;
+        } else if (!strcmp(node->val.s, "find_closest_nodes")) {
+            *mtype = VDHT_FIND_CLOSEST_NODES;
+        } else {
+            *mtype = VDHT_UNKNOWN;
+            retE((1));
+        }
+        return 0;
+
+    } else if (!strcmp(node->val.s, "r")) {
+        struct be_node* tmp = NULL;
+        node = _aux_get_dict(node, "r");
+        retE((!node));
+        retE((BE_STR != node->type));
+        tmp = _aux_get_dict(node, "hash");
+        if (tmp) {
+            *mtype = VDHT_GET_PEERS_R;
+            return 0;
+        }
+        tmp = _aux_get_dict(node, "node");
+        if (tmp) {
+            *mtype = VDHT_FIND_NODE_R;
+            return 0;
+        }
+        tmp = _aux_get_dict(node, "nodes");
+        if (tmp) {
+            *mtype = VDHT_FIND_CLOSEST_NODES_R;
+            return 0;
+        }
+        *mtype = VDHT_UNKNOWN;
+        retE((1));
+
+    } else {
+        *mtype = VDHT_UNKNOWN;
+        retE((1));
+    }
+    return 0;
+}
 
 /*
  * @buf:
@@ -1220,67 +1281,6 @@ int _vdht_dec_find_closest_nodes_rsp(void* ctxt, vtoken* token, vnodeId* srcId, 
         varray_add_tail(closest, info);
     }
 
-    return 0;
-}
-
-static
-int _aux_get_mtype(struct be_node* dict, int* mtype)
-{
-    struct be_node* node = NULL;
-
-    vassert(dict);
-    vassert(mtype);
-
-    node = _aux_get_dict(dict, "y");
-    retE((!node));
-    retE((BE_STR != node->type));
-
-    if (!strcmp(node->val.s, "q")) {
-        node = _aux_get_dict(node, "q");
-        retE((!node));
-        retE((BE_STR != node->type));
-
-        if (!strcmp(node->val.s, "ping")) {
-            *mtype = VDHT_PING;
-        } else if (!strcmp(node->val.s, "find_node")) {
-            *mtype = VDHT_FIND_NODE;
-        } else if (!strcmp(node->val.s, "get_peers")) {
-            *mtype = VDHT_GET_PEERS;
-        } else if (!strcmp(node->val.s, "find_closest_nodes")) {
-            *mtype = VDHT_FIND_CLOSEST_NODES;
-        } else {
-            *mtype = VDHT_UNKNOWN;
-            retE((1));
-        }
-        return 0;
-
-    } else if (!strcmp(node->val.s, "r")) {
-        struct be_node* tmp = NULL;
-        node = _aux_get_dict(node, "r");
-        retE((!node));
-        retE((BE_STR != node->type));
-        tmp = _aux_get_dict(node, "hash");
-        if (tmp) {
-            *mtype = VDHT_GET_PEERS_R;
-            return 0;
-        }
-        tmp = _aux_get_dict(node, "node");
-        if (tmp) {
-            *mtype = VDHT_FIND_NODE_R;
-            return 0;
-        }
-        tmp = _aux_get_dict(node, "nodes");
-        if (tmp) {
-            *mtype = VDHT_FIND_CLOSEST_NODES_R;
-            return 0;
-        }
-        *mtype = VDHT_UNKNOWN;
-        retE((1));
-
-    } else {
-        *mtype = VDHT_UNKNOWN;
-        retE((1));
-    }
     return 0;
 }
 
