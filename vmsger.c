@@ -240,7 +240,7 @@ int _vmsger_pop(struct vmsger* msger, struct vmsg_sys** ms)
 {
     struct vlist* node = NULL;
     vassert(msger);
-    vassert(*ms);
+    vassert(ms);
 
     vlock_enter(&msger->lock_msgs);
     if (!vlist_is_empty(&msger->msgs)) {

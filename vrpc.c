@@ -21,7 +21,7 @@ void* _vrpc_unix_open(struct vsockaddr* addr)
 
     unx = (struct vunix_domain*)malloc(sizeof(*unx));
     vlog((!unx), elog_malloc);
-    retE_p((!unix));
+    retE_p((!unx));
     memset(unx, 0, sizeof(*unx));
     memcpy(&unx->addr, saddr, sizeof(*saddr));
 
@@ -50,7 +50,7 @@ int _vrpc_unix_sndto(void* impl, struct vmsg_sys* msg)
     struct vunix_domain* unx = (struct vunix_domain*)impl;
     int ret = 0;
 
-    vassert(unix);
+    vassert(unx);
     vassert(msg);
 
     ret = sendto(unx->sock_fd,
@@ -88,7 +88,7 @@ int _vrpc_unix_rcvfrom(void* impl, struct vmsg_sys* msg)
     vlog((ret < 0), elog_recvfrom);
     retE((ret < 0));
     msg->len = ret;
-     
+
     return ret;
 }
 
@@ -104,7 +104,6 @@ void _vrpc_unix_close(void* impl)
     return ;
 }
 
-
 /*
  * to close udp socket.
  * @impl:
@@ -118,6 +117,23 @@ int _vrpc_unix_getfd(void* impl)
     return unx->sock_fd;
 }
 
+
+/*
+ * to dump
+ * @impl
+ */
+static
+void _vrpc_unix_dump(void* impl)
+{
+    struct vunix_domain* unx = (struct vunix_domain*)impl;
+    vassert(unx);
+
+    vdump(printf("unix domain"));
+    vdump(printf("addr: %s", unx->addr.sun_path));
+    vdump(printf("fd: %d", unx->sock_fd));
+    return ;
+}
+
 /*
  * downword method set for udp mode.
  */
@@ -127,7 +143,8 @@ struct vrpc_base_ops unix_base_ops = {
     .sndto   = _vrpc_unix_sndto,
     .rcvfrom = _vrpc_unix_rcvfrom,
     .close   = _vrpc_unix_close,
-    .getfd   = _vrpc_unix_getfd
+    .getfd   = _vrpc_unix_getfd,
+    .dump    = _vrpc_unix_dump
 };
 
 
@@ -269,6 +286,26 @@ int _vrpc_udp_getfd(void* impl)
 }
 
 /*
+ * to dump
+ * @impl
+ */
+static
+void _vrpc_udp_dump(void* impl)
+{
+    struct vudp* udp = (struct vudp*)impl;
+    char buf[64];
+    int  port = 0;
+    vassert(udp);
+
+    vsockaddr_unconvert(&udp->addr, buf, 64, &port);
+    vdump(printf("udp"));
+    vdump(printf("addr: %s:%d", buf, port));
+    vdump(printf("fd: %d", udp->sock_fd));
+
+    return ;
+}
+
+/*
  * downword method set for udp mode.
  */
 static
@@ -277,7 +314,8 @@ struct vrpc_base_ops udp_base_ops = {
     .sndto   = _vrpc_udp_sndto,
     .rcvfrom = _vrpc_udp_rcvfrom,
     .close   = _vrpc_udp_close,
-    .getfd   = _vrpc_udp_getfd
+    .getfd   = _vrpc_udp_getfd,
+    .dump    = _vrpc_udp_dump
 };
 
 /*
@@ -362,11 +400,13 @@ int _vrpc_getId(struct vrpc* rpc)
 }
 
 static
-int _vrpc_dump(struct vrpc* rpc)
+void _vrpc_dump(struct vrpc* rpc)
 {
     vassert(rpc);
-    //todo;
-    return 0;
+    vdump(printf("-> RPC"));
+    rpc->base_ops->dump(rpc->impl);
+    vdump(printf("<- RPC"));
+    return ;
 }
 
 /*
@@ -569,6 +609,15 @@ int _vwaiter_laundry(struct vwaiter* wt)
     return 0;
 }
 
+static
+int _aux_dump_cb(void* item, void* cookie)
+{
+    struct vrpc* rpc = (struct vrpc*)item;
+    vassert(rpc);
+
+    rpc->ops->dump(rpc);
+    return 0;
+}
 /*
  * @wt:
  */
@@ -576,7 +625,12 @@ static
 int _vwaiter_dump(struct vwaiter* wt)
 {
     vassert(wt);
-    //todo;
+
+    vdump(printf("-> WAITER"));
+    vlock_enter(&wt->lock);
+    varray_iterate(&wt->rpcs, _aux_dump_cb, wt);
+    vlock_leave(&wt->lock);
+    vdump(printf("<- WAITER"));
     return 0;
 }
 

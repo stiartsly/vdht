@@ -26,15 +26,16 @@ struct vrpc_base_ops {
     int   (*rcvfrom)(void*, struct vmsg_sys*);
     void  (*close)  (void*);
     int   (*getfd)  (void*);
+    void  (*dump)   (void*);
 };
 
 struct vrpc;
 struct vrpc_ops {
-    int (*snd)  (struct vrpc*);
-    int (*rcv)  (struct vrpc*);
-    int (*err)  (struct vrpc*);
-    int (*getId)(struct vrpc*);
-    int (*dump) (struct vrpc*);
+    int  (*snd)  (struct vrpc*);
+    int  (*rcv)  (struct vrpc*);
+    int  (*err)  (struct vrpc*);
+    int  (*getId)(struct vrpc*);
+    void (*dump) (struct vrpc*);
 };
 
 struct vrpc {

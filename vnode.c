@@ -3,7 +3,8 @@
 
 #define TICK_INTERVAL ((int)10)
 
-char* mode_desc[] = {
+static
+char* node_mode_desc[] = {
     "offline",
     "up",
     "running",
@@ -174,8 +175,10 @@ int _vnode_dump(struct vnode* vnd)
 {
     vassert(vnd);
 
-    vdump(printf("node state:%s", mode_desc[vnd->mode]));
+    vdump(printf("-> NODE"));
+    vdump(printf("state:%s", node_mode_desc[vnd->mode]));
     vnd->route.ops->dump(&vnd->route);
+    vdump(printf("<- NODE"));
     //todo;
 
     return 0;

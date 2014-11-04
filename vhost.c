@@ -79,11 +79,15 @@ int _vhost_stabilize(struct vhost* host)
 static
 int _vhost_dump(struct vhost* host)
 {
-    struct vnode* node = &host->node;
     vassert(host);
 
-    vdump(printf("host addr:%s:%d", host->myname, host->myport));
-    node->ops->dump(node);
+    vdump(printf("-> HOST"));
+    vdump(printf("addr: %s:%d",host->myname, host->myport));
+    host->node.ops->dump(&host->node);
+    host->msger.ops->dump(&host->msger);
+    host->waiter.ops->dump(&host->waiter);
+    vdump(printf("<- HOST"));
+
     return 0;
 }
 
@@ -148,7 +152,7 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
     int sz = 0;
     vassert(cookie);
     vassert(um);
-    vassert(*sm);
+    vassert(sm);
 
     if (VDHT_MSG(um->msgId)) {
         sz += sizeof(long);

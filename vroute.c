@@ -48,6 +48,7 @@ void vpeer_init(struct vpeer* peer, vnodeAddr* addr, time_t snd_ts, time_t rcv_t
     peer->snd_ts = snd_ts;
     peer->rcv_ts = rcv_ts;
     peer->flags  = flags;
+    peer->ntries = 0;
     return ;
 }
 
@@ -334,16 +335,16 @@ int _vroute_clear(struct vroute* route)
 static
 int _aux_dump_cb(void* item, void* cookie)
 {
-    //type_decl(struct vroute*, route, cookie);
     type_decl(struct vpeer*,  peer,  item  );
     char buf[64];
     int  port = 0;
-    //vassert(route);
     vassert(peer);
 
+    vdump(printf("-> PEER"));
     vnodeId_dump(&peer->extId.id);
     vsockaddr_unconvert(&peer->extId.addr, buf, 64, &port);
-    vdump(printf("peer addr:%s:%d", buf,port));
+    vdump(printf("addr:%s:%d", buf,port));
+    vdump(printf("<- PEER"));
 
     //todo;
     return 0;
@@ -360,12 +361,14 @@ int _vroute_dump(struct vroute* route)
     int i = 0;
     vassert(route);
 
+    vdump(printf("-> ROUTE"));
     vlock_enter(&route->lock);
     for (; i < NBUCKETS; i++) {
         peers = &route->bucket[i].peers;
         varray_iterate(peers, _aux_dump_cb, route);
     }
     vlock_leave(&route->lock);
+    vdump(printf("<- ROUTE"));
 
     return 0;
 }
@@ -379,7 +382,8 @@ int _aux_tick_cb(void* item, void* cookie)
     vassert(peer);
     vassert(now);
 
-    if (PROP_UNREACHABLE== peer->flags) {
+    if ((peer->ntries >= MAX_SND_TIMES)
+       && (PROP_UNREACHABLE== peer->flags)) {
         return 0;
     }
     if ((peer->snd_ts)&&
@@ -391,6 +395,8 @@ int _aux_tick_cb(void* item, void* cookie)
     if ((!peer->snd_ts)||
         (EXPIRED(peer->rcv_ts, *now))) {
         route->dht_ops->ping(route, &peer->extId);
+        peer->snd_ts = *now;
+        peer->ntries++;
     }
     return 0;
 }
@@ -409,8 +415,10 @@ int _vroute_tick(struct vroute* route)
 
     vlock_enter(&route->lock);
     for (; i < NBUCKETS; i++) {
+        void* argv[] = {route, &now };
+
         peers = &route->bucket[i].peers;
-        varray_iterate(peers, _aux_tick_cb, route);
+        varray_iterate(peers, _aux_tick_cb, argv);
 
         if (!EXPIRED(route->bucket[i].ts, now)) {
             continue;

@@ -11,6 +11,7 @@
  */
 struct vlock {
     pthread_mutex_t mutex;
+    pthread_mutexattr_t attr;
 };
 
 extern int  vlock_init  (struct vlock*);
