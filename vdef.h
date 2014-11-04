@@ -40,7 +40,7 @@
         } while(0)
 
 #define vwhere()        do { \
-            printf("<--{where}[%s:%d]\n", __FUNCTION__,__LINE__); \
+            printf("$${where}[%s:%d]\n", __FUNCTION__,__LINE__); \
         } while(0)
 
 #define vlog(cond,s) do {  \
