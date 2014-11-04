@@ -203,7 +203,9 @@ int _aux_load_cb(void* priv, int col, char** value, char** field)
     vassert(host);
     vassert(id_str);
 
+    errno = 0;
     port_i = strtol(port, NULL, 10);
+    retE((errno));
     vnodeId_unstrlize(id_str, &extId.id);
     vsockaddr_convert(host, port_i, &extId.addr);
     return _vroute_add(route, &extId, 0);

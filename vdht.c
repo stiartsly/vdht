@@ -84,7 +84,9 @@ long _be_decode_int(char** data, int* data_len)
     char *endp = NULL;
     long ret = 0;
 
+    errno = 0;
     ret   = strtol(*data, &endp, 10);
+    retE((errno));
     *data = endp;
     *data_len -= (endp - *data);
     return ret;

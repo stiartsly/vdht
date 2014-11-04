@@ -224,7 +224,9 @@ int eat_param_ln(struct vconfig* cfg, char* param_ln)
         _strip_underline(tmp);
 
         if (is_int) {
+            errno = 0;
             nval = strtol(tmp, NULL, 10);
+            retE((errno));
         } else {
             val = malloc(strlen(tmp) + 1);
             vlog((!val), elog_malloc);
