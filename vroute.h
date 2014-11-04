@@ -32,6 +32,17 @@ enum {
     PROP_APP         = 0x01000000
 };
 
+enum {
+    PLUG_RELAY,
+    PLUG_STUN,
+    PLUG_VPN,
+    PLUG_DDNS,
+    PLUG_MROUTE,
+    PLUG_DHASH,
+    PLUG_APP,
+    PLUG_BUTT
+};
+
 struct vpeer{
     vnodeAddr extId;
     vnodeVer  ver;
@@ -64,6 +75,13 @@ struct vroute_ops {
     int (*get_peers)(struct vroute*, vnodeHash*, struct varray*, int);
     int (*find_closest_nodes)(struct vroute*, vnodeId*, struct varray*, int);
 };
+
+struct vroute_plug_ops {
+    int (*add)  (struct vroute*, int);
+    int (*del)  (struct vroute*, int);
+    int (*get)  (struct vroute*, int, vnodeAddr*);
+};
+
 
 struct vroute_dht_ops {
     int (*ping)              (struct vroute*, vnodeAddr*);
@@ -98,11 +116,12 @@ struct vroute {
     vnodeVer  version;
     uint32_t  flags;
 
-    struct vroute_ops* ops;
-    struct vroute_cb_ops*  cb_ops;
-    struct vroute_dht_ops* dht_ops;
-    struct vdht_enc_ops*   enc_ops;
-    struct vdht_dec_ops*   dec_ops;
+    struct vroute_ops*      ops;
+    struct vroute_plug_ops* plug_ops;
+    struct vroute_cb_ops*   cb_ops;
+    struct vroute_dht_ops*  dht_ops;
+    struct vdht_enc_ops*    enc_ops;
+    struct vdht_dec_ops*    dec_ops;
 
     struct vbucket bucket[NBUCKETS];
     struct vlock   lock;

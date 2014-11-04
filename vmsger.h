@@ -19,6 +19,7 @@ enum {
     VDHT_BUTT,
 
     VMSG_LSCTL = 0x45,
+    VMSG_PLUG  = 0x48,
     VMSG_STUN  = 0x50,
     VMSG_RELAY = 0x70,
     VMSG_VPN   = 0x90,

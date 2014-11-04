@@ -153,14 +153,21 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
 static
 int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
+    uint32_t magic = 0;
     int msgId = 0;
     vassert(cookie);
     vassert(sm);
     vassert(um);
 
-    if (IS_DHT_MSG(get_uint32(sm->data))) {
-        msgId = get_int32(offset_addr(sm->data, sizeof(unsigned long)));
-        vmsg_usr_init(um, msgId, &sm->addr, sm->len, sm->data);
+    magic = get_uint32(sm->data);
+    msgId = get_int32(offset_addr(sm->data, sizeof(uint32_t)));
+
+    if (IS_DHT_MSG(magic)) {
+        vmsg_usr_init(um, msgId, &sm->addr, sm->len-8, sm->data);
+        return 0;
+    }
+    if (IS_PLUG_MSG(magic)) {
+        vmsg_usr_init(um, msgId, &sm->addr, sm->len-8, sm->data);
         return 0;
     }
 

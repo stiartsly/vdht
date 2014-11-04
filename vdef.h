@@ -97,13 +97,17 @@
 #define elog_vtimer_restart vlogE(printf("vtimer_restart"))
 #define elog_vmem_aux_alloc vlogE(printf("vmem_aux_alloc"))
 
-#define elog_vsockaddr_convert \
-                            vlogE(printf("vsockaddr_convert"))
+#define elog_vsockaddr_convert  vlogE(printf("vsockaddr_convert")) 
+#define elog_vplug_req_alloc    vlogE(printf("vplug_req_alloc"))
+#define elog_vplug_item_alloc   vlogE(printf("vplug_item_alloc"))
 
 #define elog_vmsg_cb_alloc  vlogE(printf("vmsg_cb_alloc"))
 #define elog_vmsg_sys_alloc vlogE(printf("vmsg_sys_alloc"))
 #define elog_vpeer_alloc    vlogE(printf("vpeer_alloc"))
 #define elog_vtick_cb_alloc vlogE(printf("vtick_cb_alloc"))
+
+#define vlog_vmsger_init    vlogE(printf("vmsger_init"))
+#define vlog_vrpc_init      vlogE(printf("vrpc_init"))
 
 #define elog_be_alloc       vlogE(printf("be_alloc"))
 #define elog_be_decode      vlogE(printf("be_decode"))

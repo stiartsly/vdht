@@ -40,6 +40,7 @@
 #include "vroute.h"
 #include "vhost.h"
 #include "vlsctl.h"
+#include "vplug.h"
 #include "vcfg.h"
 
 #if 0

@@ -60,6 +60,7 @@ void vpeer_init(struct vpeer* peer, vnodeAddr* addr, time_t snd_ts, time_t rcv_t
 /*
  *  auxilary function for @route->ops->add
  */
+static
 struct vpeer* _aux_get_worst(struct varray* peers, int flags)
 {
     int _aux_get_worst_cb(void* item, void* cookie)
@@ -529,6 +530,71 @@ struct vroute_ops route_ops = {
     .find_closest_nodes = _vroute_find_closest_nodes
 };
 
+/*
+ *
+ */
+static
+uint32_t _aux_to_flags(int plugId)
+{
+    uint32_t flags = 0;
+
+    switch(plugId) {
+    case PLUG_RELAY:
+        flags = PROP_RELAY;
+        break;
+    case PLUG_STUN:
+        flags = PROP_STUN;
+        break;
+    case PLUG_VPN:
+    case PLUG_MROUTE:
+    case PLUG_DHASH:
+    case PLUG_APP:
+        flags = PROP_VPN;
+        break;
+    case PLUG_DDNS:
+        //todo;
+        break;
+    default:
+        break;
+    }
+    return flags;
+}
+
+static
+int _vroute_plug_add(struct vroute* route, int plugId)
+{
+    vassert(route);
+
+    route->flags |= _aux_to_flags(plugId);
+    return 0;
+}
+
+static
+int _vroute_plug_del(struct vroute* route, int plugId)
+{
+    uint32_t flags = _aux_to_flags(plugId);
+    vassert(route);
+
+    route->flags &= ~flags;
+    return 0;
+}
+
+static
+int _vroute_plug_get(struct vroute* route, int plugId, vnodeAddr* addr)
+{
+    //uint32_t flags = _aux_to_flags(plugId);
+    vassert(route);
+    vassert(addr);
+
+    //todo;
+    return 0;
+}
+
+struct vroute_plug_ops route_plug_ops = {
+    .add = _vroute_plug_add,
+    .del = _vroute_plug_del,
+    .get = _vroute_plug_get
+};
 
 /*
  * @route:
