@@ -79,9 +79,11 @@ int _vhost_stabilize(struct vhost* host)
 static
 int _vhost_dump(struct vhost* host)
 {
+    struct vnode* node = &host->node;
     vassert(host);
 
-    //todo;
+    vdump(printf("host addr:%s:%d", host->myname, host->myport));
+    node->ops->dump(node);
     return 0;
 }
 

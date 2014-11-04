@@ -3,25 +3,29 @@
 
 #define BUF_SZ (1024)
 
-#define vcall_cond(cond,s)         do{if(cond) {s;}}while(0)
-#define vcall2_cond(cond,s1,s2)    do{if(cond) {s1;s2;}}while(0)
-#define vcall3_cond(cond,s1,s2,s3) do{if(cond) {s1;s2;s3;}}while(0)
+#define vcall_cond(cond,s)           do{if(cond) {s;}}while(0)
+#define vcall2_cond(cond,s1,s2)      do{if(cond) {s1;s2;}}while(0)
+#define vcall3_cond(cond,s1,s2,s3)   do{if(cond) {s1;s2;s3;}}while(0)
 
-#define retE(cond)          vcall_cond ((cond),return -1)
-#define ret1E(cond,s)       vcall2_cond((cond),(s), return -1)
-#define ret2E(cond,s1,s2)   vcall3_cond((cond),(s1),(s2),return -1)
+#define vcall_cond_d(cond,s)         do{if(cond) {vwhere();s;}}while(0)
+#define vcall2_cond_d(cond,s1,s2)    do{if(cond) {vwhere();s1;s2;}}while(0)
+#define vcall3_cond_d(cond,s1,s2,s3) do{if(cond) {vwhere();s1;s2;s3;}}while(0)
 
-#define retE_p(cond)        vcall_cond ((cond),return NULL)
-#define ret1E_p(cond,s)     vcall2_cond((cond),(s), return NULL)
-#define ret2E_p(cond,s1,s2) vcall3_cond((cond),(s1),(s2),return NULL)
+#define retE(cond)          vcall_cond_d ((cond),return -1)
+#define ret1E(cond,s)       vcall2_cond_d((cond),(s), return -1)
+#define ret2E(cond,s1,s2)   vcall3_cond_d((cond),(s1),(s2),return -1)
 
-#define retE_v(cond)        vcall_cond ((cond),return)
-#define ret1E_v(cond,s)     vcall2_cond((cond),(s), return)
-#define ret2E_v(cond,s1,s2) vcall3_cond((cond),(s1),(s2),return)
+#define retE_p(cond)        vcall_cond_d ((cond),return NULL)
+#define ret1E_p(cond,s)     vcall2_cond_d((cond),(s), return NULL)
+#define ret2E_p(cond,s1,s2) vcall3_cond_d((cond),(s1),(s2),return NULL)
 
-#define retS(cond)          vcall_cond ((cond),return 0)
-#define ret1S(cond,s)       vcall2_cond((cond),(s), return 0)
-#define ret2S(cond,s1,s2)   vcall3_cond((cond),(s1),(s2),return 0)
+#define retE_v(cond)        vcall_cond_d ((cond),return)
+#define ret1E_v(cond,s)     vcall2_cond_d((cond),(s), return)
+#define ret2E_v(cond,s1,s2) vcall3_cond_d((cond),(s1),(s2),return)
+
+#define retS(cond)          vcall_cond   ((cond),return 0)
+#define ret1S(cond,s)       vcall2_cond  ((cond),(s), return 0)
+#define ret2S(cond,s1,s2)   vcall3_cond  ((cond),(s1),(s2),return 0)
 
 /*
  *
@@ -36,7 +40,7 @@
         } while(0)
 
 #define vwhere()        do { \
-            printf("{where}[%s:%d]\n", __FUNCTION__,__LINE__); \
+            printf("<--{where}[%s:%d]\n", __FUNCTION__,__LINE__); \
         } while(0)
 
 #define vlog(cond,s) do {  \
@@ -55,9 +59,16 @@
 #define vlogE(s) { \
             printf("["); \
             (s); \
-            printf("] error"); \
+            printf("] error "); \
             vwhere(); \
         }
+
+#define vdump(s) do { \
+            printf("##"); \
+            (s); \
+            printf("\n"); \
+        }while(0)
+
 #else
 #define vassert()
 #define vwhere()
@@ -74,6 +85,7 @@
             (s); \
             printf("] error"); \
         }
+#define vdump(s)
 #endif
 
 #define varg_decl(argv, idx, type, var)  type var = (type)argv[idx]

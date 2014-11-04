@@ -20,6 +20,7 @@ enum {
     VLSCTL_VPN_UP,
     VLSCTL_VPN_DOWN,
 
+    VLSCTL_LOGOUT,
     VLSCTL_BUTT
 };
 

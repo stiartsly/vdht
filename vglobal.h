@@ -94,6 +94,10 @@
 #define ntohs
 #define htons
 
+#define sqlite3_open
+#define sqlite3_exec
+#define sqlite3_close
+
 #define pthread_mutex_init
 #define pthread_mutex_lock
 #define pthread_mutex_unlock

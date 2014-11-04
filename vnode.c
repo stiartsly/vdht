@@ -3,6 +3,16 @@
 
 #define TICK_INTERVAL ((int)10)
 
+char* mode_desc[] = {
+    "offline",
+    "up",
+    "running",
+    "ticking",
+    "down",
+    "error",
+    NULL
+};
+
 /*
  * start current dht node.
  * @vnd:
@@ -163,7 +173,11 @@ static
 int _vnode_dump(struct vnode* vnd)
 {
     vassert(vnd);
+
+    vdump(printf("node state:%s", mode_desc[vnd->mode]));
+    vnd->route.ops->dump(&vnd->route);
     //todo;
+
     return 0;
 }
 

@@ -3,14 +3,14 @@
 
 void vnodeId_make(vnodeId* id)
 {
-    unsigned long* data = NULL;
+    char* data = NULL;
     int i = 0;
     vassert(id);
 
     srand(time(NULL)); // TODO: need use mac as srand seed.
-    data = (unsigned long*)id->data;
-    for (; i < VNODE_ID_INTLEN; i++) {
-        data[i] = rand();
+    data = (char*)id->data;
+    for (; i < VNODE_ID_LEN; i++) {
+        data[i] = rand() % 9;
     }
     return ;
 }
@@ -78,12 +78,16 @@ void vnodeId_dump(vnodeId* id)
 {
     int i = 0;
     vassert(id);
+
+    //vdump(printf("ID:"));
+    printf("##ID:");
     for (; i < VNODE_ID_LEN; i++) {
         printf("%c", id->data[i] + '0');
-        if (i % 4 == 3) {
+        if ((i % 4 == 3) && (i +1 != VNODE_ID_LEN)){
             printf("-");
         }
     }   
+    printf("\n");
     return;
 }
 

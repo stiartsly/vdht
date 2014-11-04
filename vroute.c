@@ -191,19 +191,20 @@ int _vroute_remove(struct vroute* route, vnodeAddr* node)
 static
 int _aux_load_cb(void* priv, int col, char** value, char** field)
 {
-    varg_decl(((void**)priv ),0, struct vroute*, route);
-    varg_decl(((void**)value),0, char*, host	); // for field "host"
-    varg_decl(((void**)value),1, int,   port	); // for field "port"
-    varg_decl(((void**)value),2, char*, id_str  ); // for filed "node id"
+    varg_decl(((void**)value),1, char*, host  ); // for field "host"
+    varg_decl(((void**)value),2, char*, port  ); // for field "port"
+    varg_decl(((void**)value),3, char*, id_str); // for filed "node id"
+    type_decl(struct vroute*, route, priv);
     vnodeAddr extId;
+    int port_i = 0;
 
     vassert(route);
     vassert(host);
-    vassert(port > 0);
     vassert(id_str);
 
+    port_i = strtol(port, NULL, 10);
     vnodeId_unstrlize(id_str, &extId.id);
-    vsockaddr_convert(host, port, &extId.addr);
+    vsockaddr_convert(host, port_i, &extId.addr);
     return _vroute_add(route, &extId, 0);
 }
 
@@ -255,12 +256,15 @@ int _aux_store_item(sqlite3* db, void* item)
 
     memset(id_str, 0, 64);
     vnodeId_strlize(&peer->extId.id, id_str, 64);
-    vsockaddr_unconvert(&peer->extId.addr, host, 64, &port);
+    ret = vsockaddr_unconvert(&peer->extId.addr, host, 64, &port);
+    retE((ret < 0));
 
-    off += sprintf(sql_buf + off, "insert into %s ", VPEER_TB);
-    off += sprintf(sql_buf + off, " (%s,", host);
-    off += sprintf(sql_buf + off, "  %i,", port);
-    off += sprintf(sql_buf + off, "  %s)", id_str);
+    off += sprintf(sql_buf + off, "insert into '%s' ", VPEER_TB);
+    off += sprintf(sql_buf + off, " ('host', 'port', 'nodeId') ");
+    off += sprintf(sql_buf + off, " values (");
+    off += sprintf(sql_buf + off, " '%s',", host);
+    off += sprintf(sql_buf + off, " '%i',", port);
+    off += sprintf(sql_buf + off, " '%s')", id_str);
 
     ret = sqlite3_exec(db, sql_buf, 0, 0, &err);
     vlog((ret && err), printf("db err:%s\n", err));
@@ -299,6 +303,7 @@ int _vroute_store(struct vroute* route, const char* file)
     }
     vlock_leave(&route->lock);
     sqlite3_close(db);
+    vlogI(printf("writeback route infos"));
     return 0;
 }
 
@@ -326,6 +331,24 @@ int _vroute_clear(struct vroute* route)
     return 0;
 }
 
+static
+int _aux_dump_cb(void* item, void* cookie)
+{
+    //type_decl(struct vroute*, route, cookie);
+    type_decl(struct vpeer*,  peer,  item  );
+    char buf[64];
+    int  port = 0;
+    //vassert(route);
+    vassert(peer);
+
+    vnodeId_dump(&peer->extId.id);
+    vsockaddr_unconvert(&peer->extId.addr, buf, 64, &port);
+    vdump(printf("peer addr:%s:%d", buf,port));
+
+    //todo;
+    return 0;
+}
+
 /*
  * to dump all dht nodes info in routing table
  * @route:
@@ -333,8 +356,17 @@ int _vroute_clear(struct vroute* route)
 static
 int _vroute_dump(struct vroute* route)
 {
+    struct varray* peers = NULL;
+    int i = 0;
     vassert(route);
-    //todo;
+
+    vlock_enter(&route->lock);
+    for (; i < NBUCKETS; i++) {
+        peers = &route->bucket[i].peers;
+        varray_iterate(peers, _aux_dump_cb, route);
+    }
+    vlock_leave(&route->lock);
+
     return 0;
 }
 

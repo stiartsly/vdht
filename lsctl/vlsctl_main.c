@@ -33,6 +33,7 @@ enum {
     VLSCTL_VPN_UP,
     VLSCTL_VPN_DOWN,
 
+    VLSCTL_LOGOUT,
     VLSCTL_BUTT
 };
 
@@ -80,7 +81,7 @@ void show_usage(void)
 {
     printf("Usage: vlsctl [OPTION...]\n");
     printf("  -U, --unix-path=FILE          unix path for communicating with vdhtd\n");
-    printf("  -S, --log-stdout              Log out stdout.\n");
+    printf("  -S, --log-stdout              request to log stdout.\n");
     printf("  -d, --dht-up                  request to dht up.\n");
     printf("  -D, --dht-down                request to dht down.\n");
     printf("  -X, --dht-quit                request to dht shutdown.\n");
@@ -125,7 +126,7 @@ int main(int argc, char** argv)
 
     while(c >= 0) {
 
-        c = getopt_long(argc, argv, "U:SdDXa:d:rRtTpPhv", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:SdDXa:e:rRtTpPhv", long_options, &opt_idx);
         if (c < 0) {
             break;
         }
@@ -304,6 +305,10 @@ int main(int argc, char** argv)
 
     *(long*)buf = 0x45; //VMSG_LSCTL;
     buf += sizeof(long);
+    if (logstdout) {
+        *(long*)buf = VLSCTL_LOGOUT;
+        buf += sizeof(long);
+    }
     if (dht_up) {
         *(long*)buf = VLSCTL_DHT_UP;
         buf += sizeof(long);
