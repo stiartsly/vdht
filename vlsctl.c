@@ -78,6 +78,7 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
         retE((ret < 0));
         ret = host->ops->join(host, &sin);
         retE((ret < 0));
+        vlogI(printf("host join a node(%s:%d)", ip, port));
         break;
     }
     case VLSCTL_DEL_NODE: {
@@ -95,14 +96,31 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
         retE((ret < 0));
         ret = host->ops->drop(host, &sin);
         retE((ret < 0));
+        vlogI(printf("host drop a node(%s:%d)", ip, port));
         break;
     }
     case VLSCTL_RELAY_UP:
+        vlogI(printf("relay up"));
+        //todo;
+        break;
     case VLSCTL_RELAY_DOWN:
+        vlogI(printf("relay down"));
+        //todo;
+        break;
     case VLSCTL_STUN_UP:
+        vlogI(printf("stun up"));
+        //todo;
+        break;
     case VLSCTL_STUN_DOWN:
+        vlogI(printf("stun down"));
+        //todo;
+        break;
     case VLSCTL_VPN_UP:
+        vlogI(printf("vpn up"));
+        //todo;
+        break;
     case VLSCTL_VPN_DOWN:
+        vlogI(printf("vpn down"));
         //todo;
         break;
     default:

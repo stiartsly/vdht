@@ -111,6 +111,7 @@ int _aux_tick_cb(void* cookie)
         }
         vnd->ts   = now;
         vnd->mode = VDHT_RUN;
+        vlogI(printf("DHT start running"));
         break;
     }
     case VDHT_RUN: {
@@ -132,6 +133,7 @@ int _aux_tick_cb(void* cookie)
         vnd->cfg->ops->get_str(vnd->cfg, "route.db_file", db, 64);
         vnd->route.ops->store(&vnd->route, db);
         vnd->mode = VDHT_OFF;
+        vlogI(printf("DHT become offline"));
         break;
     }
     default:

@@ -46,6 +46,12 @@
             } \
         }while(0)
 
+#define vlogI(s) do { \
+            printf("[I]"); \
+            (s); \
+            printf("\n"); \
+        }while(0)
+
 #define vlogE(s) { \
             printf("["); \
             (s); \
@@ -60,6 +66,8 @@
                 s; \
             } \
         }while(0)
+
+#define vlogI(s)
 
 #define vlogE(s) { \
             printf("["); \

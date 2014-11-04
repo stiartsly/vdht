@@ -5,40 +5,55 @@ static
 int _vhost_start(struct vhost* host)
 {
     struct vnode* node = &host->node;
+    int ret = 0;
     vassert(host);
     vassert(node);
 
-    return node->ops->start(node);
+    ret = node->ops->start(node);
+    retE((ret < 0));
+    vlogI(printf("host started"));
+    return 0;
 }
 
 static
 int _vhost_stop(struct vhost* host)
 {
     struct vnode* node = &host->node;
+    int ret = 0;
     vassert(host);
 
-    return node->ops->stop(node);
+    ret = node->ops->stop(node);
+    retE((ret < 0));
+    vlogI(printf("host stopped"));
+    return 0;
 }
 
 static
 int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
 {
     struct vnode* node = &host->node;
-
+    int ret = 0;
     vassert(host);
     vassert(wellknown_addr);
 
-    return node->ops->join(node, wellknown_addr);
+    ret = node->ops->join(node, wellknown_addr);
+    retE((ret < 0));
+    vlogI(printf("join a node"));
+    return 0;
 }
 
 static
 int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
 {
     struct vnode* node = &host->node;
+    int ret = 0;
     vassert(host);
     vassert(addr);
 
-    return node->ops->drop(node, addr);
+    ret = node->ops->drop(node, addr);
+    retE((ret < 0));
+    vlogI(printf("drop a node"));
+    return 0;
 }
 
 static
@@ -85,6 +100,7 @@ int _vhost_loop(struct vhost* host)
             continue;
         }
     }
+    vlogI(printf("host quited from laundry."));
     return 0;
 }
 
@@ -93,6 +109,7 @@ int _vhost_req_quit(struct vhost* host)
 {
     vassert(host);
     host->to_quit = 1;
+    vlogI(printf("host about to quit."));
     return 0;
 }
 

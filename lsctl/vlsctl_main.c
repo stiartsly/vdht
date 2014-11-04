@@ -249,7 +249,7 @@ int main(int argc, char** argv)
             }
             vpn_up = 1;
             break;
-        case 'f':
+        case 'P':
             if (vpn_up) {
                 printf("Conflict options for '-p' and '-P'\n");
                 exit(-1);
