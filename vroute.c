@@ -539,7 +539,7 @@ static uint32_t to_prop[] = {
 };
 
 static
-int _vroute_plug_add(struct vroute* route, int plugId)
+int _vroute_plug(struct vroute* route, int plugId)
 {
     vassert(route);
     vassert(plugId >= 0);
@@ -550,7 +550,7 @@ int _vroute_plug_add(struct vroute* route, int plugId)
 }
 
 static
-int _vroute_plug_del(struct vroute* route, int plugId)
+int _vroute_unplug(struct vroute* route, int plugId)
 {
     uint32_t flags = to_prop[plugId];
     vassert(route);
@@ -562,7 +562,7 @@ int _vroute_plug_del(struct vroute* route, int plugId)
 }
 
 static
-int _vroute_plug_get(struct vroute* route, int plugId, vnodeAddr* addr)
+int _vroute_plugin_get(struct vroute* route, int plugId, vnodeAddr* addr)
 {
     //uint32_t flags = to_prop[plugId];
     vassert(route);
@@ -575,10 +575,10 @@ int _vroute_plug_get(struct vroute* route, int plugId, vnodeAddr* addr)
     return 0;
 }
 
-struct vroute_plug_ops route_plug_ops = {
-    .add = _vroute_plug_add,
-    .del = _vroute_plug_del,
-    .get = _vroute_plug_get
+struct vroute_plugin_ops route_plugin_ops = {
+    .plug   = _vroute_plug,
+    .unplug = _vroute_unplug,
+    .get    = _vroute_plugin_get
 };
 
 static
@@ -1247,7 +1247,7 @@ int vroute_init(struct vroute* route, struct vmsger* msger, vnodeAddr* addr)
     route->ops      = &route_ops;
     route->dht_ops  = &route_dht_ops;
     route->cb_ops   = &route_cb_ops;
-    route->plug_ops = &route_plug_ops;
+    route->plugin_ops = &route_plugin_ops;
 
     vlock_init(&route->lock);
     for (; i < NBUCKETS; i++) {

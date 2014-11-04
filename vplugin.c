@@ -162,7 +162,7 @@ int _vpluger_c_req(struct vpluger* pluger, int plugId, get_addr_cb_t cb, void* c
     retE((plugId < 0));
     retE((plugId >= PLUG_BUTT));
 
-    ret = pluger->route->plug_ops->get(pluger->route, plugId, &dest);
+    ret = pluger->route->plugin_ops->get(pluger->route, plugId, &dest);
     retE((ret < 0));
 
     prq = vplugin_req_alloc();

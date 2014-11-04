@@ -73,7 +73,7 @@
 
 
 #define elog_open           perror("[open]")
-#define elog_stat           perror("[stat]")
+#define elog_fstat          perror("[fstat]")
 #define elog_read           perror("[read]")
 #define elog_socket         perror("[socket]")
 #define elog_bind           perror("[bind]")

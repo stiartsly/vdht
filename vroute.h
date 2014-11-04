@@ -80,12 +80,11 @@ struct vroute_ops {
     int (*find_closest_nodes)(struct vroute*, vnodeId*, struct varray*, int);
 };
 
-struct vroute_plug_ops {
-    int (*add)  (struct vroute*, int);
-    int (*del)  (struct vroute*, int);
-    int (*get)  (struct vroute*, int, vnodeAddr*);
+struct vroute_plugin_ops {
+    int (*plug)  (struct vroute*, int);
+    int (*unplug)(struct vroute*, int);
+    int (*get)   (struct vroute*, int, vnodeAddr*);
 };
-
 
 struct vroute_dht_ops {
     int (*ping)              (struct vroute*, vnodeAddr*);
@@ -120,12 +119,10 @@ struct vroute {
     vnodeVer  version;
     uint32_t  flags;
 
-    struct vroute_ops*      ops;
-    struct vroute_plug_ops* plug_ops;
-    struct vroute_cb_ops*   cb_ops;
+    struct vroute_ops* ops;
+    struct vroute_cb_ops* cb_ops;
     struct vroute_dht_ops*  dht_ops;
-    struct vdht_enc_ops*    enc_ops;
-    struct vdht_dec_ops*    dec_ops;
+    struct vroute_plugin_ops* plugin_ops;
 
     struct vbucket bucket[NBUCKETS];
     struct vlock   lock;

@@ -304,7 +304,7 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
 
     memset(&stat, 0, sizeof(stat));
     ret = fstat(fd, &stat);
-    vlog((ret < 0), elog_stat);
+    vlog((ret < 0), elog_fstat);
     ret1E((ret < 0), close(fd));
 
     buf = malloc(stat.st_size + 1);
