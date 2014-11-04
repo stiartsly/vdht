@@ -67,28 +67,34 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
 
     case VLSCTL_ADD_NODE: {
         struct sockaddr_in sin;
+        char ip[64];
+        int  port = 0;
         void* data = NULL;
 
         data = offset_addr(um->data, sizeof(uint32_t));
-        sin.sin_addr.s_addr = get_uint32(data);
-        data = offset_addr(data, sizeof(uint32_t));
-        sin.sin_port   = (short)get_int32(data);
-        sin.sin_family = AF_INET;
-
+        port = get_int32(data);
+        data = offset_addr(data, sizeof(long));
+        memset(ip, 0, 64);
+        strcpy(ip, data);
+        ret = vsockaddr_convert(ip, port, &sin);
+        retE((ret < 0));
         ret = host->ops->join(host, &sin);
         retE((ret < 0));
         break;
     }
     case VLSCTL_DEL_NODE: {
         struct sockaddr_in sin;
+        char ip[64];
+        int  port = 0;
         void* data = NULL;
 
         data = offset_addr(um->data, sizeof(uint32_t));
-        sin.sin_addr.s_addr = (uint32_t)get_uint32(data);
-        data = offset_addr(data, sizeof(uint32_t));
-        sin.sin_port   = (short)get_int32(data);
-        sin.sin_family = AF_INET;
-
+        port = get_int32(data);
+        data = offset_addr(data, sizeof(long));
+        memset(ip, 0, 64);
+        strcpy(ip, data);
+        ret = vsockaddr_convert(ip, port, &sin);
+        retE((ret < 0));
         ret = host->ops->drop(host, &sin);
         retE((ret < 0));
         break;
@@ -110,20 +116,25 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
 static
 int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
-    void* data = NULL;
+    uint32_t magic = 0;
+    void* data = sm->data;
     int  msgId = 0;
+    int  sz = 0;
 
     vassert(sm);
     vassert(um);
 
-    retE(!IS_LSCTL_MAGIC(get_uint32(sm->data)));
+    magic = get_uint32(data);
+    retE((!IS_LSCTL_MAGIC(magic)));
+    data = offset_addr(data, sizeof(uint32_t));
+    sz += sizeof(uint32_t);
 
-    data  = offset_addr(sm->data, sizeof(uint32_t));
     msgId = get_int32(data);
     retE((msgId != VMSG_LSCTL));
+    data = offset_addr(data, sizeof(long));
+    sz += sizeof(long);
 
-    data  = offset_addr(data, sizeof(long));
-    vmsg_usr_init(um, msgId, &sm->addr, sm->len-8, data);
+    vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
     return 0;
 }
 

@@ -46,7 +46,7 @@ static int dht_quit  = 0;
 static int add_node  = 0;
 static int del_node  = 0;
 static char node_ip[64];
-static char node_port = 0;
+static int node_port = 0;
 static int relay_up  = 0;
 static int relay_down = 0;
 static int stun_up   = 0;
@@ -182,7 +182,12 @@ int main(int argc, char** argv)
             }
             strncpy(node_ip, optarg, (int)(port_addr-optarg));
             port_addr += 1;
+            errno = 0;
             node_port = strtol(port_addr, &new_addr, 10);
+            if (errno) {
+                printf("Invalid Port\n");
+                exit(-1);
+            }
             break;
         }
         case 'e':{
@@ -201,7 +206,12 @@ int main(int argc, char** argv)
             }
             strncpy(node_ip, optarg, (int)(port_addr-optarg));
             port_addr += 1;
+            errno = 0;
             node_port = strtol(port_addr, &new_addr, 10);
+            if (errno) {
+                printf("Invalid Port\n");
+                exit(-1);
+            }
             break;
         }
         case 'r':
@@ -309,10 +319,18 @@ int main(int argc, char** argv)
     if (add_node) {
         *(long*)buf = VLSCTL_ADD_NODE;
         buf += sizeof(long);
+        *(long*)buf = node_port;
+        buf += sizeof(long);
+        strcpy(buf, node_ip);
+        buf += strlen(node_ip) + 1;
     }
     if (del_node) {
         *(long*)buf = VLSCTL_DEL_NODE;
         buf += sizeof(long);
+        *(long*)buf = node_port;
+        buf += sizeof(long);
+        strcpy(buf, node_ip);
+        buf += strlen(node_ip) + 1;
     }
     if (relay_up) {
         *(long*)buf = VLSCTL_RELAY_UP;
@@ -345,7 +363,7 @@ int main(int argc, char** argv)
     } else {
         strcpy(dest_addr.sun_path, unix_path);
     }
-    ret = sendto(fd, buf, (int)(buf-data), 0, (struct sockaddr*)&dest_addr, sizeof(struct sockaddr_un));
+    ret = sendto(fd, data, (int)(buf-data), 0, (struct sockaddr*)&dest_addr, sizeof(struct sockaddr_un));
     if (ret < 0) {
         perror("sendto:");
         close(fd);

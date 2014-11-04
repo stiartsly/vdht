@@ -44,8 +44,6 @@ void vpeer_init(struct vpeer* peer, vnodeAddr* addr, time_t snd_ts, time_t rcv_t
 {
     vassert(peer);
     vassert(addr);
-    vassert(snd_ts);
-    vassert(rcv_ts);
 
     vnodeAddr_copy(&peer->extId, addr);
     peer->snd_ts = snd_ts;

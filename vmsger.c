@@ -14,11 +14,13 @@ struct vmsg_sys* vmsg_sys_alloc(int data_sz)
         vlog((!ms), elog_malloc);
         retE_p((!ms));
         ms->data = ms->buf;
+        ms->len  = data_sz;
     } else {
         ms = (struct vmsg_sys*)vmem_aux_alloc(&ms_cache);
         vlog((!ms), elog_vmem_aux_alloc);
         retE_p((!ms));
         ms->data = NULL;
+        ms->len  = 0;
     }
     return ms;;
 }

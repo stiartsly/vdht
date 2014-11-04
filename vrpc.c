@@ -62,9 +62,6 @@ int _vrpc_unix_sndto(void* impl, struct vmsg_sys* msg)
     vlog((ret < 0), elog_sendto);
     retE((ret < 0));
     return ret;
-
-    //todo;
-    return 0;
 }
 
 /* to receive a msg, including from where.
@@ -91,7 +88,7 @@ int _vrpc_unix_rcvfrom(void* impl, struct vmsg_sys* msg)
     vlog((ret < 0), elog_recvfrom);
     retE((ret < 0));
     msg->len = ret;
-
+     
     return ret;
 }
 

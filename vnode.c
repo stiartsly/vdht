@@ -129,9 +129,10 @@ int _aux_tick_cb(void* cookie)
     case VDHT_DOWN: {
         char db[64];
 
-        vnd->cfg->ops->get_str(vnd->cfg, "route.db", db, 64);
+        vnd->cfg->ops->get_str(vnd->cfg, "route.db_file", db, 64);
         vnd->route.ops->store(&vnd->route, db);
         vnd->mode = VDHT_OFF;
+        break;
     }
     default:
         vassert(0);
