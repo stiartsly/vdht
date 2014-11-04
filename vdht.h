@@ -7,6 +7,18 @@
 #define DHT_MAGIC ((uint32_t)0x58681506)
 #define IS_DHT_MSG(magic) (magic == DHT_MAGIC)
 
+enum {
+    VDHT_PING,
+    VDHT_PING_R,
+    VDHT_FIND_NODE,
+    VDHT_FIND_NODE_R,
+    VDHT_GET_PEERS,
+    VDHT_GET_PEERS_R,
+    VDHT_FIND_CLOSEST_NODES,
+    VDHT_FIND_CLOSEST_NODES_R,
+    VDHT_UNKNOWN
+};
+
 /*
  * method set for dht msg encoder
  */
@@ -71,64 +83,66 @@ struct vdht_enc_ops {
  */
 
 struct vdht_dec_ops {
+    int (*dec) (
+            void* buf,
+            int sz,
+            void** ctxt
+        );
+
+    int (*dec_done)(
+            void* ctxt
+        );
+
     int (*ping)(
-            void* buf, // msg buf address,
-            int   sz,  // buf size
+            void* ctxt,
             vtoken* token, // transaction Id for the query.
             vnodeId* srcId // where query is from.
         );
 
     int (*ping_rsp)(
-            void* buf,
-            int   sz,
+            void* ctxt,
             vtoken* token,
             vnodeId* srcId,
             vnodeInfo* result
         );
 
     int (*find_node)(
-            void* buf,
-            int   sz,
+            void* ctxt,
             vtoken* token,
             vnodeId* srcId,   // quering vnode id,
             vnodeId* targetId // queried vnode Id.
         );
 
     int (*find_node_rsp)(
-            void* buf,
-            int   sz,
+            void* ctxt,
             vtoken* token,
             vnodeId* srcId,
             vnodeInfo* result
         );
 
     int (*get_peers)(
-            void* buf,
-            int   sz,
+            void* ctxt,
             vtoken* token,
             vnodeId* srcId,
             vnodeHash* hash
         );
 
     int (*get_peers_rsp)(
-            void* buf,
-            int   sz,
+            void* ctxt,
             vtoken* token,
             vnodeId* srcId,
             struct varray* result
         );
 
     int (*find_closest_nodes)(
-            void* buf,
-            int   sz,
+            void* ctxt,
             vtoken* token,
             vnodeId* srcId,
             vnodeId* targetId
         );
 
     int (*find_closest_nodes_rsp)(
-            void* buf,
-            int   sz,
+            void* ctxt,
             vtoken* token,
             vnodeId* srcId,
             struct varray* result

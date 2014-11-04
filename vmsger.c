@@ -1,7 +1,6 @@
 #include "vglobal.h"
 #include "vmsger.h"
 
-
 /*
  * auxiliary funcs for vmsg_sys.
  */

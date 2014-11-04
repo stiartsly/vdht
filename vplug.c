@@ -139,10 +139,14 @@ int _aux_encode_msg(char* buf, int buf_sz, int (*cb)(char*, void**), void** cook
 }
 
 /*
- * get server addr info from remote server.
+ * Rrequest to get addr info of best node for given plugId, where cb will be invoked
+ * as long as reply arrived.
+ *
  * @pluger:
- * @plugId:
- * @addr:
+ * @plugId: plug type.
+ * @cb    : callback to invoked when reply arrived, where addr info would follow as
+ *          parameter.
+ * @cookie:
  */
 static
 int _vpluger_c_req(struct vpluger* pluger, int plugId, get_addr_cb_t cb, void* cookie)
@@ -187,7 +191,11 @@ int _vpluger_c_req(struct vpluger* pluger, int plugId, get_addr_cb_t cb, void* c
 }
 
 /*
- * clear all plugs
+ * As long as reply arrived, @rsp func will called
+ *
+ * @pluger:
+ * @plugId:
+ * @addr:
  */
 static
 int _vpluger_c_rsp(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
@@ -221,6 +229,7 @@ int _vpluger_c_rsp(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
 
 /*
  * clear all plugs
+ * @pluger:
  */
 static
 int _vpluger_c_clear(struct vpluger* pluger)
@@ -241,6 +250,7 @@ int _vpluger_c_clear(struct vpluger* pluger)
 
 /*
  * dump
+ * @pluger:
  */
 static
 int _vpluger_c_dump(struct vpluger* pluger)

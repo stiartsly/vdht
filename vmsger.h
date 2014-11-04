@@ -5,18 +5,8 @@
 #include "vsys.h"
 
 enum {
-    VDHT_RSRVD,
-    VDHT_PING,
-    VDHT_PING_R,
-    VDHT_FIND_NODE,
-    VDHT_FIND_NODE_R,
-    VDHT_GET_PEERS,
-    VDHT_GET_PEERS_R,
-    VDHT_POST_HASH,
-    VDHT_POST_HASH_R,
-    VDHT_FIND_CLOSEST_NODES,
-    VDHT_FIND_CLOSEST_NODES_R,
-    VDHT_BUTT,
+    VMSG_RSRVD = 0,
+    VMSG_DHT   = 0x01,
 
     VMSG_LSCTL = 0x45,
     VMSG_PLUG  = 0x48,
@@ -27,7 +17,7 @@ enum {
     VMSG_BUTT
 };
 
-#define VDHT_MSG(msgId) (msgId >= VDHT_RSRVD && msgId < VDHT_BUTT)
+#define VDHT_MSG(msgId) (msgId == VMSG_DHT)
 
 struct vsockaddr {
     union {
@@ -97,13 +87,11 @@ typedef int (*vmsger_unpack_t)(void*, struct vmsg_sys*, struct vmsg_usr*);
 struct vmsger {
     struct vlist  cbs;
     struct vlock  lock_cbs;
-
     struct vlist  msgs;
     struct vlock  lock_msgs;
 
     vmsger_pack_t pack_cb;
     void* cookie1;
-
     vmsger_unpack_t unpack_cb;
     void* cookie2;
 
