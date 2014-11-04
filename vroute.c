@@ -533,46 +533,30 @@ struct vroute_ops route_ops = {
 /*
  *
  */
-static
-uint32_t _aux_to_flags(int plugId)
-{
-    uint32_t flags = 0;
-
-    switch(plugId) {
-    case PLUG_RELAY:
-        flags = PROP_RELAY;
-        break;
-    case PLUG_STUN:
-        flags = PROP_STUN;
-        break;
-    case PLUG_VPN:
-    case PLUG_MROUTE:
-    case PLUG_DHASH:
-    case PLUG_APP:
-        flags = PROP_VPN;
-        break;
-    case PLUG_DDNS:
-        //todo;
-        break;
-    default:
-        break;
-    }
-    return flags;
-}
+static uint32_t to_prop[] = {
+    PROP_RELAY,
+    PROP_STUN,
+    PROP_VPN,
+    PROP_DDNS,
+    PROP_MROUTE,
+    PROP_DHASH,
+    PROP_APP,
+    PROP_PLUG_MASK
+};
 
 static
 int _vroute_plug_add(struct vroute* route, int plugId)
 {
     vassert(route);
 
-    route->flags |= _aux_to_flags(plugId);
+    route->flags |= to_prop[plugId];
     return 0;
 }
 
 static
 int _vroute_plug_del(struct vroute* route, int plugId)
 {
-    uint32_t flags = _aux_to_flags(plugId);
+    uint32_t flags = to_prop[plugId];
     vassert(route);
 
     route->flags &= ~flags;
@@ -582,11 +566,12 @@ int _vroute_plug_del(struct vroute* route, int plugId)
 static
 int _vroute_plug_get(struct vroute* route, int plugId, vnodeAddr* addr)
 {
-    //uint32_t flags = _aux_to_flags(plugId);
+    //uint32_t flags = to_prop[plugId];
     vassert(route);
     vassert(addr);
 
-    //todo;
+    // need to think through the policy to get best dht node.
+    // todo;
     return 0;
 }
 

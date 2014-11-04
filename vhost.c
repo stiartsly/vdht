@@ -163,11 +163,11 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
     msgId = get_int32(offset_addr(sm->data, sizeof(uint32_t)));
 
     if (IS_DHT_MSG(magic)) {
-        vmsg_usr_init(um, msgId, &sm->addr, sm->len-8, sm->data);
+        vmsg_usr_init(um, msgId, &sm->addr, sm->len-8, sm->data-8);
         return 0;
     }
     if (IS_PLUG_MSG(magic)) {
-        vmsg_usr_init(um, msgId, &sm->addr, sm->len-8, sm->data);
+        vmsg_usr_init(um, msgId, &sm->addr, sm->len-8, sm->data-8);
         return 0;
     }
 

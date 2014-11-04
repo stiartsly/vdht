@@ -46,6 +46,7 @@ struct vplug_item {
 struct vpluger_s_ops {
     int (*plug)  (struct vpluger*, int, struct sockaddr_in*);
     int (*unplug)(struct vpluger*, int, struct sockaddr_in*);
+    int (*get)   (struct vpluger*, int, struct sockaddr_in*);
     int (*clear) (struct vpluger*);
     int (*dump)  (struct vpluger*);
 };

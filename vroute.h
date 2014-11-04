@@ -26,12 +26,16 @@ enum {
     PROP_FIND_CLOSEST_NODES_R = 0x00000200,
 
     PROP_VER         = 0x00001000,
-    PROP_STUN        = 0x00010000,
-    PROP_RELAY       = 0x00020000,
+    PROP_RELAY       = 0x00010000,
+    PROP_STUN        = 0x00020000,
     PROP_VPN         = 0x00040000,
+    PROP_DDNS        = 0x00080000,
+    PROP_MROUTE      = 0x00100000,
+    PROP_DHASH       = 0x00200000,
     PROP_APP         = 0x01000000
 };
 
+#define PROP_PLUG_MASK ((uint32_t)0x003f0000)
 enum {
     PLUG_RELAY,
     PLUG_STUN,
