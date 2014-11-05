@@ -79,7 +79,7 @@ int _aux_req_cb(char* buf, void** cookie)
 
     set_int32(data, 0); //means request.
     sz += sizeof(long);
-    offset_addr(data, sizeof(long));
+    data = offset_addr(data, sizeof(long));
 
     set_int32(data, plugId);
     sz += sizeof(long);
@@ -100,26 +100,24 @@ int _aux_rsp_cb(char* buf, void** cookie)
 
     set_int32(data, 1); // means response;
     sz += sizeof(long);
-    offset_addr(data, sizeof(long));
+    data = offset_addr(data, sizeof(long));
 
     set_int32(data, plugId);
     sz += sizeof(long);
-    offset_addr(data, sizeof(long));
+    data = offset_addr(data, sizeof(long));
 
     set_int32(data, (long)addr->sin_port);
     sz += sizeof(long);
-    offset_addr(data, sizeof(long));
+    data = offset_addr(data, sizeof(long));
 
     set_uint32(data, (uint32_t)addr->sin_addr.s_addr);
     sz += sizeof(uint32_t);
-    offset_addr(data, sizeof(uint32_t));
 
     return sz;
 }
 
-typedef int (*encode_msg_cb)(char*, void**);
 static
-int _aux_encode_msg(char* buf, int buf_sz, encode_msg_cb cb, void** cookie)
+int _aux_encode_msg(char* buf, int buf_sz, int (*cb)(char*, void**), void** cookie)
 {
     char* data = buf;
     int sz = 0;
@@ -130,11 +128,11 @@ int _aux_encode_msg(char* buf, int buf_sz, encode_msg_cb cb, void** cookie)
 
     set_uint32(data, VPLUG_MAGIC);
     sz += sizeof(uint32_t);
-    offset_addr(data, sizeof(uint32_t));
+    data = offset_addr(data, sizeof(uint32_t));
 
     set_int32(data, VMSG_PLUG);
     sz += sizeof(long);
-    offset_addr(data, sizeof(long));
+    data = offset_addr(data, sizeof(long));
 
     sz += cb(data, cookie);
     return sz;

@@ -1,6 +1,8 @@
 #ifndef __VDEF_H__
 #define __VDEF_H__
 
+#define BUF_SZ (1024)
+
 #define vcall_cond(cond,s)         do{if(cond) {s;}}while(0)
 #define vcall2_cond(cond,s1,s2)    do{if(cond) {s1;s2;}}while(0)
 #define vcall3_cond(cond,s1,s2,s3) do{if(cond) {s1;s2;s3;}}while(0)

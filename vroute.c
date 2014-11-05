@@ -1,7 +1,6 @@
 #include "vglobal.h"
 #include "vroute.h"
 
-#define BUF_SZ (1024)
 #define VPEER_TB ((const char*)"dht_peer")
 
 #define TDIFF(a, b)   ((int)(a-b))

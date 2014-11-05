@@ -2,8 +2,6 @@
 #include "vlsctl.h"
 
 /* message interface for local service controller.*/
-
-#define BUF_SZ ((int)1024)
 #define IS_LSCTL_MAGIC(val) (val == (uint32_t)0x7fec45fa)
 
 
@@ -142,8 +140,6 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
 {
     struct vconfig_ops* ops = host->cfg->ops;
     struct sockaddr_un* sun = &ctl->addr.vsun_addr;
-    struct vmsger* msger = &ctl->msger;
-    struct vrpc*   rpc   = &ctl->rpc;
     char unix_path[BUF_SZ];
     int ret = 0;
 
@@ -157,18 +153,18 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
 
     sun->sun_family = AF_UNIX;
     strcpy(sun->sun_path, unix_path);
-    ctl->host   = host;
+    ctl->host = host;
 
-    ret += vmsger_init(msger);
-    ret += vrpc_init(rpc, msger, VRPC_UNIX, &ctl->addr);
+    ret += vmsger_init(&ctl->msger);
+    ret += vrpc_init(&ctl->rpc, &ctl->msger, VRPC_UNIX, &ctl->addr);
     if (ret < 0) {
-        vrpc_deinit(rpc);
-        vmsger_deinit(msger);
+        vrpc_deinit(&ctl->rpc);
+        vmsger_deinit(&ctl->msger);
         return -1;
     }
 
-    vmsger_reg_unpack_cb(msger, _aux_msg_unpack_cb, ctl);
-    msger->ops->add_cb  (msger, ctl, _aux_msg_parse_cb, VMSG_LSCTL);
+    vmsger_reg_unpack_cb  (&ctl->msger, _aux_msg_unpack_cb, ctl);
+    ctl->msger.ops->add_cb(&ctl->msger, ctl, _aux_msg_parse_cb, VMSG_LSCTL);
     return 0;
 }
 
