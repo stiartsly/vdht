@@ -9,11 +9,11 @@ vdht_objs = \
     vdht.o  \
     vhost.o \
     vnode.o \
-    vplug.o \
     vmsger.o  \
     vroute.o  \
     vlsctl.o  \
     vticker.o \
+    vplugin.o \
     vnodeId.o 
 
 .PHONY: all vdhtd vlsctlc clean

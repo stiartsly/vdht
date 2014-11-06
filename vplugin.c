@@ -1,8 +1,8 @@
 #include "vglobal.h"
-#include "vplug.h"
+#include "vplugin.h"
 
 static
-struct vplug_desc plug_desc[] = {
+struct vplugin_desc plug_desc[] = {
     {PLUG_RELAY, "relay"      },
     {PLUG_STUN,  "stun"       },
     {PLUG_VPN,   "vpn"        },
@@ -17,20 +17,20 @@ struct vplug_desc plug_desc[] = {
  * for plug request block
  *
  */
-static MEM_AUX_INIT(plug_req_cache, sizeof(struct vplug_req), 8);
+static MEM_AUX_INIT(plug_req_cache, sizeof(struct vplugin_req), 8);
 static
-struct vplug_req* vplug_req_alloc(void)
+struct vplugin_req* vplugin_req_alloc(void)
 {
-    struct vplug_req* prq = NULL;
+    struct vplugin_req* prq = NULL;
 
-    prq = (struct vplug_req*)vmem_aux_alloc(&plug_req_cache);
+    prq = (struct vplugin_req*)vmem_aux_alloc(&plug_req_cache);
     vlog((!prq), elog_vmem_aux_alloc);
     retE_p((!prq));
     return prq;
 }
 
 static
-void vplug_req_free(struct vplug_req* prq)
+void vplugin_req_free(struct vplugin_req* prq)
 {
     vassert(prq);
     vmem_aux_free(&plug_req_cache, prq);
@@ -38,7 +38,7 @@ void vplug_req_free(struct vplug_req* prq)
 }
 
 static
-void vplug_req_init(struct vplug_req* prq, int plugId, get_addr_cb_t cb, void* cookie)
+void vplugin_req_init(struct vplugin_req* prq, int plugId, get_addr_cb_t cb, void* cookie)
 {
     vassert(prq);
     vassert(plugId >= 0);
@@ -151,7 +151,7 @@ int _aux_encode_msg(char* buf, int buf_sz, int (*cb)(char*, void**), void** cook
 static
 int _vpluger_c_req(struct vpluger* pluger, int plugId, get_addr_cb_t cb, void* cookie)
 {
-    struct vplug_req* prq = NULL;
+    struct vplugin_req* prq = NULL;
     vnodeAddr dest;
     char buf[64];
     int ret = 0;
@@ -165,10 +165,10 @@ int _vpluger_c_req(struct vpluger* pluger, int plugId, get_addr_cb_t cb, void* c
     ret = pluger->route->plug_ops->get(pluger->route, plugId, &dest);
     retE((ret < 0));
 
-    prq = vplug_req_alloc();
-    vlog((!prq), elog_vplug_req_alloc);
+    prq = vplugin_req_alloc();
+    vlog((!prq), elog_vplugin_req_alloc);
     retE((!prq));
-    vplug_req_init(prq, plugId, cb, cookie);
+    vplugin_req_init(prq, plugId, cb, cookie);
 
     {
         void* args[] = { (void*)plugId };
@@ -180,7 +180,7 @@ int _vpluger_c_req(struct vpluger* pluger, int plugId, get_addr_cb_t cb, void* c
         };
 
         ret = pluger->msger->ops->push(pluger->msger, &msg);
-        ret1E((ret < 0), vplug_req_free(prq));
+        ret1E((ret < 0), vplugin_req_free(prq));
     }
 
     vlock_enter(&pluger->prq_lock);
@@ -200,7 +200,7 @@ int _vpluger_c_req(struct vpluger* pluger, int plugId, get_addr_cb_t cb, void* c
 static
 int _vpluger_c_rsp(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
 {
-    struct vplug_req* prq = NULL;
+    struct vplugin_req* prq = NULL;
     struct vlist* node = NULL;
     int found = 0;
 
@@ -212,7 +212,7 @@ int _vpluger_c_rsp(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
 
     vlock_enter(&pluger->prq_lock);
     __vlist_for_each(node, &pluger->prqs) {
-        prq = vlist_entry(node, struct vplug_req, list);
+        prq = vlist_entry(node, struct vplugin_req, list);
         if (prq->plugId == plugId) {
             vlist_del(&prq->list);
             found = 1;
@@ -222,7 +222,7 @@ int _vpluger_c_rsp(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
     vlock_leave(&pluger->prq_lock);
     if (found) {
         prq->cb(addr, prq->cookie);
-        vplug_req_free(prq);
+        vplugin_req_free(prq);
     }
     return (found ? 0: -1);
 }
@@ -234,15 +234,15 @@ int _vpluger_c_rsp(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
 static
 int _vpluger_c_clear(struct vpluger* pluger)
 {
-    struct vplug_req* item = NULL;
+    struct vplugin_req* item = NULL;
     struct vlist* node = NULL;
     vassert(pluger);
 
     vlock_enter(&pluger->prq_lock);
     while(!vlist_is_empty(&pluger->prqs)) {
         node = vlist_pop_head(&pluger->prqs);
-        item = vlist_entry(node, struct vplug_req, list);
-        vplug_req_free(item);
+        item = vlist_entry(node, struct vplugin_req, list);
+        vplugin_req_free(item);
     }
     vlock_leave(&pluger->prq_lock);
     return 0;
@@ -275,20 +275,20 @@ struct vpluger_c_ops pluger_c_ops = {
 /*
  * for plug_item
  */
-static MEM_AUX_INIT(plug_item_cache, sizeof(struct vplug_item), 8);
+static MEM_AUX_INIT(plug_item_cache, sizeof(struct vplugin_item), 8);
 static
-struct vplug_item* vplug_item_alloc(void)
+struct vplugin_item* vplugin_item_alloc(void)
 {
-    struct vplug_item* item = NULL;
+    struct vplugin_item* item = NULL;
 
-    item = (struct vplug_item*)vmem_aux_alloc(&plug_item_cache);
+    item = (struct vplugin_item*)vmem_aux_alloc(&plug_item_cache);
     vlog((!item), elog_vmem_aux_alloc);
     retE_p((!item));
     return item;
 }
 
 static
-void vplug_item_free(struct vplug_item* item)
+void vplugin_item_free(struct vplugin_item* item)
 {
     vassert(item);
     vmem_aux_free(&plug_item_cache, item);
@@ -296,9 +296,9 @@ void vplug_item_free(struct vplug_item* item)
 }
 
 static
-void vplug_item_init(struct vplug_item* item, int plugId, struct sockaddr_in* addr)
+void vplugin_item_init(struct vplugin_item* item, int plugId, struct sockaddr_in* addr)
 {
-    struct vplug_desc* desc = plug_desc;
+    struct vplugin_desc* desc = plug_desc;
     int i = 0;
 
     vassert(item);
@@ -329,7 +329,7 @@ void vplug_item_init(struct vplug_item* item, int plugId, struct sockaddr_in* ad
 static
 int _vpluger_s_plug(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
 {
-    struct vplug_item* item = NULL;
+    struct vplugin_item* item = NULL;
     struct vlist* node = NULL;
     int found = 0;
 
@@ -341,7 +341,7 @@ int _vpluger_s_plug(struct vpluger* pluger, int plugId, struct sockaddr_in* addr
 
     vlock_enter(&pluger->plug_lock);
     __vlist_for_each(node, &pluger->plugs) {
-        item = vlist_entry(node, struct vplug_item, list);
+        item = vlist_entry(node, struct vplugin_item, list);
         if ((item->plugId == plugId)
            && vsockaddr_equal(&item->addr, addr)) {
            found = 1;
@@ -349,11 +349,11 @@ int _vpluger_s_plug(struct vpluger* pluger, int plugId, struct sockaddr_in* addr
         }
     }
     if (!found) {
-        item = vplug_item_alloc();
-        vlog((!item), elog_vplug_item_alloc);
+        item = vplugin_item_alloc();
+        vlog((!item), elog_vplugin_item_alloc);
         ret1E((!item), vlock_leave(&pluger->plug_lock));
 
-        vplug_item_init(item, plugId, addr);
+        vplugin_item_init(item, plugId, addr);
         vlist_add_tail(&pluger->plugs, &item->list);
     }
     vlock_leave(&pluger->plug_lock);
@@ -369,7 +369,7 @@ int _vpluger_s_plug(struct vpluger* pluger, int plugId, struct sockaddr_in* addr
 static
 int _vpluger_s_unplug(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
 {
-    struct vplug_item* item = NULL;
+    struct vplugin_item* item = NULL;
     struct vlist* node = NULL;
     int found = 0;
 
@@ -381,7 +381,7 @@ int _vpluger_s_unplug(struct vpluger* pluger, int plugId, struct sockaddr_in* ad
 
     vlock_enter(&pluger->plug_lock);
     __vlist_for_each(node, &pluger->plugs) {
-        item = vlist_entry(node, struct vplug_item, list);
+        item = vlist_entry(node, struct vplugin_item, list);
         if ((item->plugId == plugId)
            && vsockaddr_equal(&item->addr, addr)) {
            found = 1;
@@ -402,7 +402,7 @@ int _vpluger_s_unplug(struct vpluger* pluger, int plugId, struct sockaddr_in* ad
 static
 int _vpluger_s_get(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
 {
-    struct vplug_item* item = NULL;
+    struct vplugin_item* item = NULL;
     struct vlist* node = NULL;
     int found = 0;
 
@@ -414,7 +414,7 @@ int _vpluger_s_get(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
 
     vlock_enter(&pluger->plug_lock);
     __vlist_for_each(node, &pluger->plugs) {
-        item = vlist_entry(node, struct vplug_item, list);
+        item = vlist_entry(node, struct vplugin_item, list);
         if (item->plugId == plugId) {
             found = 1;
             break;
@@ -433,15 +433,15 @@ int _vpluger_s_get(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
 static
 int _vpluger_s_clear(struct vpluger* pluger)
 {
-    struct vplug_item* item = NULL;
+    struct vplugin_item* item = NULL;
     struct vlist* node = NULL;
     vassert(pluger);
 
     vlock_enter(&pluger->plug_lock);
     while(!vlist_is_empty(&pluger->plugs)) {
         node = vlist_pop_head(&pluger->plugs);
-        item = vlist_entry(node, struct vplug_item, list);
-        vplug_item_free(item);
+        item = vlist_entry(node, struct vplugin_item, list);
+        vplugin_item_free(item);
     }
     vlock_leave(&pluger->plug_lock);
     return 0;

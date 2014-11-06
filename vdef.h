@@ -103,8 +103,8 @@
 #define elog_vmem_aux_alloc vlogE(printf("vmem_aux_alloc"))
 
 #define elog_vsockaddr_convert  vlogE(printf("vsockaddr_convert"))
-#define elog_vplug_req_alloc    vlogE(printf("vplug_req_alloc"))
-#define elog_vplug_item_alloc   vlogE(printf("vplug_item_alloc"))
+#define elog_vplugin_req_alloc  vlogE(printf("vplug_req_alloc"))
+#define elog_vplugin_item_alloc vlogE(printf("vplug_item_alloc"))
 
 #define elog_vmsg_cb_alloc  vlogE(printf("vmsg_cb_alloc"))
 #define elog_vmsg_sys_alloc vlogE(printf("vmsg_sys_alloc"))

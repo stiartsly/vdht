@@ -31,17 +31,17 @@
 #include "utils/vmisc.h"
 
 #include "vdef.h"
-#include "vnode.h"
-#include "vnodeId.h"
-#include "vrpc.h"
-#include "vmsger.h"
-#include "vticker.h"
-#include "vdht.h"
-#include "vroute.h"
-#include "vhost.h"
-#include "vlsctl.h"
-#include "vplug.h"
 #include "vcfg.h"
+#include "vdht.h"
+#include "vrpc.h"
+#include "vhost.h"
+#include "vnode.h"
+#include "vmsger.h"
+#include "vroute.h"
+#include "vlsctl.h"
+#include "vnodeId.h"
+#include "vticker.h"
+#include "vplugin.h"
 
 #if 0
 #define timer_t

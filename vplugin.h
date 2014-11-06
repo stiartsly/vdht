@@ -8,7 +8,7 @@
 #define VPLUG_MAGIC ((uint32_t)0x98431f031)
 #define IS_PLUG_MSG(val) ((uint32_t)val == (uint32_t)VPLUG_MAGIC)
 
-struct vplug_desc {
+struct vplugin_desc {
     int   plugId;
     char* desc;
 };
@@ -17,7 +17,7 @@ struct vplug_desc {
  * for plug_c
  */
 typedef int (*get_addr_cb_t)(struct sockaddr_in*, void*);
-struct vplug_req {
+struct vplugin_req {
     struct vlist list;
     vtoken token;
     int plugId;
@@ -37,7 +37,7 @@ struct vpluger_c_ops {
 /*
  * for plug_s
  */
-struct vplug_item {
+struct vplugin_item {
     struct vlist list;
     char* desc;
     int  plugId;
