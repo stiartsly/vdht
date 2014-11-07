@@ -1327,8 +1327,8 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     route->cb_ops   = &route_cb_ops;
     route->plugin_ops = &route_plugin_ops;
 
-    ret = cfg->ops->get_str(cfg, "route.db_file", route->db, 64);
-    retE((ret < 0));
+    ret = cfg->ops->get_str(cfg, "route.db_file", route->db, BUF_SZ);
+    vcall_cond((ret < 0), strcpy(route->db, ROUTE_DB_FILE));
 
     vlock_init(&route->lock);
     for (; i < NBUCKETS; i++) {

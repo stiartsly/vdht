@@ -106,7 +106,7 @@ struct vroute {
     vnodeVer  version;
     uint32_t  flags;
 
-    char db[64]; //db file.
+    char db[BUF_SZ]; //db file.
 
     struct vroute_ops* ops;
     struct vroute_cb_ops* cb_ops;

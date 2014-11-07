@@ -26,6 +26,8 @@ struct vhost {
     int  myport;
     int  to_quit;
 
+    int  tick_tmo;
+
     struct vmsger  msger;
     struct vrpc    rpc;
     struct vwaiter waiter;

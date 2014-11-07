@@ -72,7 +72,7 @@ int _vhost_stabilize(struct vhost* host)
 
     node->ops->stabilize(node);
     ticker->ops->add_cb(ticker, _aux_tick_cb, host);
-    ticker->ops->start(ticker, 5);
+    ticker->ops->start(ticker, host->tick_tmo);
     return 0;
 }
 
@@ -100,6 +100,7 @@ int _vhost_loop(struct vhost* host)
     vassert(host);
     vassert(waiter);
 
+    vlogI(printf("host in laundry."));
     while(!host->to_quit) {
         ret = waiter->ops->laundry(waiter);
         if (ret < 0) {
@@ -150,6 +151,7 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
     struct vmsg_sys* ms = NULL;
     char* data = NULL;
     int sz = 0;
+
     vassert(cookie);
     vassert(um);
     vassert(sm);
@@ -213,6 +215,37 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
     return 0;
 }
 
+static
+int _aux_get_tick_tmo(struct vconfig* cfg)
+{
+    char buf[32];
+    int tms = 0;
+    int ret = 0;
+    vassert(cfg);
+
+    ret = cfg->ops->get_str(cfg, "global.tick_tmo", buf, 32);
+    vcall_cond((ret < 0), strcpy(buf, HOST_TICK_TMO));
+    ret = strlen(buf);
+    retE((ret <= 1));
+
+    switch(buf[ret-1]) {
+    case 's':
+        tms = 1;
+        break;
+    case 'm':
+        tms = 60;
+        break;
+    default:
+        retE((1));
+        break;
+    }
+    errno = 0;
+    ret = strtol(buf, NULL, 10);
+    retE((errno));
+
+    return (ret * tms);
+}
+
 struct vhost* vhost_create(struct vconfig* cfg, const char* hostname, int port)
 {
     struct vhost* host = NULL;
@@ -237,6 +270,10 @@ struct vhost* vhost_create(struct vconfig* cfg, const char* hostname, int port)
     host->myport  = port;
     host->ops     = &host_ops;
     host->cfg     = cfg;
+
+    ret = _aux_get_tick_tmo(cfg);
+    retE_p((ret < 0));
+    host->tick_tmo = ret;
 
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, &addr);

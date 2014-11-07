@@ -1,6 +1,11 @@
 #ifndef __VCFG_H__
 #define __VCFG_H__
 
+#define HOST_TICK_TMO      "5s"
+#define NODE_TICK_INTERVAL "7s"
+
+#define ROUTE_DB_FILE      "route.db"
+
 struct vconfig;
 struct vconfig_ops {
     int (*parse)  (struct vconfig*, const char*);
