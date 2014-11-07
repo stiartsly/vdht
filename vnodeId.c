@@ -79,7 +79,6 @@ void vnodeId_dump(vnodeId* id)
     int i = 0;
     vassert(id);
 
-    //vdump(printf("ID:"));
     printf("##ID:");
     for (; i < VNODE_ID_LEN; i++) {
         printf("%c", id->data[i] + '0');

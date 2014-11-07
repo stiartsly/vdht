@@ -9,10 +9,21 @@
 #define MAX_CAPC ((int)8)
 #define vmin(a, b)   ((a < b) ? a: b)
 
+struct vpeer{
+    vnodeAddr extId;
+    vnodeVer  ver;
+    uint32_t  flags;
+
+    time_t    snd_ts;
+    time_t    rcv_ts;
+    int       ntries;
+};
+
 /*
  * for vpeer
  */
 static MEM_AUX_INIT(peer_cache, sizeof(struct vpeer), 0);
+static
 struct vpeer* vpeer_alloc(void)
 {
     struct vpeer* peer = NULL;
@@ -25,6 +36,7 @@ struct vpeer* vpeer_alloc(void)
 /*
  * @peer:
  */
+static
 void vpeer_free(struct vpeer* peer)
 {
     vassert(peer);
@@ -39,6 +51,7 @@ void vpeer_free(struct vpeer* peer)
  * @rcv_ts:
  * @flags:
  */
+static
 void vpeer_init(struct vpeer* peer, vnodeAddr* addr, time_t snd_ts, time_t rcv_ts, int flags)
 {
     vassert(peer);

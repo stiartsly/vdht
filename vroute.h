@@ -47,20 +47,6 @@ enum {
     PLUG_BUTT
 };
 
-struct vpeer{
-    vnodeAddr extId;
-    vnodeVer  ver;
-    uint32_t  flags;
-
-    time_t    snd_ts;
-    time_t    rcv_ts;
-    int       ntries;
-};
-
-struct vpeer* vpeer_alloc(void);
-void vpeer_free(struct vpeer* );
-void vpeer_init(struct vpeer*, vnodeAddr*, time_t, time_t, int);
-
 /*
  * for routing table.
  */
