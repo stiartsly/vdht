@@ -14,7 +14,6 @@ enum vnode_mode {
     VDHT_OFF,
     VDHT_UP,
     VDHT_RUN,
-    VDHT_TICK,
     VDHT_DOWN,
     VDHT_ERR,
     VDHT_M_BUTT
@@ -37,6 +36,7 @@ struct vnode {
     vnodeAddr ownId;
     struct vroute route;
 
+    int    tick_interval;
     time_t ts;
     int    mode;
     struct vlock lock;  // for mode.

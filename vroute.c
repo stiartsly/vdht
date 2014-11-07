@@ -232,17 +232,15 @@ int _aux_load_cb(void* priv, int col, char** value, char** field)
  *
  */
 static
-int _vroute_load(struct vroute* route, const char* file)
+int _vroute_load(struct vroute* route)
 {
     char sql_buf[BUF_SZ];
     sqlite3* db = NULL;
     char* err = NULL;
     int ret = 0;
-
     vassert(route);
-    vassert(file);
 
-    ret = sqlite3_open(file, &db);
+    ret = sqlite3_open(route->db, &db);
     vlog((ret), elog_sqlite3_open);
     retE((ret));
 
@@ -296,18 +294,16 @@ int _aux_store_item(sqlite3* db, void* item)
  * @file
  */
 static
-int _vroute_store(struct vroute* route, const char* file)
+int _vroute_store(struct vroute* route)
 {
     struct varray* peers = NULL;
     sqlite3* db = NULL;
     int ret = 0;
     int i = 0;
     int j = 0;
-
     vassert(route);
-    vassert(file);
 
-    ret = sqlite3_open(file, &db);
+    ret = sqlite3_open(route->db, &db);
     vlog((ret), elog_sqlite3_open);
     retE((ret));
 
@@ -1315,19 +1311,24 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     return 0;
 }
 
-int vroute_init(struct vroute* route, struct vmsger* msger, vnodeAddr* addr)
+int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger, vnodeAddr* addr)
 {
+    int ret = 0;
     int i = 0;
     vassert(route);
     vassert(msger);
     vassert(addr);
 
     vnodeAddr_copy(&route->ownId, addr);
+    route->cfg      = cfg;
     route->msger    = msger;
     route->ops      = &route_ops;
     route->dht_ops  = &route_dht_ops;
     route->cb_ops   = &route_cb_ops;
     route->plugin_ops = &route_plugin_ops;
+
+    ret = cfg->ops->get_str(cfg, "route.db_file", route->db, 64);
+    retE((ret < 0));
 
     vlock_init(&route->lock);
     for (; i < NBUCKETS; i++) {

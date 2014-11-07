@@ -8,7 +8,6 @@ char* node_mode_desc[] = {
     "offline",
     "up",
     "running",
-    "ticking",
     "down",
     "error",
     NULL
@@ -26,7 +25,7 @@ int _vnode_start(struct vnode* vnd)
     vlock_enter(&vnd->lock);
     if (vnd->mode != VDHT_OFF) {
         vlock_leave(&vnd->lock);
-        return -1;
+        return 0;
     }
     vnd->mode = VDHT_UP;
     vlock_leave(&vnd->lock);
@@ -85,7 +84,7 @@ int _vnode_stop(struct vnode* vnd)
     vlock_enter(&vnd->lock);
     if ((vnd->mode == VDHT_OFF) || (vnd->mode == VDHT_ERR)) {
         vlock_leave(&vnd->lock);
-        return -1;
+        return 0;
     }
     vnd->mode = VDHT_DOWN;
     vlock_leave(&vnd->lock);
@@ -97,6 +96,7 @@ int _aux_tick_cb(void* cookie)
 {
     struct vnode* vnd = (struct vnode*)cookie;
     time_t now = time(NULL);
+    int ret = 0;
     vassert(vnd);
 
     vlock_enter(&vnd->lock);
@@ -107,15 +107,7 @@ int _aux_tick_cb(void* cookie)
         break;
     }
     case VDHT_UP: {
-        char db[64];
-        int ret = 0;
-
-        ret = vnd->cfg->ops->get_str(vnd->cfg, "route.db_file", db, 64);
-        if (ret < 0) {
-            vnd->mode = VDHT_ERR;
-            break;
-        }
-        ret = vnd->route.ops->load(&vnd->route, db);
+        ret = vnd->route.ops->load(&vnd->route);
         if (ret < 0) {
             vnd->mode = VDHT_ERR;
             break;
@@ -126,23 +118,14 @@ int _aux_tick_cb(void* cookie)
         break;
     }
     case VDHT_RUN: {
-        if (now - vnd->ts > TICK_INTERVAL) {
+        if (now - vnd->ts > vnd->tick_interval) {
+            vnd->route.ops->tick(&vnd->route);
             vnd->ts = now;
-            vnd->mode = VDHT_TICK;
         }
         break;
     }
-    case VDHT_TICK: {
-        vnd->route.ops->tick(&vnd->route);
-        vnd->ts = now;
-        vnd->mode = VDHT_RUN;
-        break;
-    }
     case VDHT_DOWN: {
-        char db[64];
-
-        vnd->cfg->ops->get_str(vnd->cfg, "route.db_file", db, 64);
-        vnd->route.ops->store(&vnd->route, db);
+        vnd->route.ops->store(&vnd->route);
         vnd->mode = VDHT_OFF;
         vlogI(printf("DHT become offline"));
         break;
@@ -195,6 +178,36 @@ struct vnode_ops node_ops = {
 //    .get_peers = _vnode_get_peers
 };
 
+static
+int _aux_get_tick_interval(struct vconfig* cfg)
+{
+    char buf[32];
+    int ret = 0;
+    int tms = 0;
+    vassert(cfg);
+
+    ret = cfg->ops->get_str(cfg, "node.tick_interval", buf, 32);
+    retE((ret < 0));
+    ret = strlen(buf);
+    retE((ret <= 0));
+
+    switch(buf[ret-1]) {
+    case 's':
+        tms = 1;
+        break;
+    case 'm':
+        tms = 60;
+        break;
+    default:
+        retE((1));
+    }
+    errno = 0;
+    ret = strtol(buf, NULL, 10);
+    retE((errno));
+
+    return (ret * tms);
+}
+
 /*
  * @vnd:
  * @msger:
@@ -211,7 +224,7 @@ int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vmsger* msger, str
 
     vnodeId_make(&vnd->ownId.id);
     vsockaddr_copy(&vnd->ownId.addr, addr);
-    vroute_init(&vnd->route, msger, &vnd->ownId);
+    vroute_init(&vnd->route, cfg, msger, &vnd->ownId);
 
     vlock_init (&vnd->lock);
     vnd->mode  = VDHT_OFF;
@@ -220,6 +233,9 @@ int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vmsger* msger, str
     vnd->msger  = msger;
     vnd->ticker = ticker;
     vnd->ops    = &node_ops;
+
+    vnd->tick_interval = _aux_get_tick_interval(cfg);
+    retE((vnd->tick_interval < 0));
     return 0;
 }
 

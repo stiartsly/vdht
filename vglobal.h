@@ -93,6 +93,7 @@
 #define inet_ntoa
 #define ntohs
 #define htons
+#define errno
 
 #define sqlite3_open
 #define sqlite3_exec

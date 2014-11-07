@@ -3,6 +3,7 @@
 
 #include "vnodeId.h"
 #include "varray.h"
+#include "vcfg.h"
 #include "vsys.h"
 
 #define MAX_SND_PERIOD 600
@@ -52,8 +53,8 @@ enum {
  */
 struct vroute;
 struct vroute_ops {
-    int (*load)  (struct vroute*, const char*);
-    int (*store) (struct vroute*, const char*);
+    int (*load)  (struct vroute*);
+    int (*store) (struct vroute*);
     int (*clear) (struct vroute*);
     int (*dump)  (struct vroute*);
     int (*tick)  (struct vroute*);
@@ -105,6 +106,8 @@ struct vroute {
     vnodeVer  version;
     uint32_t  flags;
 
+    char db[64]; //db file.
+
     struct vroute_ops* ops;
     struct vroute_cb_ops* cb_ops;
     struct vroute_dht_ops*  dht_ops;
@@ -113,11 +116,12 @@ struct vroute {
     struct vbucket bucket[NBUCKETS];
     struct vlock   lock;
 
+    struct vconfig* cfg;
     struct vmsger*  msger;
     struct vmem_aux mbuf_cache;
 };
 
-int  vroute_init  (struct vroute*, struct vmsger*, vnodeAddr*);
+int  vroute_init  (struct vroute*, struct vconfig*, struct vmsger*, vnodeAddr*);
 void vroute_deinit(struct vroute*);
 
 #endif
