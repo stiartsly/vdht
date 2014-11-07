@@ -73,11 +73,12 @@ struct vpeer* _aux_get_worst(struct varray* peers, int flags)
 {
     int _aux_get_worst_cb(void* item, void* cookie)
     {
-        varg_decl(((void**)cookie), 0, int*, max_period);
-        varg_decl(((void**)cookie), 1, int*, min_flags );
-        varg_decl(((void**)cookie), 2, time_t*, now    );
-        varg_decl(((void**)cookie), 3, struct vpeer**,target);
-        struct vpeer* peer = (struct vpeer*)item;
+        void** argv = (void**)cookie;
+        varg_decl(argv, 0, int*, max_period);
+        varg_decl(argv, 1, int*, min_flags );
+        varg_decl(argv, 2, time_t*, now    );
+        varg_decl(argv, 3, struct vpeer**, target);
+        type_decl(struct vpeer*, peer, item);
 
         vassert(max_period);
         vassert(min_flags);
@@ -391,9 +392,10 @@ int _vroute_dump(struct vroute* route)
 static
 int _aux_tick_cb(void* item, void* cookie)
 {
-    varg_decl(((void**)cookie), 0, struct vroute*, route);
-    varg_decl(((void**)cookie), 1, time_t*, now);
-    type_decl(struct vpeer*, peer, item);
+    struct vpeer* peer = (struct vpeer*)item;
+    void** argv = (void**)cookie;
+    varg_decl(argv, 0, struct vroute*, route);
+    varg_decl(argv, 1, time_t*       , now  );
     vassert(peer);
     vassert(now);
 
@@ -696,6 +698,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), _aux_mbuf_free(route, buf));
+        vlogI(printf("send 'ping'"));
     }
     return 0;
 }
@@ -731,6 +734,7 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), _aux_mbuf_free(route, buf));
+        vlogI(printf("send 'ping rsp'"));
     }
     return 0;
 }
@@ -767,6 +771,7 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), _aux_mbuf_free(route, buf));
+        vlogI(printf("send 'find_node'"));
     }
     return 0;
 }
@@ -801,6 +806,7 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), _aux_mbuf_free(route, buf));
+        vlogI(printf("send 'find_node rsp'"));
     }
     return 0;
 }
@@ -837,6 +843,7 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), _aux_mbuf_free(route, buf));
+        vlogI(printf("send 'get_peers'"));
     }
     return 0;
 }
@@ -873,6 +880,7 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), _aux_mbuf_free(route, buf));
+        vlogI(printf("send 'get_peers' rsp"));
     }
     return 0;
 }
@@ -908,6 +916,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), _aux_mbuf_free(route, buf));
+        vlogI(printf("send 'find_closest_nodes'"));
     }
     return 0;
 }
@@ -944,6 +953,7 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vt
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), _aux_mbuf_free(route, buf));
+        vlogI(printf("send 'find_closest_nodes' rsp"));
     }
     return 0;
 }
@@ -1188,6 +1198,19 @@ struct vroute_cb_ops route_cb_ops = {
 };
 
 static
+char* dht_id_desc[] = {
+    "ping",
+    "ping rsp",
+    "find_node",
+    "find_node rsp",
+    "get_peers",
+    "get_peers rsp",
+    "find_closest_nodes",
+    "find_closest_nodes rsp",
+    NULL,
+};
+
+static
 int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
     struct vroute* route = (struct vroute*)cookie;
@@ -1203,6 +1226,8 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     vsockaddr_copy(&addr.addr, &mu->addr->vsin_addr);
     ret = dec_ops->dec(mu->data, mu->len, &ctxt);
     retE((ret < 0));
+    retE((ret >= VDHT_UNKNOWN));
+    vlogI(printf("received dht '%s'", dht_id_desc[ret]));
 
     switch(ret) {
     case VDHT_PING: {
