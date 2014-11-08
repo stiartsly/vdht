@@ -50,6 +50,7 @@ int main(int argc, char** argv)
     struct vhost*  host = NULL;
     struct vconfig cfg;
     char* cfg_file = NULL;
+    char hostname[64];
     int opt_idx = 0;
     int ret = 0;
     int c = 0;
@@ -120,6 +121,11 @@ int main(int argc, char** argv)
         exit(0);
     }
 
+    ret = vhostaddr_get_first(hostname, 64);
+    if (ret < 0) {
+        printf("network unavialable\n");
+        exit(-1);
+    }
     vconfig_init(&cfg);
     if (defcfgfile) {
         cfg_file = "vdht.conf";
@@ -133,8 +139,7 @@ int main(int argc, char** argv)
         exit(-1);
     }
 
-    //todo;
-    host = vhost_create(&cfg, "10.0.0.16", 12300);
+    host = vhost_create(&cfg, hostname);
     if (!host) {
         vconfig_deinit(&cfg);
         exit(-1);

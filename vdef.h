@@ -98,6 +98,7 @@
 #define elog_socket         perror("[socket]")
 #define elog_bind           perror("[bind]")
 #define elog_fcntl          perror("[fcntl]")
+#define elog_ioctl          perror("[ioctl]")
 #define elog_setsockopt     perror("[setsockopt]")
 #define elog_pselect        perror("[pselect]")
 #define elog_recvfrom       perror("[recvfrom]")

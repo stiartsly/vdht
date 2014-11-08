@@ -246,16 +246,20 @@ int _aux_get_tick_tmo(struct vconfig* cfg)
     return (ret * tms);
 }
 
-struct vhost* vhost_create(struct vconfig* cfg, const char* hostname, int port)
+struct vhost* vhost_create(struct vconfig* cfg, const char* hostname)
 {
     struct vhost* host = NULL;
     struct vsockaddr addr;
-    int ret = 0;
+    int port = 0;
+    int ret  = 0;
 
     vassert(cfg);
     vassert(hostname);
-    vassert(port > 0);
 
+    ret = cfg->ops->get_int(cfg, "dht.port", &port);
+    if (ret < 0) {
+        port = DEF_DHT_PORT;
+    }
     ret = vsockaddr_convert(hostname, port, &addr.vsin_addr);
     vlog((ret < 0), elog_vsockaddr_convert);
     retE_p((ret < 0));

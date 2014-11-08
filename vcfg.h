@@ -9,6 +9,8 @@
 #define DEF_ROUTE_MAX_SND_TIMES ((int)10)
 #define DEF_LSCTL_UNIX_PATH     "/var/run/vdht/lsctl_socket"
 
+#define DEF_DHT_PORT            ((int)12300)
+
 
 struct vconfig;
 struct vconfig_ops {

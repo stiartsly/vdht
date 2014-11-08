@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <sqlite3.h>

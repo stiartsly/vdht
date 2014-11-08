@@ -6,6 +6,75 @@
  * @ len:  [in] buffer size;
  * @ port: [out]
  **/
+static struct ifconf gifc;
+static struct ifreq  gifr[16];
+static int gindex = 0;
+int vhostaddr_get_first(char* host, int sz)
+{
+    char* ip = NULL;
+    int sockfd = 0;
+    int ret = 0;
+
+    vassert(host);
+    vassert(sz > 0);
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    vlog((sockfd < 0), elog_socket);
+    retE((sockfd < 0));
+
+    gindex = 0;
+    gifc.ifc_len = sizeof(gifr);
+    gifc.ifc_buf = (caddr_t)gifr;
+
+    ret = ioctl(sockfd, SIOCGIFCONF, &gifc);
+    close(sockfd);
+    vlog((ret < 0), elog_ioctl);
+    retE((ret < 0));
+
+    ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
+    if (strcmp(ip, "127.0.0.1")) {
+        retE((strlen(ip) + 1 > sz));
+        strcpy(host, ip);
+        return 0;
+    }
+    gindex++;
+
+    retE((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
+    ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
+    retE((strlen(ip) + 1 > sz));
+    strcpy(host, ip);
+    gindex++;
+
+    return 0;
+}
+
+int vhostaddr_get_next(char* host, int sz)
+{
+    char* ip = NULL;
+    vassert(host);
+    vassert(sz > 0);
+
+    retE((!gindex));
+    retE((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
+
+    ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
+    if (strcmp(ip, "127.0.0.1")) { 
+        retE((strlen(ip) + 1 > sz));
+        strcpy(host, ip);
+        return 0;
+    } 
+    gindex++;
+
+    retE((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
+    ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
+    retE((strlen(ip) + 1 > sz));
+    strcpy(host, ip);
+    gindex++;
+
+    return 0;
+}
+
+#if 0
 static struct hostent* ghent = NULL;
 static int gindex = 0;
 int vhostaddr_get_first(char* host, int sz)
@@ -54,6 +123,7 @@ int vhostaddr_get_next(char* host, int sz)
     gindex++;
     return 0;
 }
+#endif
 
 void vsockaddr_copy(struct sockaddr_in* dst, struct sockaddr_in* src)
 {
