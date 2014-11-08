@@ -447,9 +447,19 @@ int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct vsockaddr
     rpc->ops  = &rpc_ops;
     rpc->base_ops = rpc_base_ops[mode];
 
-    sm = vmsg_sys_alloc(8*1024);
-    vlog((!sm), elog_vmsg_sys_alloc);
-    retE((!sm));
+    {
+        void* buf = NULL;
+
+        buf = malloc(8*BUF_SZ);
+        vlog((!buf), elog_malloc);
+        retE((!buf));
+
+        sm = vmsg_sys_alloc();
+        vlog((!sm), elog_vmsg_sys_alloc);
+        ret1E((!sm), free(buf));
+
+        vmsg_sys_init(sm, 0, 8*BUF_SZ, buf);
+    }
 
     vlist_init(&sm->list);
     rpc->rcvm = sm;

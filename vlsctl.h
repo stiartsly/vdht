@@ -21,6 +21,7 @@ enum {
     VLSCTL_VPN_DOWN,
 
     VLSCTL_LOGOUT,
+    VLSCTL_CFGOUT,
     VLSCTL_BUTT
 };
 

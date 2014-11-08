@@ -45,10 +45,9 @@ struct vmsg_sys {
     struct vsockaddr addr;
     int   len;
     void* data;
-    char  buf[4];
 };
 
-struct vmsg_sys* vmsg_sys_alloc(int sz);
+struct vmsg_sys* vmsg_sys_alloc(void);
 void vmsg_sys_free(struct vmsg_sys*);
 void vmsg_sys_init(struct vmsg_sys*, struct vsockaddr*, int, void*);
 

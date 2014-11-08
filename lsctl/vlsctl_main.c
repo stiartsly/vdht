@@ -34,6 +34,7 @@ enum {
     VLSCTL_VPN_DOWN,
 
     VLSCTL_LOGOUT,
+    VLSCTL_CFGOUT,
     VLSCTL_BUTT
 };
 
@@ -41,6 +42,7 @@ static char* cur_unix_path = "/var/run/vdht/lsctl_client";
 static int def_unix_path = 1;
 static char unix_path[1024];
 static int logstdout = 0;
+static int cfgstdout = 0;
 static int dht_up    = 0;
 static int dht_down  = 0;
 static int dht_quit  = 0;
@@ -61,6 +63,7 @@ static
 struct option long_options[] = {
     {"unix-path",   required_argument,  0,         'U'},
     {"log-stdout",  no_argument,        &logstdout,  1},
+    {"cfg-stdout",  no_argument,        &cfgstdout,  1},
     {"dht-up",      no_argument,        &dht_up,     1},
     {"dht-down",    no_argument,        &dht_down,   1},
     {"dht-quit",    no_argument,        &dht_quit,   1},
@@ -82,6 +85,7 @@ void show_usage(void)
     printf("Usage: vlsctl [OPTION...]\n");
     printf("  -U, --unix-path=FILE          unix path for communicating with vdhtd\n");
     printf("  -S, --log-stdout              request to log stdout.\n");
+    printf("  -C  --cfg_stdout              request to print config\n");
     printf("  -d, --dht-up                  request to dht up.\n");
     printf("  -D, --dht-down                request to dht down.\n");
     printf("  -X, --dht-quit                request to dht shutdown.\n");
@@ -112,8 +116,10 @@ int main(int argc, char** argv)
 {
     struct sockaddr_un unix_addr;
     char  data[1024];
-    char* buf = data;
+    char* buf  = data;
+    void* addr = NULL;
     int opt_idx = 0;
+    int nitems = 0;
     int ret = 0;
     int fd = 0;
     int c = 0;
@@ -126,7 +132,7 @@ int main(int argc, char** argv)
 
     while(c >= 0) {
 
-        c = getopt_long(argc, argv, "U:SdDXa:e:rRtTpPhv", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:SCdDXa:e:rRtTpPhv", long_options, &opt_idx);
         if (c < 0) {
             break;
         }
@@ -149,6 +155,9 @@ int main(int argc, char** argv)
             break;
         case 'S':
             logstdout = 1;
+            break;
+        case 'C':
+            cfgstdout = 1;
             break;
         case 'd':
             if (dht_down) {
@@ -305,21 +314,33 @@ int main(int argc, char** argv)
 
     *(long*)buf = 0x45; //VMSG_LSCTL;
     buf += sizeof(long);
+
+    addr = (long*)buf;
+    buf += sizeof(long);
     if (logstdout) {
         *(long*)buf = VLSCTL_LOGOUT;
         buf += sizeof(long);
+        nitems++;
+    }
+    if (cfgstdout) {
+        *(long*) buf = VLSCTL_CFGOUT;
+        buf += sizeof(long);
+        nitems++;
     }
     if (dht_up) {
         *(long*)buf = VLSCTL_DHT_UP;
         buf += sizeof(long);
+        nitems++;
     }
     if (dht_down) {
         *(long*)buf = VLSCTL_DHT_DOWN;
         buf += sizeof(long);
+        nitems++;
     }
     if (dht_quit) {
         *(long*)buf = VLSCTL_DHT_EXIT;
         buf += sizeof(long);
+        nitems++;
     }
     if (add_node) {
         *(long*)buf = VLSCTL_ADD_NODE;
@@ -328,6 +349,7 @@ int main(int argc, char** argv)
         buf += sizeof(long);
         strcpy(buf, node_ip);
         buf += strlen(node_ip) + 1;
+        nitems++;
     }
     if (del_node) {
         *(long*)buf = VLSCTL_DEL_NODE;
@@ -336,32 +358,40 @@ int main(int argc, char** argv)
         buf += sizeof(long);
         strcpy(buf, node_ip);
         buf += strlen(node_ip) + 1;
+        nitems++;
     }
     if (relay_up) {
         *(long*)buf = VLSCTL_RELAY_UP;
         buf += sizeof(long);
+        nitems++;
     }
     if (relay_down) {
         *(long*)buf = VLSCTL_RELAY_DOWN;
         buf += sizeof(long);
+        nitems++;
     }
     if (stun_up) {
         *(long*)buf = VLSCTL_STUN_UP;
         buf += sizeof(long);
+        nitems++;
     }
     if (stun_down) {
         *(long*)buf = VLSCTL_STUN_DOWN;
         buf += sizeof(long);
+        nitems++;
     }
     if (vpn_up) {
         *(long*)buf = VLSCTL_VPN_UP;
         buf += sizeof(long);
+        nitems++;
     }
     if (vpn_down) {
         *(long*)buf = VLSCTL_VPN_DOWN;
         buf += sizeof(long);
+        nitems++;
     }
 
+    *(long*)addr = nitems;
     dest_addr.sun_family = AF_UNIX;
     if (def_unix_path) {
         strcpy(dest_addr.sun_path, "/var/run/vdht/lsctl_socket");

@@ -400,13 +400,13 @@ int _aux_tick_cb(void* item, void* cookie)
         return 0;
     }
     if ((peer->snd_ts)&&
-        (peer->ntries = MAX_SND_TIMES)) {
+        (MAX_SND_TIMES == peer->ntries)) {
         peer->flags = PROP_UNREACHABLE;
         return 0;
     }
 
     if ((!peer->snd_ts)||
-        (EXPIRED(peer->rcv_ts, *now))) {
+        (EXPIRED(*now, peer->rcv_ts))) {
         route->dht_ops->ping(route, &peer->extId);
         peer->snd_ts = *now;
         peer->ntries++;
@@ -640,8 +640,8 @@ void* _aux_mbuf_alloc(struct vroute* route)
     void* mbuf = NULL;
     vassert(route);
 
-    mbuf = vmem_aux_alloc(&route->mbuf_cache);
-    vlog((!mbuf), elog_vmem_aux_alloc);
+    mbuf = malloc(8*BUF_SZ);
+    vlog((!mbuf), elog_malloc);
     retE_p((!mbuf));
 
     //reserve padding for magic and msgId.
@@ -660,7 +660,7 @@ void _aux_mbuf_free(struct vroute* route, void* mbuf)
     vassert(route);
     vassert(mbuf);
 
-    vmem_aux_free(&route->mbuf_cache, mbuf - 8);
+    free(mbuf - 8);
     return ;
 }
 
@@ -1328,7 +1328,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     route->plugin_ops = &route_plugin_ops;
 
     ret = cfg->ops->get_str(cfg, "route.db_file", route->db, BUF_SZ);
-    vcall_cond((ret < 0), strcpy(route->db, ROUTE_DB_FILE));
+    vcall_cond((ret < 0), strcpy(route->db, DEF_ROUTE_DB_FILE));
 
     vlock_init(&route->lock);
     for (; i < NBUCKETS; i++) {

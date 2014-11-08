@@ -187,7 +187,7 @@ int _aux_get_tick_interval(struct vconfig* cfg)
     vassert(cfg);
 
     ret = cfg->ops->get_str(cfg, "node.tick_interval", buf, 32);
-    vcall_cond((ret < 0), strcpy(buf, NODE_TICK_INTERVAL));
+    vcall_cond((ret < 0), strcpy(buf, DEF_NODE_TICK_INTERVAL));
     ret = strlen(buf);
     retE((ret <= 0));
 

@@ -165,7 +165,7 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
         data = unoff_addr(um->data, sz);
         set_uint32(data, DHT_MAGIC);
 
-        ms = vmsg_sys_alloc(0);
+        ms = vmsg_sys_alloc();
         vlog((!ms), elog_vmsg_sys_alloc);
         retE((!ms));
         vmsg_sys_init(ms, um->addr, um->len + sz, data);
@@ -224,7 +224,7 @@ int _aux_get_tick_tmo(struct vconfig* cfg)
     vassert(cfg);
 
     ret = cfg->ops->get_str(cfg, "global.tick_tmo", buf, 32);
-    vcall_cond((ret < 0), strcpy(buf, HOST_TICK_TMO));
+    vcall_cond((ret < 0), strcpy(buf, DEF_HOST_TICK_TMO));
     ret = strlen(buf);
     retE((ret <= 1));
 

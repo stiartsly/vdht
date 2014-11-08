@@ -5,53 +5,45 @@
  * auxiliary funcs for vmsg_sys.
  */
 static MEM_AUX_INIT(ms_cache, sizeof(struct vmsg_sys), 8);
-struct vmsg_sys* vmsg_sys_alloc(int data_sz)
+struct vmsg_sys* vmsg_sys_alloc(void)
 {
     struct vmsg_sys* ms = NULL;
-    if (data_sz > 0) {
-        ms = (struct vmsg_sys*)malloc(sizeof(*ms) + data_sz);
-        vlog((!ms), elog_malloc);
-        retE_p((!ms));
-        ms->data = ms->buf;
-        ms->len  = data_sz;
-    } else {
-        ms = (struct vmsg_sys*)vmem_aux_alloc(&ms_cache);
-        vlog((!ms), elog_vmem_aux_alloc);
-        retE_p((!ms));
-        ms->data = NULL;
-        ms->len  = 0;
-    }
-    return ms;;
+
+    ms = (struct vmsg_sys*)vmem_aux_alloc(&ms_cache);
+    vlog((!ms), elog_vmem_aux_alloc);
+    retE_p((!ms));
+    ms->data = NULL;
+    ms->len  = 0;
+    return ms;
 }
 
 void vmsg_sys_free(struct vmsg_sys* ms)
 {
     vassert(ms);
-    if (ms->data == ms->buf) {
-        free(ms);
-    } else {
-        vmem_aux_free(&ms_cache, ms);
+
+    if (ms->data) {
         free(ms->data);
     }
+    vmem_aux_free(&ms_cache, ms);
+
     return ;
 }
 
 void vmsg_sys_init(struct vmsg_sys* ms, struct vsockaddr* addr, int len, void* data)
 {
     vassert(ms);
-    vassert(addr);
+    vassert(addr || !addr);
     vassert(len > 0);
     vassert(data);
 
     vlist_init(&ms->list);
-    memcpy(&ms->addr, addr, sizeof(*addr));
-    ms->len = len;
-    if (ms->data == ms->buf) {
-        memcpy(ms->buf, data, len);
-    } else {
-        ms->data = data;
+    if (addr) {
+        memcpy(&ms->addr, addr, sizeof(*addr));
     }
-    return;
+    ms->len  = len;
+    ms->data = data;
+
+    return ;
 }
 
 /*
