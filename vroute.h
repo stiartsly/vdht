@@ -8,9 +8,7 @@
 
 #define MAX_SND_PERIOD 600
 #define MAX_RCV_PERIOD 20
-#define MAX_SND_TIMES  10
 
-#define BUCKET_CAPC ((int)10)
 #define NBUCKETS    ((int)160)
 
 enum {
@@ -107,6 +105,8 @@ struct vroute {
     uint32_t  flags;
 
     char db[BUF_SZ]; //db file.
+    int  bucket_sz;
+    int  max_snd_times;
 
     struct vroute_ops* ops;
     struct vroute_cb_ops* cb_ops;
@@ -118,7 +118,6 @@ struct vroute {
 
     struct vconfig* cfg;
     struct vmsger*  msger;
-    struct vmem_aux mbuf_cache;
 };
 
 int  vroute_init  (struct vroute*, struct vconfig*, struct vmsger*, vnodeAddr*);

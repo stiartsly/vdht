@@ -144,7 +144,7 @@ int _vroute_add(struct vroute* route, vnodeAddr* node, int flags)
     if ( i < varray_size(peers)) { // if existed, just modification.
         vpeer_init(peer, node, peer->snd_ts, now, peer->flags | flags);
         updated = 1;
-    } else if (varray_size(peers) >= BUCKET_CAPC) { // replace the worst one.
+    } else if (varray_size(peers) >= route->bucket_sz) { // replace the worst one.
         peer = _aux_get_worst(peers, flags);
         if (peer) {
             vpeer_init(peer, node, 0, now, flags);
@@ -395,12 +395,12 @@ int _aux_tick_cb(void* item, void* cookie)
     vassert(peer);
     vassert(now);
 
-    if ((peer->ntries >= MAX_SND_TIMES)
+    if ((peer->ntries >= route->max_snd_times)
        && (PROP_UNREACHABLE== peer->flags)) {
         return 0;
     }
     if ((peer->snd_ts)&&
-        (MAX_SND_TIMES == peer->ntries)) {
+        (peer->ntries == route->max_snd_times)) {
         peer->flags = PROP_UNREACHABLE;
         return 0;
     }
@@ -1207,7 +1207,7 @@ char* dht_id_desc[] = {
 };
 
 static
-int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
+int _aux_dht_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
     struct vroute* route = (struct vroute*)cookie;
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
@@ -1311,9 +1311,30 @@ int _vroute_msg_cb(void* cookie, struct vmsg_usr* mu)
     return 0;
 }
 
-int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger, vnodeAddr* addr)
+static
+void _aux_load_cfg(struct vroute* route, struct vconfig* cfg)
 {
     int ret = 0;
+    vassert(route);
+    vassert(cfg);
+
+    ret = cfg->ops->get_str(cfg, "route.db_file", route->db, BUF_SZ);
+    if (ret < 0) {
+        strcpy(route->db, DEF_ROUTE_DB_FILE);
+    }
+    ret = cfg->ops->get_int(cfg, "route.bucket_size", &route->bucket_sz);
+    if (ret < 0) {
+        route->bucket_sz = DEF_ROUTE_BUCKET_CAPC;
+    }
+    ret = cfg->ops->get_int(cfg, "route.max_send_times", &route->max_snd_times);
+    if (ret < 0) {
+        route->max_snd_times = DEF_ROUTE_MAX_SND_TIMES;
+    }
+    return ;
+}
+
+int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger, vnodeAddr* addr)
+{
     int i = 0;
     vassert(route);
     vassert(msger);
@@ -1327,16 +1348,14 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     route->cb_ops   = &route_cb_ops;
     route->plugin_ops = &route_plugin_ops;
 
-    ret = cfg->ops->get_str(cfg, "route.db_file", route->db, BUF_SZ);
-    vcall_cond((ret < 0), strcpy(route->db, DEF_ROUTE_DB_FILE));
+    _aux_load_cfg(route, cfg);
 
     vlock_init(&route->lock);
     for (; i < NBUCKETS; i++) {
         varray_init(&route->bucket[i].peers, 0);
         route->bucket[i].ts = 0;
     }
-    vmem_aux_init(&route->mbuf_cache, BUF_SZ, 8);
-    msger->ops->add_cb(route->msger, route, _vroute_msg_cb, VMSG_DHT);
+    msger->ops->add_cb(route->msger, route, _aux_dht_msg_cb, VMSG_DHT);
     return 0;
 }
 
@@ -1345,7 +1364,6 @@ void vroute_deinit(struct vroute* route)
     int i = 0;
     vassert(route);
 
-    vmem_aux_deinit(&route->mbuf_cache);
     route->ops->clear(route);
     for (; i < NBUCKETS; i++) {
         varray_deinit(&route->bucket[i].peers);
