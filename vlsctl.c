@@ -138,11 +138,12 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
             //todo;
             break;
         case VLSCTL_LOGOUT:
-            vlogI(printf("[vlsctl] dump request"));
+            vlogI(printf("[vlsctl] request to dump host"));
             host->ops->dump(host);
             break;
         case VLSCTL_CFGOUT:
             vlogI(printf("[vlsctl] request to dump config"));
+            host->cfg->ops->dump(host->cfg);
             break;
         default:
             retE((1));

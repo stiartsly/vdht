@@ -9,10 +9,11 @@
 
 struct vconfig;
 struct vconfig_ops {
-    int (*parse)  (struct vconfig*, const char*);
-    int (*clear)  (struct vconfig*);
-    int (*get_int)(struct vconfig*, const char*, int*);
-    int (*get_str)(struct vconfig*, const char*, char*, int);
+    int  (*parse)  (struct vconfig*, const char*);
+    int  (*clear)  (struct vconfig*);
+    void (*dump)   (struct vconfig*);
+    int  (*get_int)(struct vconfig*, const char*, int*);
+    int  (*get_str)(struct vconfig*, const char*, char*, int);
 };
 
 struct vconfig {

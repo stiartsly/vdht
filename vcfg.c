@@ -328,6 +328,32 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
 }
 
 static
+void _vcfg_dump(struct vconfig* cfg)
+{
+    struct vcfg_item* item = NULL;
+    struct vlist* node = NULL;
+    vassert(cfg);
+
+    vdump(printf("-> CONFIG"));
+    __vlist_for_each(node, &cfg->items) {
+        item = vlist_entry(node, struct vcfg_item, list);
+        switch(item->type) {
+        case CFG_INT:
+            vdump(printf("[%s]:%d", item->key, item->nval));
+            break;
+        case CFG_STR:
+            vdump(printf("[%s]:%s", item->key, item->val));
+            break;
+        default:
+            vassert(0);
+            break;
+        }
+    }
+    vdump(printf("<- CONFIG"));
+    return ;
+}
+
+static
 int _vcfg_clear(struct vconfig* cfg)
 {
     struct vcfg_item* item = NULL;
@@ -384,6 +410,7 @@ static
 struct vconfig_ops cfg_ops = {
     .parse   = _vcfg_parse,
     .clear   = _vcfg_clear,
+    .dump    = _vcfg_dump,
     .get_int = _vcfg_get_int,
     .get_str = _vcfg_get_str
 };
