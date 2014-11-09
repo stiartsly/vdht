@@ -650,7 +650,7 @@ int _vroute_plug(struct vroute* route, int plugId)
 {
     vassert(route);
     vassert(plugId >= 0);
-    vassert(plugId < PLUG_BUTT);
+    vassert(plugId < PLUGIN_BUTT);
 
     route->flags |= peer_plugin_prop[plugId];
     return 0;
@@ -662,7 +662,7 @@ int _vroute_unplug(struct vroute* route, int plugId)
     uint32_t flags = peer_plugin_prop[plugId];
     vassert(route);
     vassert(plugId >= 0);
-    vassert(plugId < PLUG_BUTT);
+    vassert(plugId < PLUGIN_BUTT);
 
     route->flags &= ~flags;
     return 0;
@@ -675,7 +675,7 @@ int _vroute_plugin_get(struct vroute* route, int plugId, vnodeAddr* addr)
     vassert(route);
     vassert(addr);
     vassert(plugId >= 0);
-    vassert(plugId < PLUG_BUTT);
+    vassert(plugId < PLUGIN_BUTT);
 
     // need to think through the policy to get best dht node.
     // todo;

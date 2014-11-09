@@ -85,7 +85,7 @@ int _vhost_plug(struct vhost* host, int pluginId)
 
     vassert(host);
     vassert(pluginId >= 0);
-    vassert(pluginId < PLUG_BUTT);
+    vassert(pluginId < PLUGIN_BUTT);
 
     node->ops->get_route(node, &route);
     ret = route->plugin_ops->plug(route, pluginId);
@@ -102,7 +102,7 @@ int _vhost_unplug(struct vhost* host, int pluginId)
 
     vassert(host);
     vassert(pluginId >= 0);
-    vassert(pluginId < PLUG_BUTT);
+    vassert(pluginId < PLUGIN_BUTT);
 
     node->ops->get_route(node, &route);
     ret = route->plugin_ops->unplug(route, pluginId);

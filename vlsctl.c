@@ -129,7 +129,7 @@ int _aux_rt_relay_up(void** argv)
     int ret = 0;
     vassert(host);
 
-    ret =  host->ops->plug(host, PLUG_RELAY);
+    ret =  host->ops->plug(host, PLUGIN_RELAY);
     retE((ret < 0));
     vlogI(printf("relay up"));
     return 0;
@@ -142,7 +142,7 @@ int _aux_rt_relay_down(void** argv)
     int ret = 0;
     vassert(host);
 
-    ret = host->ops->unplug(host, PLUG_RELAY);
+    ret = host->ops->unplug(host, PLUGIN_RELAY);
     retE((ret < 0));
     vlogI(printf("relay down"));
     return 0;
@@ -155,7 +155,7 @@ int _aux_rt_stun_up(void** argv)
     int ret = 0;
     vassert(host);
 
-    ret = host->ops->plug(host, PLUG_STUN);
+    ret = host->ops->plug(host, PLUGIN_STUN);
     retE((ret < 0));
     vlogI(printf("stun up"));
     return 0;
@@ -168,7 +168,7 @@ int _aux_rt_stun_down(void** argv)
     int ret = 0;
     vassert(host);
 
-    ret = host->ops->unplug(host, PLUG_STUN);
+    ret = host->ops->unplug(host, PLUGIN_STUN);
     retE((ret < 0));
     vlogI(printf("stun down"));
     return 0;
@@ -182,7 +182,7 @@ int _aux_rt_vpn_up(void** argv)
     int ret = 0;
     vassert(host);
 
-    ret = host->ops->plug(host, PLUG_VPN);
+    ret = host->ops->plug(host, PLUGIN_VPN);
     retE((ret < 0));
     vlogI(printf("vpn up"));
     return 0;
@@ -195,7 +195,7 @@ int _aux_rt_vpn_down(void** argv)
     int ret = 0;
     vassert(host);
 
-    ret = host->ops->unplug(host, PLUG_VPN);
+    ret = host->ops->unplug(host, PLUGIN_VPN);
     retE((ret < 0));
     vlogI(printf("vpn down"));
     return 0;

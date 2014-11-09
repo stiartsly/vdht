@@ -3,14 +3,14 @@
 
 static
 struct vplugin_desc plug_desc[] = {
-    {PLUG_RELAY, "relay"      },
-    {PLUG_STUN,  "stun"       },
-    {PLUG_VPN,   "vpn"        },
-    {PLUG_DDNS,  "ddns"       },
-    {PLUG_MROUTE,"multi route"},
-    {PLUG_DHASH, "data hash"  },
-    {PLUG_APP,   "app"        },
-    {PLUG_BUTT,  0            }
+    {PLUGIN_RELAY, "relay"      },
+    {PLUGIN_STUN,  "stun"       },
+    {PLUGIN_VPN,   "vpn"        },
+    {PLUGIN_DDNS,  "ddns"       },
+    {PLUGIN_MROUTE,"multi route"},
+    {PLUGIN_DHASH, "data hash"  },
+    {PLUGIN_APP,   "app"        },
+    {PLUGIN_BUTT,  0            }
 };
 
 /*
@@ -42,7 +42,7 @@ void vplugin_req_init(struct vplugin_req* prq, int plugId, get_addr_cb_t cb, voi
 {
     vassert(prq);
     vassert(plugId >= 0);
-    vassert(plugId < PLUG_BUTT);
+    vassert(plugId < PLUGIN_BUTT);
     vassert(cb);
 
     vlist_init(&prq->list);
@@ -160,7 +160,7 @@ int _vpluger_c_req(struct vpluger* pluger, int plugId, get_addr_cb_t cb, void* c
     vassert(cb);
 
     retE((plugId < 0));
-    retE((plugId >= PLUG_BUTT));
+    retE((plugId >= PLUGIN_BUTT));
 
     ret = pluger->route->plugin_ops->get(pluger->route, plugId, &dest);
     retE((ret < 0));
@@ -208,7 +208,7 @@ int _vpluger_c_rsp(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
     vassert(addr);
 
     retE((plugId < 0));
-    retE((plugId >= PLUG_BUTT));
+    retE((plugId >= PLUGIN_BUTT));
 
     vlock_enter(&pluger->prq_lock);
     __vlist_for_each(node, &pluger->prqs) {
@@ -303,7 +303,7 @@ void vplugin_item_init(struct vplugin_item* item, int plugId, struct sockaddr_in
 
     vassert(item);
     vassert(plugId >= 0);
-    vassert(plugId < PLUG_BUTT);
+    vassert(plugId < PLUGIN_BUTT);
     vassert(addr);
 
     vlist_init(&item->list);
@@ -337,7 +337,7 @@ int _vpluger_s_plug(struct vpluger* pluger, int plugId, struct sockaddr_in* addr
     vassert(addr);
 
     retE((plugId < 0));
-    retE((plugId >= PLUG_BUTT));
+    retE((plugId >= PLUGIN_BUTT));
 
     vlock_enter(&pluger->plug_lock);
     __vlist_for_each(node, &pluger->plugs) {
@@ -377,7 +377,7 @@ int _vpluger_s_unplug(struct vpluger* pluger, int plugId, struct sockaddr_in* ad
     vassert(addr);
 
     retE((plugId < 0));
-    retE((plugId >= PLUG_BUTT));
+    retE((plugId >= PLUGIN_BUTT));
 
     vlock_enter(&pluger->plug_lock);
     __vlist_for_each(node, &pluger->plugs) {
@@ -410,7 +410,7 @@ int _vpluger_s_get(struct vpluger* pluger, int plugId, struct sockaddr_in* addr)
     vassert(addr);
 
     retE((plugId < 0));
-    retE((plugId >= PLUG_BUTT));
+    retE((plugId >= PLUGIN_BUTT));
 
     vlock_enter(&pluger->plug_lock);
     __vlist_for_each(node, &pluger->plugs) {

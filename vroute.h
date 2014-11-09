@@ -36,14 +36,14 @@ enum {
 
 #define PROP_PLUG_MASK ((uint32_t)0x003f0000)
 enum {
-    PLUG_RELAY,
-    PLUG_STUN,
-    PLUG_VPN,
-    PLUG_DDNS,
-    PLUG_MROUTE,
-    PLUG_DHASH,
-    PLUG_APP,
-    PLUG_BUTT
+    PLUGIN_RELAY,
+    PLUGIN_STUN,
+    PLUGIN_VPN,
+    PLUGIN_DDNS,
+    PLUGIN_MROUTE,
+    PLUGIN_DHASH,
+    PLUGIN_APP,
+    PLUGIN_BUTT
 };
 
 /*
