@@ -165,7 +165,7 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
         data = unoff_addr(um->data, sz);
         set_uint32(data, DHT_MAGIC);
 
-        ms = vmsg_sys_alloc();
+        ms = vmsg_sys_alloc(0);
         vlog((!ms), elog_vmsg_sys_alloc);
         retE((!ms));
         vmsg_sys_init(ms, um->addr, um->len + sz, data);

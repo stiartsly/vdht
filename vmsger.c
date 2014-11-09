@@ -5,15 +5,25 @@
  * auxiliary funcs for vmsg_sys.
  */
 static MEM_AUX_INIT(ms_cache, sizeof(struct vmsg_sys), 8);
-struct vmsg_sys* vmsg_sys_alloc(void)
+struct vmsg_sys* vmsg_sys_alloc(int sz)
 {
     struct vmsg_sys* ms = NULL;
+    void* buf = NULL;
+
+    vassert(sz >= 0);
 
     ms = (struct vmsg_sys*)vmem_aux_alloc(&ms_cache);
     vlog((!ms), elog_vmem_aux_alloc);
     retE_p((!ms));
-    ms->data = NULL;
-    ms->len  = 0;
+
+    if (sz > 0) {
+        buf = malloc(sz);
+        vlog((!buf), elog_malloc);
+        ret1E_p((!buf), vmem_aux_free(&ms_cache, ms));
+    }
+    ms->data = buf;
+    ms->len  = sz;
+
     return ms;
 }
 

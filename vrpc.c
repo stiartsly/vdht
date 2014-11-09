@@ -27,12 +27,16 @@ void* _vrpc_unix_open(struct vsockaddr* addr)
 
     fd = socket(AF_UNIX, SOCK_DGRAM, 0);
     vlog((fd < 0), elog_socket);
-    retE_p((fd < 0));
+    ret1E_p((fd < 0), free(unx));
 
     unlink(saddr->sun_path);
     ret = bind(fd, (struct sockaddr*)saddr, sizeof(*saddr));
     vlog((ret < 0), elog_bind);
-    retE_p((ret < 0));
+    if (ret < 0) {
+        free(unx);
+        close(fd);
+        return NULL;
+    }
 
     unx->sock_fd = fd;
     return unx;
@@ -101,6 +105,7 @@ void _vrpc_unix_close(void* impl)
      if (unx->sock_fd > 0) {
         close(unx->sock_fd);
     }
+    free(unx);
     return ;
 }
 
@@ -164,11 +169,6 @@ struct vudp {
 static
 void* _vrpc_udp_open(struct vsockaddr* addr)
 {
-    void _reclaim(struct vudp* udp, int fd)
-    {
-        vcall_cond((fd >= 0), close(fd));
-        vcall_cond((!udp)   , free(udp));
-    }
     struct sockaddr_in* saddr = (struct sockaddr_in*)&addr->vsin_addr;
     struct vudp* udp = NULL;
     int flags = 0;
@@ -185,21 +185,20 @@ void* _vrpc_udp_open(struct vsockaddr* addr)
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     vlog((fd < 0), elog_socket);
-    ret1E_p((fd < 0), _reclaim(udp, fd));
+    ret1E_p((fd < 0), free(udp));
 
-    ret = bind(fd, (struct sockaddr*)saddr, sizeof(*saddr));
+    ret += bind(fd, (struct sockaddr*)saddr, sizeof(*saddr));
     vlog((ret < 0), elog_bind);
-    ret1E_p((ret < 0), _reclaim(udp,fd));
-
     flags = fcntl(fd, F_GETFL, 0);
-    ret = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    ret += fcntl(fd, F_SETFL, flags | O_NONBLOCK);
     vlog((ret < 0), elog_fcntl);
-    ret1E_p((ret < 0), _reclaim(udp, fd));
-
     ret = setsockopt(fd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
     vlog((ret < 0), elog_setsockopt);
-    ret1E_p((ret < 0), _reclaim(udp, fd));
-
+    if (ret < 0) {
+        free(udp);
+        close(fd);
+        return NULL;
+    }
     udp->sock_fd = fd;
     return udp;
 }
@@ -270,6 +269,7 @@ void _vrpc_udp_close(void* impl)
     if (udp->sock_fd > 0) {
         close(udp->sock_fd);
     }
+    free(udp);
     return ;
 }
 
@@ -447,21 +447,11 @@ int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct vsockaddr
     rpc->ops  = &rpc_ops;
     rpc->base_ops = rpc_base_ops[mode];
 
-    {
-        void* buf = NULL;
-
-        buf = malloc(8*BUF_SZ);
-        vlog((!buf), elog_malloc);
-        retE((!buf));
-
-        sm = vmsg_sys_alloc();
-        vlog((!sm), elog_vmsg_sys_alloc);
-        ret1E((!sm), free(buf));
-
-        vmsg_sys_init(sm, 0, 8*BUF_SZ, buf);
-    }
-
+    sm = vmsg_sys_alloc(8*BUF_SZ);
+    vlog((!sm), elog_vmsg_sys_alloc);
+    retE((!sm));
     vlist_init(&sm->list);
+
     rpc->rcvm = sm;
     rpc->sndm = NULL;
 
