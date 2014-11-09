@@ -4,7 +4,6 @@
 /* message interface for local service controller.*/
 #define IS_LSCTL_MAGIC(val) (val == (uint32_t)0x7fec45fa)
 
-
 /* try to start host.
  *----------------------------
  * lsctl_id -->|
@@ -35,6 +34,201 @@
  * VLSCTL_RELAY|
  *----------------------------
  */
+
+static
+int _aux_rt_dht_up(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    return host->ops->start(host);
+}
+
+static
+int _aux_rt_dht_down(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    return host->ops->stop(host);
+}
+
+static
+int _aux_rt_dht_exit(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    return host->ops->req_quit(host);
+}
+
+static
+int _aux_rt_add_node(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    varg_decl(argv, 1, void*, addr);
+    int sz = *(int*)argv[2];
+    struct sockaddr_in sin;
+    void* data = NULL;
+    char ip[64];
+    int  port = 0;
+    int  ret  = 0;
+
+    data = offset_addr(addr, sz);
+    port = get_int32(data);
+    sz  += sizeof(long);
+
+    data = offset_addr(addr, sz);
+    memset(ip, 0, 64);
+    strcpy(ip, data);
+    sz  += strlen(ip) + 1;
+
+    ret = vsockaddr_convert(ip, port, &sin);
+    retE((ret < 0));
+    ret = host->ops->join(host, &sin);
+    retE((ret < 0));
+
+    vlogI(printf("[vlsctl] host joined a node (%s:%d)", ip, port));
+    return sz;
+}
+
+static
+int _aux_rt_del_node(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    varg_decl(argv, 1, void*, addr);
+    int sz = *(int*)argv[2];
+    struct sockaddr_in sin;
+    void* data = NULL;
+    char ip[64];
+    int  port = 0;
+    int  ret  = 0;
+
+    data = offset_addr(addr, sz);
+    port = get_int32(data);
+    sz  += sizeof(long);
+
+    data = offset_addr(addr, sz);
+    memset(ip, 0, 64);
+    strcpy(ip, data);
+    sz  += strlen(ip) + 1;
+
+    ret = vsockaddr_convert(ip, port, &sin);
+    retE((ret < 0));
+    ret = host->ops->drop(host, &sin);
+    retE((ret < 0));
+
+    vlogI(printf("[vlsctl] host dropped a node (%s:%d)", ip, port));
+    return sz;
+}
+
+static
+int _aux_rt_relay_up(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    //todo;
+    vlogI(printf("[vlsctl] relay up"));
+    return 0;
+}
+
+static
+int _aux_rt_relay_down(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    //todo;
+    vlogI(printf("[vlsctl] relay down"));
+    return 0;
+}
+
+static
+int _aux_rt_stun_up(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    //todo;
+    vlogI(printf("[vlsctl] stun up"));
+    return 0;
+}
+
+static
+int _aux_rt_stun_down(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    //todo;
+    vlogI(printf("[vlsctl] stun down"));
+    return 0;
+}
+
+
+static
+int _aux_rt_vpn_up(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    //todo;
+    vlogI(printf("[vlsctl] vpn up"));
+    return 0;
+}
+
+static
+int _aux_rt_vpn_down(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    //todo;
+    vlogI(printf("[vlsctl] vpn down"));
+    return 0;
+}
+
+static
+int _aux_rt_log_stdout(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    vlogI(printf("[vlsctl] request to dump host"));
+    host->ops->dump(host);
+    return 0;
+}
+
+static
+int _aux_rt_cfg_stdout(void** argv)
+{
+    varg_decl(argv, 0, struct vhost*, host);
+    vassert(host);
+
+    vlogI(printf("[vlsctl] request to dump config"));
+    host->cfg->ops->dump(host->cfg);
+    return 0;
+}
+
+static
+int (*lsctl_rt_t[])(void**) = {
+    _aux_rt_dht_up,
+    _aux_rt_dht_down,
+    _aux_rt_dht_exit,
+    _aux_rt_add_node,
+    _aux_rt_del_node,
+    _aux_rt_relay_up,
+    _aux_rt_relay_down,
+    _aux_rt_stun_up,
+    _aux_rt_stun_down,
+    _aux_rt_vpn_up,
+    _aux_rt_vpn_down,
+    _aux_rt_log_stdout,
+    _aux_rt_cfg_stdout,
+    NULL
+};
+
 static
 int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
 {
@@ -52,104 +246,26 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
     nitems = get_int32(um->data);
     sz += sizeof(long);
     vlogI(printf("[lsctl] received lsctl request (%d)", nitems));
-    while(--nitems >= 0) {
+
+    while(nitems-- > 0) {
+        void* argv[3];
+
         data = offset_addr(um->data, sz);
         lsctl_id = get_uint32(data);
         sz += sizeof(uint32_t);
 
-        switch (lsctl_id) {
-        case VLSCTL_DHT_UP:
-            ret = host->ops->start(host);
-            retE((ret < 0));
-            break;
+        argv[0] = host;
+        argv[1] = um->data;
+        argv[2] = &sz;
 
-        case VLSCTL_DHT_DOWN:
-            ret = host->ops->stop(host);
-            retE((ret < 0));
-            break;
+        retE((lsctl_id < 0));
+        retE((lsctl_id >= VLSCTL_BUTT));
 
-        case VLSCTL_DHT_EXIT:
-            ret = host->ops->req_quit(host);
-            retE((ret < 0));
-            break;
-
-        case VLSCTL_ADD_NODE: {
-            struct sockaddr_in sin;
-            char ip[64];
-            int  port = 0;
-            void* data = NULL;
-
-            data = offset_addr(um->data, sz);
-            port = get_int32(data);
-            sz  += sizeof(long);
-            data = offset_addr(um->data, sz);
-            memset(ip, 0, 64);
-            strcpy(ip, data);
-            ret  = vsockaddr_convert(ip, port, &sin);
-            retE((ret < 0));
-            ret  = host->ops->join(host, &sin);
-            retE((ret < 0));
-            sz  += strlen(ip) + 1;
-            vlogI(printf("[vlsctl]host join a node(%s:%d)", ip, port));
-            break;
-        }
-        case VLSCTL_DEL_NODE: {
-            struct sockaddr_in sin;
-            char ip[64];
-            int  port = 0;
-            void* data = NULL;
-
-            data = offset_addr(um->data, sz);
-            port = get_int32(data);
-            sz  += sizeof(long);
-            data = offset_addr(um->data, sz);
-            memset(ip, 0, 64);
-            strcpy(ip, data);
-            ret  = vsockaddr_convert(ip, port, &sin);
-            retE((ret < 0));
-            ret  = host->ops->drop(host, &sin);
-            retE((ret < 0));
-            sz  += strlen(ip) + 1;
-            vlogI(printf("[vlsctl]host drop a node(%s:%d)", ip, port));
-            break;
-        }
-        case VLSCTL_RELAY_UP:
-            vlogI(printf("relay up"));
-            //todo;
-            break;
-        case VLSCTL_RELAY_DOWN:
-            vlogI(printf("relay down"));
-            //todo;
-            break;
-        case VLSCTL_STUN_UP:
-            vlogI(printf("stun up"));
-            //todo;
-            break;
-        case VLSCTL_STUN_DOWN:
-            vlogI(printf("stun down"));
-            //todo;
-            break;
-        case VLSCTL_VPN_UP:
-            vlogI(printf("vpn up"));
-            //todo;
-            break;
-        case VLSCTL_VPN_DOWN:
-            vlogI(printf("vpn down"));
-            //todo;
-            break;
-        case VLSCTL_LOGOUT:
-            vlogI(printf("[vlsctl] request to dump host"));
-            host->ops->dump(host);
-            break;
-        case VLSCTL_CFGOUT:
-            vlogI(printf("[vlsctl] request to dump config"));
-            host->cfg->ops->dump(host->cfg);
-            break;
-        default:
-            retE((1));
-            break;
-        }
+        ret = lsctl_rt_t[lsctl_id](argv);
+        retE((ret < 0));
+        sz += ret;
     }
+
     return 0;
 }
 

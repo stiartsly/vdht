@@ -7,7 +7,7 @@
 #include "vsys.h"
 
 #define MAX_SND_PERIOD 600
-#define MAX_RCV_PERIOD 20
+#define MAX_RCV_PERIOD 1500
 
 #define NBUCKETS    ((int)160)
 

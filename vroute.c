@@ -58,6 +58,16 @@ struct vpeer_flags_desc peer_flags_desc[] = {
     {PROP_UNREACHABLE, 0}
 };
 
+static uint32_t peer_plugin_prop[] = {
+    PROP_RELAY,
+    PROP_STUN,
+    PROP_VPN,
+    PROP_DDNS,
+    PROP_MROUTE,
+    PROP_DHASH,
+    PROP_APP,
+    PROP_PLUG_MASK
+};
 
 /*
  * for vpeer
@@ -635,17 +645,6 @@ struct vroute_ops route_ops = {
 /*
  *
  */
-static uint32_t to_prop[] = {
-    PROP_RELAY,
-    PROP_STUN,
-    PROP_VPN,
-    PROP_DDNS,
-    PROP_MROUTE,
-    PROP_DHASH,
-    PROP_APP,
-    PROP_PLUG_MASK
-};
-
 static
 int _vroute_plug(struct vroute* route, int plugId)
 {
@@ -653,14 +652,14 @@ int _vroute_plug(struct vroute* route, int plugId)
     vassert(plugId >= 0);
     vassert(plugId < PLUG_BUTT);
 
-    route->flags |= to_prop[plugId];
+    route->flags |= peer_plugin_prop[plugId];
     return 0;
 }
 
 static
 int _vroute_unplug(struct vroute* route, int plugId)
 {
-    uint32_t flags = to_prop[plugId];
+    uint32_t flags = peer_plugin_prop[plugId];
     vassert(route);
     vassert(plugId >= 0);
     vassert(plugId < PLUG_BUTT);
