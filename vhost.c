@@ -260,7 +260,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
 
     ret = vhostaddr_get_first(host->myname, HOST_SZ);
     vlog((ret < 0), elog_vhostaddr_get_first);
-    retE_p((ret < 0));
+    ret1E_p((ret < 0), free(host));
     ret = cfg->ops->get_int(cfg, "dht.port", &host->myport);
     if (ret < 0) {
         host->myport = DEF_DHT_PORT;
@@ -268,14 +268,14 @@ struct vhost* vhost_create(struct vconfig* cfg)
 
     ret = vsockaddr_convert(host->myname, host->myport, &addr.vsin_addr);
     vlog((ret < 0), elog_vsockaddr_convert);
-    retE_p((ret < 0));
+    ret1E_p((ret < 0), free(host));
 
     host->to_quit = 0;
     host->ops     = &host_ops;
     host->cfg     = cfg;
 
     ret = _aux_get_tick_tmo(cfg);
-    retE_p((ret < 0));
+    ret1E_p((ret < 0), free(host));
     host->tick_tmo = ret;
 
     ret += vmsger_init (&host->msger);
@@ -291,6 +291,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
         vticker_deinit(&host->ticker);
         vrpc_deinit   (&host->rpc);
         vmsger_deinit (&host->msger);
+        free(host);
         return NULL;
     }
 
