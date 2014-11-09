@@ -126,10 +126,12 @@ static
 int _aux_rt_relay_up(void** argv)
 {
     varg_decl(argv, 0, struct vhost*, host);
+    int ret = 0;
     vassert(host);
 
-    //todo;
-    vlogI(printf("[vlsctl] relay up"));
+    ret =  host->ops->plug(host, PLUG_RELAY);
+    retE((ret < 0));
+    vlogI(printf("relay up"));
     return 0;
 }
 
@@ -137,10 +139,12 @@ static
 int _aux_rt_relay_down(void** argv)
 {
     varg_decl(argv, 0, struct vhost*, host);
+    int ret = 0;
     vassert(host);
 
-    //todo;
-    vlogI(printf("[vlsctl] relay down"));
+    ret = host->ops->unplug(host, PLUG_RELAY);
+    retE((ret < 0));
+    vlogI(printf("relay down"));
     return 0;
 }
 
@@ -148,10 +152,12 @@ static
 int _aux_rt_stun_up(void** argv)
 {
     varg_decl(argv, 0, struct vhost*, host);
+    int ret = 0;
     vassert(host);
 
-    //todo;
-    vlogI(printf("[vlsctl] stun up"));
+    ret = host->ops->plug(host, PLUG_STUN);
+    retE((ret < 0));
+    vlogI(printf("stun up"));
     return 0;
 }
 
@@ -159,10 +165,12 @@ static
 int _aux_rt_stun_down(void** argv)
 {
     varg_decl(argv, 0, struct vhost*, host);
+    int ret = 0;
     vassert(host);
 
-    //todo;
-    vlogI(printf("[vlsctl] stun down"));
+    ret = host->ops->unplug(host, PLUG_STUN);
+    retE((ret < 0));
+    vlogI(printf("stun down"));
     return 0;
 }
 
@@ -171,10 +179,12 @@ static
 int _aux_rt_vpn_up(void** argv)
 {
     varg_decl(argv, 0, struct vhost*, host);
+    int ret = 0;
     vassert(host);
 
-    //todo;
-    vlogI(printf("[vlsctl] vpn up"));
+    ret = host->ops->plug(host, PLUG_VPN);
+    retE((ret < 0));
+    vlogI(printf("vpn up"));
     return 0;
 }
 
@@ -182,10 +192,12 @@ static
 int _aux_rt_vpn_down(void** argv)
 {
     varg_decl(argv, 0, struct vhost*, host);
+    int ret = 0;
     vassert(host);
 
-    //todo;
-    vlogI(printf("[vlsctl] vpn down"));
+    ret = host->ops->unplug(host, PLUG_VPN);
+    retE((ret < 0));
+    vlogI(printf("vpn down"));
     return 0;
 }
 

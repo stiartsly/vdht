@@ -154,6 +154,19 @@ int _vnode_stabilize(struct vnode* vnd)
  * @vnd:
  */
 static
+int _vnode_get_route(struct vnode* vnd, struct vroute** route)
+{
+    vassert(vnd);
+    vassert(route);
+
+    *route = &vnd->route;
+    return 0;
+}
+
+/*
+ * @vnd:
+ */
+static
 int _vnode_dump(struct vnode* vnd)
 {
     vassert(vnd);
@@ -162,7 +175,6 @@ int _vnode_dump(struct vnode* vnd)
     vdump(printf("state:%s", node_mode_desc[vnd->mode]));
     vnd->route.ops->dump(&vnd->route);
     vdump(printf("<- NODE"));
-    //todo;
 
     return 0;
 }
@@ -174,6 +186,7 @@ struct vnode_ops node_ops = {
     .join      = _vnode_join,
     .drop      = _vnode_drop,
     .stabilize = _vnode_stabilize,
+    .get_route = _vnode_get_route,
     .dump      = _vnode_dump
 //    .get_peers = _vnode_get_peers
 };

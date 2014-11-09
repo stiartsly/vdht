@@ -77,6 +77,40 @@ int _vhost_stabilize(struct vhost* host)
 }
 
 static
+int _vhost_plug(struct vhost* host, int pluginId)
+{
+    struct vnode*  node  = &host->node;
+    struct vroute* route = NULL;
+    int ret = 0;
+
+    vassert(host);
+    vassert(pluginId >= 0);
+    vassert(pluginId < PLUG_BUTT);
+
+    node->ops->get_route(node, &route);
+    ret = route->plugin_ops->plug(route, pluginId);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vhost_unplug(struct vhost* host, int pluginId)
+{
+    struct vnode*  node  = &host->node;
+    struct vroute* route = NULL;
+    int ret = 0;
+
+    vassert(host);
+    vassert(pluginId >= 0);
+    vassert(pluginId < PLUG_BUTT);
+
+    node->ops->get_route(node, &route);
+    ret = route->plugin_ops->unplug(route, pluginId);
+    retE((ret < 0));
+    return 0;
+}
+
+static
 int _vhost_dump(struct vhost* host)
 {
     vassert(host);
@@ -127,6 +161,8 @@ struct vhost_ops host_ops = {
     .join      = _vhost_join,
     .drop      = _vhost_drop,
     .stabilize = _vhost_stabilize,
+    .plug      = _vhost_plug,
+    .unplug    = _vhost_unplug,
     .loop      = _vhost_loop,
     .req_quit  = _vhost_req_quit,
     .dump      = _vhost_dump

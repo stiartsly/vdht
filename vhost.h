@@ -16,6 +16,8 @@ struct vhost_ops {
     int (*join)     (struct vhost*, struct sockaddr_in*);
     int (*drop)     (struct vhost*, struct sockaddr_in*);
     int (*stabilize)(struct vhost*);
+    int (*plug)     (struct vhost*, int);
+    int (*unplug)   (struct vhost*, int);
     int (*loop)     (struct vhost*);
     int (*req_quit) (struct vhost*);
     int (*dump)     (struct vhost*);

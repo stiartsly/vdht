@@ -28,6 +28,7 @@ struct vnode_ops {
     int (*join)     (struct vnode*, struct sockaddr_in*);
     int (*drop)     (struct vnode*, struct sockaddr_in*);
     int (*stabilize)(struct vnode*);
+    int (*get_route)(struct vnode*, struct vroute**);
     int (*dump)     (struct vnode*);
 //   int (*get_peers)(struct vnode*, vnodeHash*, vpeer_cb_t, void*);
 };
