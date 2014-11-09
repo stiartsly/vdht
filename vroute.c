@@ -3,9 +3,6 @@
 
 #define VPEER_TB ((const char*)"dht_peer")
 
-#define TDIFF(a, b)   ((int)(a-b))
-#define EXPIRED(a, b) (TDIFF(a, b) > MAX_RCV_PERIOD)
-
 #define MAX_CAPC ((int)8)
 #define vmin(a, b)   ((a < b) ? a: b)
 
@@ -18,6 +15,49 @@ struct vpeer{
     time_t    rcv_ts;
     int       ntries;
 };
+
+struct vpeer_flags_desc {
+    uint32_t  prop;
+    char*     desc;
+};
+
+static char* dht_id_desc[] = {
+    "ping",
+    "ping rsp",
+    "find_node",
+    "find_node rsp",
+    "get_peers",
+    "get_peers rsp",
+    "post_hash",
+    "post_hash_r",
+    "find_closest_nodes",
+    "find_closest_nodes rsp",
+    NULL,
+};
+
+static
+struct vpeer_flags_desc peer_flags_desc[] = {
+    {PROP_PING,                 "ping"                },
+    {PROP_PING_R,               "ping_r"              },
+    {PROP_FIND_NODE,            "find_node"           },
+    {PROP_FIND_NODE_R,          "find_node_r"         },
+    {PROP_GET_PEERS,            "get_peers"           },
+    {PROP_GET_PEERS_R,          "get_peers_r"         },
+    {PROP_POST_HASH,            "post_hash"           },
+    {PROP_POST_HASH_R,          "post_hash_r"         },
+    {PROP_FIND_CLOSEST_NODES,   "find_closest_nodes"  },
+    {PROP_FIND_CLOSEST_NODES_R, "find_closest_nodes_r"},
+    {PROP_VER,                  "same version"        },
+    {PROP_RELAY,                "relay"               },
+    {PROP_STUN,                 "stun"                },
+    {PROP_VPN,                  "vpn"                 },
+    {PROP_DDNS,                 "ddns"                },
+    {PROP_MROUTE,               "mroute"              },
+    {PROP_DHASH,                "dhash"               },
+    {PROP_APP,                  "apps"                },
+    {PROP_UNREACHABLE, 0}
+};
+
 
 /*
  * for vpeer
@@ -79,6 +119,7 @@ struct vpeer* _aux_get_worst(struct varray* peers, int flags)
         varg_decl(argv, 2, time_t*, now    );
         varg_decl(argv, 3, struct vpeer**, target);
         type_decl(struct vpeer*, peer, item);
+        int tdiff = *now - peer->rcv_ts;
 
         vassert(max_period);
         vassert(min_flags);
@@ -86,9 +127,9 @@ struct vpeer* _aux_get_worst(struct varray* peers, int flags)
         vassert(*target);
         vassert(peer);
 
-        if (TDIFF(*now, peer->rcv_ts) > *max_period) {
+        if (tdiff > *max_period) {
             *target = peer;
-            *max_period = TDIFF(*now, peer->rcv_ts);
+            *max_period = tdiff;
         }
         if (peer->flags < *min_flags) {
             *target = peer;
@@ -347,7 +388,7 @@ int _vroute_clear(struct vroute* route)
 static
 int _aux_dump_cb(void* item, void* cookie)
 {
-    type_decl(struct vpeer*,  peer,  item  );
+    struct vpeer* peer = (struct vpeer*)item;
     char buf[64];
     int  port = 0;
     vassert(peer);
@@ -356,9 +397,24 @@ int _aux_dump_cb(void* item, void* cookie)
     vnodeId_dump(&peer->extId.id);
     vsockaddr_unconvert(&peer->extId.addr, buf, 64, &port);
     vdump(printf("addr:%s:%d", buf,port));
-    vdump(printf("<- PEER"));
+    {
+        struct vpeer_flags_desc* desc = peer_flags_desc;
+        static char buf[BUF_SZ];
 
-    //todo;
+        memset(buf, 0, BUF_SZ);
+        while(desc->desc) {
+            if (desc->prop & peer->flags) {
+                strcat(buf, desc->desc);
+                strcat(buf, " ");
+            }
+            desc++;
+        }
+        vdump(printf("flags: %s", buf));
+    }
+    vdump(printf("sent timestamp: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet"));
+    vdump(printf("rcv  timestamp: %s",  ctime(&peer->rcv_ts)));
+    vdump(printf("tried send times:%d", peer->ntries));
+    vdump(printf("<- PEER"));
     return 0;
 }
 
@@ -405,8 +461,7 @@ int _aux_tick_cb(void* item, void* cookie)
         return 0;
     }
 
-    if ((!peer->snd_ts)||
-        (EXPIRED(*now, peer->rcv_ts))) {
+    if ((!peer->snd_ts)|| (*now - peer->rcv_ts) > MAX_RCV_PERIOD) {
         route->dht_ops->ping(route, &peer->extId);
         peer->snd_ts = *now;
         peer->ntries++;
@@ -433,7 +488,7 @@ int _vroute_tick(struct vroute* route)
         peers = &route->bucket[i].peers;
         varray_iterate(peers, _aux_tick_cb, argv);
 
-        if (!EXPIRED(route->bucket[i].ts, now)) {
+        if ((now - route->bucket[i].ts) > MAX_RCV_PERIOD) {
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
@@ -1194,19 +1249,6 @@ struct vroute_cb_ops route_cb_ops = {
 };
 
 static
-char* dht_id_desc[] = {
-    "ping",
-    "ping rsp",
-    "find_node",
-    "find_node rsp",
-    "get_peers",
-    "get_peers rsp",
-    "find_closest_nodes",
-    "find_closest_nodes rsp",
-    NULL,
-};
-
-static
 int _aux_dht_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
     struct vroute* route = (struct vroute*)cookie;
@@ -1223,7 +1265,7 @@ int _aux_dht_msg_cb(void* cookie, struct vmsg_usr* mu)
     ret = dec_ops->dec(mu->data, mu->len, &ctxt);
     retE((ret < 0));
     retE((ret >= VDHT_UNKNOWN));
-    vlogI(printf("received dht '%s'", dht_id_desc[ret]));
+    vlogI(printf("received dht message(%s)", dht_id_desc[ret]));
 
     switch(ret) {
     case VDHT_PING: {
