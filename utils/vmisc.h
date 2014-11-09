@@ -5,7 +5,7 @@
 /*
  * for host address.
  */
-int vhostaddr_get_fist(char*, int);
+int vhostaddr_get_first(char*, int);
 int vhostaddr_get_next(char*, int);
 
 /*

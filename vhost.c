@@ -246,32 +246,31 @@ int _aux_get_tick_tmo(struct vconfig* cfg)
     return (ret * tms);
 }
 
-struct vhost* vhost_create(struct vconfig* cfg, const char* hostname)
+struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
     struct vsockaddr addr;
-    int port = 0;
     int ret  = 0;
-
     vassert(cfg);
-    vassert(hostname);
-
-    ret = cfg->ops->get_int(cfg, "dht.port", &port);
-    if (ret < 0) {
-        port = DEF_DHT_PORT;
-    }
-    ret = vsockaddr_convert(hostname, port, &addr.vsin_addr);
-    vlog((ret < 0), elog_vsockaddr_convert);
-    retE_p((ret < 0));
 
     host = (struct vhost*)malloc(sizeof(struct vhost));
     vlog((!host), elog_malloc);
     retE_p((!host));
     memset(host, 0, sizeof(*host));
 
-    strcpy(host->myname, hostname);
+    ret = vhostaddr_get_first(host->myname, HOST_SZ);
+    vlog((ret < 0), elog_vhostaddr_get_first);
+    retE_p((ret < 0));
+    ret = cfg->ops->get_int(cfg, "dht.port", &host->myport);
+    if (ret < 0) {
+        host->myport = DEF_DHT_PORT;
+    }
+
+    ret = vsockaddr_convert(host->myname, host->myport, &addr.vsin_addr);
+    vlog((ret < 0), elog_vsockaddr_convert);
+    retE_p((ret < 0));
+
     host->to_quit = 0;
-    host->myport  = port;
     host->ops     = &host_ops;
     host->cfg     = cfg;
 

@@ -39,7 +39,7 @@ struct vhost {
     struct vhost_ops* ops;
 };
 
-struct vhost* vhost_create(struct vconfig*, const char*);
+struct vhost* vhost_create(struct vconfig*);
 void vhost_destroy(struct vhost*);
 
 #endif
