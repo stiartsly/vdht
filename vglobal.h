@@ -104,6 +104,9 @@
 #define pthread_mutex_lock
 #define pthread_mutex_unlock
 #define pthread_mutex_destroy
+#define pthread_mutexattr_init
+#define pthread_mutexattr_settype
+#define pthread_mutexattr_destroy
 #define pthread_cond_init
 #define pthread_cond_wait
 #define pthread_cond_signal
