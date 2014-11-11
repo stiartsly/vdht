@@ -183,8 +183,15 @@ void vnodeAddr_copy (vnodeAddr* a, vnodeAddr* b)
 
 void vnodeAddr_dump (vnodeAddr* addr)
 {
+    char ip[64];
+    int port = 0;
+    int ret = 0;
+
     vassert(addr);
-    //todo;
+    vnodeId_dump(&addr->id);
+    ret = vsockaddr_unconvert(&addr->addr, ip, 64, &port);
+    retE_v((ret < 0));
+    printf("##Addr: %s:%d\n", ip, port);
     return ;
 }
 
@@ -229,30 +236,53 @@ int vnodeVer_equal(vnodeVer* ver_a, vnodeVer* ver_b)
 
 int vnodeVer_strlize(vnodeVer* ver, char* buf, int len)
 {
+    int offset = 0;
+    int ret = 0;
     int i = 0;
     vassert(ver);
     vassert(buf);
     vassert(len > 0);
 
-    retE((len + 1 < VNODE_ID_LEN));
-    for (; i < VNODE_ID_LEN; i++) {
-        buf[i] = ver->data[i] + '0';
+    ret = snprintf(buf, len - ret, "%d", ver->data[i]);
+    retE((ret < 0));
+    offset += ret;
+    i++;
+
+    for (; i < VNODE_ID_INTLEN; i++) {
+        ret = snprintf(buf + offset, len - offset, ".");
+        retE((ret < 0));
+        offset += ret;
+
+        ret = snprintf(buf + offset, len - offset, "%d", ver->data[i]);
+        retE((ret < 0));
+        offset += ret;
     }
-    buf[i] = '\0';
     return 0;
 }
 
 int vnodeVer_unstrlize(const char* ver_str, vnodeVer* ver)
 {
+    char* s = (char*)ver_str;
+    int32_t ret = 0;
     int i = 0;
     vassert(ver_str);
     vassert(ver);
 
-    retE((strlen(ver_str) != VNODE_ID_LEN));
-    for(; i < VNODE_ID_LEN; i++) {
-        retE((ver_str[i] < '0'));
-        retE((ver_str[i] > '9'));
-        ver->data[i] = ver_str[i] - '0';
+    errno = 0;
+    ret = strtol(s, &s, 10);
+    retE((errno));
+    ver->data[i] = ret;
+    i++;
+
+    while(*s != '\0') {
+        retE((*s != '.'));
+        s++;
+
+        errno = 0;
+        ret = strtol(s, &s, 10);
+        retE((errno));
+        ver->data[i] = ret;
+        i++;
     }
     return 0;
 }
