@@ -343,8 +343,17 @@ struct be_node* _aux_be_create_addr(struct sockaddr_in* addr)
 static
 struct be_node* _aux_be_create_ver(vnodeVer* ver)
 {
-    //todo;
-    return NULL;
+    struct be_node* node = NULL;
+    char buf[64];
+    int ret = 0;
+    vassert(ver);
+
+    ret = vnodeVer_strlize(ver, buf, 64);
+    retE_p((ret < 0));
+
+    node = _aux_be_create_str(buf);
+    retE_p((!node));
+    return node;
 }
 
 static
