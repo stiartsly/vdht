@@ -498,10 +498,14 @@ int _vroute_tick(struct vroute* route)
         peers = &route->bucket[i].peers;
         varray_iterate(peers, _aux_tick_cb, argv);
 
+        if (!varray_size(peers)) {
+            continue;
+        }
         if ((now - route->bucket[i].ts) < MAX_RCV_PERIOD) {
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
+        vassert(peer);
         route->dht_ops->find_closest_nodes(route, &peer->extId, &route->ownId.id);
     }
     vlock_leave(&route->lock);

@@ -365,6 +365,7 @@ int _vrpc_rcv(struct vrpc* rpc)
     vassert(rpc->impl);
     vassert(rpc->msger);
 
+    rpc->rcvm->len = 8*BUF_SZ; // refresh.
     ret = rpc->base_ops->rcvfrom(rpc->impl, rpc->rcvm);
     retE((ret < 0));
     rpc->rcv_sz += ret;
