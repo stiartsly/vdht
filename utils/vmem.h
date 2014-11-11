@@ -4,7 +4,7 @@
 #define VMEM_FIRST_CAPC ((int)32)
 
 struct vmem_chunk {
-    unsigned long magic;
+    uint32_t magic;
     int  taken;
     char obj[4];
 };

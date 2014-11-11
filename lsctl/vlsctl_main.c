@@ -312,86 +312,86 @@ int main(int argc, char** argv)
     *(uint32_t*)buf = 0x7fec45fa; //lsctl magic;
     buf += sizeof(uint32_t);
 
-    *(long*)buf = 0x45; //VMSG_LSCTL;
-    buf += sizeof(long);
+    *(int32_t*)buf = 0x45; //VMSG_LSCTL;
+    buf += sizeof(int32_t);
 
-    addr = (long*)buf;
-    buf += sizeof(long);
+    addr = (int32_t*)buf;
+    buf += sizeof(int32_t);
     if (logstdout) {
-        *(long*)buf = VLSCTL_LOGOUT;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_LOGOUT;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (cfgstdout) {
-        *(long*) buf = VLSCTL_CFGOUT;
-        buf += sizeof(long);
+        *(int32_t*) buf = VLSCTL_CFGOUT;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (dht_up) {
-        *(long*)buf = VLSCTL_DHT_UP;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_DHT_UP;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (dht_down) {
-        *(long*)buf = VLSCTL_DHT_DOWN;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_DHT_DOWN;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (dht_quit) {
-        *(long*)buf = VLSCTL_DHT_EXIT;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_DHT_EXIT;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (add_node) {
-        *(long*)buf = VLSCTL_ADD_NODE;
-        buf += sizeof(long);
-        *(long*)buf = node_port;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_ADD_NODE;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = node_port;
+        buf += sizeof(int32_t);
         strcpy(buf, node_ip);
         buf += strlen(node_ip) + 1;
         nitems++;
     }
     if (del_node) {
-        *(long*)buf = VLSCTL_DEL_NODE;
-        buf += sizeof(long);
-        *(long*)buf = node_port;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_DEL_NODE;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = node_port;
+        buf += sizeof(int32_t);
         strcpy(buf, node_ip);
         buf += strlen(node_ip) + 1;
         nitems++;
     }
     if (relay_up) {
-        *(long*)buf = VLSCTL_RELAY_UP;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_RELAY_UP;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (relay_down) {
-        *(long*)buf = VLSCTL_RELAY_DOWN;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_RELAY_DOWN;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (stun_up) {
-        *(long*)buf = VLSCTL_STUN_UP;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_STUN_UP;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (stun_down) {
-        *(long*)buf = VLSCTL_STUN_DOWN;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_STUN_DOWN;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (vpn_up) {
-        *(long*)buf = VLSCTL_VPN_UP;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_VPN_UP;
+        buf += sizeof(int32_t);
         nitems++;
     }
     if (vpn_down) {
-        *(long*)buf = VLSCTL_VPN_DOWN;
-        buf += sizeof(long);
+        *(int32_t*)buf = VLSCTL_VPN_DOWN;
+        buf += sizeof(int32_t);
         nitems++;
     }
 
-    *(long*)addr = nitems;
+    *(int32_t*)addr = nitems;
     dest_addr.sun_family = AF_UNIX;
     if (def_unix_path) {
         strcpy(dest_addr.sun_path, "/var/run/vdht/lsctl_socket");

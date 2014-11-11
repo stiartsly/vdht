@@ -1,7 +1,7 @@
 #include "vglobal.h"
 #include "vmem.h"
 
-#define CHUNK_MAGIC     ((unsigned long)0x87654312)
+#define CHUNK_MAGIC     ((uint32_t)0x87654312)
 
 /*
  * @aux:

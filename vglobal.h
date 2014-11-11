@@ -48,6 +48,7 @@
 #define timer_t
 #define time_t
 #define uint32_t
+#define int32_t
 #define sockaddr_in
 #define sockaddr_un
 #define sockaddr
@@ -124,20 +125,20 @@ extern struct vdht_enc_ops dht_enc_ops;
 extern struct vdht_dec_ops dht_dec_ops;
 
 static
-inline long get_int32(void* addr)
+inline int32_t get_int32(void* addr)
 {
-    return *(long*)addr;
+    return *(int32_t*)addr;
 }
 
 static
-inline void set_int32(void* addr, long val)
+inline void set_int32(void* addr, int32_t val)
 {
-    *(long*)addr = val;
+    *(int32_t*)addr = val;
     return ;
 };
 
 static
-inline unsigned long get_uint32(void* addr)
+inline uint32_t get_uint32(void* addr)
 {
     return *(uint32_t*)addr;
 }

@@ -78,11 +78,11 @@ int _aux_req_cb(char* buf, void** cookie)
     vassert(cookie);
 
     set_int32(data, 0); //means request.
-    sz += sizeof(long);
-    data = offset_addr(data, sizeof(long));
+    sz += sizeof(int32_t);
+    data = offset_addr(data, sizeof(int32_t));
 
     set_int32(data, plugId);
-    sz += sizeof(long);
+    sz += sizeof(int32_t);
 
     return sz;
 }
@@ -99,16 +99,16 @@ int _aux_rsp_cb(char* buf, void** cookie)
     vassert(cookie);
 
     set_int32(data, 1); // means response;
-    sz += sizeof(long);
-    data = offset_addr(data, sizeof(long));
+    sz += sizeof(int32_t);
+    data = offset_addr(data, sizeof(int32_t));
 
     set_int32(data, plugId);
-    sz += sizeof(long);
-    data = offset_addr(data, sizeof(long));
+    sz += sizeof(int32_t);
+    data = offset_addr(data, sizeof(int32_t));
 
-    set_int32(data, (long)addr->sin_port);
-    sz += sizeof(long);
-    data = offset_addr(data, sizeof(long));
+    set_int32(data, (int32_t)addr->sin_port);
+    sz += sizeof(int32_t);
+    data = offset_addr(data, sizeof(int32_t));
 
     set_uint32(data, (uint32_t)addr->sin_addr.s_addr);
     sz += sizeof(uint32_t);
@@ -131,8 +131,8 @@ int _aux_encode_msg(char* buf, int buf_sz, int (*cb)(char*, void**), void** cook
     data = offset_addr(data, sizeof(uint32_t));
 
     set_int32(data, VMSG_PLUG);
-    sz += sizeof(long);
-    data = offset_addr(data, sizeof(long));
+    sz += sizeof(int32_t);
+    data = offset_addr(data, sizeof(int32_t));
 
     sz += cb(data, cookie);
     return sz;
@@ -487,11 +487,11 @@ int _vpluger_msg_cb(void* cookie, struct vmsg_usr* mu)
     vassert(mu);
 
     type = get_int32(data);
-    sz += sizeof(long);
+    sz += sizeof(int32_t);
 
     data = offset_addr(mu->data, sz);
     plugId = get_int32(data);
-    sz += sizeof(long);
+    sz += sizeof(int32_t);
 
     switch(type) {
     case 0: { //means request.
@@ -514,7 +514,7 @@ int _vpluger_msg_cb(void* cookie, struct vmsg_usr* mu)
     case 1: { //means response.
         data = offset_addr(mu->data, sz);
         addr.sin_port = get_int32(data);
-        sz += sizeof(long);
+        sz += sizeof(int32_t);
 
         data = offset_addr(mu->data, sz);
         addr.sin_addr.s_addr = get_uint32(data);

@@ -89,7 +89,7 @@ int _vlsctl_add_node(struct vlsctl* lsctl, void* data, int offset)
     int sz = 0;
 
     port = get_int32(offset_addr(data, offset + sz));
-    sz += sizeof(long);
+    sz += sizeof(int32_t);
 
     memset(ip, 0, 64);
     strcpy(ip, (char*)offset_addr(data, offset + sz));
@@ -115,7 +115,7 @@ int _vlsctl_del_node(struct vlsctl* lsctl, void* data, int offset)
     int sz   = 0;
 
     port = get_int32(offset_addr(data, offset + sz));
-    sz += sizeof(long);
+    sz += sizeof(int32_t);
 
     memset(ip, 0, 64);
     strcpy(ip, (char*)offset_addr(data, offset + sz));
@@ -283,7 +283,7 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
     vassert(um);
 
     nitems = get_int32(um->data);
-    sz += sizeof(long);
+    sz += sizeof(int32_t);
     vlogI(printf("[lsctl] received lsctl request (%d)", nitems));
 
     while(nitems-- > 0) {
@@ -362,8 +362,8 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 
     msgId = get_int32(data);
     retE((msgId != VMSG_LSCTL));
-    data = offset_addr(data, sizeof(long));
-    sz += sizeof(long);
+    data = offset_addr(data, sizeof(int32_t));
+    sz += sizeof(int32_t);
 
     vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
     return 0;

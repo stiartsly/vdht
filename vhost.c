@@ -193,7 +193,7 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
     vassert(sm);
 
     if (VDHT_MSG(um->msgId)) {
-        sz += sizeof(long);
+        sz += sizeof(int32_t);
         data = unoff_addr(um->data, sz);
         set_int32(data, um->msgId);
 
@@ -205,6 +205,7 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
         vlog((!ms), elog_vmsg_sys_alloc);
         retE((!ms));
         vmsg_sys_init(ms, um->addr, um->len + sz, data);
+        printf("<%s> sys msg len :%d.\n", __FUNCTION__, ms->len);
         *sm = ms;
         return 0;
     }
@@ -235,11 +236,14 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 
     data = offset_addr(sm->data, sz);
     msgId = get_int32(data);
-    sz += sizeof(long);
+    sz += sizeof(int32_t);
+    printf("<%s> sizeof(int32_t):%d.\n", __FUNCTION__, sizeof(int32_t));
 
     data = offset_addr(sm->data, sz);
     if (IS_DHT_MSG(magic)) {
+        printf("<%s> sys msg len :%d.\n", __FUNCTION__, sm->len);
         vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
+        printf("<%s> usr msg len: %d.\n", __FUNCTION__, um->len);
         return 0;
     }
     if (IS_PLUG_MSG(magic)) {
