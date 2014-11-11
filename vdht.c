@@ -1169,15 +1169,15 @@ int _aux_get_mtype(struct be_node* dict, int* mtype)
         struct be_node* tmp = NULL;
         node = _aux_get_dict(dict, "r");
         retE((!node));
-        retE((BE_STR != node->type));
-        tmp = _aux_get_dict(node, "hash");
-        if (tmp) {
-            *mtype = VDHT_GET_PEERS_R;
-            return 0;
-        }
+        retE((BE_DICT != node->type));
         tmp = _aux_get_dict(node, "node");
         if (tmp) {
             *mtype = VDHT_FIND_NODE_R;
+            return 0;
+        }
+        tmp = _aux_get_dict(node, "hash");
+        if (tmp) {
+            *mtype = VDHT_GET_PEERS_R;
             return 0;
         }
         tmp = _aux_get_dict(node, "nodes");

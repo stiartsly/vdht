@@ -701,6 +701,7 @@ void* _aux_mbuf_alloc(struct vroute* route)
     mbuf = malloc(8*BUF_SZ);
     vlog((!mbuf), elog_malloc);
     retE_p((!mbuf));
+    memset(mbuf, 0, 8*BUF_SZ);
 
     //reserve padding for magic and msgId.
     return mbuf + 8;
@@ -818,7 +819,7 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
     ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
-            .addr  = (struct vsockaddr*)&dest->addr,
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
             .msgId = VMSG_DHT,
             .data  = buf,
             .len   = ret
@@ -853,7 +854,7 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
-            .addr  = (struct vsockaddr*)&dest->addr,
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
             .msgId = VMSG_DHT,
             .data  = buf,
             .len   = ret
@@ -890,7 +891,7 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
     ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
-            .addr  = (struct vsockaddr*)&dest->addr,
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
             .msgId = VMSG_DHT,
             .data  = buf,
             .len   = ret
@@ -927,7 +928,7 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
-            .addr  = (struct vsockaddr*)&dest->addr,
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
             .msgId = VMSG_DHT,
             .data  = buf,
             .len   = ret
@@ -963,7 +964,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
     ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
-            .addr  = (struct vsockaddr*)&dest->addr,
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
             .msgId = VMSG_DHT,
             .data  = buf,
             .len   = ret
@@ -1000,7 +1001,7 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vt
     ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
-            .addr  = (struct vsockaddr*)&dest->addr,
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
             .msgId = VMSG_DHT,
             .data  = buf,
             .len   = ret

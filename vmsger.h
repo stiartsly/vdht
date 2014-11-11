@@ -54,8 +54,9 @@ struct vmsg_sys {
 };
 
 struct vmsg_sys* vmsg_sys_alloc(int);
-void vmsg_sys_free(struct vmsg_sys*);
-void vmsg_sys_init(struct vmsg_sys*, struct vsockaddr*, int, void*);
+void vmsg_sys_free   (struct vmsg_sys*);
+void vmsg_sys_init   (struct vmsg_sys*, struct vsockaddr*, int, void*);
+void vmsg_sys_refresh(struct vmsg_sys*, int);
 
 /*
  * for vmsg callback

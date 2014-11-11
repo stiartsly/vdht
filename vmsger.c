@@ -56,6 +56,21 @@ void vmsg_sys_init(struct vmsg_sys* ms, struct vsockaddr* addr, int len, void* d
     return ;
 }
 
+void vmsg_sys_refresh(struct vmsg_sys* ms, int buf_len)
+{
+    void* data = ms->data;
+    vassert(ms);
+    vassert(buf_len > 0);
+
+    memset(data, 0, buf_len);
+    memset(ms,   0, sizeof(*ms));
+
+    vlist_init(&ms->list);
+    ms->len  = buf_len;
+    ms->data = data;
+    return ;
+}
+
 /*
  * auxiliary func for vmsg_usr.
  */
