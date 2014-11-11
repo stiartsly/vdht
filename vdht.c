@@ -1033,7 +1033,7 @@ int _aux_get_token(struct be_node* dict, vtoken* token)
     char* s = NULL;
     int len = 0;
     int ret = 0;
-    vassert(node);
+    vassert(dict);
     vassert(token);
 
     node = _aux_get_dict(dict, "t");
