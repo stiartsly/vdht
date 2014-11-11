@@ -85,7 +85,7 @@ void vnodeId_dump(vnodeId* id)
         if ((i % 4 == 3) && (i +1 != VNODE_ID_LEN)){
             printf("-");
         }
-    }   
+    }
     printf("\n");
     return;
 }
@@ -227,27 +227,53 @@ int vnodeVer_equal(vnodeVer* ver_a, vnodeVer* ver_b)
     return 1;
 }
 
+int vnodeVer_strlize(vnodeVer* ver, char* buf, int len)
+{
+    int i = 0;
+    vassert(ver);
+    vassert(buf);
+    vassert(len > 0);
+
+    retE((len + 1 < VNODE_ID_LEN));
+    for (; i < VNODE_ID_LEN; i++) {
+        buf[i] = ver->data[i] + '0';
+    }
+    buf[i] = '\0';
+    return 0;
+}
+
+int vnodeVer_unstrlize(const char* ver_str, vnodeVer* ver)
+{
+    int i = 0;
+    vassert(ver_str);
+    vassert(ver);
+
+    retE((strlen(ver_str) != VNODE_ID_LEN));
+    for(; i < VNODE_ID_LEN; i++) {
+        retE((ver_str[i] < '0'));
+        retE((ver_str[i] > '9'));
+        ver->data[i] = ver_str[i] - '0';
+    }
+    return 0;
+}
+
+
 /*
  *  for token
  */
-static 
-vtoken gtoken = {{[0 ... VNODE_ID_INTLEN] = 0}};
 void vtoken_make(vtoken* token)
 {
-#define VUINT32_MAX ((uint32_t)0x0ffffffe)
-    uint32_t* data = NULL;
+    char* data = NULL;
     int i = 0;
     vassert(token);
 
-    data = (uint32_t*)gtoken.data;
-    for (; i < VNODE_ID_INTLEN; i++) {
-        if (data[i]++ >= VUINT32_MAX) {
-            data[i] = 0;
-        } else {
-            break;
-        }
+    srand(time(NULL)); // TODO: need use mac as srand seed.
+    data = (char*)token->data;
+    for (; i < VNODE_ID_LEN; i++) {
+        data[i] = rand() % 9;
     }
     return ;
+
 }
 
 int vtoken_equal(vtoken* a, vtoken* b)
@@ -262,6 +288,35 @@ int vtoken_equal(vtoken* a, vtoken* b)
         }
     }
     return 1;
+}
+int vtoken_strlize(vtoken* token, char* buf, int len)
+{
+    int i = 0;
+    vassert(token);
+    vassert(buf);
+    vassert(len > 0);
+
+    retE((len + 1 < VNODE_ID_LEN));
+    for (; i < VNODE_ID_LEN; i++) {
+        buf[i] = token->data[i] + '0';
+    }
+    buf[i] = '\0';
+    return 0;
+}
+
+int vtoken_unstrlize(const char* token_str, vtoken* token)
+{
+    int i = 0;
+    vassert(token_str);
+    vassert(token);
+
+    retE((strlen(token_str) != VNODE_ID_LEN));
+    for(; i < VNODE_ID_LEN; i++) {
+        retE((token_str[i] < '0'));
+        retE((token_str[i] > '9'));
+        token->data[i] = token_str[i] - '0';
+    }
+    return 0;
 }
 
 /*

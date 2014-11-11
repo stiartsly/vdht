@@ -87,8 +87,8 @@ long _be_decode_int(char** data, int* data_len)
     errno = 0;
     ret   = strtol(*data, &endp, 10);
     retE((errno));
-    *data = endp;
     *data_len -= (endp - *data);
+    *data = endp;
     return ret;
 }
 
@@ -114,7 +114,7 @@ char* _be_decode_str(char** data, int* data_len)
         memcpy(s, *data + 1, len);
         s[len] = '\0';
         *data += len + 1;
-        *data_len -= len -1;
+        *data_len -= len + 1;
     }
     return s;
 }
@@ -206,7 +206,7 @@ struct be_node *_be_decode(char **data, int *data_len)
         break;
     }
     case '0'...'9': { /* byte strings */
-        node = be_alloc(BE_INT);
+        node = be_alloc(BE_STR);
         vlog((!node), elog_be_alloc);
         retE_p((!node));
 
@@ -232,26 +232,36 @@ struct be_node *be_decode_str(char *data)
     return be_decode(data, strlen(data));
 }
 
-/* hackish way to create nodes! */
 static
-struct be_node *be_create_dict()
+void _aux_enc_reclaim(struct be_node* dict, struct be_node* node)
+{
+    vassert(dict);
+    vassert(node || !node);
+
+    vcall_cond(node, be_free(node));
+    vcall_cond(dict, be_free(dict));
+    return ;
+}
+
+static
+struct be_node *_aux_be_create_dict()
 {
     return be_decode_str("de");
 }
 
 static
-struct be_node *be_create_list()
+struct be_node *_aux_be_create_list()
 {
     return be_decode_str("le");
 }
 
 static
-struct be_node* be_create_str(void* str, int len)
+struct be_node* _aux_be_create_str(char* str)
 {
     struct be_node* node = NULL;
     char* s = NULL;
+    int len = strlen(str);
     vassert(str);
-    vassert(len > 0);
 
     node = be_alloc(BE_STR);
     vlog((!node), elog_be_alloc);
@@ -261,17 +271,43 @@ struct be_node* be_create_str(void* str, int len)
     vlog((!s), elog_malloc);
     ret1E_p((!s), be_free(node));
 
-    ((long*)s)[0] = len;
+    set_int32(s, len);
     s = offset_addr(s, sizeof(long));
-    memcpy(s, str, len);
-    s[len]='\0';
+    strcpy(s, str);
 
-    node->val.s = (char*)s;
+    node->val.s = s;
     return node;
 }
 
 static
-struct be_node *be_create_int(int num)
+struct be_node* _aux_be_create_vtoken(vtoken* token)
+{
+    struct be_node* node = NULL;
+    char buf[64];
+    vassert(token);
+
+    memset(buf, 0, 64);
+    vtoken_strlize(token, buf, 64);
+    node = _aux_be_create_str(buf);
+    retE_p((!node));
+    return node;
+}
+
+static
+struct be_node* _aux_be_create_vnodeId(vnodeId* srcId)
+{
+    struct be_node* node = NULL;
+    char buf[64];
+    vassert(srcId);
+
+    vnodeId_strlize(srcId, buf, 64);
+    node = _aux_be_create_str(buf);
+    retE_p((!node));
+    return node;
+}
+
+static
+struct be_node* _aux_be_create_int(int num)
 {
     struct be_node* node = NULL;
 
@@ -284,32 +320,33 @@ struct be_node *be_create_int(int num)
 }
 
 static
-struct be_node *be_create_addr(struct sockaddr_in* addr)
+struct be_node* _aux_be_create_addr(struct sockaddr_in* addr)
 {
     struct be_node* node = NULL;
-    char* s = NULL;
-    int len = 2*sizeof(long) + 1;
+    char buf[64];
+    int port = 0;
+    int ret  = 0;
     vassert(addr);
 
-    node = be_alloc(BE_STR);
-    vlog((!node), elog_be_alloc);
+    ret = vsockaddr_unconvert(addr, buf, 64, &port);
+    vlog((ret < 0), elog_vsockaddr_unconvert);
+    retE_p((ret < 0));
+    sprintf(buf + strlen(buf), ":%d", port);
+
+    node = _aux_be_create_str(buf);
     retE_p((!node));
-
-    s = (char*)malloc(len);
-    vlog((!s), elog_malloc);
-    ret1E_p((!s), be_free(node));
-    memset(s, 0, len);
-
-    ((long*)s)[0] = 8; //size
-    ((long*)s)[2] = (long)addr->sin_port; // store port.
-    ((uint32_t*)s)[1] = (uint32_t)addr->sin_addr.s_addr; // store ip.
-
-    node->val.s = (char*)s + 4;
     return node;
 }
 
 static
-int be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
+struct be_node* _aux_be_create_ver(vnodeVer* ver)
+{
+    //todo;
+    return NULL;
+}
+
+static
+int _aux_be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
 {
     struct be_dict* d = NULL;
     int len = strlen(str);
@@ -343,40 +380,41 @@ int be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
 }
 
 static
-struct be_node* be_create_info(vnodeInfo* info)
+struct be_node* _aux_be_create_info(vnodeInfo* info)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
     int ret = 0;
+    vassert(info);
 
-    dict = be_create_dict();
+    dict = _aux_be_create_dict();
     retE_p((!dict));
 
-    node = be_create_str(info->id.data, VNODE_ID_LEN);
-    ret1E_p((!node), be_free(dict));
-    ret = be_add_keypair(dict, "id", node);
-    ret2E_p((ret < 0), be_free(dict), be_free(node));
+    node = _aux_be_create_vnodeId(&info->id);
+    ret1E_p((!node),   _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "id", node);
+    ret1E_p((ret < 0), _aux_enc_reclaim(dict, node));
 
-    node = be_create_addr(&info->addr);
-    ret1E_p((!node), be_free(dict));
-    ret = be_add_keypair(dict, "m", node);
-    ret2E_p((ret < 0), be_free(dict), be_free(node));
+    node = _aux_be_create_addr(&info->addr);
+    ret1E_p((!node),   _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "m", node);
+    ret1E_p((ret < 0), _aux_enc_reclaim(dict, node));
 
-    node = be_create_str(&info->ver, VNODE_ID_LEN);
-    ret1E_p((!node), be_free(dict));
-    ret = be_add_keypair(dict, "v", node);
-    ret2E_p((ret < 0), be_free(dict), be_free(node));
+    node = _aux_be_create_ver(&info->ver);
+    ret1E_p((!node),   _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "v", node);
+    ret1E_p((ret < 0), _aux_enc_reclaim(dict, node));
 
-    node = be_create_int(info->flags);
-    ret1E_p((!node), be_free(dict));
-    ret = be_add_keypair(dict, "f", node);
-    ret2E_p((ret < 0), be_free(dict), be_free(node));
+    node = _aux_be_create_int(info->flags);
+    ret1E_p((!node),   _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "f", node);
+    ret1E_p((ret < 0), _aux_enc_reclaim(dict, node));
 
     return dict;
 }
 
 static
-int be_add_list(struct be_node *list, struct be_node *node)
+int _aux_be_add_list(struct be_node *list, struct be_node *node)
 {
     struct be_node** l = NULL;
     int i = 0;
@@ -419,7 +457,7 @@ int be_encode(struct be_node *node, char *buf, int len)
         break;
     }
     case BE_INT:
-        ret = snprintf(buf+off, len-off, "i%li", node->val.i);
+        ret = snprintf(buf+off, len-off, "i%lie", node->val.i);
         retE((ret < 0));
         off += ret;
         break;
@@ -465,7 +503,6 @@ int be_encode(struct be_node *node, char *buf, int len)
     return off;
 }
 
-
 /*
  * @token:
  * @srcId: Id of node sending query.
@@ -484,8 +521,6 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
     struct be_node* id   = NULL;
-    char* str_q = "q";
-    char* ping = "ping";
     int ret = 0;
 
     vassert(token);
@@ -493,23 +528,37 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
     vassert(buf);
     vassert(sz > 0);
 
-    dict = be_create_dict();
-    node = be_create_str(token->data, VTOKEN_LEN);
-    be_add_keypair(dict, "t", node);
+    dict = _aux_be_create_dict();
+    retE((!dict));
 
-    node = be_create_str(str_q, strlen(str_q));
-    be_add_keypair(dict, "y", node);
+    node = _aux_be_create_vtoken(token);
+    ret1E((!node),   _aux_enc_reclaim(dict, NULL));
+    ret = _aux_be_add_keypair(dict, "t", node);
+    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
 
-    node = be_create_str(ping, strlen(ping));
-    be_add_keypair(dict, "q", node);
+    node = _aux_be_create_str("q");
+    ret1E((!node),   _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "y", node);
+    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
 
-    id   = be_create_dict();
-    node = be_create_str(srcId->data, VNODE_ID_LEN);
-    be_add_keypair(id, "id", node);
-    be_add_keypair(dict,"a", id);
+    node = _aux_be_create_str("ping");
+    ret1E((!node),   _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "q", node);
+    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
 
-    ret = be_encode(dict, buf, sz);
+    node = _aux_be_create_dict();
+    ret1E((!node),   _aux_enc_reclaim(dict, NULL));
+    id   = _aux_be_create_vnodeId(srcId);
+    ret1E((!node),   _aux_enc_reclaim(dict, node));
+    ret  = _aux_be_add_keypair(node, "id", id);
+    vcall_cond((ret < 0), be_free(id));
+    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
+    ret  = _aux_be_add_keypair(dict, "a", node);
+    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
+
+    ret  = be_encode(dict, buf, sz);
     be_free(dict);
+    retE((ret < 0));
     return ret;
 }
 
@@ -538,7 +587,6 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
     struct be_node* rslt = NULL;
-    char* str_r = "r";
     int ret = 0;
 
     vassert(token);
@@ -547,22 +595,38 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf
     vassert(buf);
     vassert(sz > 0);
 
-    dict = be_create_dict();
-    node = be_create_str(token->data, VTOKEN_LEN);
-    be_add_keypair(dict, "t", node);
+    dict = _aux_be_create_dict();
+    retE((!dict));
 
-    node = be_create_str(str_r, strlen(str_r));
-    be_add_keypair(dict, "y", node);
+    node = _aux_be_create_vtoken(token);
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "t", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
-    rslt = be_create_dict();
-    node = be_create_str(srcId->data, VNODE_ID_LEN);
-    be_add_keypair(rslt, "id", node);
-    node = be_create_info(result);
-    be_add_keypair(rslt, "node", node);
-    be_add_keypair(dict, "r", rslt);
+    node = _aux_be_create_str("r");
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "y", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+
+    rslt = _aux_be_create_dict();
+    ret1E((!rslt), _aux_enc_reclaim(dict, NULL));
+    node = _aux_be_create_vnodeId(srcId);
+    ret1E((!node), _aux_enc_reclaim(dict, rslt));
+    ret  = _aux_be_add_keypair(rslt, "id", node);
+    vcall_cond((ret < 0), be_free(node));
+    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+
+    node = _aux_be_create_info(result);
+    ret1E((!node), _aux_enc_reclaim(dict, rslt));
+    ret  = _aux_be_add_keypair(rslt, "node", node);
+    vcall_cond((ret < 0), be_free(node));
+    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+    ret  = _aux_be_add_keypair(dict, "r", rslt);
+    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
+    retE((ret < 0));
     return ret;
 }
 
@@ -587,9 +651,7 @@ int _vdht_enc_find_node(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* 
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* a    = NULL;
-    char* str_q = "q";
-    char* query = "find_node";
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(token);
@@ -598,25 +660,41 @@ int _vdht_enc_find_node(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* 
     vassert(buf);
     vassert(sz > 0);
 
-    dict = be_create_dict();
-    node = be_create_str(token->data, VTOKEN_LEN);
-    be_add_keypair(dict, "t", node);
+    dict = _aux_be_create_dict();
+    retE((!dict));
 
-    node = be_create_str(str_q, strlen(str_q));
-    be_add_keypair(dict, "y", node);
+    node = _aux_be_create_vtoken(token);
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "t", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
-    node = be_create_str(query, strlen(query));
-    be_add_keypair(dict, "q", node);
+    node = _aux_be_create_str("q");
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "y", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
-    a = be_create_dict();
-    node = be_create_str(srcId->data, VNODE_ID_LEN);
-    be_add_keypair(a, "id", node);
-    node = be_create_str(targetId->data, VNODE_ID_LEN);
-    be_add_keypair(a, "target", node);
-    be_add_keypair(dict, "a", a);
+    node = _aux_be_create_str("find_node");
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "q", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+
+    node = _aux_be_create_dict();
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    tmp  = _aux_be_create_vnodeId(srcId);
+    ret1E((!tmp),  _aux_enc_reclaim(dict, node));
+    ret  = _aux_be_add_keypair(node, "id", tmp);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    tmp  = _aux_be_create_vnodeId(targetId);
+    ret1E((!tmp) , _aux_enc_reclaim(dict, node));
+    ret  = _aux_be_add_keypair(node, "target", tmp);
+    vcall_cond((ret < 0), be_free(tmp));
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    ret  = _aux_be_add_keypair(dict, "a", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
+    retE((ret < 0));
     return ret;
 }
 
@@ -645,7 +723,6 @@ int _vdht_enc_find_node_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, vo
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
     struct be_node* rslt = NULL;
-    char* str_r = "r";
     int ret = 0;
 
     vassert(token);
@@ -654,22 +731,38 @@ int _vdht_enc_find_node_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, vo
     vassert(buf);
     vassert(sz > 0);
 
-    dict = be_create_dict();
-    node = be_create_str(token->data, VTOKEN_LEN);
-    be_add_keypair(dict, "t", node);
+    dict = _aux_be_create_dict();
+    retE((!dict));
 
-    node = be_create_str(str_r, strlen(str_r));
-    be_add_keypair(dict, "y", node);
+    node = _aux_be_create_vtoken(token);
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "t", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
-    rslt = be_create_dict();
-    node = be_create_str(srcId->data, VNODE_ID_LEN);
-    be_add_keypair(rslt, "id", node);
-    node = be_create_info(result);
-    be_add_keypair(rslt, "node", node);
-    be_add_keypair(dict, "r", rslt);
+    node = _aux_be_create_str("r");
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "y", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+
+    rslt = _aux_be_create_dict();
+    ret1E((!rslt), _aux_enc_reclaim(dict, NULL));
+    node = _aux_be_create_vnodeId(srcId);
+    ret1E((!node), _aux_enc_reclaim(dict, rslt));
+    ret  = _aux_be_add_keypair(rslt, "id", node);
+    vcall_cond((ret < 0), be_free(node));
+    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+
+    node = _aux_be_create_info(result);
+    ret1E((!node), _aux_enc_reclaim(dict, rslt));
+    ret  = _aux_be_add_keypair(rslt, "node", node);
+    vcall_cond((ret < 0), be_free(node));
+    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+    ret  = _aux_be_add_keypair(dict, "r", rslt);
+    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
+    retE((ret < 0));
     return ret;
 }
 
@@ -737,9 +830,7 @@ int _vdht_enc_find_closest_nodes(vtoken* token, vnodeId* srcId, vnodeId* targetI
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* a    = NULL;
-    char* str_q = "q";
-    char* query = "find_closest_nodes";
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(token);
@@ -748,25 +839,45 @@ int _vdht_enc_find_closest_nodes(vtoken* token, vnodeId* srcId, vnodeId* targetI
     vassert(buf);
     vassert(sz > 0);
 
-    dict = be_create_dict();
-    node = be_create_str(token->data, VTOKEN_LEN);
-    be_add_keypair(dict, "t", node);
+    dict = _aux_be_create_dict();
+    retE((!dict));
 
-    node = be_create_str(str_q, strlen(str_q));
-    be_add_keypair(dict, "y", node);
+    node = _aux_be_create_vtoken(token);
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "t", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
-    node = be_create_str(query, strlen(query));
-    be_add_keypair(dict, "q", node);
+    node = _aux_be_create_str("q");
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "y", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
-    a = be_create_dict();
-    node = be_create_str(srcId->data, VNODE_ID_LEN);
-    be_add_keypair(a, "id", node);
-    node = be_create_str(targetId->data, VNODE_ID_LEN);
-    be_add_keypair(a, "target", node);
-    be_add_keypair(dict, "a", a);
+    node = _aux_be_create_str("find_closest_nodes");
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "q", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+
+    node = _aux_be_create_dict();
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+
+    tmp  = _aux_be_create_vnodeId(srcId);
+    ret1E((!tmp),  _aux_enc_reclaim(dict, node));
+    ret  = _aux_be_add_keypair(node, "id", tmp);
+    vcall_cond((ret < 0), be_free(tmp));
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+
+    tmp  = _aux_be_create_vnodeId(targetId);
+    ret1E((!tmp) , _aux_enc_reclaim(dict, node));
+    ret  = _aux_be_add_keypair(node, "target", tmp);
+    vcall_cond((ret < 0), be_free(tmp));
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+
+    ret  = _aux_be_add_keypair(dict, "a", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
+    retE((ret < 0));
     return ret;
 }
 
@@ -806,7 +917,6 @@ int _vdht_enc_find_closest_nodes_rsp(
     struct be_node* node = NULL;
     struct be_node* rslt = NULL;
     struct be_node* list = NULL;
-    char* str_r = "r";
     int ret = 0;
     int i   = 0;
 
@@ -816,28 +926,52 @@ int _vdht_enc_find_closest_nodes_rsp(
     vassert(buf);
     vassert(sz > 0);
 
-    dict = be_create_dict();
-    node = be_create_str(token->data, VTOKEN_LEN);
-    be_add_keypair(dict, "t", node);
+    dict = _aux_be_create_dict();
+    retE((!dict));
 
-    node = be_create_str(str_r, strlen(str_r));
-    be_add_keypair(dict, "y", node);
+    node = _aux_be_create_vtoken(token);
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "t", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
-    rslt = be_create_dict();
-    node = be_create_str(srcId->data, VNODE_ID_LEN);
-    be_add_keypair(rslt, "id", node);
+    node = _aux_be_create_str("r");
+    ret1E((!node), _aux_enc_reclaim(dict, NULL));
+    ret  = _aux_be_add_keypair(dict, "y", node);
+    ret1E((ret<0), _aux_enc_reclaim(dict, node));
 
-    list = be_create_list();
+    rslt = _aux_be_create_dict();
+    ret1E((!rslt), _aux_enc_reclaim(dict, NULL));
+
+    node = _aux_be_create_vnodeId(srcId);
+    ret1E((!node), _aux_enc_reclaim(dict, rslt));
+    ret  = _aux_be_add_keypair(rslt, "id", node);
+    vcall_cond((ret < 0), be_free(node));
+    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+
+    list = _aux_be_create_list();
+    ret1E((!list), _aux_enc_reclaim(dict, rslt));
     for (; i < varray_size(closest); i++) {
-        vnodeInfo* info = (vnodeInfo*)varray_get(closest, i);
-        node = be_create_info(info);
-        be_add_list(list, node);
+        vnodeInfo* info = NULL;
+
+        info = (vnodeInfo*)varray_get(closest, i);
+        node = _aux_be_create_info(info);
+        vcall_cond((!node), be_free(list));
+        ret1E((!node), _aux_enc_reclaim(dict, rslt));
+
+        ret  = _aux_be_add_list(list, node);
+        vcall_cond((ret < 0), be_free(node));
+        vcall_cond((ret < 0), be_free(list));
+        ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
     }
-    be_add_keypair(rslt, "nodes", list);
-    be_add_keypair(dict, "r", rslt);
+    ret = _aux_be_add_keypair(rslt, "nodes", list);
+    vcall_cond((ret < 0), be_free(list));
+    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+    ret = _aux_be_add_keypair(dict, "r", rslt);
+    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
+    retE((ret < 0));
     return ret;
 }
 
@@ -894,7 +1028,9 @@ static
 int _aux_get_token(struct be_node* dict, vtoken* token)
 {
     struct be_node* node = NULL;
+    char* s = NULL;
     int len = 0;
+    int ret = 0;
     vassert(node);
     vassert(token);
 
@@ -902,10 +1038,12 @@ int _aux_get_token(struct be_node* dict, vtoken* token)
     retE((!node));
     retE((node->type != BE_STR));
 
-    len = get_int32(unoff_addr(node->val.s, sizeof(long)));
-    retE((len != VTOKEN_LEN));
+    s   = unoff_addr(node->val.s, sizeof(long));
+    len = get_int32(s);
+    retE((len != strlen(node->val.s)));
 
-    memcpy(&token->data, node->val.s, len);
+    ret = vtoken_unstrlize(node->val.s, token);
+    retE((ret < 0));
     return 0;
 }
 
@@ -914,6 +1052,7 @@ int _aux_get_id(struct be_node* dict, char* key1, char* key2, vnodeId* id)
 {
     struct be_node* node = NULL;
     int len = 0;
+    int ret = 0;
 
     vassert(dict);
     vassert(key1);
@@ -925,9 +1064,10 @@ int _aux_get_id(struct be_node* dict, char* key1, char* key2, vnodeId* id)
     retE((BE_STR != node->type));
 
     len = get_int32(unoff_addr(node->val.s, sizeof(long)));
-    retE((VNODE_ID_LEN != len));
-    memcpy(id->data, node->val.s, len);
+    retE((len != strlen(node->val.s)));
 
+    ret = vnodeId_unstrlize(node->val.s, id);
+    retE((ret < 0));
     return 0;
 }
 
@@ -936,38 +1076,50 @@ int _aux_get_info(struct be_node* dict, vnodeInfo* info)
 {
     struct be_node* node = NULL;
     int len = 0;
+    int ret = 0;
     vassert(dict);
     vassert(info);
 
     node = _aux_get_dict(dict, "id");
     retE((!node));
     retE((BE_STR != node->type));
-    len = get_int32(unoff_addr(node->val.s, sizeof(long)));
-    retE((len != VNODE_ID_LEN));
-    memcpy(info->id.data, node->val.s, len);
 
-    node = _aux_get_dict(dict, "m"); // address.
+    len = get_int32(unoff_addr(node->val.s, sizeof(long)));
+    retE((len != strlen(node->val.s)));
+    ret = vnodeId_unstrlize(node->val.s, &info->id);
+    retE((ret < 0));
+
+    node = _aux_get_dict(dict, "m");
     retE((!node));
     retE((BE_STR != node->type));
     len = get_int32(unoff_addr(node->val.s, sizeof(long)));
-    retE((len != 8));
-
-    info->addr.sin_family = AF_INET;
-    info->addr.sin_addr.s_addr = get_uint32(node->val.s);
-    info->addr.sin_port = get_int32(unoff_addr(node->val.s, sizeof(uint32_t)));
+    retE((len != strlen(node->val.s)));
+    {
+        char* s = strchr(node->val.s, ':');
+        char ip[64];
+        int port = 0;
+        retE((!s));
+        strncpy(ip, node->val.s, s - node->val.s);
+        s += 1;
+        errno = 0;
+        port = strtol(s, NULL, 10);
+        retE((errno));
+        ret = vsockaddr_convert(ip, port, &info->addr);
+        retE((ret < 0));
+    }
 
     node = _aux_get_dict(dict, "v"); // version.
     retE((!node));
     retE((BE_STR != node->type));
     len = get_int32(unoff_addr(node->val.s, sizeof(long)));
-    retE((len != VNODE_ID_LEN));
-    memcpy(info->ver.data, node->val.s, len);
+    retE((len != strlen(node->val.s)));
+    ret = vnodeVer_unstrlize(node->val.s, &info->ver);
+    retE((ret < 0));
 
-    node = _aux_get_dict(dict, "f");  // flags
+    node = _aux_get_dict(dict, "f"); // flags;
     retE((!node));
     retE((BE_INT != node->type));
     info->flags = (uint32_t)node->val.i;
-
     return 0;
 }
 

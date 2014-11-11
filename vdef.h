@@ -126,6 +126,7 @@
 #define elog_vhostaddr_get_first  vlogE(printf("vhostaddr_get_first"))
 #define elog_vhostaddr_get_next   vlogE(printf("vhostaddr_get_next"))
 #define elog_vsockaddr_convert    vlogE(printf("vsockaddr_convert"))
+#define elog_vsockaddr_unconvert  vlogE(printf("vsockaddr_unconvert"))
 #define elog_vplugin_req_alloc    vlogE(printf("vplug_req_alloc"))
 #define elog_vplugin_item_alloc   vlogE(printf("vplug_item_alloc"))
 
