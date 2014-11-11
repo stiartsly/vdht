@@ -237,13 +237,10 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
     data = offset_addr(sm->data, sz);
     msgId = get_int32(data);
     sz += sizeof(int32_t);
-    printf("<%s> sizeof(int32_t):%d.\n", __FUNCTION__, sizeof(int32_t));
 
     data = offset_addr(sm->data, sz);
     if (IS_DHT_MSG(magic)) {
-        printf("<%s> sys msg len :%d.\n", __FUNCTION__, sm->len);
         vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
-        printf("<%s> usr msg len: %d.\n", __FUNCTION__, um->len);
         return 0;
     }
     if (IS_PLUG_MSG(magic)) {
