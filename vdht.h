@@ -33,7 +33,6 @@ struct vdht_enc_ops {
 
     int (*ping_rsp)(
             vtoken* token,  // trans Id.
-            vnodeId* srcId,
             vnodeInfo* result, // query result. nomally info of current dht node
             void* buf,
             int   sz);
@@ -104,7 +103,6 @@ struct vdht_dec_ops {
     int (*ping_rsp)(
             void* ctxt,
             vtoken* token,
-            vnodeId* srcId,
             vnodeInfo* result
         );
 

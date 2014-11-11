@@ -330,6 +330,7 @@ struct be_node* _aux_be_create_addr(struct sockaddr_in* addr)
     int ret  = 0;
     vassert(addr);
 
+    memset(buf, 0, 64);
     ret = vsockaddr_unconvert(addr, buf, 64, &port);
     vlog((ret < 0), elog_vsockaddr_unconvert);
     retE_p((ret < 0));
@@ -348,6 +349,7 @@ struct be_node* _aux_be_create_ver(vnodeVer* ver)
     int ret = 0;
     vassert(ver);
 
+    memset(buf, 0, 64);
     ret = vnodeVer_strlize(ver, buf, 64);
     retE_p((ret < 0));
 
@@ -583,8 +585,7 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
  *
  * response = {"t":"aa",
  *             "y":"r",
- *             "r":{"id":"abcdefghij0123456789",
- *                  "node" :{"id": "abcdefghij0123456789",
+ *             "r":{"node" :{"id": "abcdefghij0123456789",
  *                            "m": "0120342301031234",
  *                            "v": "20013243413143414",
  *                            "f": "00000001"
@@ -594,7 +595,7 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
  * bencoded = d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe
  */
 static
-int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf, int   sz)
+int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result,void* buf, int   sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -602,7 +603,6 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf
     int ret = 0;
 
     vassert(token);
-    vassert(srcId);
     vassert(result);
     vassert(buf);
     vassert(sz > 0);
@@ -622,11 +622,6 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId,vnodeInfo* result,void* buf
 
     rslt = _aux_be_create_dict();
     ret1E((!rslt), _aux_enc_reclaim(dict, NULL));
-    node = _aux_be_create_vnodeId(srcId);
-    ret1E((!node), _aux_enc_reclaim(dict, rslt));
-    ret  = _aux_be_add_keypair(rslt, "id", node);
-    vcall_cond((ret < 0), be_free(node));
-    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
 
     node = _aux_be_create_info(result);
     ret1E((!node), _aux_enc_reclaim(dict, rslt));
@@ -1014,7 +1009,9 @@ struct be_node* _aux_get_dict(struct be_node* node, char* key)
             break;
         }
     }
-    retE_p((!found));
+    if (!found) {
+        return NULL;
+    }
     return node->val.d[i].val;
 }
 
@@ -1110,6 +1107,7 @@ int _aux_get_info(struct be_node* dict, vnodeInfo* info)
         char ip[64];
         int port = 0;
         retE((!s));
+        memset(ip, 0, 64);
         strncpy(ip, node->val.s, s - node->val.s);
         s += 1;
         errno = 0;
@@ -1172,7 +1170,12 @@ int _aux_get_mtype(struct be_node* dict, int* mtype)
         retE((BE_DICT != node->type));
         tmp = _aux_get_dict(node, "node");
         if (tmp) {
-            *mtype = VDHT_FIND_NODE_R;
+            tmp = _aux_get_dict(node, "id");
+            if (!tmp) {
+                *mtype = VDHT_PING_R;
+            }else {
+                *mtype = VDHT_FIND_NODE_R;
+            }
             return 0;
         }
         tmp = _aux_get_dict(node, "hash");
@@ -1232,8 +1235,7 @@ int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
  * @result:
  * response = {"t":"aa",
  *             "y":"r",
- *             "r":{"id":"abcdefghij0123456789",
- *                  "node" :{"id": "abcdefghij0123456789",
+ *             "r":{"node" :{"id": "abcdefghij0123456789",
  *                            "m": "0120342301031234",
  *                            "v": "20013243413143414",
  *                            "f": "00000001"
@@ -1243,7 +1245,7 @@ int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
  * bencoded = d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe
  */
 static
-int _vdht_dec_ping_rsp(void* ctxt, vtoken* token, vnodeId* srcId, vnodeInfo* result)
+int _vdht_dec_ping_rsp(void* ctxt, vtoken* token, vnodeInfo* result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
@@ -1251,12 +1253,9 @@ int _vdht_dec_ping_rsp(void* ctxt, vtoken* token, vnodeId* srcId, vnodeInfo* res
 
     vassert(ctxt);
     vassert(token);
-    vassert(srcId);
     vassert(result);
 
     ret = _aux_get_token(dict, token);
-    retE((ret < 0));
-    ret = _aux_get_id(dict, "r", "id", srcId);
     retE((ret < 0));
 
     node = _aux_get_node(dict, "r", "node");

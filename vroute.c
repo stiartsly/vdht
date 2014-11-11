@@ -778,7 +778,7 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
     buf = _aux_mbuf_alloc(route);
     retE((!buf));
 
-    ret = enc_ops->ping_rsp(token, &dest->id, info, buf, _aux_mbuf_len());
+    ret = enc_ops->ping_rsp(token, info, buf, _aux_mbuf_len());
     ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
@@ -1282,9 +1282,10 @@ int _aux_dht_msg_cb(void* cookie, struct vmsg_usr* mu)
     }
     case VDHT_PING_R: {
         vnodeInfo info;
-        ret = dec_ops->ping_rsp(ctxt, &token, &addr.id, &info);
+        ret = dec_ops->ping_rsp(ctxt, &token, &info);
         dec_ops->dec_done(ctxt);
         retE((ret < 0));
+        vnodeId_copy(&addr.id, &info.id);
         ret = route->cb_ops->ping_rsp(route, &addr, &info);
         retE((ret < 0));
         break;
