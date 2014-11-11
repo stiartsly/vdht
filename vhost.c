@@ -311,6 +311,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
     struct vsockaddr addr;
+    vnodeVer ver;
     char ip[64];
     int port = 0;
     int tmo  = 0;
@@ -344,10 +345,14 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->ops = &host_ops;
     host->cfg = cfg;
 
+    host->ops->version(host, ip, 64);
+    ret = vnodeVer_unstrlize(ip, &ver);
+    ret1E_p((ret < 0), free(host));
+
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, &addr);
     ret += vticker_init(&host->ticker);
-    ret += vnode_init  (&host->node, host->cfg, &host->msger, &host->ticker, &addr.vsin_addr);
+    ret += vnode_init  (&host->node, host->cfg, &host->msger, &host->ticker, &addr.vsin_addr, &ver);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host);
     if (ret < 0) {

@@ -227,17 +227,18 @@ int _aux_get_tick_interval(struct vconfig* cfg)
  * @ticker:
  * @addr:
  */
-int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vmsger* msger, struct vticker* ticker, struct sockaddr_in* addr)
+int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vmsger* msger, struct vticker* ticker, struct sockaddr_in* addr, vnodeVer* ver)
 {
     vassert(vnd);
     vassert(cfg);
     vassert(msger);
     vassert(ticker);
     vassert(addr);
+    vassert(ver);
 
     vnodeId_make(&vnd->ownId.id);
     vsockaddr_copy(&vnd->ownId.addr, addr);
-    vroute_init(&vnd->route, cfg, msger, &vnd->ownId);
+    vroute_init(&vnd->route, cfg, msger, &vnd->ownId, ver);
 
     vlock_init (&vnd->lock);
     vnd->mode  = VDHT_OFF;

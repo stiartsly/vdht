@@ -120,7 +120,7 @@ struct vroute {
     struct vmsger*  msger;
 };
 
-int  vroute_init  (struct vroute*, struct vconfig*, struct vmsger*, vnodeAddr*);
+int  vroute_init  (struct vroute*, struct vconfig*, struct vmsger*, vnodeAddr*, vnodeVer*);
 void vroute_deinit(struct vroute*);
 
 #endif

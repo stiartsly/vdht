@@ -288,6 +288,7 @@ int main(int argc, char** argv)
         show_usage();
         exit(0);
     }
+
     if (show_ver) {
         show_version();
         exit(0);

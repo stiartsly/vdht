@@ -49,7 +49,7 @@ struct vnode {
     struct vnode_ops* ops;
 };
 
-int  vnode_init  (struct vnode*, struct vconfig*, struct vmsger*, struct vticker*, struct sockaddr_in*);
+int  vnode_init  (struct vnode*, struct vconfig*, struct vmsger*, struct vticker*, struct sockaddr_in*, vnodeVer*);
 void vnode_deinit(struct vnode*);
 
 #endif
