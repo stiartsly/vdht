@@ -543,7 +543,7 @@ int vpluger_init(struct vpluger* pluger, struct vhost* host)
     vlist_init(&pluger->prqs);
     vlock_init(&pluger->prq_lock);
 
-    pluger->route = &host->node.route;
+    pluger->route = &host->route;
     pluger->msger = &host->msger;
     pluger->c_ops = &pluger_c_ops;
     pluger->s_ops = &pluger_s_ops;

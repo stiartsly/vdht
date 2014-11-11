@@ -115,11 +115,48 @@ void vpeer_init(struct vpeer* peer, vnodeAddr* addr, time_t snd_ts, time_t rcv_t
     return ;
 }
 
+static
+void vpeer_dump_flags(uint32_t flags)
+{
+    struct vpeer_flags_desc* desc = peer_flags_desc;
+    static char buf[BUF_SZ];
+
+    memset(buf, 0, BUF_SZ);
+    while(desc->desc) {
+        if (desc->prop & flags) {
+            strcat(buf, desc->desc);
+            strcat(buf, ":");
+        }
+        desc++;
+    }
+    vdump(printf("flags: %s", buf));
+    return ;
+}
+
+static
+void vpeer_dump(struct vpeer* peer)
+{
+    char buf[64];
+    int  port = 0;
+    vassert(peer);
+
+    vdump(printf("-> PEER"));
+    vnodeId_dump(&peer->extId.id);
+    vsockaddr_unconvert(&peer->extId.addr, buf, 64, &port);
+    vdump(printf("addr:%s:%d", buf,port));
+    vpeer_dump_flags(peer->flags);
+    vdump(printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet"));
+    vdump(printf("timestamp[rcv]: %s",  ctime(&peer->rcv_ts)));
+    vdump(printf("tried send times:%d", peer->ntries));
+    vdump(printf("<- PEER"));
+    return ;
+}
+
 /*
  *  auxilary function for @route->ops->add
  */
 static
-struct vpeer* _aux_get_worst(struct varray* peers, int flags)
+struct vpeer* _aux_get_worst_item(struct varray* peers, int flags)
 {
     int _aux_get_worst_cb(void* item, void* cookie)
     {
@@ -196,7 +233,7 @@ int _vroute_add(struct vroute* route, vnodeAddr* node, int flags)
         vpeer_init(peer, node, peer->snd_ts, now, peer->flags | flags);
         updated = 1;
     } else if (varray_size(peers) >= route->bucket_sz) { // replace the worst one.
-        peer = _aux_get_worst(peers, flags);
+        peer = _aux_get_worst_item(peers, flags);
         if (peer) {
             vpeer_init(peer, node, 0, now, flags);
             updated = 1;
@@ -255,7 +292,7 @@ int _vroute_remove(struct vroute* route, vnodeAddr* node)
  *
  */
 static
-int _aux_load_cb(void* priv, int col, char** value, char** field)
+int _aux_load_item_cb(void* priv, int col, char** value, char** field)
 {
     varg_decl(((void**)value),1, char*, host  ); // for field "host"
     varg_decl(((void**)value),2, char*, port  ); // for field "port"
@@ -296,7 +333,7 @@ int _vroute_load(struct vroute* route)
     retE((ret));
 
     sprintf(sql_buf, "select * from %s", VPEER_TB);
-    ret = sqlite3_exec(db, sql_buf, _aux_load_cb, route, &err);
+    ret = sqlite3_exec(db, sql_buf, _aux_load_item_cb, route, &err);
     vlog((ret && err), printf("db err:%s\n", err));
     sqlite3_close(db);
     vlog((ret), elog_sqlite3_exec);
@@ -396,35 +433,12 @@ int _vroute_clear(struct vroute* route)
 }
 
 static
-int _aux_dump_cb(void* item, void* cookie)
+int _aux_dump_item_cb(void* item, void* cookie)
 {
     struct vpeer* peer = (struct vpeer*)item;
-    char buf[64];
-    int  port = 0;
     vassert(peer);
 
-    vdump(printf("-> PEER"));
-    vnodeId_dump(&peer->extId.id);
-    vsockaddr_unconvert(&peer->extId.addr, buf, 64, &port);
-    vdump(printf("addr:%s:%d", buf,port));
-    {
-        struct vpeer_flags_desc* desc = peer_flags_desc;
-        static char buf[BUF_SZ];
-
-        memset(buf, 0, BUF_SZ);
-        while(desc->desc) {
-            if (desc->prop & peer->flags) {
-                strcat(buf, desc->desc);
-                strcat(buf, " ");
-            }
-            desc++;
-        }
-        vdump(printf("flags: %s", buf));
-    }
-    vdump(printf("sent timestamp: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet"));
-    vdump(printf("rcv  timestamp: %s",  ctime(&peer->rcv_ts)));
-    vdump(printf("tried send times:%d", peer->ntries));
-    vdump(printf("<- PEER"));
+    vpeer_dump(peer);
     return 0;
 }
 
@@ -440,10 +454,11 @@ int _vroute_dump(struct vroute* route)
     vassert(route);
 
     vdump(printf("-> ROUTE"));
+    vpeer_dump_flags(route->flags);
     vlock_enter(&route->lock);
     for (; i < NBUCKETS; i++) {
         peers = &route->bucket[i].peers;
-        varray_iterate(peers, _aux_dump_cb, route);
+        varray_iterate(peers, _aux_dump_item_cb, route);
     }
     vlock_leave(&route->lock);
     vdump(printf("<- ROUTE"));
@@ -1389,6 +1404,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
 
     vnodeAddr_copy(&route->ownId, addr);
     vnodeVer_copy (&route->version, ver);
+    route->flags   |= PROP_DHT_MASK;
     route->cfg      = cfg;
     route->msger    = msger;
     route->ops      = &route_ops;

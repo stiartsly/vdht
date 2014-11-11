@@ -34,6 +34,7 @@ enum {
     PROP_APP         = 0x01000000
 };
 
+#define PROP_DHT_MASK  ((uint32_t)0x000003ff)
 #define PROP_PLUG_MASK ((uint32_t)0x003f0000)
 enum {
     PLUGIN_RELAY,
