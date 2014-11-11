@@ -21,6 +21,7 @@ struct vhost_ops {
     int (*loop)     (struct vhost*);
     int (*req_quit) (struct vhost*);
     int (*dump)     (struct vhost*);
+    int (*version)  (struct vhost*, char*, int);
 };
 
 struct vhost {

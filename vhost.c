@@ -113,9 +113,13 @@ int _vhost_unplug(struct vhost* host, int pluginId)
 static
 int _vhost_dump(struct vhost* host)
 {
+    char ver[64];
     vassert(host);
 
     vdump(printf("-> HOST"));
+    memset(ver, 0, 64);
+    host->ops->version(host, ver, 64);
+    vdump(printf("version: %s", ver));
     vdump(printf("addr: %s:%d",host->myname, host->myport));
     host->node.ops->dump(&host->node);
     host->msger.ops->dump(&host->msger);
@@ -155,6 +159,26 @@ int _vhost_req_quit(struct vhost* host)
 }
 
 static
+int _vhost_version(struct vhost* host, char* buf, int len)
+{
+    /*
+     * version : a.b.c.d.e
+     * a: major
+     * b: minor
+     * c: bugfix
+     * d: demo(candidate)
+     * e: skipped.
+     */
+    const char* version = "0.0.0.1.0";
+    vassert(host);
+    vassert(buf);
+
+    retE((len < strlen(version) + 1));
+    strcpy(buf, version);
+    return 0;
+}
+
+static
 struct vhost_ops host_ops = {
     .start     = _vhost_start,
     .stop      = _vhost_stop,
@@ -165,7 +189,8 @@ struct vhost_ops host_ops = {
     .unplug    = _vhost_unplug,
     .loop      = _vhost_loop,
     .req_quit  = _vhost_req_quit,
-    .dump      = _vhost_dump
+    .dump      = _vhost_dump,
+    .version   = _vhost_version
 };
 
 /*
@@ -205,7 +230,6 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
         vlog((!ms), elog_vmsg_sys_alloc);
         retE((!ms));
         vmsg_sys_init(ms, um->addr, um->len + sz, data);
-        printf("<%s> sys msg len :%d.\n", __FUNCTION__, ms->len);
         *sm = ms;
         return 0;
     }
