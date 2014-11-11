@@ -86,7 +86,7 @@ int _vlsctl_add_node(struct vlsctl* lsctl, void* data, int offset)
     char ip[64];
     int port = 0;
     int ret  = 0;
-    int sz = offset;
+    int sz = 0;
 
     port = get_int32(offset_addr(data, offset + sz));
     sz += sizeof(long);

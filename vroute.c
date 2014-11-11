@@ -498,7 +498,7 @@ int _vroute_tick(struct vroute* route)
         peers = &route->bucket[i].peers;
         varray_iterate(peers, _aux_tick_cb, argv);
 
-        if ((now - route->bucket[i].ts) > MAX_RCV_PERIOD) {
+        if ((now - route->bucket[i].ts) < MAX_RCV_PERIOD) {
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);

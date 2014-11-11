@@ -25,7 +25,7 @@ void varray_deinit(struct varray* array)
     vassert(array);
 
     if (array->items) {
-    	free(array->items);
+        free(array->items);
     }
     return ;
 }
@@ -42,7 +42,7 @@ void* varray_get(struct varray* array, int idx)
 
     retE_p((!array->items));
     retE_p((idx < 0));
-	retE_p((idx >= array->used));
+    retE_p((idx >= array->used));
 
     return array->items[idx];
 }
@@ -137,7 +137,7 @@ int _aux_shrink(struct varray* array)
     vassert(array->items);
     vassert(array->used * 2 <= array->capc);
 
-	retS((array->capc == array->first));
+    retS((array->capc == array->first));
 
     new_items = realloc(array->items, new_capc * sizeof(void*));
     ret1E((!new_items), elog_realloc);
@@ -252,15 +252,15 @@ int vsorted_array_add(struct vsorted_array* sarray, void* new)
         item = varray_get(&sarray->array, i);
         if (sarray->cmp_cb(new, item, sarray->cookie) > 0) {
             // "new" is better than "item"
-    	    break;
+            break;
         }
-   	}
-   	if (i < sz) {
-   	    return varray_add(&sarray->array, i, new);
-   	} else {
-   	    return varray_add_tail(&sarray->array, new);
-   	}
-   	return 0;
+    }
+    if (i < sz) {
+        return varray_add(&sarray->array, i, new);
+    } else {
+        return varray_add_tail(&sarray->array, new);
+    }
+    return 0;
 }
 
 void* vsorted_array_del(struct vsorted_array* sarray, void* todel)
