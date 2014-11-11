@@ -997,8 +997,7 @@ struct be_node* _aux_get_dict(struct be_node* node, char* key)
 
     vassert(node);
     vassert(key);
-
-   // retE_p((node->type != BE_DICT));
+    retE_p((node->type != BE_DICT));
 
     for(; node->val.d[i].val; i++) {
         if (!strcmp(key, node->val.d[i].key)) {
@@ -1139,7 +1138,7 @@ int _aux_get_mtype(struct be_node* dict, int* mtype)
     retE((BE_STR != node->type));
 
     if (!strcmp(node->val.s, "q")) {
-        node = _aux_get_dict(node, "q");
+        node = _aux_get_dict(dict, "q");
         retE((!node));
         retE((BE_STR != node->type));
 
@@ -1159,7 +1158,7 @@ int _aux_get_mtype(struct be_node* dict, int* mtype)
 
     } else if (!strcmp(node->val.s, "r")) {
         struct be_node* tmp = NULL;
-        node = _aux_get_dict(node, "r");
+        node = _aux_get_dict(dict, "r");
         retE((!node));
         retE((BE_STR != node->type));
         tmp = _aux_get_dict(node, "hash");
