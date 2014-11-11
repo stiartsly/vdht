@@ -25,16 +25,15 @@ struct vhost_ops {
 };
 
 struct vhost {
-    char myname[HOST_SZ];
-    int  myport;
+    vnodeAddr ownId;
     int  to_quit;
-
     int  tick_tmo;
 
     struct vmsger  msger;
     struct vrpc    rpc;
     struct vwaiter waiter;
     struct vticker ticker;
+    struct vroute  route;
     struct vnode   node;
     struct vlsctl  lsctl;
 

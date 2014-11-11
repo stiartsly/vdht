@@ -50,7 +50,7 @@ int _vnode_join(struct vnode* vnd, struct sockaddr_in* addr)
 
     vnodeId_make(&nodeAddr.id);
     vsockaddr_copy(&nodeAddr.addr, addr);
-    return vnd->route.ops->add(&vnd->route, &nodeAddr, 0);
+    return vnd->route->ops->add(vnd->route, &nodeAddr, 0);
 }
 
 /*
@@ -70,7 +70,7 @@ int _vnode_drop(struct vnode* vnd, struct sockaddr_in* addr)
 
     vnodeId_make(&nodeAddr.id);
     vsockaddr_copy(&nodeAddr.addr, addr);
-    return vnd->route.ops->remove(&vnd->route, &nodeAddr);
+    return vnd->route->ops->remove(vnd->route, &nodeAddr);
 }
 
 /*
@@ -107,7 +107,7 @@ int _aux_tick_cb(void* cookie)
         break;
     }
     case VDHT_UP: {
-        ret = vnd->route.ops->load(&vnd->route);
+        ret = vnd->route->ops->load(vnd->route);
         if (ret < 0) {
             vnd->mode = VDHT_ERR;
             break;
@@ -119,13 +119,13 @@ int _aux_tick_cb(void* cookie)
     }
     case VDHT_RUN: {
         if (now - vnd->ts > vnd->tick_interval) {
-            vnd->route.ops->tick(&vnd->route);
+            vnd->route->ops->tick(vnd->route);
             vnd->ts = now;
         }
         break;
     }
     case VDHT_DOWN: {
-        vnd->route.ops->store(&vnd->route);
+        vnd->route->ops->store(vnd->route);
         vnd->mode = VDHT_OFF;
         vlogI(printf("DHT become offline"));
         break;
@@ -154,26 +154,12 @@ int _vnode_stabilize(struct vnode* vnd)
  * @vnd:
  */
 static
-int _vnode_get_route(struct vnode* vnd, struct vroute** route)
-{
-    vassert(vnd);
-    vassert(route);
-
-    *route = &vnd->route;
-    return 0;
-}
-
-/*
- * @vnd:
- */
-static
 int _vnode_dump(struct vnode* vnd)
 {
     vassert(vnd);
 
     vdump(printf("-> NODE"));
     vdump(printf("state:%s", node_mode_desc[vnd->mode]));
-    vnd->route.ops->dump(&vnd->route);
     vdump(printf("<- NODE"));
 
     return 0;
@@ -186,7 +172,6 @@ struct vnode_ops node_ops = {
     .join      = _vnode_join,
     .drop      = _vnode_drop,
     .stabilize = _vnode_stabilize,
-    .get_route = _vnode_get_route,
     .dump      = _vnode_dump
 //    .get_peers = _vnode_get_peers
 };
@@ -199,6 +184,7 @@ int _aux_get_tick_interval(struct vconfig* cfg)
     int tms = 0;
     vassert(cfg);
 
+    memset(buf, 0, 32);
     ret = cfg->ops->get_str(cfg, "node.tick_interval", buf, 32);
     vcall_cond((ret < 0), strcpy(buf, DEF_NODE_TICK_INTERVAL));
     ret = strlen(buf);
@@ -227,25 +213,20 @@ int _aux_get_tick_interval(struct vconfig* cfg)
  * @ticker:
  * @addr:
  */
-int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vmsger* msger, struct vticker* ticker, struct sockaddr_in* addr, vnodeVer* ver)
+int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, struct vroute* route, vnodeAddr* nodeAddr)
 {
     vassert(vnd);
     vassert(cfg);
-    vassert(msger);
     vassert(ticker);
-    vassert(addr);
-    vassert(ver);
+    vassert(nodeAddr);
 
-    vnodeId_make(&vnd->ownId.id);
-    vsockaddr_copy(&vnd->ownId.addr, addr);
-    vroute_init(&vnd->route, cfg, msger, &vnd->ownId, ver);
-
+    vnodeAddr_copy(&vnd->ownId, nodeAddr);
     vlock_init (&vnd->lock);
     vnd->mode  = VDHT_OFF;
 
     vnd->cfg    = cfg;
-    vnd->msger  = msger;
     vnd->ticker = ticker;
+    vnd->route  = route;
     vnd->ops    = &node_ops;
 
     vnd->tick_interval = _aux_get_tick_interval(cfg);
@@ -267,9 +248,6 @@ void vnode_deinit(struct vnode* vnd)
         vlock_enter(&vnd->lock);
     }
     vlock_leave(&vnd->lock);
-
-    vnd->route.ops->clear(&vnd->route);
-    vroute_deinit(&vnd->route);
     vlock_deinit (&vnd->lock);
 
     return ;

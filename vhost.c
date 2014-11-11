@@ -79,15 +79,13 @@ int _vhost_stabilize(struct vhost* host)
 static
 int _vhost_plug(struct vhost* host, int pluginId)
 {
-    struct vnode*  node  = &host->node;
-    struct vroute* route = NULL;
+    struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(pluginId >= 0);
     vassert(pluginId < PLUGIN_BUTT);
 
-    node->ops->get_route(node, &route);
     ret = route->plugin_ops->plug(route, pluginId);
     retE((ret < 0));
     return 0;
@@ -96,15 +94,13 @@ int _vhost_plug(struct vhost* host, int pluginId)
 static
 int _vhost_unplug(struct vhost* host, int pluginId)
 {
-    struct vnode*  node  = &host->node;
-    struct vroute* route = NULL;
+    struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(pluginId >= 0);
     vassert(pluginId < PLUGIN_BUTT);
 
-    node->ops->get_route(node, &route);
     ret = route->plugin_ops->unplug(route, pluginId);
     retE((ret < 0));
     return 0;
@@ -120,7 +116,8 @@ int _vhost_dump(struct vhost* host)
     memset(ver, 0, 64);
     host->ops->version(host, ver, 64);
     vdump(printf("version: %s", ver));
-    vdump(printf("addr: %s:%d",host->myname, host->myport));
+    vsockaddr_dump(&host->ownId.addr);
+    host->route.ops->dump(&host->route);
     host->node.ops->dump(&host->node);
     host->msger.ops->dump(&host->msger);
     host->waiter.ops->dump(&host->waiter);
@@ -277,13 +274,14 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 }
 
 static
-int _aux_get_tick_tmo(struct vconfig* cfg)
+int _aux_init_tick_tmo(struct vconfig* cfg)
 {
     char buf[32];
     int tms = 0;
     int ret = 0;
     vassert(cfg);
 
+    memset(buf, 0, 32);
     ret = cfg->ops->get_str(cfg, "global.tick_tmo", buf, 32);
     vcall_cond((ret < 0), strcpy(buf, DEF_HOST_TICK_TMO));
     ret = strlen(buf);
@@ -307,30 +305,56 @@ int _aux_get_tick_tmo(struct vconfig* cfg)
     return (ret * tms);
 }
 
+static
+int _aux_init_ownId(struct vconfig* cfg, vnodeAddr* nodeAddr)
+{
+    char ip[64];
+    int port = 0;
+    int ret  = 0;
+    vassert(cfg);
+    vassert(nodeAddr);
+
+    memset(ip, 0, 64);
+    ret = vhostaddr_get_first(ip, 64);
+    vlog((ret < 0), elog_vhostaddr_get_first);
+    retE((ret < 0));
+    ret = cfg->ops->get_int(cfg, "dht.port", &port);
+    if (ret < 0) {
+        port = DEF_DHT_PORT;
+    }
+    ret = vsockaddr_convert(ip, port, &nodeAddr->addr);
+    vlog((ret < 0), elog_vsockaddr_convert);
+    retE((ret < 0));
+
+    vnodeId_make(&nodeAddr->id);
+    return 0;
+}
+
+static
+int _aux_init_ver(struct vhost* host, vnodeVer* ver)
+{
+    char str_ver[64];
+    vassert(host);
+
+    memset(str_ver, 0, 64);
+    host->ops->version(host, str_ver, 64);
+    vnodeVer_unstrlize(str_ver, ver);
+
+    return 0;
+}
+
 struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
-    struct vsockaddr addr;
+    vnodeAddr nodeAddr;
     vnodeVer ver;
-    char ip[64];
-    int port = 0;
-    int tmo  = 0;
-    int ret  = 0;
+    int ret = 0;
+    int tmo = 0;
     vassert(cfg);
 
-    ret = vhostaddr_get_first(ip, 64);
-    vlog((ret < 0), elog_vhostaddr_get_first);
+    ret = _aux_init_ownId(cfg, &nodeAddr);
     retE_p((ret < 0));
-    ret = cfg->ops->get_int(cfg, "dht.port", &port);
-    if (ret < 0) {
-        host->myport = DEF_DHT_PORT;
-    }
-
-    ret = vsockaddr_convert(ip, port, &addr.vsin_addr);
-    vlog((ret < 0), elog_vsockaddr_convert);
-    retE_p((ret < 0));
-
-    tmo = _aux_get_tick_tmo(cfg);
+    tmo = _aux_init_tick_tmo(cfg);
     retE_p((tmo < 0));
 
     host = (struct vhost*)malloc(sizeof(struct vhost));
@@ -338,27 +362,25 @@ struct vhost* vhost_create(struct vconfig* cfg)
     retE_p((!host));
     memset(host, 0, sizeof(*host));
 
-    strcpy(host->myname, ip);
-    host->myport   = port;
+    vnodeAddr_copy(&host->ownId, &nodeAddr);
     host->tick_tmo = tmo;
     host->to_quit  = 0;
     host->ops = &host_ops;
     host->cfg = cfg;
-
-    host->ops->version(host, ip, 64);
-    ret = vnodeVer_unstrlize(ip, &ver);
-    ret1E_p((ret < 0), free(host));
+    _aux_init_ver(host, &ver);
 
     ret += vmsger_init (&host->msger);
-    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, &addr);
+    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&nodeAddr.addr));
     ret += vticker_init(&host->ticker);
-    ret += vnode_init  (&host->node, host->cfg, &host->msger, &host->ticker, &addr.vsin_addr, &ver);
+    ret += vroute_init (&host->route, cfg, &host->msger, &nodeAddr, &ver);
+    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &nodeAddr);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host);
     if (ret < 0) {
         vlsctl_deinit (&host->lsctl);
         vwaiter_deinit(&host->waiter);
         vnode_deinit  (&host->node);
+        vroute_deinit (&host->route);
         vticker_deinit(&host->ticker);
         vrpc_deinit   (&host->rpc);
         vmsger_deinit (&host->msger);
@@ -384,6 +406,7 @@ void vhost_destroy(struct vhost* host)
     vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);
+    vroute_deinit (&host->route);
     vticker_deinit(&host->ticker);
     vrpc_deinit   (&host->rpc);
     vmsger_deinit (&host->msger);

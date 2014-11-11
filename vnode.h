@@ -28,14 +28,12 @@ struct vnode_ops {
     int (*join)     (struct vnode*, struct sockaddr_in*);
     int (*drop)     (struct vnode*, struct sockaddr_in*);
     int (*stabilize)(struct vnode*);
-    int (*get_route)(struct vnode*, struct vroute**);
     int (*dump)     (struct vnode*);
 //   int (*get_peers)(struct vnode*, vnodeHash*, vpeer_cb_t, void*);
 };
 
 struct vnode {
     vnodeAddr ownId;
-    struct vroute route;
 
     int    tick_interval;
     time_t ts;
@@ -43,13 +41,13 @@ struct vnode {
     struct vlock lock;  // for mode.
 
     struct vconfig* cfg;
-    struct vmsger*  msger;
     struct vticker* ticker;
+    struct vroute*  route;
 
     struct vnode_ops* ops;
 };
 
-int  vnode_init  (struct vnode*, struct vconfig*, struct vmsger*, struct vticker*, struct sockaddr_in*, vnodeVer*);
+int  vnode_init  (struct vnode*, struct vconfig*, struct vticker*, struct vroute*, vnodeAddr*);
 void vnode_deinit(struct vnode*);
 
 #endif

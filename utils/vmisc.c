@@ -23,6 +23,7 @@ int vhostaddr_get_first(char* host, int sz)
     retE((sockfd < 0));
 
     gindex = 0;
+    memset(gifr, 0, sizeof(gifr));
     gifc.ifc_len = sizeof(gifr);
     gifc.ifc_buf = (caddr_t)gifr;
 
@@ -190,9 +191,10 @@ int vsockaddr_dump(struct sockaddr_in* addr)
     int ret  = 0;
     vassert(addr);
 
+    memset(ip, 0, 64);
     ret = vsockaddr_unconvert(addr, ip, 64, &port);
     retE((ret < 0));
-    printf("##ADDR: %s:%d\n", ip, port);
+    vdump(printf("ADDR:%s:%d", ip, port));
     return 0;
 }
 

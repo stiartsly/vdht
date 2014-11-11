@@ -1388,7 +1388,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     vassert(addr);
 
     vnodeAddr_copy(&route->ownId, addr);
-    vnodeVer_copy(&route->version, ver);
+    vnodeVer_copy (&route->version, ver);
     route->cfg      = cfg;
     route->msger    = msger;
     route->ops      = &route_ops;
