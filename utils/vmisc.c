@@ -58,11 +58,11 @@ int vhostaddr_get_next(char* host, int sz)
     retE((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
 
     ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
-    if (strcmp(ip, "127.0.0.1")) { 
+    if (strcmp(ip, "127.0.0.1")) {
         retE((strlen(ip) + 1 > sz));
         strcpy(host, ip);
         return 0;
-    } 
+    }
     gindex++;
 
     retE((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
@@ -180,6 +180,19 @@ int vsockaddr_unconvert(struct sockaddr_in* addr, char* host, int len, int* port
     strcpy(host, hostname);
 
     *port = (int)ntohs(addr->sin_port);
+    return 0;
+}
+
+int vsockaddr_dump(struct sockaddr_in* addr)
+{
+    char ip[64];
+    int port = 0;
+    int ret  = 0;
+    vassert(addr);
+
+    ret = vsockaddr_unconvert(addr, ip, 64, &port);
+    retE((ret < 0));
+    printf("##ADDR: %s:%d\n", ip, port);
     return 0;
 }
 

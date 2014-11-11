@@ -238,7 +238,7 @@ static
 int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
 {
     struct vudp* udp = (struct vudp*)impl;
-    int len = 0;
+    int len = sizeof(struct sockaddr_in);
     int ret = 0;
 
     vassert(udp);

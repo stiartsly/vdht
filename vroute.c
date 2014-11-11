@@ -745,7 +745,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
     ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
-            .addr  = (struct vsockaddr*)&dest->addr,
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
             .msgId = VMSG_DHT,
             .data  = buf,
             .len   = ret
@@ -781,7 +781,7 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
     ret1E((ret < 0), _aux_mbuf_free(route, buf));
     {
         struct vmsg_usr msg = {
-            .addr  = (struct vsockaddr*)&dest->addr,
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
             .msgId = VMSG_DHT,
             .data  = buf,
             .len   = ret
