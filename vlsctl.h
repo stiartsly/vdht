@@ -25,12 +25,30 @@ enum {
     VLSCTL_BUTT
 };
 
+struct vlsctl;
+struct vlsctl_ops {
+    int (*dht_up)    (struct vlsctl*, void*, int);
+    int (*dht_down)  (struct vlsctl*, void*, int);
+    int (*dht_exit)  (struct vlsctl*, void*, int);
+    int (*add_node)  (struct vlsctl*, void*, int);
+    int (*del_node)  (struct vlsctl*, void*, int);
+    int (*relay_up)  (struct vlsctl*, void*, int);
+    int (*relay_down)(struct vlsctl*, void*, int);
+    int (*stun_up)   (struct vlsctl*, void*, int);
+    int (*stun_down) (struct vlsctl*, void*, int);
+    int (*vpn_up)    (struct vlsctl*, void*, int);
+    int (*vpn_down)  (struct vlsctl*, void*, int);
+    int (*log_stdout)(struct vlsctl*, void*, int);
+    int (*cfg_stdout)(struct vlsctl*, void*, int);
+};
+
 struct vlsctl {
     struct vrpc     rpc;
     struct vmsger   msger;
     struct vhost*   host;
 
     struct vsockaddr addr;
+    struct vlsctl_ops* ops;
 };
 
 int  vlsctl_init  (struct vlsctl*, struct vhost*);

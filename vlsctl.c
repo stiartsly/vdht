@@ -36,52 +36,64 @@
  */
 
 static
-int _aux_rt_dht_up(void** argv)
+int _vlsctl_dht_up(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
-    vassert(host);
+    struct vhost* host = lsctl->host;
+    int ret = 0;
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
-    return host->ops->start(host);
+    ret = host->ops->start(host);
+    retE((ret < 0));
+    return 0;
 }
 
 static
-int _aux_rt_dht_down(void** argv)
+int _vlsctl_dht_down(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
-    vassert(host);
+    struct vhost* host = lsctl->host;
+    int ret = 0;
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
-    return host->ops->stop(host);
+    ret = host->ops->stop(host);
+    retE((ret < 0));
+    return 0;
 }
 
 static
-int _aux_rt_dht_exit(void** argv)
+int _vlsctl_dht_exit(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
-    vassert(host);
+    struct vhost* host = lsctl->host;
+    int ret = 0;
 
-    return host->ops->req_quit(host);
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
+
+    ret = host->ops->req_quit(host);
+    retE((ret < 0));
+    return 0;
 }
 
 static
-int _aux_rt_add_node(void** argv)
+int _vlsctl_add_node(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
-    varg_decl(argv, 1, void*, addr);
-    int sz = *(int*)argv[2];
+    struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
-    void* data = NULL;
     char ip[64];
-    int  port = 0;
-    int  ret  = 0;
+    int port = 0;
+    int ret  = 0;
+    int sz = offset;
 
-    data = offset_addr(addr, sz);
-    port = get_int32(data);
-    sz  += sizeof(long);
+    port = get_int32(offset_addr(data, offset + sz));
+    sz += sizeof(long);
 
-    data = offset_addr(addr, sz);
     memset(ip, 0, 64);
-    strcpy(ip, data);
-    sz  += strlen(ip) + 1;
+    strcpy(ip, (char*)offset_addr(data, offset + sz));
+    sz += strlen(ip) + 1;
 
     ret = vsockaddr_convert(ip, port, &sin);
     retE((ret < 0));
@@ -93,25 +105,21 @@ int _aux_rt_add_node(void** argv)
 }
 
 static
-int _aux_rt_del_node(void** argv)
+int _vlsctl_del_node(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
-    varg_decl(argv, 1, void*, addr);
-    int sz = *(int*)argv[2];
+    struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
-    void* data = NULL;
     char ip[64];
-    int  port = 0;
-    int  ret  = 0;
+    int port = 0;
+    int ret  = 0;
+    int sz   = 0;
 
-    data = offset_addr(addr, sz);
-    port = get_int32(data);
-    sz  += sizeof(long);
+    port = get_int32(offset_addr(data, offset + sz));
+    sz += sizeof(long);
 
-    data = offset_addr(addr, sz);
     memset(ip, 0, 64);
-    strcpy(ip, data);
-    sz  += strlen(ip) + 1;
+    strcpy(ip, (char*)offset_addr(data, offset + sz));
+    sz += strlen(ip) + 1;
 
     ret = vsockaddr_convert(ip, port, &sin);
     retE((ret < 0));
@@ -123,24 +131,30 @@ int _aux_rt_del_node(void** argv)
 }
 
 static
-int _aux_rt_relay_up(void** argv)
+int _vlsctl_relay_up(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
+    struct vhost* host = lsctl->host;
     int ret = 0;
-    vassert(host);
 
-    ret =  host->ops->plug(host, PLUGIN_RELAY);
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
+
+    ret = host->ops->plug(host, PLUGIN_RELAY);
     retE((ret < 0));
     vlogI(printf("relay up"));
     return 0;
 }
 
 static
-int _aux_rt_relay_down(void** argv)
+int _vlsctl_relay_down(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
+    struct vhost* host = lsctl->host;
     int ret = 0;
-    vassert(host);
+
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
     ret = host->ops->unplug(host, PLUGIN_RELAY);
     retE((ret < 0));
@@ -149,11 +163,14 @@ int _aux_rt_relay_down(void** argv)
 }
 
 static
-int _aux_rt_stun_up(void** argv)
+int _vlsctl_stun_up(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
+    struct vhost* host = lsctl->host;
     int ret = 0;
-    vassert(host);
+
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
     ret = host->ops->plug(host, PLUGIN_STUN);
     retE((ret < 0));
@@ -162,11 +179,14 @@ int _aux_rt_stun_up(void** argv)
 }
 
 static
-int _aux_rt_stun_down(void** argv)
+int _vlsctl_stun_down(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
+    struct vhost* host = lsctl->host;
     int ret = 0;
-    vassert(host);
+
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
     ret = host->ops->unplug(host, PLUGIN_STUN);
     retE((ret < 0));
@@ -174,13 +194,15 @@ int _aux_rt_stun_down(void** argv)
     return 0;
 }
 
-
 static
-int _aux_rt_vpn_up(void** argv)
+int _vlsctl_vpn_up(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
+    struct vhost* host = lsctl->host;
     int ret = 0;
-    vassert(host);
+
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
     ret = host->ops->plug(host, PLUGIN_VPN);
     retE((ret < 0));
@@ -189,11 +211,14 @@ int _aux_rt_vpn_up(void** argv)
 }
 
 static
-int _aux_rt_vpn_down(void** argv)
+int _vlsctl_vpn_down(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
+    struct vhost* host = lsctl->host;
     int ret = 0;
-    vassert(host);
+
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
     ret = host->ops->unplug(host, PLUGIN_VPN);
     retE((ret < 0));
@@ -202,10 +227,12 @@ int _aux_rt_vpn_down(void** argv)
 }
 
 static
-int _aux_rt_log_stdout(void** argv)
+int _vlsctl_log_stdout(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
-    vassert(host);
+    struct vhost* host = lsctl->host;
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
     vlogI(printf("[vlsctl] request to dump host"));
     host->ops->dump(host);
@@ -213,10 +240,12 @@ int _aux_rt_log_stdout(void** argv)
 }
 
 static
-int _aux_rt_cfg_stdout(void** argv)
+int _vlsctl_cfg_stdout(struct vlsctl* lsctl, void* data, int offset)
 {
-    varg_decl(argv, 0, struct vhost*, host);
-    vassert(host);
+    struct vhost* host = lsctl->host;
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
     vlogI(printf("[vlsctl] request to dump config"));
     host->cfg->ops->dump(host->cfg);
@@ -224,28 +253,26 @@ int _aux_rt_cfg_stdout(void** argv)
 }
 
 static
-int (*lsctl_rt_t[])(void**) = {
-    _aux_rt_dht_up,
-    _aux_rt_dht_down,
-    _aux_rt_dht_exit,
-    _aux_rt_add_node,
-    _aux_rt_del_node,
-    _aux_rt_relay_up,
-    _aux_rt_relay_down,
-    _aux_rt_stun_up,
-    _aux_rt_stun_down,
-    _aux_rt_vpn_up,
-    _aux_rt_vpn_down,
-    _aux_rt_log_stdout,
-    _aux_rt_cfg_stdout,
-    NULL
+struct vlsctl_ops lsctl_ops = {
+    .dht_up     = _vlsctl_dht_up,
+    .dht_down   = _vlsctl_dht_down,
+    .dht_exit   = _vlsctl_dht_exit,
+    .add_node   = _vlsctl_add_node,
+    .del_node   = _vlsctl_del_node,
+    .relay_up   = _vlsctl_relay_up,
+    .relay_down = _vlsctl_relay_down,
+    .stun_up    = _vlsctl_stun_up,
+    .stun_down  = _vlsctl_stun_down,
+    .vpn_up     = _vlsctl_vpn_up,
+    .vpn_down   = _vlsctl_vpn_down,
+    .log_stdout = _vlsctl_log_stdout,
+    .cfg_stdout = _vlsctl_cfg_stdout
 };
 
 static
 int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
 {
     struct vlsctl* ctl = (struct vlsctl*)cookie;
-    struct vhost* host = ctl->host;
     void* data = um->data;
     int lsctl_id = 0;
     int nitems = 0;
@@ -260,20 +287,56 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
     vlogI(printf("[lsctl] received lsctl request (%d)", nitems));
 
     while(nitems-- > 0) {
-        void* argv[3];
-
         data = offset_addr(um->data, sz);
         lsctl_id = get_uint32(data);
         sz += sizeof(uint32_t);
 
-        argv[0] = host;
-        argv[1] = um->data;
-        argv[2] = &sz;
-
         retE((lsctl_id < 0));
         retE((lsctl_id >= VLSCTL_BUTT));
 
-        ret = lsctl_rt_t[lsctl_id](argv);
+        switch(lsctl_id) {
+        case VLSCTL_DHT_UP:
+            ret = ctl->ops->dht_up(ctl, um->data, sz);
+            break;
+        case VLSCTL_DHT_DOWN:
+            ret = ctl->ops->dht_down(ctl, um->data, sz);
+            break;
+        case VLSCTL_DHT_EXIT:
+            ret = ctl->ops->dht_exit(ctl, um->data, sz);
+            break;
+        case VLSCTL_ADD_NODE:
+            ret = ctl->ops->add_node(ctl, um->data, sz);
+            break;
+        case VLSCTL_DEL_NODE:
+            ret = ctl->ops->del_node(ctl, um->data, sz);
+            break;
+        case VLSCTL_RELAY_UP:
+            ret = ctl->ops->relay_up(ctl, um->data, sz);
+            break;
+        case VLSCTL_RELAY_DOWN:
+            ret = ctl->ops->relay_down(ctl, um->data, sz);
+            break;
+        case VLSCTL_STUN_UP:
+            ret = ctl->ops->stun_up(ctl, um->data, sz);
+            break;
+        case VLSCTL_STUN_DOWN:
+            ret = ctl->ops->stun_down(ctl, um->data, sz);
+            break;
+        case VLSCTL_VPN_UP:
+            ret = ctl->ops->vpn_up(ctl, um->data, sz);
+            break;
+        case VLSCTL_VPN_DOWN:
+            ret = ctl->ops->vpn_down(ctl, um->data, sz);
+            break;
+        case VLSCTL_LOGOUT:
+            ret = ctl->ops->log_stdout(ctl, um->data, sz);
+            break;
+        case VLSCTL_CFGOUT:
+            ret = ctl->ops->cfg_stdout(ctl, um->data, sz);
+            break;
+        default:
+            vassert(0);
+        }
         retE((ret < 0));
         sz += ret;
     }
@@ -326,6 +389,7 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
     sun->sun_family = AF_UNIX;
     strcpy(sun->sun_path, unix_path);
     ctl->host = host;
+    ctl->ops  = &lsctl_ops;
 
     ret += vmsger_init(&ctl->msger);
     ret += vrpc_init(&ctl->rpc, &ctl->msger, VRPC_UNIX, &ctl->addr);
