@@ -34,6 +34,7 @@
 #include "vdef.h"
 #include "vcfg.h"
 #include "vdht.h"
+#include "vdht_core.h"
 #include "vrpc.h"
 #include "vhost.h"
 #include "vnode.h"
@@ -79,6 +80,7 @@
 #define pselect
 #define pthread_sigmask
 #define time
+#define ctime
 #define srand
 #define rand
 #define sleep

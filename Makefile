@@ -7,6 +7,7 @@ vdht_objs = \
     vcfg.o  \
     vrpc.o  \
     vdht.o  \
+    vdht_core.o \
     vhost.o \
     vnode.o \
     vmsger.o  \
