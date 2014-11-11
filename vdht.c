@@ -17,7 +17,6 @@ struct be_dict {
 
 struct be_node {
     int type;
-    int capc;
     union {
         char* s;
         int32_t i;
@@ -40,7 +39,6 @@ struct be_node* be_alloc(int type)
 
     memset(node, 0, sizeof(*node));
     node->type = type;
-    node->capc = 0;
     return node;
 }
 
@@ -56,7 +54,8 @@ void be_free(struct be_node* node)
         break;
     case BE_LIST: {
         int i = 0;
-        for (; i < node->capc; i++) {
+
+        for (; node->val.l[i]; ++i) {
             be_free(node->val.l[i]);
         }
         free(node->val.l);
@@ -64,7 +63,7 @@ void be_free(struct be_node* node)
     }
     case BE_DICT: {
         int i = 0;
-        for (; i < node->capc; i++) {
+        for (; node->val.d[i].val; ++i) {
             free(unoff_addr(node->val.d[i].key, sizeof(int32_t)));
             be_free(node->val.d[i].val);
         }
@@ -1458,6 +1457,7 @@ int _vdht_dec(void* buf, int len, void** ctxt)
     vassert(buf);
     vassert(len);
 
+    vlogI(printf("[dht msg]->%s", (char*)buf));
     dict = be_decode(buf, len);
     vlog((!dict), elog_be_decode);
     retE((!dict));
