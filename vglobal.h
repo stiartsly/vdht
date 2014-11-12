@@ -63,6 +63,7 @@
 #define snprintf
 #define strcmp
 #define strtol
+#define strchr
 #define strcat
 #define strncat
 #define memset

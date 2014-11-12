@@ -237,6 +237,74 @@ struct be_node* be_create_str(char* str)
     return node;
 }
 
+struct be_node* be_create_int(int num)
+{
+    struct be_node* node = NULL;
+
+    node = be_alloc(BE_INT);
+    vlog((!node), elog_be_alloc);
+    retE_p((!node));
+
+    node->val.i = num;
+    return node;
+}
+
+struct be_node* be_create_vtoken(vtoken* token)
+{
+    struct be_node* node = NULL;
+    char buf[64];
+    vassert(token);
+
+    memset(buf, 0, 64);
+    vtoken_strlize(token, buf, 64);
+    node = be_create_str(buf);
+    retE_p((!node));
+    return node;
+}
+
+struct be_node* be_create_addr(struct sockaddr_in* addr)
+{
+    struct be_node* node = NULL;
+    char buf[64];
+    int port = 0;
+    vassert(addr);
+
+    memset(buf, 0, 64);
+    vsockaddr_unconvert(addr, buf, 64, &port);
+    sprintf(buf + strlen(buf), ":%d", port);
+
+    node = be_create_str(buf);
+    retE_p((!node));
+    return node;
+}
+
+struct be_node* be_create_vnodeId(vnodeId* srcId)
+{
+    struct be_node* node = NULL;
+    char buf[64];
+    vassert(srcId);
+
+    memset(buf, 0, 64);
+    vnodeId_strlize(srcId, buf, 64);
+    node = be_create_str(buf);
+    retE_p((!node));
+    return node;
+}
+
+struct be_node* be_create_ver(vnodeVer* ver)
+{
+    struct be_node* node = NULL;
+    char buf[64];
+    vassert(ver);
+
+    memset(buf, 0, 64);
+    vnodeVer_strlize(ver, buf, 64);
+
+    node = be_create_str(buf);
+    retE_p((!node));
+    return node;
+}
+
 int be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
 {
     struct be_dict* d = NULL;
@@ -269,7 +337,6 @@ int be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
     dict->val.d[i].val = NULL;
     return 0;
 }
-
 int be_add_list(struct be_node *list, struct be_node *node)
 {
     struct be_node** l = NULL;
@@ -378,5 +445,27 @@ struct be_node* be_get_dict(struct be_node* node, char* key)
         return NULL;
     }
     return node->val.d[i].val;
+}
+
+int be_get_token(struct be_node* dict, vtoken* token)
+{
+    struct be_node* node = NULL;
+    char* s = NULL;
+    int len = 0;
+    int ret = 0;
+    vassert(dict);
+    vassert(token);
+
+    node = be_get_dict(dict, "t");
+    retE((!node));
+    retE((node->type != BE_STR));
+
+    s   = unoff_addr(node->val.s, sizeof(int32_t));
+    len = get_int32(s);
+    retE((len != strlen(node->val.s)));
+
+    ret = vtoken_unstrlize(node->val.s, token);
+    retE((ret < 0));
+    return 0;
 }
 
