@@ -306,6 +306,18 @@ void vtoken_make(vtoken* token)
 
 }
 
+void vtoken_copy(vtoken* dst, vtoken* src)
+{
+    int i = 0;
+    vassert(dst);
+    vassert(src);
+
+    for (; i < VNODE_ID_LEN; i++) {
+        dst->data[i] = src->data[i];
+    }
+    return ;
+}
+
 int vtoken_equal(vtoken* a, vtoken* b)
 {
     int i = 0;
@@ -347,6 +359,22 @@ int vtoken_unstrlize(const char* token_str, vtoken* token)
         token->data[i] = token_str[i] - '0';
     }
     return 0;
+}
+
+void vtoken_dump(vtoken* token)
+{
+    int i = 0;
+    vassert(token);
+
+    printf("##ID:");
+    for (; i < VNODE_ID_LEN; i++) {
+        printf("%c", token->data[i] + '0');
+        if ((i % 4 == 3) && (i +1 != VNODE_ID_LEN)){
+            printf("-");
+        }
+    }
+    printf("\n");
+    return;
 }
 
 /*

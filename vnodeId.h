@@ -71,18 +71,20 @@ int  vnodeAddr_init (vnodeAddr*, vnodeId*, struct sockaddr_in*);
 /*
  * version
  */
-void vnodeVer_copy (vnodeVer*, vnodeVer*);
-int  vnodeVer_equal(vnodeVer*, vnodeVer*);
+void vnodeVer_copy   (vnodeVer*, vnodeVer*);
+int  vnodeVer_equal  (vnodeVer*, vnodeVer*);
 int  vnodeVer_strlize(vnodeVer*, char*, int);
 int  vnodeVer_unstrlize(const char*, vnodeVer*);
 
 /*
  * token
  */
-void vtoken_make (vtoken*);
-int  vtoken_equal(vtoken*, vtoken*);
+void vtoken_make   (vtoken*);
+void vtoken_copy   (vtoken*, vtoken*);
+int  vtoken_equal  (vtoken*, vtoken*);
 int  vtoken_strlize(vtoken*, char*, int);
 int  vtoken_unstrlize(const char*, vtoken*);
+void vtoken_dump   (vtoken*);
 
 /*
  * vnodeInfo
