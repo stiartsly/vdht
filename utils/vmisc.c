@@ -204,7 +204,7 @@ int vsockaddr_strlize(struct sockaddr_in* addr, char* buf, int len)
 
 int vsockaddr_unstrlize(const char* ip_addr, struct sockaddr_in* addr)
 {
-    char* addr = NULL;
+    char* s = NULL;
     char ip[64];
     int  port = 0;
     int  ret = 0;
@@ -212,15 +212,15 @@ int vsockaddr_unstrlize(const char* ip_addr, struct sockaddr_in* addr)
     vassert(ip_addr);
     vassert(addr);
 
-    addr = strchr(ip_addr, ':');
-    retE((!addr));
+    s = strchr(ip_addr, ':');
+    retE((!s));
 
     memset(ip, 0, 64);
-    strncpy(ip, ip_addr, addr-ip_addr);
+    strncpy(ip, ip_addr, s - ip_addr);
 
-    addr += 1;
+    s += 1;
     errno = 0;
-    port = strtol(addr, NULL, 10);
+    port = strtol(s, NULL, 10);
     retE((errno));
 
     ret = vsockaddr_convert(ip, port, addr);

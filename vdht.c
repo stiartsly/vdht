@@ -533,8 +533,8 @@ int _aux_be_get_mtype(struct be_node* dict, int* mtype)
             retE((1));
         }
         return 0;
-
-    } else if (!strcmp(node->val.s, "r")) {
+    }
+    if (!strcmp(node->val.s, "r")) {
         struct be_node* tmp = NULL;
         node = be_get_dict(dict, "r");
         retE((!node));
@@ -561,12 +561,9 @@ int _aux_be_get_mtype(struct be_node* dict, int* mtype)
         }
         *mtype = VDHT_UNKNOWN;
         retE((1));
-
-    } else {
-        *mtype = VDHT_UNKNOWN;
-        retE((1));
     }
-    return 0;
+    *mtype = VDHT_UNKNOWN;
+    return -1;
 }
 
 /*
