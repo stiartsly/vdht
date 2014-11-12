@@ -2,46 +2,26 @@
 #include "vdht.h"
 
 static
-void _aux_enc_reclaim(struct be_node* dict, struct be_node* node)
-{
-    vassert(dict);
-    vassert(node || !node);
-
-    vcall_cond(node, be_free(node));
-    vcall_cond(dict, be_free(dict));
-    return ;
-}
-
-static
 struct be_node* _aux_be_create_info(vnodeInfo* info)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    int ret = 0;
     vassert(info);
 
     dict = be_create_dict();
     retE_p((!dict));
 
     node = be_create_vnodeId(&info->id);
-    ret1E_p((!node),   _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "id", node);
-    ret1E_p((ret < 0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "id", node);
 
     node = be_create_addr(&info->addr);
-    ret1E_p((!node),   _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "m", node);
-    ret1E_p((ret < 0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "m", node);
 
     node = be_create_ver(&info->ver);
-    ret1E_p((!node),   _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "v", node);
-    ret1E_p((ret < 0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "v", node);
 
     node = be_create_int(info->flags);
-    ret1E_p((!node),   _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "f", node);
-    ret1E_p((ret < 0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "f", node);
 
     return dict;
 }
@@ -76,29 +56,18 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
     retE((!dict));
 
     node = be_create_vtoken(token);
-    ret1E((!node),   _aux_enc_reclaim(dict, NULL));
-    ret = be_add_keypair(dict, "t", node);
-    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
-    ret1E((!node),   _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "y", node);
-    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "y", node);
 
     node = be_create_str("ping");
-    ret1E((!node),   _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "q", node);
-    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "q", node);
 
     node = be_create_dict();
-    ret1E((!node),   _aux_enc_reclaim(dict, NULL));
     id   = be_create_vnodeId(srcId);
-    ret1E((!node),   _aux_enc_reclaim(dict, node));
-    ret  = be_add_keypair(node, "id", id);
-    vcall_cond((ret < 0), be_free(id));
-    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
-    ret  = be_add_keypair(dict, "a", node);
-    ret1E((ret < 0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(node, "id", id);
+    be_add_keypair(dict, "a", node);
 
     ret  = be_encode(dict, buf, sz);
     be_free(dict);
@@ -142,25 +111,15 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result,void* buf, int   sz)
     retE((!dict));
 
     node = be_create_vtoken(token);
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "t", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "y", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "y", node);
 
     rslt = be_create_dict();
-    ret1E((!rslt), _aux_enc_reclaim(dict, NULL));
-
     node = _aux_be_create_info(result);
-    ret1E((!node), _aux_enc_reclaim(dict, rslt));
-    ret  = be_add_keypair(rslt, "node", node);
-    vcall_cond((ret < 0), be_free(node));
-    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
-    ret  = be_add_keypair(dict, "r", rslt);
-    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+    be_add_keypair(rslt, "node", node);
+    be_add_keypair(dict, "r", rslt);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -202,33 +161,20 @@ int _vdht_enc_find_node(vtoken* token, vnodeId* srcId, vnodeId* targetId, void* 
     retE((!dict));
 
     node = be_create_vtoken(token);
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "t", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "y", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "y", node);
 
     node = be_create_str("find_node");
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "q", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "q", node);
 
     node = be_create_dict();
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
     tmp  = be_create_vnodeId(srcId);
-    ret1E((!tmp),  _aux_enc_reclaim(dict, node));
-    ret  = be_add_keypair(node, "id", tmp);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(node, "id", tmp);
     tmp  = be_create_vnodeId(targetId);
-    ret1E((!tmp) , _aux_enc_reclaim(dict, node));
-    ret  = be_add_keypair(node, "target", tmp);
-    vcall_cond((ret < 0), be_free(tmp));
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
-    ret  = be_add_keypair(dict, "a", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(node, "target", tmp);
+    be_add_keypair(dict, "a", node);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -273,30 +219,18 @@ int _vdht_enc_find_node_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, vo
     retE((!dict));
 
     node = be_create_vtoken(token);
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "t", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "y", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "y", node);
 
     rslt = be_create_dict();
-    ret1E((!rslt), _aux_enc_reclaim(dict, NULL));
     node = be_create_vnodeId(srcId);
-    ret1E((!node), _aux_enc_reclaim(dict, rslt));
-    ret  = be_add_keypair(rslt, "id", node);
-    vcall_cond((ret < 0), be_free(node));
-    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+    be_add_keypair(rslt, "id", node);
 
     node = _aux_be_create_info(result);
-    ret1E((!node), _aux_enc_reclaim(dict, rslt));
-    ret  = be_add_keypair(rslt, "node", node);
-    vcall_cond((ret < 0), be_free(node));
-    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
-    ret  = be_add_keypair(dict, "r", rslt);
-    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+    be_add_keypair(rslt, "node", node);
+    be_add_keypair(dict, "r", rslt);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -381,37 +315,20 @@ int _vdht_enc_find_closest_nodes(vtoken* token, vnodeId* srcId, vnodeId* targetI
     retE((!dict));
 
     node = be_create_vtoken(token);
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "t", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "y", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "y", node);
 
     node = be_create_str("find_closest_nodes");
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "q", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "q", node);
 
     node = be_create_dict();
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-
     tmp  = be_create_vnodeId(srcId);
-    ret1E((!tmp),  _aux_enc_reclaim(dict, node));
-    ret  = be_add_keypair(node, "id", tmp);
-    vcall_cond((ret < 0), be_free(tmp));
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
-
+    be_add_keypair(node, "id", tmp);
     tmp  = be_create_vnodeId(targetId);
-    ret1E((!tmp) , _aux_enc_reclaim(dict, node));
-    ret  = be_add_keypair(node, "target", tmp);
-    vcall_cond((ret < 0), be_free(tmp));
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
-
-    ret  = be_add_keypair(dict, "a", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(node, "target", tmp);
+    be_add_keypair(dict, "a", node);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -468,44 +385,24 @@ int _vdht_enc_find_closest_nodes_rsp(
     retE((!dict));
 
     node = be_create_vtoken(token);
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "t", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
-    ret1E((!node), _aux_enc_reclaim(dict, NULL));
-    ret  = be_add_keypair(dict, "y", node);
-    ret1E((ret<0), _aux_enc_reclaim(dict, node));
+    be_add_keypair(dict, "y", node);
 
     rslt = be_create_dict();
-    ret1E((!rslt), _aux_enc_reclaim(dict, NULL));
-
     node = be_create_vnodeId(srcId);
-    ret1E((!node), _aux_enc_reclaim(dict, rslt));
-    ret  = be_add_keypair(rslt, "id", node);
-    vcall_cond((ret < 0), be_free(node));
-    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
-
+    be_add_keypair(rslt, "id", node);
     list = be_create_list();
-    ret1E((!list), _aux_enc_reclaim(dict, rslt));
     for (; i < varray_size(closest); i++) {
         vnodeInfo* info = NULL;
 
         info = (vnodeInfo*)varray_get(closest, i);
         node = _aux_be_create_info(info);
-        vcall_cond((!node), be_free(list));
-        ret1E((!node), _aux_enc_reclaim(dict, rslt));
-
-        ret  = be_add_list(list, node);
-        vcall_cond((ret < 0), be_free(node));
-        vcall_cond((ret < 0), be_free(list));
-        ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+        be_add_list(list, node);
     }
-    ret = be_add_keypair(rslt, "nodes", list);
-    vcall_cond((ret < 0), be_free(list));
-    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
-    ret = be_add_keypair(dict, "r", rslt);
-    ret1E((ret<0), _aux_enc_reclaim(dict, rslt));
+    be_add_keypair(rslt, "nodes", list);
+    be_add_keypair(dict, "r", rslt);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
