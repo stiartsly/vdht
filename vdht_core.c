@@ -266,13 +266,10 @@ struct be_node* be_create_addr(struct sockaddr_in* addr)
 {
     struct be_node* node = NULL;
     char buf[64];
-    int port = 0;
     vassert(addr);
 
     memset(buf, 0, 64);
-    vsockaddr_unconvert(addr, buf, 64, &port);
-    sprintf(buf + strlen(buf), ":%d", port);
-
+    vsockaddr_strlize(addr, buf, 64);
     node = be_create_str(buf);
     retE_p((!node));
     return node;
@@ -299,7 +296,6 @@ struct be_node* be_create_ver(vnodeVer* ver)
 
     memset(buf, 0, 64);
     vnodeVer_strlize(ver, buf, 64);
-
     node = be_create_str(buf);
     retE_p((!node));
     return node;
@@ -337,6 +333,7 @@ int be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
     dict->val.d[i].val = NULL;
     return 0;
 }
+
 int be_add_list(struct be_node *list, struct be_node *node)
 {
     struct be_node** l = NULL;
@@ -433,7 +430,7 @@ struct be_node* be_get_dict(struct be_node* node, char* key)
 
     vassert(node);
     vassert(key);
-    retE_p((node->type != BE_DICT));
+    retE_p((BE_DICT != node->type));
 
     for(; node->val.d[i].val; i++) {
         if (!strcmp(key, node->val.d[i].key)) {
@@ -441,16 +438,12 @@ struct be_node* be_get_dict(struct be_node* node, char* key)
             break;
         }
     }
-    if (!found) {
-        return NULL;
-    }
-    return node->val.d[i].val;
+    return (found ? node->val.d[i].val : NULL);
 }
 
 int be_get_token(struct be_node* dict, vtoken* token)
 {
     struct be_node* node = NULL;
-    char* s = NULL;
     int len = 0;
     int ret = 0;
     vassert(dict);
@@ -458,10 +451,9 @@ int be_get_token(struct be_node* dict, vtoken* token)
 
     node = be_get_dict(dict, "t");
     retE((!node));
-    retE((node->type != BE_STR));
+    retE((BE_STR != node->type));
 
-    s   = unoff_addr(node->val.s, sizeof(int32_t));
-    len = get_int32(s);
+    len = get_int32(unoff_addr(node->val.s, sizeof(int32_t)));
     retE((len != strlen(node->val.s)));
 
     ret = vtoken_unstrlize(node->val.s, token);

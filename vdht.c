@@ -485,20 +485,8 @@ int _aux_be_get_info(struct be_node* dict, vnodeInfo* info)
     retE((BE_STR != node->type));
     len = get_int32(unoff_addr(node->val.s, sizeof(int32_t)));
     retE((len != strlen(node->val.s)));
-    {
-        char* s = strchr(node->val.s, ':');
-        char ip[64];
-        int port = 0;
-        retE((!s));
-        memset(ip, 0, 64);
-        strncpy(ip, node->val.s, s - node->val.s);
-        s += 1;
-        errno = 0;
-        port = strtol(s, NULL, 10);
-        retE((errno));
-        ret = vsockaddr_convert(ip, port, &info->addr);
-        retE((ret < 0));
-    }
+    ret = vsockaddr_unstrlize(node->val.s, &info->addr);
+    retE((ret < 0));
 
     node = be_get_dict(dict, "v"); // version.
     retE((!node));

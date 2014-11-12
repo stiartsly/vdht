@@ -184,6 +184,50 @@ int vsockaddr_unconvert(struct sockaddr_in* addr, char* host, int len, int* port
     return 0;
 }
 
+int vsockaddr_strlize(struct sockaddr_in* addr, char* buf, int len)
+{
+    int port = 0;
+    int ret  = 0;
+    int sz   = 0;
+
+    vassert(addr);
+    vassert(buf);
+    vassert(len > 0);
+
+    ret = vsockaddr_unconvert(addr, buf, len, &port);
+    retE((ret < 0));
+    sz  = strlen(buf);
+    ret = snprintf(buf + sz, len - sz, ":%d", port);
+    retE((ret < 0));
+    return 0;
+}
+
+int vsockaddr_unstrlize(const char* ip_addr, struct sockaddr_in* addr)
+{
+    char* addr = NULL;
+    char ip[64];
+    int  port = 0;
+    int  ret = 0;
+
+    vassert(ip_addr);
+    vassert(addr);
+
+    addr = strchr(ip_addr, ':');
+    retE((!addr));
+
+    memset(ip, 0, 64);
+    strncpy(ip, ip_addr, addr-ip_addr);
+
+    addr += 1;
+    errno = 0;
+    port = strtol(addr, NULL, 10);
+    retE((errno));
+
+    ret = vsockaddr_convert(ip, port, addr);
+    retE((ret < 0));
+    return 0;
+}
+
 int vsockaddr_dump(struct sockaddr_in* addr)
 {
     char ip[64];
