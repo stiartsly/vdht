@@ -183,14 +183,16 @@ int _aux_dec_get_plugin(void* ctxt, vtoken* token, int* plgnId)
     vassert(token);
     vassert(plgnId);
 
-    ret  = be_get_token(dict, token);
+    ret = be_node_by_key(dict, "t", &node);
     retE((ret < 0));
-    node = be_get_dict(dict, "a");
-    retE((!node));
-    retE((BE_DICT != node->type));
-    node = be_get_dict(node, "id");
-    retE((!node));
-    retE((BE_INT  != node->type));
+    retE((BE_STR != node->type));
+
+    ret = be_unpack_token(node, token);
+    retE((ret < 0));
+
+    ret = be_node_by_2keys(dict, "a", "id", &node);
+    retE((ret < 0));
+    retE((BE_INT != node->type));
 
     *plgnId = node->val.i;
     return 0;
@@ -226,32 +228,30 @@ int _aux_dec_get_plugin_rsp(void* ctxt, vtoken* token, int* plgnId, struct socka
     struct be_node* node = NULL;
     struct be_node* plgn = NULL;
     int ret = 0;
-    int len = 0;
 
     vassert(dict);
     vassert(token);
     vassert(plgnId);
     vassert(addr);
 
-    ret  = be_get_token(dict, token);
+    ret = be_node_by_key(dict, "t", &node);
     retE((ret < 0));
-    node = be_get_dict(dict, "r");
-    retE((!node));
-    retE((BE_DICT != node->type));
-    plgn = be_get_dict(node, "plugin");
-    retE((!plgn));
+    retE((BE_STR != node->type));
+
+    ret = be_node_by_2keys(dict, "r", "plugin", &plgn);
+    retE((ret < 0));
     retE((BE_DICT != plgn->type));
 
-    node = be_get_dict(plgn, "id");
-    retE((!node));
-    retE((BE_INT != node->type));
+    ret = be_node_by_key(plgn, "id", &node);
+    retE((ret < 0));
+    retE((BE_INT != plgn->type));
     *plgnId = node->val.i;
-    node = be_get_dict(plgn, "m");
-    retE((!node));
+
+    ret = be_node_by_key(plgn, "m", &node);
+    retE((ret < 0));
     retE((BE_STR != node->type));
-    ret  = get_int32(unoff_addr(node->val.s, sizeof(int32_t)));
-    retE((len != strlen(node->val.s)));
-    ret = vsockaddr_unstrlize(node->val.s, addr);
+    ret = be_unpack_addr(node, addr);
+    retE((ret < 0));
 
     return 0;
 }
@@ -272,31 +272,26 @@ int _aux_dec(char* buf, int sz, void** ctxt)
     vlog((!dict), elog_be_decode);
     retE((!dict));
 
-    node = be_get_dict(dict, "y");
-    retE((!node));
+    ret = be_node_by_key(dict, "y", &node);
+    retE((ret < 0));
     retE((BE_STR != node->type));
 
     if (!strcmp(node->val.s, "q")) {
-        node = be_get_dict(dict, "q");
-        retE((!node));
+        ret = be_node_by_key(dict, "q", &node);
+        retE((ret < 0));
         retE((BE_STR != node->type));
+
         if (!strcmp(node->val.s, "get_plugin")) {
             ret = VPLUGIN_GET_PLUGIN;
         } else {
             ret = VPLUGIN_BUTT;
-            retE((1));
         }
+
     } else if (!strcmp(node->val.s, "r")) {
-        node = be_get_dict(dict, "r");
-        retE((!node));
-        retE((BE_STR != node->type));
-        node = be_get_dict(node, "plugin");
-        if (node) {
-            ret = VPLUGIN_GET_PLUGIN_RSP;
-        } else {
-            ret = VPLUGIN_BUTT;
-            retE((1));
-        }
+        ret = be_node_by_2keys(dict, "r", "plugin", &node);
+        retE((ret < 0));
+        retE((BE_DICT != node->type));
+        ret = VPLUGIN_GET_PLUGIN_RSP;
     }
     *ctxt = (void*)dict;
     return ret;
@@ -358,7 +353,7 @@ int _aux_req_get_plugin(struct vpluger* pluger, vtoken* token, int plgnId, struc
     buf = _aux_mbuf_alloc(pluger);
     retE((!buf));
 
-    ret = _aux_enc_get_plugin(buf, _aux_mbuf_len(), &token, plgnId);
+    ret = _aux_enc_get_plugin(buf, _aux_mbuf_len(), token, plgnId);
     ret1E((ret < 0), _aux_mbuf_free(pluger, buf));
 
     {

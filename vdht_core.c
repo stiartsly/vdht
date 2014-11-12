@@ -423,41 +423,126 @@ int be_encode(struct be_node *node, char *buf, int len)
     return off;
 }
 
-struct be_node* be_get_dict(struct be_node* node, char* key)
+int be_unpack_int(struct be_node* node, int* val)
 {
-    int found = 0;
-    int i = 0;
-
     vassert(node);
-    vassert(key);
-    retE_p((BE_DICT != node->type));
+    vassert(val);
 
-    for(; node->val.d[i].val; i++) {
-        if (!strcmp(key, node->val.d[i].key)) {
-            found = 1;
-            break;
-        }
-    }
-    return (found ? node->val.d[i].val : NULL);
+    retE((BE_INT != node->type));
+    *val = node->val.i;
+    return 0;
 }
 
-int be_get_token(struct be_node* dict, vtoken* token)
+int be_unpack_token(struct be_node* node, vtoken* token)
 {
-    struct be_node* node = NULL;
-    int len = 0;
+    char* s = NULL;
     int ret = 0;
-    vassert(dict);
+
+    vassert(node);
     vassert(token);
 
-    node = be_get_dict(dict, "t");
-    retE((!node));
     retE((BE_STR != node->type));
 
-    len = get_int32(unoff_addr(node->val.s, sizeof(int32_t)));
-    retE((len != strlen(node->val.s)));
+    s = unoff_addr(node->val.s, sizeof(int32_t));
+    ret = get_int32(s);
+    retE((ret != strlen(node->val.s)));
 
     ret = vtoken_unstrlize(node->val.s, token);
     retE((ret < 0));
+    return 0;
+}
+
+int be_unpack_nodeId(struct be_node* node, vnodeId* id)
+{
+    char* s = NULL;
+    int ret = 0;
+
+    vassert(node);
+    vassert(id);
+
+    retE((BE_STR != node->type));
+
+    s = unoff_addr(node->val.s, sizeof(int32_t));
+    ret = get_int32(s);
+    retE((ret != strlen(node->val.s)));
+
+    ret = vnodeId_unstrlize(node->val.s, id);
+    retE((ret < 0));
+    return 0;
+}
+
+int be_unpack_version(struct be_node* node, vnodeVer* ver)
+{
+    char* s = NULL;
+    int ret = 0;
+
+    vassert(node);
+    vassert(ver);
+
+    retE((BE_STR != node->type));
+
+    s = unoff_addr(node->val.s, sizeof(int32_t));
+    ret = get_int32(s);
+    retE((ret != strlen(node->val.s)));
+
+    ret = vnodeVer_unstrlize(node->val.s, ver);
+    retE((ret < 0));
+    return 0;
+}
+
+int be_unpack_addr(struct be_node* node, struct sockaddr_in* addr)
+{
+    char* s = NULL;
+    int ret = 0;
+
+    vassert(node);
+    vassert(addr);
+
+    retE((BE_STR != node->type));
+
+    s = unoff_addr(node->val.s, sizeof(int32_t));
+    ret = get_int32(s);
+    retE((ret != strlen(node->val.s)));
+
+    ret = vsockaddr_unstrlize(node->val.s, addr);
+    retE((ret < 0));
+    return 0;
+}
+
+int be_node_by_key(struct be_node* dict, char* key, struct be_node** node)
+{
+    int i = 0;
+    vassert(dict);
+    vassert(key);
+    vassert(node);
+
+    retE((BE_DICT != dict->type));
+    for(; dict->val.d[i].val; i++) {
+        if (!strcmp(key, dict->val.d[i].key)) {
+            *node = dict->val.d[i].val;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int be_node_by_2keys(struct be_node* dict, char* key1, char* key2, struct be_node** node)
+{
+    struct be_node* tmp = NULL;
+    int ret = 0;
+    vassert(dict);
+    vassert(key1);
+    vassert(key2);
+    vassert(node);
+
+    ret = be_node_by_key(dict, key1, &tmp);
+    if ((ret < 0) || (BE_DICT != tmp->type)) {
+        return -1;
+    }
+    ret = be_node_by_key(tmp, key2, node);
+    if (ret < 0) {
+        return -1;
+    }
     return 0;
 }
 

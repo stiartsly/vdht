@@ -21,6 +21,11 @@ enum {
     VDHT_UNKNOWN
 };
 
+struct vdhtId_desc {
+    int   dhtId;
+    char* desc;
+};
+
 /*
  * method set for dht msg encoder
  */
