@@ -20,6 +20,10 @@ enum {
     VLSCTL_VPN_UP,
     VLSCTL_VPN_DOWN,
 
+    VLSCTL_PING,
+    VLSCTL_FIND_NODE,
+    VLSCTL_FIND_CLOSEST_NODES,
+
     VLSCTL_LOGOUT,
     VLSCTL_CFGOUT,
     VLSCTL_BUTT
@@ -38,12 +42,13 @@ struct vlsctl_ops {
     int (*stun_down) (struct vlsctl*, void*, int);
     int (*vpn_up)    (struct vlsctl*, void*, int);
     int (*vpn_down)  (struct vlsctl*, void*, int);
-    int (*log_stdout)(struct vlsctl*, void*, int);
-    int (*cfg_stdout)(struct vlsctl*, void*, int);
     int (*ping)      (struct vlsctl*, void*, int);
     int (*find_node) (struct vlsctl*, void*, int);
     int (*find_closest_nodes)
                      (struct vlsctl*, void*, int);
+
+    int (*log_stdout)(struct vlsctl*, void*, int);
+    int (*cfg_stdout)(struct vlsctl*, void*, int);
 };
 
 struct vlsctl {

@@ -33,6 +33,10 @@ enum {
     VLSCTL_VPN_UP,
     VLSCTL_VPN_DOWN,
 
+    VLSCTL_PING,
+    VLSCTL_FIND_NODE,
+    VLSCTL_FIND_CLOSEST_NODES,
+
     VLSCTL_LOGOUT,
     VLSCTL_CFGOUT,
     VLSCTL_BUTT
@@ -41,23 +45,28 @@ enum {
 static char* cur_unix_path = "/var/run/vdht/lsctl_client";
 static int def_unix_path = 1;
 static char unix_path[1024];
-static int logstdout = 0;
-static int cfgstdout = 0;
-static int dht_up    = 0;
-static int dht_down  = 0;
-static int dht_quit  = 0;
-static int add_node  = 0;
-static int del_node  = 0;
+static int logstdout  = 0;
+static int cfgstdout  = 0;
+static int dht_up     = 0;
+static int dht_down   = 0;
+static int dht_quit   = 0;
+static int add_node   = 0;
+static int del_node   = 0;
 static char node_ip[64];
-static int node_port = 0;
-static int relay_up  = 0;
+static int node_port  = 0;
+static int relay_up   = 0;
 static int relay_down = 0;
-static int stun_up   = 0;
-static int stun_down = 0;
-static int vpn_up    = 0;
-static int vpn_down  = 0;
-static int show_help = 0;
-static int show_ver  = 0;
+static int stun_up    = 0;
+static int stun_down  = 0;
+static int vpn_up     = 0;
+static int vpn_down   = 0;
+static int ping       = 0;
+static char dest_ip[64];
+static int dest_port  = 0;
+static int find_node  = 0;
+static int find_nodes = 0;
+static int show_help  = 0;
+static int show_ver   = 0;
 
 static
 struct option long_options[] = {
@@ -75,6 +84,9 @@ struct option long_options[] = {
     {"stun-down",   no_argument,        &stun_down,  1},
     {"vpn_up",      no_argument,        &vpn_up,     1},
     {"vpn-down",    no_argument,        &vpn_down,   1},
+    {"ping",        required_argument,  0,         'l'},
+    {"find_node",   required_argument,  0,         'm'},
+    {"find_closest_nodes", required_argument, 0,   'n'},
     {"help",        no_argument,        &show_help,  1},
     {"version",     no_argument,        &show_ver,   1},
     {0, 0, 0, 0}
@@ -83,24 +95,27 @@ struct option long_options[] = {
 void show_usage(void)
 {
     printf("Usage: vlsctl [OPTION...]\n");
-    printf("  -U, --unix-path=FILE          unix path for communicating with vdhtd\n");
-    printf("  -S, --log-stdout              request to log stdout.\n");
-    printf("  -C  --cfg_stdout              request to print config\n");
-    printf("  -d, --dht-up                  request to dht up.\n");
-    printf("  -D, --dht-down                request to dht down.\n");
-    printf("  -X, --dht-quit                request to dht shutdown.\n");
-    printf("  -a  --add-node=IP:PORT        reqeust to add wellknown node.\n");
-    printf("  -e  --del-node=IP:PORT        reqeust to delete wellknown node.\n");
+    printf("  -U, --unix-path=FILE              unix path for communicating with vdhtd\n");
+    printf("  -S, --log-stdout                  request to log stdout.\n");
+    printf("  -C  --cfg_stdout                  request to print config\n");
+    printf("  -d, --dht-up                      request to dht up.\n");
+    printf("  -D, --dht-down                    request to dht down.\n");
+    printf("  -X, --dht-quit                    request to dht shutdown.\n");
+    printf("  -a  --add-node=IP:PORT            reqeust to add wellknown node.\n");
+    printf("  -e  --del-node=IP:PORT            reqeust to delete wellknown node.\n");
     printf("  -r, --relay_up        \n");
     printf("  -R, --relay_down      \n");
     printf("  -t, --stun_up         \n");
     printf("  -T, --stun_down       \n");
     printf("  -p, --vpn_up          \n");
     printf("  -P, --vpn_down        \n");
+    printf("  -l, --ping=IP:PORT                request to send ping query.\n");
+    printf("  -m, --find_node=IP:PORT           request to send find_node query.\n");
+    printf("  -n, --find_closest_nodes=IP:PORT  request to send find_closest_nodes query.\n");
     printf("\n");
     printf("Help options\n");
-    printf("  -h  --help                    Show this help message.\n");
-    printf("  -v, --version                 Print version.\n");
+    printf("  -h  --help                        Show this help message.\n");
+    printf("  -v, --version                     Print version.\n");
     printf("\n");
 }
 
@@ -111,6 +126,30 @@ void show_version(void)
 }
 
 static struct sockaddr_un dest_addr;
+
+int parse_ip(const char* full_ip, char* ip, int len, int* port)
+{
+    char* port_addr = (char*)full_ip;
+    char* new_addr = NULL;
+
+    port_addr = strchr(full_ip, ':');
+    if (!port_addr) {
+        return -1;
+    }
+    if ((port_addr - full_ip) >= len) {
+        return -1;
+    }
+
+    strncpy(ip, optarg, (int)(port_addr - full_ip));
+    port_addr += 1;
+
+    errno = 0;
+    *port = strtol(port_addr, &new_addr, 10);
+    if (errno) {
+        return -1;
+    }
+    return 0;
+}
 
 int main(int argc, char** argv)
 {
@@ -132,7 +171,7 @@ int main(int argc, char** argv)
 
     while(c >= 0) {
 
-        c = getopt_long(argc, argv, "U:SCdDXa:e:rRtTpPhv", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:SCdDXa:e:rRtTpPl:n:m:hv", long_options, &opt_idx);
         if (c < 0) {
             break;
         }
@@ -177,49 +216,27 @@ int main(int argc, char** argv)
             dht_quit = 1;
             break;
         case 'a': {
-            char* port_addr = optarg;
-            char* new_addr = NULL;
-
             if (del_node) {
                 printf("Conflict options for '-e' and '-a'\n");
                 exit(-1);
             }
             add_node = 1;
-            port_addr = strchr(optarg, ':');
-            if (!port_addr) {
-                printf("Invalid IP\n");
-                exit(-1);
-            }
-            strncpy(node_ip, optarg, (int)(port_addr-optarg));
-            port_addr += 1;
-            errno = 0;
-            node_port = strtol(port_addr, &new_addr, 10);
-            if (errno) {
-                printf("Invalid Port\n");
+            ret = parse_ip(optarg, node_ip, 64, &node_port);
+            if (ret < 0){
+                printf("Invalid IP or Port\n");
                 exit(-1);
             }
             break;
         }
         case 'e':{
-            char* port_addr = optarg;
-            char* new_addr = NULL;
-
             if (add_node) {
                 printf("Conflict options for '-e' and '-a'\n");
                 exit(-1);
             }
             del_node = 1;
-            port_addr = strchr(optarg, ':');
-            if (!port_addr) {
-                printf("Invalid IP\n");
-                exit(-1);
-            }
-            strncpy(node_ip, optarg, (int)(port_addr-optarg));
-            port_addr += 1;
-            errno = 0;
-            node_port = strtol(port_addr, &new_addr, 10);
-            if (errno) {
-                printf("Invalid Port\n");
+            ret = parse_ip(optarg, node_ip, 64, &node_port);
+            if (ret < 0){
+                printf("Invalid IP or Port\n");
                 exit(-1);
             }
             break;
@@ -265,6 +282,42 @@ int main(int argc, char** argv)
                 exit(-1);
             }
             vpn_down = 1;
+            break;
+        case 'l':
+            if (find_node || find_nodes) {
+                printf("Too many queries to send\n");
+                exit(-1);
+            }
+            ping = 1;
+            ret = parse_ip(optarg, dest_ip, 64, &dest_port);
+            if (ret < 0){
+                printf("Invalid IP or Port\n");
+                exit(-1);
+            }
+            break;
+        case 'm':
+            if (ping || find_nodes) {
+                printf("Too many queries to send\n");
+                exit(-1);
+            }
+            find_node = 1;
+            ret = parse_ip(optarg, dest_ip, 64, &dest_port);
+            if (ret < 0){
+                printf("Invalid IP or Port\n");
+                exit(-1);
+           }
+            break;
+        case 'n':
+            if (ping || find_node) {
+                printf("Too many queries to send\n");
+                exit(-1);
+            }
+            find_nodes = 1;
+            ret = parse_ip(optarg, dest_ip, 64, &dest_port);
+            if (ret < 0){
+                printf("Invalid IP or Port\n");
+                exit(-1);
+            }
             break;
         case 'h':
             show_help = 1;
@@ -389,6 +442,33 @@ int main(int argc, char** argv)
     if (vpn_down) {
         *(int32_t*)buf = VLSCTL_VPN_DOWN;
         buf += sizeof(int32_t);
+        nitems++;
+    }
+    if (ping) {
+        *(int32_t*)buf = VLSCTL_PING,
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = dest_port;
+        buf += sizeof(int32_t);
+        strcpy(buf, dest_ip);
+        buf += strlen(dest_ip) + 1;
+        nitems++;
+    }
+    if (find_node) {
+        *(int32_t*)buf = VLSCTL_FIND_NODE;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = dest_port;
+        buf += sizeof(int32_t);
+        strcpy(buf, dest_ip);
+        buf += strlen(dest_ip) + 1;
+        nitems++;
+    }
+    if (find_nodes) {
+        *(int32_t*)buf = VLSCTL_FIND_CLOSEST_NODES;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = dest_port;
+        buf += sizeof(int32_t);
+        strcpy(buf, dest_ip);
+        buf += strlen(dest_ip) + 1;
         nitems++;
     }
 
