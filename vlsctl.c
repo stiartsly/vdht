@@ -255,12 +255,26 @@ struct vlsctl_ops lsctl_ops = {
 };
 
 static
+int (*lsctl_routine[])(struct vlsctl*, void*, int) = {
+    _vlsctl_dht_up,
+    _vlsctl_dht_down,
+    _vlsctl_dht_exit,
+    _vlsctl_dht_query,
+    _vlsctl_add_node,
+    _vlsctl_del_node,
+    _vlsctl_plug,
+    _vlsctl_unplug,
+    _vlsctl_log_stdout,
+    _vlsctl_cfg_stdout,
+    NULL
+};
+
+static
 int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
 {
     struct vlsctl* ctl = (struct vlsctl*)cookie;
-    void* data = um->data;
-    int lsctl_id = 0;
     int nitems = 0;
+    int what = 0;
     int ret = 0;
     int sz  = 0;
 
@@ -272,47 +286,13 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
     vlogI(printf("[lsctl] received lsctl request (%d)", nitems));
 
     while(nitems-- > 0) {
-        data = offset_addr(um->data, sz);
-        lsctl_id = get_uint32(data);
+        what = get_uint32(offset_addr(um->data, sz));
         sz += sizeof(uint32_t);
 
-        retE((lsctl_id < 0));
-        retE((lsctl_id >= VLSCTL_BUTT));
+        retE((what < 0));
+        retE((what >= VLSCTL_BUTT));
 
-        switch(lsctl_id) {
-        case VLSCTL_DHT_UP:
-            ret = ctl->ops->dht_up(ctl, um->data, sz);
-            break;
-        case VLSCTL_DHT_DOWN:
-            ret = ctl->ops->dht_down(ctl, um->data, sz);
-            break;
-        case VLSCTL_DHT_EXIT:
-            ret = ctl->ops->dht_exit(ctl, um->data, sz);
-            break;
-        case VLSCTL_DHT_QUERY:
-            ret = ctl->ops->dht_query(ctl, um->data, sz);
-            break;
-        case VLSCTL_ADD_NODE:
-            ret = ctl->ops->add_node(ctl, um->data, sz);
-            break;
-        case VLSCTL_DEL_NODE:
-            ret = ctl->ops->del_node(ctl, um->data, sz);
-            break;
-        case VLSCTL_PLUG:
-            ret = ctl->ops->plug(ctl, um->data, sz);
-            break;
-        case VLSCTL_UNPLUG:
-            ret = ctl->ops->unplug(ctl, um->data, sz);
-            break;
-        case VLSCTL_LOGOUT:
-            ret = ctl->ops->log_stdout(ctl, um->data, sz);
-            break;
-        case VLSCTL_CFGOUT:
-            ret = ctl->ops->cfg_stdout(ctl, um->data, sz);
-            break;
-        default:
-            vassert(0);
-        }
+        ret = lsctl_routine[what](ctl, um->data, sz);
         retE((ret < 0));
         sz += ret;
     }
