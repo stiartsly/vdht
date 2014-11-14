@@ -30,6 +30,30 @@ static char* dht_query_desc[] = {
 };
 
 static
+int _aux_get_addr(void* data, int offset, struct sockaddr_in* addr)
+{
+    char ip[64];
+    int port = 0;
+    int ret = 0;
+    int sz = 0;
+
+    vassert(data);
+    vassert(offset > 0);
+    vassert(addr);
+
+    port = get_int32(offset_addr(data, offset + sz));
+    sz += sizeof(int32_t);
+
+    memset(ip, 0, 64);
+    strcpy(ip, (char*)offset_addr(data, offset + sz));
+    sz += strlen(ip) + 1;
+
+    ret = vsockaddr_convert(ip, port, addr);
+    retE((ret < 0));
+    return sz;
+}
+
+static
 int _vlsctl_dht_up(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
@@ -77,25 +101,22 @@ int _vlsctl_dht_query(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
-    char ip[64];
-    int port = 0;
     int qId  = 0;
     int ret  = 0;
     int sz   = 0;
+
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
     qId = get_int32(offset_addr(data, offset + sz));
     sz += sizeof(int32_t);
     vlogI(printf("[vlsctl] reqeust to send @%s query", dht_query_desc[qId]));
 
-    port = get_int32(offset_addr(data, offset + sz));
-    sz += sizeof(int32_t);
-
-    memset(ip, 0, 64);
-    strcpy(ip, (char*)offset_addr(data, offset + sz));
-    sz += strlen(ip) + 1;
-
-    ret = vsockaddr_convert(ip, port, &sin);
+    ret = _aux_get_addr(data, offset + sz, &sin);
     retE((ret < 0));
+    sz += ret;
+
     ret = host->ops->bogus_query(host, qId, &sin);
     retE((ret < 0));
     return 0;
@@ -106,24 +127,21 @@ int _vlsctl_add_node(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
-    char ip[64];
-    int port = 0;
     int ret  = 0;
     int sz = 0;
 
-    port = get_int32(offset_addr(data, offset + sz));
-    sz += sizeof(int32_t);
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
-    memset(ip, 0, 64);
-    strcpy(ip, (char*)offset_addr(data, offset + sz));
-    sz += strlen(ip) + 1;
-
-    ret = vsockaddr_convert(ip, port, &sin);
+    ret = _aux_get_addr(data, offset, &sin);
     retE((ret < 0));
+    sz += ret;
+
     ret = host->ops->join(host, &sin);
     retE((ret < 0));
 
-    vlogI(printf("[vlsctl] host joined a node (%s:%d)", ip, port));
+    vlogI(printf("[vlsctl] host joined a node"));
     return sz;
 }
 
@@ -132,24 +150,21 @@ int _vlsctl_del_node(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
-    char ip[64];
-    int port = 0;
     int ret  = 0;
     int sz   = 0;
 
-    port = get_int32(offset_addr(data, offset + sz));
-    sz += sizeof(int32_t);
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
 
-    memset(ip, 0, 64);
-    strcpy(ip, (char*)offset_addr(data, offset + sz));
-    sz += strlen(ip) + 1;
-
-    ret = vsockaddr_convert(ip, port, &sin);
+    ret = _aux_get_addr(data, offset, &sin);
     retE((ret < 0));
+    sz += ret;
+
     ret = host->ops->drop(host, &sin);
     retE((ret < 0));
 
-    vlogI(printf("[vlsctl] host dropped a node (%s:%d)", ip, port));
+    vlogI(printf("[vlsctl] host dropped a node"));
     return sz;
 }
 
