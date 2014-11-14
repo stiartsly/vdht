@@ -6,34 +6,34 @@
 #include "vhost.h"
 
 enum {
-    VLSCTL_DHT_UP,
-    VLSCTL_DHT_DOWN,
-    VLSCTL_DHT_EXIT,
+    VLSCTL_HOST_UP,
+    VLSCTL_HOST_DOWN,
+    VLSCTL_HOST_EXIT,
+    VLSCTL_HOST_DUMP,
     VLSCTL_DHT_QUERY,
 
-    VLSCTL_ADD_NODE,
-    VLSCTL_DEL_NODE,
+    VLSCTL_NODE_JOIN,
+    VLSCTL_NODE_DROP,
 
     VLSCTL_PLUG,
     VLSCTL_UNPLUG,
 
-    VLSCTL_LOGOUT,
-    VLSCTL_CFGOUT,
+    VLSCTL_CFG_DUMP,
     VLSCTL_BUTT
 };
 
 struct vlsctl;
 struct vlsctl_ops {
-    int (*dht_up)    (struct vlsctl*, void*, int);
-    int (*dht_down)  (struct vlsctl*, void*, int);
-    int (*dht_exit)  (struct vlsctl*, void*, int);
+    int (*host_up)   (struct vlsctl*, void*, int);
+    int (*host_down) (struct vlsctl*, void*, int);
+    int (*host_exit) (struct vlsctl*, void*, int);
+    int (*host_dump) (struct vlsctl*, void*, int);
     int (*dht_query) (struct vlsctl*, void*, int);
     int (*add_node)  (struct vlsctl*, void*, int);
     int (*del_node)  (struct vlsctl*, void*, int);
     int (*plug)      (struct vlsctl*, void*, int);
     int (*unplug)    (struct vlsctl*, void*, int);
-    int (*log_stdout)(struct vlsctl*, void*, int);
-    int (*cfg_stdout)(struct vlsctl*, void*, int);
+    int (*cfg_dump)  (struct vlsctl*, void*, int);
 };
 
 struct vlsctl {

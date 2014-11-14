@@ -54,7 +54,7 @@ int _aux_get_addr(void* data, int offset, struct sockaddr_in* addr)
 }
 
 static
-int _vlsctl_dht_up(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_host_up(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     int ret = 0;
@@ -68,7 +68,7 @@ int _vlsctl_dht_up(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
-int _vlsctl_dht_down(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_host_down(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     int ret = 0;
@@ -82,7 +82,7 @@ int _vlsctl_dht_down(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
-int _vlsctl_dht_exit(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_host_exit(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     int ret = 0;
@@ -93,6 +93,18 @@ int _vlsctl_dht_exit(struct vlsctl* lsctl, void* data, int offset)
 
     ret = host->ops->req_quit(host);
     retE((ret < 0));
+    return 0;
+}
+
+static
+int _vlsctl_host_dump(struct vlsctl* lsctl, void* data, int offset)
+{
+    struct vhost* host = lsctl->host;
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
+
+    host->ops->dump(host);
     return 0;
 }
 
@@ -215,43 +227,29 @@ int _vlsctl_unplug(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
-int _vlsctl_log_stdout(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_cfg_dump(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     vassert(lsctl);
     vassert(data);
     vassert(offset > 0);
 
-    vlogI(printf("[vlsctl] request to dump host"));
-    host->ops->dump(host);
-    return 0;
-}
-
-static
-int _vlsctl_cfg_stdout(struct vlsctl* lsctl, void* data, int offset)
-{
-    struct vhost* host = lsctl->host;
-    vassert(lsctl);
-    vassert(data);
-    vassert(offset > 0);
-
-    vlogI(printf("[vlsctl] request to dump config"));
     host->cfg->ops->dump(host->cfg);
     return 0;
 }
 
 static
 struct vlsctl_ops lsctl_ops = {
-    .dht_up     = _vlsctl_dht_up,
-    .dht_down   = _vlsctl_dht_down,
-    .dht_exit   = _vlsctl_dht_exit,
+    .host_up    = _vlsctl_host_up,
+    .host_down  = _vlsctl_host_down,
+    .host_exit  = _vlsctl_host_exit,
+    .host_dump  = _vlsctl_host_dump,
     .dht_query  = _vlsctl_dht_query,
     .add_node   = _vlsctl_add_node,
     .del_node   = _vlsctl_del_node,
     .plug       = _vlsctl_plug,
     .unplug     = _vlsctl_unplug,
-    .log_stdout = _vlsctl_log_stdout,
-    .cfg_stdout = _vlsctl_cfg_stdout
+    .cfg_dump   = _vlsctl_cfg_dump
 };
 
 static
@@ -259,16 +257,16 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
 {
     struct vlsctl* ctl = (struct vlsctl*)cookie;
     int (*routine[])(struct vlsctl*, void*, int) = {
-        ctl->ops->dht_up,
-        ctl->ops->dht_down,
-        ctl->ops->dht_exit,
+        ctl->ops->host_up,
+        ctl->ops->host_down,
+        ctl->ops->host_exit,
+        ctl->ops->host_dump,
         ctl->ops->dht_query,
         ctl->ops->add_node,
         ctl->ops->del_node,
         ctl->ops->plug,
         ctl->ops->unplug,
-        ctl->ops->log_stdout,
-        ctl->ops->cfg_stdout,
+        ctl->ops->cfg_dump,
         NULL
     };
 

@@ -19,19 +19,19 @@
 #include <arpa/inet.h>
 
 enum {
-    VLSCTL_DHT_UP,
-    VLSCTL_DHT_DOWN,
-    VLSCTL_DHT_EXIT,
+    VLSCTL_HOST_UP,
+    VLSCTL_HOST_DOWN,
+    VLSCTL_HOST_EXIT,
+    VLSCTL_HOST_DUMP,
     VLSCTL_DHT_QUERY,
 
-    VLSCTL_ADD_NODE,
-    VLSCTL_DEL_NODE,
+    VLSCTL_NODE_JOIN,
+    VLSCTL_NODE_DROP,
 
     VLSCTL_PLUG,
     VLSCTL_UNPLUG,
 
-    VLSCTL_LOGOUT,
-    VLSCTL_CFGOUT,
+    VLSCTL_CFG_DUMP,
     VLSCTL_BUTT
 };
 
@@ -63,11 +63,11 @@ enum {
 static char* cur_unix_path = "/var/run/vdht/lsctl_client";
 static int def_unix_path = 1;
 static char unix_path[1024];
-static int logstdout  = 0;
-static int cfgstdout  = 0;
-static int dht_up     = 0;
-static int dht_down   = 0;
-static int dht_quit   = 0;
+static int host_dump  = 0;
+static int cfg_dump   = 0;
+static int host_up    = 0;
+static int host_down  = 0;
+static int host_quit  = 0;
 static int add_node   = 0;
 static int del_node   = 0;
 static char node_ip[64];
@@ -89,11 +89,11 @@ static int show_ver   = 0;
 static
 struct option long_options[] = {
     {"unix-path",   required_argument,  0,         'U'},
-    {"log-stdout",  no_argument,        &logstdout,  1},
-    {"cfg-stdout",  no_argument,        &cfgstdout,  1},
-    {"dht-up",      no_argument,        &dht_up,     1},
-    {"dht-down",    no_argument,        &dht_down,   1},
-    {"dht-quit",    no_argument,        &dht_quit,   1},
+    {"cfg-dump",    no_argument,        &cfg_dump,   1},
+    {"host-up",     no_argument,        &host_up,    1},
+    {"host-down",   no_argument,        &host_down,  1},
+    {"host-quit",   no_argument,        &host_quit,  1},
+    {"host-dump",   no_argument,        &host_dump,  1},
     {"add-node",    required_argument,  0,         'a'},
     {"del-node",    required_argument,  0,         'e'},
     {"relay_up",    no_argument,        &relay_up,   1},
@@ -114,19 +114,19 @@ void show_usage(void)
 {
     printf("Usage: vlsctl [OPTION...]\n");
     printf("  -U, --unix-path=FILE              unix path for communicating with vdhtd\n");
-    printf("  -S, --log-stdout                  request to log stdout.\n");
-    printf("  -C  --cfg_stdout                  request to print config\n");
-    printf("  -d, --dht-up                      request to dht up.\n");
-    printf("  -D, --dht-down                    request to dht down.\n");
-    printf("  -X, --dht-quit                    request to dht shutdown.\n");
-    printf("  -a  --add-node=IP:PORT            reqeust to add wellknown node.\n");
-    printf("  -e  --del-node=IP:PORT            reqeust to delete wellknown node.\n");
-    printf("  -r, --relay_up        \n");
-    printf("  -R, --relay_down      \n");
-    printf("  -t, --stun_up         \n");
-    printf("  -T, --stun_down       \n");
-    printf("  -p, --vpn_up          \n");
-    printf("  -P, --vpn_down        \n");
+    printf("  -C  --cfg-dump                    request to dump config\n");
+    printf("  -d, --host-up                     request to start host\n");
+    printf("  -D, --host-down                   request to stop host\n");
+    printf("  -X, --host-quit                   request to shutdown host\n");
+    printf("  -S, --host-dump                   request to dump host\n");
+    printf("  -a  --add-node=IP:PORT            reqeust to add wellknown node\n");
+    printf("  -e  --del-node=IP:PORT            reqeust to delete wellknown node\n");
+    printf("  -r, --relay_up                    request to plug relay service\n");
+    printf("  -R, --relay_down                  request to unplug relay service\n");
+    printf("  -t, --stun_up                     request to plug stun service\n");
+    printf("  -T, --stun_down                   request to unplug stun service\n");
+    printf("  -p, --vpn_up                      request to plug vpn service\n");
+    printf("  -P, --vpn_down                    request to unplug vpn service\n");
     printf("  -l, --ping=IP:PORT                request to send ping query.\n");
     printf("  -m, --find_node=IP:PORT           request to send find_node query.\n");
     printf("  -n, --find_closest_nodes=IP:PORT  request to send find_closest_nodes query.\n");
@@ -211,27 +211,27 @@ int main(int argc, char** argv)
             strcpy(unix_path, optarg);
             break;
         case 'S':
-            logstdout = 1;
+            host_dump = 1;
             break;
         case 'C':
-            cfgstdout = 1;
+            cfg_dump = 1;
             break;
         case 'd':
-            if (dht_down) {
+            if (host_down) {
                 printf("Conflict options\n");
                 exit(-1);
             }
-            dht_up = 1;
+            host_up = 1;
             break;
         case 'D':
-            if (dht_up) {
+            if (host_up) {
                 printf("Conflict options\n");
                 exit(-1);
             }
-            dht_down = 1;
+            host_down = 1;
             break;
         case 'X':
-            dht_quit = 1;
+            host_quit = 1;
             break;
         case 'a': {
             if (del_node) {
@@ -365,22 +365,6 @@ int main(int argc, char** argv)
         exit(0);
     }
 
-    fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-    if (fd < 0) {
-        perror("socket:");
-        exit(-1);
-    }
-    unlink(cur_unix_path);
-
-    unix_addr.sun_family = AF_UNIX;
-    strcpy(unix_addr.sun_path, cur_unix_path);
-    ret = bind(fd, (struct sockaddr*)&unix_addr, sizeof(unix_addr));
-    if (ret < 0) {
-        perror("bind:");
-        close(fd);
-        exit(-1);
-    }
-
     *(uint32_t*)buf = 0x7fec45fa; //lsctl magic;
     buf += sizeof(uint32_t);
 
@@ -389,33 +373,33 @@ int main(int argc, char** argv)
 
     addr = (int32_t*)buf;
     buf += sizeof(int32_t);
-    if (logstdout) {
-        *(int32_t*)buf = VLSCTL_LOGOUT;
+    if (host_dump) {
+        *(int32_t*)buf = VLSCTL_HOST_DUMP;
         buf += sizeof(int32_t);
         nitems++;
     }
-    if (cfgstdout) {
-        *(int32_t*) buf = VLSCTL_CFGOUT;
+    if (cfg_dump) {
+        *(int32_t*)buf = VLSCTL_CFG_DUMP;
         buf += sizeof(int32_t);
         nitems++;
     }
-    if (dht_up) {
-        *(int32_t*)buf = VLSCTL_DHT_UP;
+    if (host_up) {
+        *(int32_t*)buf = VLSCTL_HOST_UP;
         buf += sizeof(int32_t);
         nitems++;
     }
-    if (dht_down) {
-        *(int32_t*)buf = VLSCTL_DHT_DOWN;
+    if (host_down) {
+        *(int32_t*)buf = VLSCTL_HOST_DOWN;
         buf += sizeof(int32_t);
         nitems++;
     }
-    if (dht_quit) {
-        *(int32_t*)buf = VLSCTL_DHT_EXIT;
+    if (host_quit) {
+        *(int32_t*)buf = VLSCTL_HOST_EXIT;
         buf += sizeof(int32_t);
         nitems++;
     }
     if (add_node) {
-        *(int32_t*)buf = VLSCTL_ADD_NODE;
+        *(int32_t*)buf = VLSCTL_NODE_JOIN;
         buf += sizeof(int32_t);
         *(int32_t*)buf = node_port;
         buf += sizeof(int32_t);
@@ -424,7 +408,7 @@ int main(int argc, char** argv)
         nitems++;
     }
     if (del_node) {
-        *(int32_t*)buf = VLSCTL_DEL_NODE;
+        *(int32_t*)buf = VLSCTL_NODE_DROP;
         buf += sizeof(int32_t);
         *(int32_t*)buf = node_port;
         buf += sizeof(int32_t);
@@ -510,6 +494,23 @@ int main(int argc, char** argv)
     }
 
     *(int32_t*)addr = nitems;
+
+    fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        perror("socket:");
+        exit(-1);
+    }
+    unlink(cur_unix_path);
+
+    unix_addr.sun_family = AF_UNIX;
+    strcpy(unix_addr.sun_path, cur_unix_path);
+    ret = bind(fd, (struct sockaddr*)&unix_addr, sizeof(unix_addr));
+    if (ret < 0) {
+        perror("bind:");
+        close(fd);
+        exit(-1);
+    }
+
     dest_addr.sun_family = AF_UNIX;
     if (def_unix_path) {
         strcpy(dest_addr.sun_path, "/var/run/vdht/lsctl_socket");
