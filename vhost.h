@@ -22,6 +22,7 @@ struct vhost_ops {
     int (*req_quit) (struct vhost*);
     int (*dump)     (struct vhost*);
     int (*version)  (struct vhost*, char*, int);
+    int (*bogus)    (struct vhost*, int, struct sockaddr_in*);
 };
 
 struct vhost {

@@ -253,6 +253,27 @@ int _vlsctl_cfg_stdout(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
+int _vlsctl_dht_ping(struct vlsctl* lsctl, void* data, int offset)
+{
+    //todo;
+    return 0;
+}
+
+static
+int _vlsctl_dht_find_node(struct vlsctl* lsctl, void* data, int offset)
+{
+    //todo;
+    return 0;
+}
+
+static
+int _vlsctl_dht_find_closest_nodes(struct vlsctl* lsctl, void* data, int offset)
+{
+    //todo;
+    return 0;
+}
+
+static
 struct vlsctl_ops lsctl_ops = {
     .dht_up     = _vlsctl_dht_up,
     .dht_down   = _vlsctl_dht_down,
@@ -266,7 +287,10 @@ struct vlsctl_ops lsctl_ops = {
     .vpn_up     = _vlsctl_vpn_up,
     .vpn_down   = _vlsctl_vpn_down,
     .log_stdout = _vlsctl_log_stdout,
-    .cfg_stdout = _vlsctl_cfg_stdout
+    .cfg_stdout = _vlsctl_cfg_stdout,
+    .ping       = _vlsctl_dht_ping,
+    .find_node  = _vlsctl_dht_find_node,
+    .find_closest_nodes = _vlsctl_dht_find_closest_nodes
 };
 
 static

@@ -175,6 +175,51 @@ int _vhost_version(struct vhost* host, char* buf, int len)
     return 0;
 }
 
+/*
+ *  the routine to send bogus dht query to dest addr, which will be only
+ *  used for debug or simulation.
+ *
+ * @host:
+ * @what: what dht query;
+ * @dest: dest address of dht query.
+ *
+ */
+static
+int _vhost_bogus_dht(struct vhost* host, int what, struct sockaddr_in* dest)
+{
+    struct vroute* route = &host->route;
+    vnodeAddr nodeAddr;
+    int ret = 0;
+
+    vassert(host);
+    vassert(dest);
+
+    vnodeId_make(&nodeAddr.id);
+    vsockaddr_copy(&nodeAddr.addr, dest);
+
+    switch(what) {
+    case VDHT_PING:
+        ret = route->dht_ops->ping(route, &nodeAddr);
+        break;
+
+    case VDHT_FIND_NODE:
+        ret = route->dht_ops->find_node(route, &nodeAddr, &host->ownId.id);
+        break;
+
+    case VDHT_FIND_CLOSEST_NODES:
+        ret = route->dht_ops->find_closest_nodes(route, &nodeAddr, &host->ownId.id);
+        break;
+
+    case VDHT_GET_PEERS:
+    case VDHT_POST_HASH:
+    default:
+        retE((1));
+        break;
+    }
+    retE((ret < 0));
+    return 0;
+}
+
 static
 struct vhost_ops host_ops = {
     .start     = _vhost_start,
@@ -187,7 +232,8 @@ struct vhost_ops host_ops = {
     .loop      = _vhost_loop,
     .req_quit  = _vhost_req_quit,
     .dump      = _vhost_dump,
-    .version   = _vhost_version
+    .version   = _vhost_version,
+    .bogus     = _vhost_bogus_dht
 };
 
 /*

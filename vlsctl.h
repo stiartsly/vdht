@@ -40,6 +40,10 @@ struct vlsctl_ops {
     int (*vpn_down)  (struct vlsctl*, void*, int);
     int (*log_stdout)(struct vlsctl*, void*, int);
     int (*cfg_stdout)(struct vlsctl*, void*, int);
+    int (*ping)      (struct vlsctl*, void*, int);
+    int (*find_node) (struct vlsctl*, void*, int);
+    int (*find_closest_nodes)
+                     (struct vlsctl*, void*, int);
 };
 
 struct vlsctl {
