@@ -4,7 +4,7 @@
 enum {
     VPLUGIN_GET_PLUGIN,
     VPLUGIN_GET_PLUGIN_RSP,
-    VPLUGIN_BUTT
+    VPLUGIN_DHT_BUTT
 };
 
 struct vplugin_desc {
@@ -19,7 +19,7 @@ struct vplugin_desc plugin_desc[] = {
     { PLUGIN_VPN,    "vpn"             },
     { PLUGIN_DDNS,   "ddns"            },
     { PLUGIN_MROUTE, "multiple routes" },
-    { PLUGIN_DHASH,  "dhash"           },
+    { PLUGIN_DHASH,  "data hash"       },
     { PLUGIN_APP,    "app"             },
     { PLUGIN_BUTT, 0}
 };
@@ -29,16 +29,17 @@ char* vpluger_get_desc(int plugin_id)
     struct vplugin_desc* desc = plugin_desc;
     int i = 0;
 
-    retE_p((plugin_id < PLUGIN_RELAY));
-    retE_p((plugin_id >= PLUGIN_BUTT));
+    if ((plugin_id < PLUGIN_RELAY) || (plugin_id >= PLUGIN_BUTT)) {
+        return "unknown plugin";
+    }
 
     for (; desc->desc; i++) {
         if (desc->plgnId == plugin_id) {
-            return desc->desc;
+            break;
         }
         desc++;
     }
-    return NULL;
+    return desc->desc;
 }
 /*
  * for plug request block

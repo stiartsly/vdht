@@ -4,22 +4,6 @@
 /* message interface for local service controller.*/
 #define IS_LSCTL_MAGIC(val) (val == (uint32_t)0x7fec45fa)
 
-static char* dht_query_desc[] = {
-    "ping",
-    "ping_r",
-    "find_node",
-    "find_node_r",
-    "get_peers",
-    "get_peers_r",
-    "post_hash",
-    "post_hash_r",
-    "find_closest_nodes",
-    "find_closest_nodes_r",
-    "get_plugin",
-    "get_plugin_r",
-    NULL
-};
-
 static
 int _aux_get_addr(void* data, int offset, struct sockaddr_in* addr)
 {
@@ -114,7 +98,7 @@ int _vlsctl_dht_query(struct vlsctl* lsctl, void* data, int offset)
 
     qId = get_int32(offset_addr(data, offset + sz));
     sz += sizeof(int32_t);
-    vlogI(printf("[vlsctl] reqeust to send @%s query", dht_query_desc[qId]));
+    vlogI(printf("[vlsctl] reqeust to send @%s query", vdht_get_desc(qId)));
 
     ret = _aux_get_addr(data, offset + sz, &sin);
     retE((ret < 0));

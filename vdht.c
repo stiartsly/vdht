@@ -1,6 +1,11 @@
 #include "vglobal.h"
 #include "vdht.h"
 
+struct vdhtId_desc {
+    int   id;
+    char* desc;
+};
+
 static
 struct vdhtId_desc dhtId_desc[] = {
     {VDHT_PING,                 "ping"                  },
@@ -17,6 +22,66 @@ struct vdhtId_desc dhtId_desc[] = {
     {VDHT_GET_PLUGIN_R,         "get_plugin_rsp"        },
     {VDHT_UNKNOWN, NULL}
 };
+
+char* vdht_get_desc(int dhtId)
+{
+    struct vdhtId_desc* desc = dhtId_desc;
+    int i = 0;
+
+    if ((dhtId < VDHT_PING) || (dhtId >= VDHT_UNKNOWN)) {
+        return "unknown dht";
+    }
+
+    for (; desc->desc; i++) {
+        if (desc->id == dhtId) {
+            break;
+        }
+        desc++;
+    }
+    return desc->desc;
+}
+
+static
+int  vdht_get_queryId(char* desc)
+{
+    struct vdhtId_desc* id_desc = dhtId_desc;
+    int qId = VDHT_UNKNOWN;
+    vassert(desc);
+
+    for (; id_desc->desc;) {
+        if (!strcmp(id_desc->desc, desc)) {
+            qId = id_desc->id;
+            break;
+        }
+        id_desc++;
+    }
+    return qId;
+}
+
+void* vdht_buf_alloc(void)
+{
+    void* buf = NULL;
+
+    buf = malloc(8*BUF_SZ);
+    vlog((!buf), elog_malloc);
+    retE_p((!buf));
+    memset(buf, 0, 8*BUF_SZ);
+
+    return buf + 8;
+}
+
+int vdht_buf_len(void)
+{
+    return (int)(8*BUF_SZ - 8);
+}
+
+void vdht_buf_free(void* buf)
+{
+    vassert(buf);
+
+    free(buf - 8);
+    return ;
+}
 
 static
 struct be_node* _aux_be_create_info(vnodeInfo* info)
@@ -604,9 +669,7 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
 static
 int _aux_unpack_dhtId(struct be_node* dict)
 {
-    struct vdhtId_desc* desc = dhtId_desc;
     struct be_node* node = NULL;
-    int dhtId = 0;
     int ret = 0;
 
     vassert(dict);
@@ -620,16 +683,7 @@ int _aux_unpack_dhtId(struct be_node* dict)
         ret = be_node_by_key(dict, "q", &node);
         retE((ret < 0));
         retE((BE_STR != node->type));
-
-        dhtId = VDHT_UNKNOWN;
-        for (; desc->desc; ) {
-            if (!strcmp(node->val.s, desc->desc)) {
-                dhtId = desc->dhtId;
-                break;
-            }
-            desc++;
-        }
-        return dhtId;
+        return vdht_get_queryId(node->val.s);
     }
     if (!strcmp(node->val.s, "r")) {
         ret = be_node_by_2keys(dict, "r", "nodes", &node);
@@ -1052,29 +1106,4 @@ struct vdht_dec_ops dht_dec_ops = {
     .get_plugin             = _vdht_dec_get_plugin,
     .get_plugin_rsp         = _vdht_dec_get_plugin_rsp
 };
-
-void* vdht_buf_alloc(void)
-{
-    void* buf = NULL;
-
-    buf = malloc(8*BUF_SZ);
-    vlog((!buf), elog_malloc);
-    retE_p((!buf));
-    memset(buf, 0, 8*BUF_SZ);
-
-    return buf + 8;
-}
-
-int vdht_buf_len(void)
-{
-    return (int)(8*BUF_SZ - 8);
-}
-
-void vdht_buf_free(void* buf)
-{
-    vassert(buf);
-
-    free(buf - 8);
-    return ;
-}
 
