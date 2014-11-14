@@ -8,40 +8,13 @@
 #define VPLUG_MAGIC ((uint32_t)0x98431f031)
 #define IS_PLUG_MSG(val) ((uint32_t)val == (uint32_t)VPLUG_MAGIC)
 
-struct vplgn_desc {
-    int   plgnId;
-    char* desc;
-};
-
-/*
- * for plug_c
- */
-typedef int (*get_addr_cb_t)(struct sockaddr_in*, void*);
-struct vplgn_req {
-    struct vlist list;
-    vtoken token;
-    int plgnId;
-
-    get_addr_cb_t cb;
-    void* cookie;
-};
-
+typedef int (*vplugin_reqblk_t)(struct sockaddr_in*, void*);
 struct vpluger;
 struct vpluger_c_ops {
-    int  (*req)   (struct vpluger*, int, get_addr_cb_t,void*);
+    int  (*req)   (struct vpluger*, int, vplugin_reqblk_t,void*);
     int  (*invoke)(struct vpluger*, int, vtoken*, struct sockaddr_in*);
     int  (*clear) (struct vpluger*);
     void (*dump)  (struct vpluger*);
-};
-
-/*
- * for plug_s
- */
-struct vplgn_item {
-    struct vlist list;
-    char* desc;
-    int   plgnId;
-    struct sockaddr_in addr;
 };
 
 struct vpluger_s_ops {
