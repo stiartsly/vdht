@@ -13,12 +13,8 @@ enum {
     VLSCTL_ADD_NODE,
     VLSCTL_DEL_NODE,
 
-    VLSCTL_RELAY_UP,
-    VLSCTL_RELAY_DOWN,
-    VLSCTL_STUN_UP,
-    VLSCTL_STUN_DOWN,
-    VLSCTL_VPN_UP,
-    VLSCTL_VPN_DOWN,
+    VLSCTL_PLUG,
+    VLSCTL_UNPLUG,
 
     VLSCTL_PING,
     VLSCTL_FIND_NODE,
@@ -36,12 +32,8 @@ struct vlsctl_ops {
     int (*dht_exit)  (struct vlsctl*, void*, int);
     int (*add_node)  (struct vlsctl*, void*, int);
     int (*del_node)  (struct vlsctl*, void*, int);
-    int (*relay_up)  (struct vlsctl*, void*, int);
-    int (*relay_down)(struct vlsctl*, void*, int);
-    int (*stun_up)   (struct vlsctl*, void*, int);
-    int (*stun_down) (struct vlsctl*, void*, int);
-    int (*vpn_up)    (struct vlsctl*, void*, int);
-    int (*vpn_down)  (struct vlsctl*, void*, int);
+    int (*plug)      (struct vlsctl*, void*, int);
+    int (*unplug)    (struct vlsctl*, void*, int);
     int (*ping)      (struct vlsctl*, void*, int);
     int (*find_node) (struct vlsctl*, void*, int);
     int (*find_closest_nodes)

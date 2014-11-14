@@ -26,12 +26,8 @@ enum {
     VLSCTL_ADD_NODE,
     VLSCTL_DEL_NODE,
 
-    VLSCTL_RELAY_UP,
-    VLSCTL_RELAY_DOWN,
-    VLSCTL_STUN_UP,
-    VLSCTL_STUN_DOWN,
-    VLSCTL_VPN_UP,
-    VLSCTL_VPN_DOWN,
+    VLSCTL_PLUG,
+    VLSCTL_UNPLUG,
 
     VLSCTL_PING,
     VLSCTL_FIND_NODE,
@@ -40,6 +36,17 @@ enum {
     VLSCTL_LOGOUT,
     VLSCTL_CFGOUT,
     VLSCTL_BUTT
+};
+
+enum {
+    PLUGIN_RELAY,
+    PLUGIN_STUN,
+    PLUGIN_VPN,
+    PLUGIN_DDNS,
+    PLUGIN_MROUTE,
+    PLUGIN_DHASH,
+    PLUGIN_APP,
+    PLUGIN_BUTT
 };
 
 static char* cur_unix_path = "/var/run/vdht/lsctl_client";
@@ -415,32 +422,44 @@ int main(int argc, char** argv)
         nitems++;
     }
     if (relay_up) {
-        *(int32_t*)buf = VLSCTL_RELAY_UP;
+        *(int32_t*)buf = VLSCTL_PLUG,
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = PLUGIN_RELAY;
         buf += sizeof(int32_t);
         nitems++;
     }
     if (relay_down) {
-        *(int32_t*)buf = VLSCTL_RELAY_DOWN;
+        *(int32_t*)buf = VLSCTL_UNPLUG,
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = PLUGIN_RELAY,
         buf += sizeof(int32_t);
         nitems++;
     }
     if (stun_up) {
-        *(int32_t*)buf = VLSCTL_STUN_UP;
+        *(int32_t*)buf = VLSCTL_PLUG;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = PLUGIN_STUN;
         buf += sizeof(int32_t);
         nitems++;
     }
     if (stun_down) {
-        *(int32_t*)buf = VLSCTL_STUN_DOWN;
+        *(int32_t*)buf = VLSCTL_UNPLUG;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = PLUGIN_STUN;
         buf += sizeof(int32_t);
         nitems++;
     }
     if (vpn_up) {
-        *(int32_t*)buf = VLSCTL_VPN_UP;
+        *(int32_t*)buf = VLSCTL_PLUG;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = PLUGIN_VPN;
         buf += sizeof(int32_t);
         nitems++;
     }
     if (vpn_down) {
-        *(int32_t*)buf = VLSCTL_VPN_DOWN;
+        *(int32_t*)buf = VLSCTL_UNPLUG;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = PLUGIN_VPN;
         buf += sizeof(int32_t);
         nitems++;
     }

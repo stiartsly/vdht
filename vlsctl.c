@@ -4,36 +4,16 @@
 /* message interface for local service controller.*/
 #define IS_LSCTL_MAGIC(val) (val == (uint32_t)0x7fec45fa)
 
-/* try to start host.
- *----------------------------
- * lsctl_id -->|
- *----------------------------
- *
- * try to stop host.
- *----------------------------
- * VLSCTL_DHT_DOWN
- *----------------------------
- *
- * try to make host app exit.
- *----------------------------
- * VLSCTL_DHT_SHUTDOWN
- *----------------------------
- *
- * try to add a node with well-known address.
- *------------------------------
- * lsctl-id -->|<-IP->|<-port->|
- *------------------------------
- *
- * try to drop a node with well-known address.
- *------------------------------
- * lsctl-id -->|<-IP->|<-port->|
- *------------------------------
- *
- * try to register replay property.
- *----------------------------
- * VLSCTL_RELAY|
- *----------------------------
- */
+static char* plugin_desc[] = {
+    "relay",
+    "stun",
+    "vpn",
+    "ddns",
+    "multi_route",
+    "data_hash",
+    "app",
+    NULL
+};
 
 static
 int _vlsctl_dht_up(struct vlsctl* lsctl, void* data, int offset)
@@ -131,98 +111,48 @@ int _vlsctl_del_node(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
-int _vlsctl_relay_up(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_plug(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
+    int plgnId = 0;
     int ret = 0;
+    int sz  = 0;
 
     vassert(lsctl);
     vassert(data);
     vassert(offset > 0);
 
-    ret = host->ops->plug(host, PLUGIN_RELAY);
+    plgnId = get_int32(offset_addr(data, offset + sz));
+    sz += sizeof(int32_t);
+    retE((plgnId < PLUGIN_RELAY));
+    retE((plgnId >= PLUGIN_BUTT));
+
+    ret = host->ops->plug(host, plgnId);
     retE((ret < 0));
-    vlogI(printf("relay up"));
+    vlogI(printf("plugin(%s) up.", plugin_desc[plgnId]));
     return 0;
 }
 
 static
-int _vlsctl_relay_down(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_unplug(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
+    int plgnId = 0;
     int ret = 0;
+    int sz  = 0;
 
     vassert(lsctl);
     vassert(data);
     vassert(offset > 0);
 
-    ret = host->ops->unplug(host, PLUGIN_RELAY);
+    plgnId = get_int32(offset_addr(data, offset + sz));
+    sz += sizeof(int32_t);
+    retE((plgnId < PLUGIN_RELAY));
+    retE((plgnId >= PLUGIN_BUTT));
+
+    ret = host->ops->unplug(host, plgnId);
     retE((ret < 0));
-    vlogI(printf("relay down"));
-    return 0;
-}
-
-static
-int _vlsctl_stun_up(struct vlsctl* lsctl, void* data, int offset)
-{
-    struct vhost* host = lsctl->host;
-    int ret = 0;
-
-    vassert(lsctl);
-    vassert(data);
-    vassert(offset > 0);
-
-    ret = host->ops->plug(host, PLUGIN_STUN);
-    retE((ret < 0));
-    vlogI(printf("stun up"));
-    return 0;
-}
-
-static
-int _vlsctl_stun_down(struct vlsctl* lsctl, void* data, int offset)
-{
-    struct vhost* host = lsctl->host;
-    int ret = 0;
-
-    vassert(lsctl);
-    vassert(data);
-    vassert(offset > 0);
-
-    ret = host->ops->unplug(host, PLUGIN_STUN);
-    retE((ret < 0));
-    vlogI(printf("stun down"));
-    return 0;
-}
-
-static
-int _vlsctl_vpn_up(struct vlsctl* lsctl, void* data, int offset)
-{
-    struct vhost* host = lsctl->host;
-    int ret = 0;
-
-    vassert(lsctl);
-    vassert(data);
-    vassert(offset > 0);
-
-    ret = host->ops->plug(host, PLUGIN_VPN);
-    retE((ret < 0));
-    vlogI(printf("vpn up"));
-    return 0;
-}
-
-static
-int _vlsctl_vpn_down(struct vlsctl* lsctl, void* data, int offset)
-{
-    struct vhost* host = lsctl->host;
-    int ret = 0;
-
-    vassert(lsctl);
-    vassert(data);
-    vassert(offset > 0);
-
-    ret = host->ops->unplug(host, PLUGIN_VPN);
-    retE((ret < 0));
-    vlogI(printf("vpn down"));
+    vlogI(printf("plugin(%s) down.", plugin_desc[plgnId]));
     return 0;
 }
 
@@ -337,12 +267,8 @@ struct vlsctl_ops lsctl_ops = {
     .dht_exit   = _vlsctl_dht_exit,
     .add_node   = _vlsctl_add_node,
     .del_node   = _vlsctl_del_node,
-    .relay_up   = _vlsctl_relay_up,
-    .relay_down = _vlsctl_relay_down,
-    .stun_up    = _vlsctl_stun_up,
-    .stun_down  = _vlsctl_stun_down,
-    .vpn_up     = _vlsctl_vpn_up,
-    .vpn_down   = _vlsctl_vpn_down,
+    .plug       = _vlsctl_plug,
+    .unplug     = _vlsctl_unplug,
     .ping       = _vlsctl_dht_ping,
     .find_node  = _vlsctl_dht_find_node,
     .find_closest_nodes = _vlsctl_dht_find_closest_nodes,
@@ -391,23 +317,11 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
         case VLSCTL_DEL_NODE:
             ret = ctl->ops->del_node(ctl, um->data, sz);
             break;
-        case VLSCTL_RELAY_UP:
-            ret = ctl->ops->relay_up(ctl, um->data, sz);
+        case VLSCTL_PLUG:
+            ret = ctl->ops->plug(ctl, um->data, sz);
             break;
-        case VLSCTL_RELAY_DOWN:
-            ret = ctl->ops->relay_down(ctl, um->data, sz);
-            break;
-        case VLSCTL_STUN_UP:
-            ret = ctl->ops->stun_up(ctl, um->data, sz);
-            break;
-        case VLSCTL_STUN_DOWN:
-            ret = ctl->ops->stun_down(ctl, um->data, sz);
-            break;
-        case VLSCTL_VPN_UP:
-            ret = ctl->ops->vpn_up(ctl, um->data, sz);
-            break;
-        case VLSCTL_VPN_DOWN:
-            ret = ctl->ops->vpn_down(ctl, um->data, sz);
+        case VLSCTL_UNPLUG:
+            ret = ctl->ops->unplug(ctl, um->data, sz);
             break;
         case VLSCTL_PING:
             ret = ctl->ops->ping(ctl, um->data, sz);
