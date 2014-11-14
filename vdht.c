@@ -13,6 +13,8 @@ struct vdhtId_desc dhtId_desc[] = {
     {VDHT_POST_HASH_R,          "post_hash_rsp"         },
     {VDHT_FIND_CLOSEST_NODES,   "find_closest_nodes"    },
     {VDHT_FIND_CLOSEST_NODES_R, "find_closest_nodes_rsp"},
+    {VDHT_GET_PLUGIN,           "get_plugin"            },
+    {VDHT_GET_PLUGIN_R,         "get_plugin_rsp"        },
     {VDHT_UNKNOWN, NULL}
 };
 
@@ -425,6 +427,100 @@ int _vdht_enc_find_closest_nodes_rsp(
     return ret;
 }
 
+
+ /* 1. request special plug info
+ *  Query = { "t": "80407320171565445232",
+ *            "y": "q",
+ *            "q": "get_plugin"
+ *            "a": {"id: "1"}
+ *           }
+ */
+static
+int _vdht_enc_get_plugin(vtoken* token, int plgnId, void* buf, int sz)
+{
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* id   = NULL;
+    int ret = 0;
+
+    vassert(token);
+    vassert(plgnId >= 0);
+    vassert(plgnId < PLUGIN_BUTT);
+    vassert(buf);
+    vassert(sz > 0);
+
+    dict = be_create_dict();
+    retE((!dict));
+
+    node = be_create_vtoken(token);
+    be_add_keypair(dict, "t", node);
+
+    node = be_create_str("q");
+    be_add_keypair(dict, "y", node);
+
+    node= be_create_str("get_plugin");
+    be_add_keypair(dict, "q", node);
+
+    node = be_create_dict();
+    id   = be_create_int(plgnId);
+    be_add_keypair(node, "id", id);
+    be_add_keypair(dict, "a", node);;
+
+    ret  = be_encode(dict, buf, sz);
+    be_free(dict);
+    retE((ret < 0));
+    return ret;
+}
+
+/* 1. request special plug info
+ *  Query = { "t": "80407320171565445232",
+ *            "y": "r",
+ *            "r": {"plugin" {"id": "1",
+ *                            "m" : "10.0.0.16:13400"
+ *                           }
+ *                 }
+ *           }
+ */
+static
+int _vdht_enc_get_plugin_rsp(vtoken* token, int plgnId, struct sockaddr_in* addr, void* buf, int sz)
+{
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* rslt = NULL;
+    struct be_node* plgn = NULL;
+    int ret = 0;
+
+    vassert(buf);
+    vassert(sz > 0);
+    vassert(token);
+    vassert(addr);
+    vassert(plgnId >= 0);
+    vassert(plgnId < PLUGIN_BUTT);
+
+    dict = be_create_dict();
+    retE((!dict));
+
+    node = be_create_vtoken(token);
+    be_add_keypair(dict, "t", node);
+    node = be_create_str("r");
+    be_add_keypair(dict, "y", node);
+
+    plgn = be_create_dict();
+    node = be_create_int(plgnId);
+    be_add_keypair(plgn, "id", node);
+    node = be_create_addr(addr);
+    be_add_keypair(plgn, "m", node);
+
+    rslt = be_create_dict();
+    be_add_keypair(rslt, "plugin", plgn);
+    be_add_keypair(dict, "r", rslt);
+
+    ret = be_encode(dict, buf, sz);
+    be_free(dict);
+    retE((ret < 0));
+    return ret;
+}
+
 struct vdht_enc_ops dht_enc_ops = {
     .ping                   = _vdht_enc_ping,
     .ping_rsp               = _vdht_enc_ping_rsp,
@@ -433,7 +529,9 @@ struct vdht_enc_ops dht_enc_ops = {
     .get_peers              = _vdht_enc_get_peers,
     .get_peers_rsp          = _vdht_enc_get_peers_rsp,
     .find_closest_nodes     = _vdht_enc_find_closest_nodes,
-    .find_closest_nodes_rsp = _vdht_enc_find_closest_nodes_rsp
+    .find_closest_nodes_rsp = _vdht_enc_find_closest_nodes_rsp,
+    .get_plugin             = _vdht_enc_get_plugin,
+    .get_plugin_rsp         = _vdht_enc_get_plugin_rsp
 };
 
 static
@@ -542,6 +640,10 @@ int _aux_unpack_dhtId(struct be_node* dict)
         ret = be_node_by_2keys(dict, "r", "hash", &node);
         if (!ret) {
             return VDHT_GET_PEERS_R;
+        }
+        ret = be_node_by_2keys(dict, "r", "plugin", &node);
+        if (!ret) {
+            return VDHT_GET_PLUGIN_R;
         }
         ret = be_node_by_2keys(dict, "r", "node", &node);
         if (ret < 0) {
@@ -809,6 +911,104 @@ int _vdht_dec_find_closest_nodes_rsp(void* ctxt, vtoken* token, vnodeId* srcId, 
     return 0;
 }
 
+/*
+ *  1. @get_plugin message format.
+ *
+ *  Query = { "t": "80407320171565445232",
+ *            "y": "q",
+ *            "q": "get_plugin"
+ *            "a": {"id: "1"}
+ *           }
+ *
+ * @ctxt : dht decode context
+ * @token: token to dht message
+ * @plugId: plugin ID
+ *
+ */
+static
+int _vdht_dec_get_plugin(void* ctxt, vtoken* token, int* plgnId)
+{
+    struct be_node* dict = (struct be_node*)ctxt;
+    struct be_node* node = NULL;
+    int ret = 0;
+
+    vassert(dict);
+    vassert(token);
+    vassert(plgnId);
+
+    ret = be_node_by_key(dict, "t", &node);
+    retE((ret < 0));
+    retE((BE_STR != node->type));
+
+    ret = be_unpack_token(node, token);
+    retE((ret < 0));
+
+    ret = be_node_by_2keys(dict, "a", "id", &node);
+    retE((ret < 0));
+    retE((BE_INT != node->type));
+
+    *plgnId = node->val.i;
+    return 0;
+}
+
+/* @get_plugin_rsp message format
+ *
+ * 1. success:
+ *  Response = { "t": "80407320171565445232",
+ *               "y": "r",
+ *               "r": {"plugin": {"id": "1",
+ *                                "m" : "10.0.0.16:13400"
+ *                               }
+ *                    }
+ *              }
+ * 2. failed:
+ *  Response = { "t": "80407320171565445232",
+ *               "y": "r",
+ *               "r": {"plugin": {}
+ *                    }
+ *              }
+ *
+ * @ctxt  : dht decoder context
+ * @token : token to dht message.
+ * @plgnId: plugin ID
+ * @addr  : addr to plugin server
+ *
+ */
+static
+int _vdht_dec_get_plugin_rsp(void* ctxt, vtoken* token, int* plgnId, struct sockaddr_in* addr)
+{
+    struct be_node* dict = (struct be_node*)ctxt;
+    struct be_node* node = NULL;
+    struct be_node* plgn = NULL;
+    int ret = 0;
+
+    vassert(dict);
+    vassert(token);
+    vassert(plgnId);
+    vassert(addr);
+
+    ret = be_node_by_key(dict, "t", &node);
+    retE((ret < 0));
+    retE((BE_STR != node->type));
+
+    ret = be_node_by_2keys(dict, "r", "plugin", &plgn);
+    retE((ret < 0));
+    retE((BE_DICT != plgn->type));
+
+    ret = be_node_by_key(plgn, "id", &node);
+    retE((ret < 0));
+    retE((BE_INT != plgn->type));
+    *plgnId = node->val.i;
+
+    ret = be_node_by_key(plgn, "m", &node);
+    retE((ret < 0));
+    retE((BE_STR != node->type));
+    ret = be_unpack_addr(node, addr);
+    retE((ret < 0));
+
+    return 0;
+}
+
 static
 int _vdht_dec(void* buf, int len, void** ctxt)
 {
@@ -849,6 +1049,8 @@ struct vdht_dec_ops dht_dec_ops = {
     .get_peers              = _vdht_dec_get_peers,
     .get_peers_rsp          = _vdht_dec_get_peers_rsp,
     .find_closest_nodes     = _vdht_dec_find_closest_nodes,
-    .find_closest_nodes_rsp = _vdht_dec_find_closest_nodes_rsp
+    .find_closest_nodes_rsp = _vdht_dec_find_closest_nodes_rsp,
+    .get_plugin             = _vdht_dec_get_plugin,
+    .get_plugin_rsp         = _vdht_dec_get_plugin_rsp
 };
 

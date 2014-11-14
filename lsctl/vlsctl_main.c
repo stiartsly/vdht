@@ -57,6 +57,8 @@ enum {
     VDHT_POST_HASH_R,
     VDHT_FIND_CLOSEST_NODES,
     VDHT_FIND_CLOSEST_NODES_R,
+    VDHT_GET_PLUGIN,
+    VDHT_GET_PLUGIN_R,
     VDHT_UNKNOWN
 };
 
@@ -88,25 +90,25 @@ static int show_ver   = 0;
 
 static
 struct option long_options[] = {
-    {"unix-path",   required_argument,  0,         'U'},
-    {"cfg-dump",    no_argument,        &cfg_dump,   1},
-    {"host-up",     no_argument,        &host_up,    1},
-    {"host-down",   no_argument,        &host_down,  1},
-    {"host-quit",   no_argument,        &host_quit,  1},
-    {"host-dump",   no_argument,        &host_dump,  1},
-    {"add-node",    required_argument,  0,         'a'},
-    {"del-node",    required_argument,  0,         'e'},
-    {"relay_up",    no_argument,        &relay_up,   1},
-    {"relay_down",  no_argument,        &relay_down, 1},
-    {"stun-up",     no_argument,        &stun_up,    1},
-    {"stun-down",   no_argument,        &stun_down,  1},
-    {"vpn_up",      no_argument,        &vpn_up,     1},
-    {"vpn-down",    no_argument,        &vpn_down,   1},
-    {"ping",        required_argument,  0,         'l'},
-    {"find_node",   required_argument,  0,         'm'},
-    {"find_closest_nodes", required_argument, 0,   'n'},
-    {"help",        no_argument,        &show_help,  1},
-    {"version",     no_argument,        &show_ver,   1},
+    {"unix-path",          required_argument,  0,         'U'},
+    {"cfg-dump",           no_argument,        &cfg_dump,   1},
+    {"host-up",            no_argument,        &host_up,    1},
+    {"host-down",          no_argument,        &host_down,  1},
+    {"host-quit",          no_argument,        &host_quit,  1},
+    {"host-dump",          no_argument,        &host_dump,  1},
+    {"add-node",           required_argument,  0,         'a'},
+    {"del-node",           required_argument,  0,         'e'},
+    {"relay_up",           no_argument,        &relay_up,   1},
+    {"relay_down",         no_argument,        &relay_down, 1},
+    {"stun-up",            no_argument,        &stun_up,    1},
+    {"stun-down",          no_argument,        &stun_down,  1},
+    {"vpn_up",             no_argument,        &vpn_up,     1},
+    {"vpn-down",           no_argument,        &vpn_down,   1},
+    {"ping",               required_argument,  0,         'l'},
+    {"find_node",          required_argument,  0,         'm'},
+    {"find_closest_nodes", required_argument,  0,         'n'},
+    {"help",               no_argument,        &show_help,  1},
+    {"version",            no_argument,        &show_ver,   1},
     {0, 0, 0, 0}
 };
 

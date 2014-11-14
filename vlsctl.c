@@ -26,6 +26,8 @@ static char* dht_query_desc[] = {
     "post_hash_r",
     "find_closest_nodes",
     "find_closest_nodes_r",
+    "get_plugin",
+    "get_plugin_r",
     NULL
 };
 

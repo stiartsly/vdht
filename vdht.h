@@ -18,6 +18,8 @@ enum {
     VDHT_POST_HASH_R,
     VDHT_FIND_CLOSEST_NODES,
     VDHT_FIND_CLOSEST_NODES_R,
+    VDHT_GET_PLUGIN,
+    VDHT_GET_PLUGIN_R,
     VDHT_UNKNOWN
 };
 
@@ -80,6 +82,19 @@ struct vdht_enc_ops {
             vtoken* token,
             vnodeId* srcId,
             struct varray* result,
+            void* buf,
+            int   sz);
+
+    int (*get_plugin)(
+            vtoken* token,
+            int plgnId,
+            void* buf,
+            int   sz);
+
+    int (*get_plugin_rsp)(
+            vtoken* token,
+            int plgnId,
+            struct sockaddr_in* addr,
             void* buf,
             int   sz);
 };
@@ -152,6 +167,18 @@ struct vdht_dec_ops {
             vnodeId* srcId,
             struct varray* result
         );
+
+    int (*get_plugin)(
+            void* ctxt,
+            vtoken* token,
+            int* plgnId);
+
+    int (*get_plugin_rsp)(
+            void* ctxt,
+            vtoken* token,
+            int* plgnId,
+            struct sockaddr_in* addr);
+
 };
 
 #endif

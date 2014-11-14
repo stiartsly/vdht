@@ -59,253 +59,6 @@ void vplgn_req_init(struct vplgn_req* req, int plgnId, vtoken* token, get_addr_c
 }
 
 /*
- * 2. reply for special plug info request.
- * ---------------------------------------------
- * magic  | msgId  | plugin dht msg.
- * ---------------------------------------------
- */
-
- /* 1. request special plug info
- *  Query = { "t": "80407320171565445232",
- *            "y": "q",
- *            "q": "get_plugin"
- *            "a": {"id: "1"}
- *           }
- */
-static
-int _aux_enc_get_plugin(char* buf, int sz, vtoken* token, int plgnId)
-{
-    struct be_node* dict = NULL;
-    struct be_node* node = NULL;
-    struct be_node* id   = NULL;
-    int ret = 0;
-
-    vassert(token);
-    vassert(plgnId >= 0);
-    vassert(plgnId < PLUGIN_BUTT);
-    vassert(buf);
-    vassert(sz > 0);
-
-    dict = be_create_dict();
-    retE((!dict));
-
-    node = be_create_vtoken(token);
-    be_add_keypair(dict, "t", node);
-
-    node = be_create_str("q");
-    be_add_keypair(dict, "y", node);
-
-    node= be_create_str("get_plugin");
-    be_add_keypair(dict, "q", node);
-
-    node = be_create_dict();
-    id   = be_create_int(plgnId);
-    be_add_keypair(node, "id", id);
-    be_add_keypair(dict, "a", node);;
-
-    ret  = be_encode(dict, buf, sz);
-    be_free(dict);
-    retE((ret < 0));
-    return ret;
-}
-
-/* 1. request special plug info
- *  Query = { "t": "80407320171565445232",
- *            "y": "r",
- *            "r": {"plugin" {"id": "1",
- *                            "m" : "10.0.0.16:13400"
- *                           }
- *                 }
- *           }
- */
-static
-int _aux_enc_get_plugin_rsp(char* buf, int sz, vtoken* token, int plgnId, struct sockaddr_in* addr)
-{
-    struct be_node* dict = NULL;
-    struct be_node* node = NULL;
-    struct be_node* rslt = NULL;
-    struct be_node* plgn = NULL;
-    int ret = 0;
-
-    vassert(buf);
-    vassert(sz > 0);
-    vassert(token);
-    vassert(addr);
-    vassert(plgnId >= 0);
-    vassert(plgnId < PLUGIN_BUTT);
-
-    dict = be_create_dict();
-    retE((!dict));
-
-    node = be_create_vtoken(token);
-    be_add_keypair(dict, "t", node);
-    node = be_create_str("r");
-    be_add_keypair(dict, "y", node);
-
-    plgn = be_create_dict();
-    node = be_create_int(plgnId);
-    be_add_keypair(plgn, "id", node);
-    node = be_create_addr(addr);
-    be_add_keypair(plgn, "m", node);
-
-    rslt = be_create_dict();
-    be_add_keypair(rslt, "plugin", plgn);
-    be_add_keypair(dict, "r", rslt);
-
-    ret = be_encode(dict, buf, sz);
-    be_free(dict);
-    retE((ret < 0));
-    return ret;
-}
-
-/*
- *  1. @get_plugin message format.
- *
- *  Query = { "t": "80407320171565445232",
- *            "y": "q",
- *            "q": "get_plugin"
- *            "a": {"id: "1"}
- *           }
- *
- * @ctxt : dht decode context
- * @token: token to dht message
- * @plugId: plugin ID
- *
- */
-static
-int _aux_dec_get_plugin(void* ctxt, vtoken* token, int* plgnId)
-{
-    struct be_node* dict = (struct be_node*)ctxt;
-    struct be_node* node = NULL;
-    int ret = 0;
-
-    vassert(dict);
-    vassert(token);
-    vassert(plgnId);
-
-    ret = be_node_by_key(dict, "t", &node);
-    retE((ret < 0));
-    retE((BE_STR != node->type));
-
-    ret = be_unpack_token(node, token);
-    retE((ret < 0));
-
-    ret = be_node_by_2keys(dict, "a", "id", &node);
-    retE((ret < 0));
-    retE((BE_INT != node->type));
-
-    *plgnId = node->val.i;
-    return 0;
-}
-
-/* @get_plugin_rsp message format
- *
- * 1. success:
- *  Response = { "t": "80407320171565445232",
- *               "y": "r",
- *               "r": {"plugin": {"id": "1",
- *                                "m" : "10.0.0.16:13400"
- *                               }
- *                    }
- *              }
- * 2. failed:
- *  Response = { "t": "80407320171565445232",
- *               "y": "r",
- *               "r": {"plugin": {}
- *                    }
- *              }
- *
- * @ctxt  : dht decoder context
- * @token : token to dht message.
- * @plgnId: plugin ID
- * @addr  : addr to plugin server
- *
- */
-static
-int _aux_dec_get_plugin_rsp(void* ctxt, vtoken* token, int* plgnId, struct sockaddr_in* addr)
-{
-    struct be_node* dict = (struct be_node*)ctxt;
-    struct be_node* node = NULL;
-    struct be_node* plgn = NULL;
-    int ret = 0;
-
-    vassert(dict);
-    vassert(token);
-    vassert(plgnId);
-    vassert(addr);
-
-    ret = be_node_by_key(dict, "t", &node);
-    retE((ret < 0));
-    retE((BE_STR != node->type));
-
-    ret = be_node_by_2keys(dict, "r", "plugin", &plgn);
-    retE((ret < 0));
-    retE((BE_DICT != plgn->type));
-
-    ret = be_node_by_key(plgn, "id", &node);
-    retE((ret < 0));
-    retE((BE_INT != plgn->type));
-    *plgnId = node->val.i;
-
-    ret = be_node_by_key(plgn, "m", &node);
-    retE((ret < 0));
-    retE((BE_STR != node->type));
-    ret = be_unpack_addr(node, addr);
-    retE((ret < 0));
-
-    return 0;
-}
-
-static
-int _aux_dec(char* buf, int sz, void** ctxt)
-{
-    struct be_node* dict = NULL;
-    struct be_node* node = NULL;
-    int ret = 0;
-
-    vassert(buf);
-    vassert(sz > 0);
-    vassert(ctxt);
-
-    vlogI(printf("[plugin msg]->%s", buf));
-    dict = be_decode(buf, sz);
-    vlog((!dict), elog_be_decode);
-    retE((!dict));
-
-    ret = be_node_by_key(dict, "y", &node);
-    retE((ret < 0));
-    retE((BE_STR != node->type));
-
-    if (!strcmp(node->val.s, "q")) {
-        ret = be_node_by_key(dict, "q", &node);
-        retE((ret < 0));
-        retE((BE_STR != node->type));
-
-        if (!strcmp(node->val.s, "get_plugin")) {
-            ret = VPLUGIN_GET_PLUGIN;
-        } else {
-            ret = VPLUGIN_BUTT;
-        }
-
-    } else if (!strcmp(node->val.s, "r")) {
-        ret = be_node_by_2keys(dict, "r", "plugin", &node);
-        retE((ret < 0));
-        retE((BE_DICT != node->type));
-        ret = VPLUGIN_GET_PLUGIN_RSP;
-    }
-    *ctxt = (void*)dict;
-    return ret;
-}
-
-static
-int _aux_dec_done(void* ctxt)
-{
-    vassert(ctxt);
-    be_free((struct be_node*)ctxt);
-    return 0;
-}
-
-/*
  * helpers to manage the msg buf for plugin dht request and response.
  */
 static
@@ -353,7 +106,7 @@ int _aux_req_get_plugin(struct vpluger* pluger, vtoken* token, int plgnId, struc
     buf = _aux_mbuf_alloc(pluger);
     retE((!buf));
 
-    ret = _aux_enc_get_plugin(buf, _aux_mbuf_len(), token, plgnId);
+    ret = dht_enc_ops.get_plugin(token, plgnId, buf, _aux_mbuf_len());
     ret1E((ret < 0), _aux_mbuf_free(pluger, buf));
 
     {
@@ -683,7 +436,7 @@ int _vpluger_s_rsp(struct vpluger* pluger, int plgnId, vtoken* token, struct vso
 
     buf = _aux_mbuf_alloc(pluger);
     retE((!buf));
-    ret = _aux_enc_get_plugin_rsp(buf, _aux_mbuf_len(), token, plgnId, &addr);
+    ret = dht_enc_ops.get_plugin_rsp(token, plgnId, &addr, buf, _aux_mbuf_len());
     ret1E((ret < 0), _aux_mbuf_free(pluger, buf));
 
     {
@@ -767,6 +520,7 @@ struct vpluger_s_ops pluger_s_ops = {
 static
 int _vpluger_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vpluger* pluger = (struct vpluger*)cookie;
     struct sockaddr_in addr;
     vtoken token;
@@ -777,13 +531,13 @@ int _vpluger_msg_cb(void* cookie, struct vmsg_usr* mu)
     vassert(pluger);
     vassert(mu);
 
-    ret = _aux_dec(mu->data, mu->len, &ctxt);
+    ret = dec_ops->dec(mu->data, mu->len, &ctxt);
     retE((ret < 0));
 
     switch(ret) {
     case VPLUGIN_GET_PLUGIN: {
-        ret = _aux_dec_get_plugin(ctxt, &token, &plgnId);
-        _aux_dec_done(ctxt);
+        ret = dec_ops->get_plugin(ctxt, &token, &plgnId);
+        dec_ops->dec_done(ctxt);
         retE((ret < 0));
 
         ret = pluger->s_ops->rsp(pluger, plgnId, &token, mu->addr);
@@ -791,8 +545,8 @@ int _vpluger_msg_cb(void* cookie, struct vmsg_usr* mu)
         break;
     }
     case VPLUGIN_GET_PLUGIN_RSP: {
-        ret = _aux_dec_get_plugin_rsp(ctxt, &token, &plgnId, &addr);
-        _aux_dec_done(ctxt);
+        ret = dec_ops->get_plugin_rsp(ctxt, &token, &plgnId, &addr);
+        dec_ops->dec_done(ctxt);
         retE((ret < 0));
 
         ret = pluger->c_ops->invoke(pluger, plgnId, &token, &addr);
