@@ -608,7 +608,6 @@ int _aux_unpack_dhtId(struct be_node* dict)
     struct be_node* node = NULL;
     int dhtId = 0;
     int ret = 0;
-    int i = 0;
 
     vassert(dict);
     retE((BE_DICT != dict->type));

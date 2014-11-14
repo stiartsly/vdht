@@ -289,6 +289,11 @@ int _aux_parse(struct vconfig* cfg, void* buf)
     return 0;
 }
 
+/*
+ * the routine to load all config items by parsing config file.
+ * @cfg:
+ * @filename
+ */
 static
 int _vcfg_parse(struct vconfig* cfg, const char* filename)
 {
@@ -322,11 +327,17 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
     buf[stat.st_size] = '\0';
     close(fd);
 
+    vlock_enter(&cfg->lock);
     ret = _aux_parse(cfg, buf);
-    ret1E((ret < 0), cfg->ops->clear(cfg));
+    vlock_leave(&cfg->lock);
+    retE((ret < 0));
     return 0;
 }
 
+/*
+ * the routine to dump all config items.
+ * @cfg:
+ */
 static
 void _vcfg_dump(struct vconfig* cfg)
 {
@@ -335,6 +346,7 @@ void _vcfg_dump(struct vconfig* cfg)
     vassert(cfg);
 
     vdump(printf("-> CONFIG"));
+    vlock_enter(&cfg->lock);
     __vlist_for_each(node, &cfg->items) {
         item = vlist_entry(node, struct vcfg_item, list);
         switch(item->type) {
@@ -349,10 +361,15 @@ void _vcfg_dump(struct vconfig* cfg)
             break;
         }
     }
+    vlock_leave(&cfg->lock);
     vdump(printf("<- CONFIG"));
     return ;
 }
 
+/*
+ * the routine to clear all config items
+ * @cfg:
+ */
 static
 int _vcfg_clear(struct vconfig* cfg)
 {
@@ -360,14 +377,22 @@ int _vcfg_clear(struct vconfig* cfg)
     struct vlist* node = NULL;
     vassert(cfg);
 
+    vlock_enter(&cfg->lock);
     while(!vlist_is_empty(&cfg->items)) {
         node = vlist_pop_head(&cfg->items);
         item = vlist_entry(node, struct vcfg_item, list);
         vitem_free(item);
     }
+    vlock_leave(&cfg->lock);
     return 0;
 }
 
+/*
+ * the routine to get value of config item by given kye @key.
+ * @cfg:
+ * @key:
+ * @value:
+ */
 static
 int _vcfg_get_int(struct vconfig* cfg, const char* key, int* value)
 {
@@ -375,6 +400,11 @@ int _vcfg_get_int(struct vconfig* cfg, const char* key, int* value)
     struct vlist* node = NULL;
     int ret = -1;
 
+    vassert(cfg);
+    vassert(key);
+    vassert(value);
+
+    vlock_enter(&cfg->lock);
     __vlist_for_each(node, &cfg->items) {
         item = vlist_entry(node, struct vcfg_item, list);
         if ((!strcmp(item->key, key)) && (item->type == CFG_INT)) {
@@ -383,9 +413,58 @@ int _vcfg_get_int(struct vconfig* cfg, const char* key, int* value)
             break;
         }
     }
+    vlock_leave(&cfg->lock);
     return ret;
 }
 
+/*
+ * the routine to get value of config item by given kye @key.
+ * @cfg:
+ * @key:
+ * @value:
+ * @def_value:
+ */
+static
+int _vcfg_get_int_ext(struct vconfig* cfg, const char* key, int* value, int def_value)
+{
+    struct vcfg_item* item = NULL;
+    char* kay = NULL;
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(key);
+    vassert(value);
+
+    ret = cfg->ops->get_int(cfg, key, value);
+    retS((ret >= 0));
+
+    kay = (char*)malloc(strlen(key) + 1);
+    retE((!kay));
+    strcpy(kay, key);
+
+    item = vitem_alloc();
+    ret1E((!item), free(kay));
+    vlist_init(&item->list);
+    item->key = kay;
+    item->val = NULL;
+    item->nval = def_value;
+    item->type = CFG_INT;
+
+    vlock_enter(&cfg->lock);
+    vlist_add_tail(&cfg->items, &item->list);
+    vlock_leave(&cfg->lock);
+
+    *value = def_value;
+    return 0;
+}
+
+/*
+ * the routine to get value of config item by given kye @key.
+ * @cfg:
+ * @key:
+ * @value:
+ * @sz:
+ */
 static
 int _vcfg_get_str(struct vconfig* cfg, const char* key, char* value, int sz)
 {
@@ -393,6 +472,12 @@ int _vcfg_get_str(struct vconfig* cfg, const char* key, char* value, int sz)
     struct vlist* node = NULL;
     int ret = -1;
 
+    vassert(cfg);
+    vassert(key);
+    vassert(value);
+    vassert(sz > 0);
+
+    vlock_enter(&cfg->lock);
     __vlist_for_each(node, &cfg->items) {
         item = vlist_entry(node, struct vcfg_item, list);
         if ((!strcmp(item->key, key))
@@ -403,16 +488,68 @@ int _vcfg_get_str(struct vconfig* cfg, const char* key, char* value, int sz)
             break;
         }
     }
+    vlock_leave(&cfg->lock);
     return ret;
+}
+
+/*
+ * the routine to get value of config item by given kye @key.
+ * @cfg:
+ * @key:
+ * @value:
+ * @sz:
+ * @def_value:
+ */
+static
+int _vcfg_get_str_ext(struct vconfig* cfg, const char* key, char* value, int sz, char* def_value)
+{
+    struct vcfg_item* item = NULL;
+    char* val = NULL;
+    char* kay = NULL;
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(key);
+    vassert(value);
+    vassert(sz > 0);
+    vassert(def_value);
+
+    ret = cfg->ops->get_str(cfg, key, value, sz);
+    retS((ret >= 0));
+    retE((sz < strlen(def_value) + 1));
+
+    val = (char*)malloc(strlen(def_value) + 1);
+    retE((!val));
+    strcpy(val, def_value);
+    kay  = (char*)malloc(strlen(key) + 1);
+    ret1E((!kay), free(val));
+    strcpy(kay, key);
+
+    item = vitem_alloc();
+    ret2E((!item), free(val), free(kay));
+    vlist_init(&item->list);
+    item->key  = kay;
+    item->val  = val;
+    item->type = CFG_STR;
+    item->nval = 0;
+
+    vlock_enter(&cfg->lock);
+    vlist_add_tail(&cfg->items, &item->list);
+    vlock_leave(&cfg->lock);
+
+    strcpy(value, def_value);
+    return 0;
 }
 
 static
 struct vconfig_ops cfg_ops = {
-    .parse   = _vcfg_parse,
-    .clear   = _vcfg_clear,
-    .dump    = _vcfg_dump,
-    .get_int = _vcfg_get_int,
-    .get_str = _vcfg_get_str
+    .parse       = _vcfg_parse,
+    .clear       = _vcfg_clear,
+    .dump        = _vcfg_dump,
+    .get_int     = _vcfg_get_int,
+    .get_int_ext = _vcfg_get_int_ext,
+    .get_str     = _vcfg_get_str,
+    .get_str_ext = _vcfg_get_str_ext
 };
 
 int vconfig_init(struct vconfig* cfg)
@@ -420,6 +557,7 @@ int vconfig_init(struct vconfig* cfg)
     vassert(cfg);
 
     vlist_init(&cfg->items);
+    vlock_init(&cfg->lock);
     cfg->ops = &cfg_ops;
     return 0;
 }
@@ -429,6 +567,7 @@ void vconfig_deinit(struct vconfig* cfg)
     vassert(cfg);
 
     cfg->ops->clear(cfg);
+    vlock_deinit(&cfg->lock);
     return ;
 }
 

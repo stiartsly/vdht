@@ -14,15 +14,19 @@
 
 struct vconfig;
 struct vconfig_ops {
-    int  (*parse)  (struct vconfig*, const char*);
-    int  (*clear)  (struct vconfig*);
-    void (*dump)   (struct vconfig*);
-    int  (*get_int)(struct vconfig*, const char*, int*);
-    int  (*get_str)(struct vconfig*, const char*, char*, int);
+    int  (*parse)      (struct vconfig*, const char*);
+    int  (*clear)      (struct vconfig*);
+    void (*dump)       (struct vconfig*);
+    int  (*get_int)    (struct vconfig*, const char*, int*);
+    int  (*get_int_ext)(struct vconfig*, const char*, int*, int);
+    int  (*get_str)    (struct vconfig*, const char*, char*, int);
+    int  (*get_str_ext)(struct vconfig*, const char*, char*, int, char*);
 };
 
 struct vconfig {
     struct vlist items;
+    struct vlock lock;
+
     struct vconfig_ops* ops;
 };
 

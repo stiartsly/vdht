@@ -335,10 +335,8 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
     vassert(host);
 
     memset(unix_path, 0, BUF_SZ);
-    ret = ops->get_str(host->cfg, "lsctl.unix_path", unix_path, BUF_SZ);
-    if (ret < 0) {
-        strcpy(unix_path, DEF_LSCTL_UNIX_PATH);
-    }
+    ret = ops->get_str_ext(host->cfg, "lsctl.unix_path", unix_path, BUF_SZ, DEF_LSCTL_UNIX_PATH);
+    retE((ret < 0));
     retE((strlen(unix_path) + 1 >= sizeof(sun->sun_path)));
 
     sun->sun_family = AF_UNIX;

@@ -372,11 +372,10 @@ int _aux_init_tick_tmo(struct vconfig* cfg)
     vassert(cfg);
 
     memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "global.tick_tmo", buf, 32);
-    vcall_cond((ret < 0), strcpy(buf, DEF_HOST_TICK_TMO));
-    ret = strlen(buf);
-    retE((ret <= 1));
+    ret = cfg->ops->get_str_ext(cfg, "global.tick_tmo", buf, 32, DEF_HOST_TICK_TMO);
+    retE((ret < 0));
 
+    ret = strlen(buf);
     switch(buf[ret-1]) {
     case 's':
         tms = 1;

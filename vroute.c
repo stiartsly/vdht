@@ -1349,8 +1349,8 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
     vassert(mu);
 
     ret = dec_ops->dec(mu->data, mu->len, &ctxt);
-    retE((ret < 0));
     retE((ret >= VDHT_UNKNOWN));
+    retE((ret < 0));
     vlogI(printf("Received (%s) msg.\n", dht_id_desc[ret]));
 
     ret = routine[ret](route, &mu->addr->vsin_addr, ctxt);
@@ -1360,30 +1360,28 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
 }
 
 static
-void _aux_load_cfg(struct vroute* route, struct vconfig* cfg)
+int _aux_load_cfg(struct vroute* route, struct vconfig* cfg)
 {
     int ret = 0;
     vassert(route);
     vassert(cfg);
 
-    ret = cfg->ops->get_str(cfg, "route.db_file", route->db, BUF_SZ);
-    if (ret < 0) {
-        strcpy(route->db, DEF_ROUTE_DB_FILE);
-    }
-    ret = cfg->ops->get_int(cfg, "route.bucket_size", &route->bucket_sz);
-    if (ret < 0) {
-        route->bucket_sz = DEF_ROUTE_BUCKET_CAPC;
-    }
-    ret = cfg->ops->get_int(cfg, "route.max_send_times", &route->max_snd_times);
-    if (ret < 0) {
-        route->max_snd_times = DEF_ROUTE_MAX_SND_TIMES;
-    }
-    return ;
+    ret = cfg->ops->get_str_ext(cfg, "route.db_file", route->db, BUF_SZ, DEF_ROUTE_DB_FILE);
+    retE((ret < 0));
+
+    ret = cfg->ops->get_int_ext(cfg, "route.bucket_size", &route->bucket_sz, DEF_ROUTE_BUCKET_CAPC);
+    retE((ret < 0));
+
+    ret = cfg->ops->get_int_ext(cfg, "route.max_send_times", &route->max_snd_times, DEF_ROUTE_MAX_SND_TIMES);
+    retE((ret < 0));
+    return 0;
 }
 
 int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger, vnodeAddr* addr, vnodeVer* ver)
 {
+    int ret = 0;
     int i = 0;
+
     vassert(route);
     vassert(msger);
     vassert(addr);
@@ -1398,7 +1396,8 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     route->cb_ops   = &route_cb_ops;
     route->plugin_ops = &route_plugin_ops;
 
-    _aux_load_cfg(route, cfg);
+    ret = _aux_load_cfg(route, cfg);
+    retE((ret < 0));
 
     vlock_init(&route->lock);
     for (; i < NBUCKETS; i++) {

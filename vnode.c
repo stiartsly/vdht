@@ -185,11 +185,10 @@ int _aux_get_tick_interval(struct vconfig* cfg)
     vassert(cfg);
 
     memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "node.tick_interval", buf, 32);
-    vcall_cond((ret < 0), strcpy(buf, DEF_NODE_TICK_INTERVAL));
-    ret = strlen(buf);
-    retE((ret <= 0));
+    ret = cfg->ops->get_str_ext(cfg, "node.tick_interval", buf, 32, DEF_NODE_TICK_INTERVAL);
+    retE((ret < 0));
 
+    ret = strlen(buf);
     switch(buf[ret-1]) {
     case 's':
         tms = 1;
