@@ -36,17 +36,6 @@ enum {
 
 #define PROP_DHT_MASK  ((uint32_t)0x000003ff)
 #define PROP_PLUG_MASK ((uint32_t)0x003f0000)
-enum {
-    PLUGIN_RELAY,
-    PLUGIN_STUN,
-    PLUGIN_VPN,
-    PLUGIN_DDNS,
-    PLUGIN_MROUTE,
-    PLUGIN_DHASH,
-    PLUGIN_APP,
-    PLUGIN_BUTT
-};
-
 /*
  * for routing table.
  */

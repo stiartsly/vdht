@@ -7,17 +7,39 @@ enum {
     VPLUGIN_BUTT
 };
 
-static char* plugin_desc[] = {
-    "relay",
-    "stun",
-    "vpn",
-    "ddns",
-    "multi_route",
-    "data_hash",
-    "app",
-    NULL
+struct vplugin_desc {
+    int   plgnId;
+    char* desc;
 };
 
+static
+struct vplugin_desc plugin_desc[] = {
+    { PLUGIN_RELAY,  "relay"           },
+    { PLUGIN_STUN,   "stun"            },
+    { PLUGIN_VPN,    "vpn"             },
+    { PLUGIN_DDNS,   "ddns"            },
+    { PLUGIN_MROUTE, "multiple routes" },
+    { PLUGIN_DHASH,  "dhash"           },
+    { PLUGIN_APP,    "app"             },
+    { PLUGIN_BUTT, 0}
+};
+
+char* vpluger_get_desc(int plugin_id)
+{
+    struct vplugin_desc* desc = plugin_desc;
+    int i = 0;
+
+    retE_p((plugin_id < PLUGIN_RELAY));
+    retE_p((plugin_id >= PLUGIN_BUTT));
+
+    for (; desc->desc; i++) {
+        if (desc->plgnId == plugin_id) {
+            return desc->desc;
+        }
+        desc++;
+    }
+    return NULL;
+}
 /*
  * for plug request block
  *
@@ -217,7 +239,7 @@ void _vpluger_c_dump(struct vpluger* pluger)
         req = vlist_entry(node, struct vrequest, list);
         vdump(printf("-> PLUGIN_REQ"));
         vtoken_dump(&req->token);
-        vdump(printf("plgnId: %s", plugin_desc[req->plgnId]));
+        vdump(printf("plgnId: %s", vpluger_get_desc(req->plgnId)));
         vdump(printf("<- PLUGIN_REQ"));
     }
     vlock_leave(&pluger->prq_lock);
@@ -468,7 +490,7 @@ void _vpluger_s_dump(struct vpluger* pluger)
     __vlist_for_each(node, &pluger->plgns) {
         item = vlist_entry(node, struct vplugin, list);
         vdump(printf("-> PLUGIN"));
-        vdump(printf("plugId: %s", plugin_desc[item->id]));
+        vdump(printf("plugId: %s", vpluger_get_desc(item->id)));
         vsockaddr_dump(&item->addr);
         vdump(printf("<- PLUGIN"));
     }

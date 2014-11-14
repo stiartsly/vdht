@@ -8,6 +8,17 @@
 #define VPLUG_MAGIC ((uint32_t)0x98431f031)
 #define IS_PLUG_MSG(val) ((uint32_t)val == (uint32_t)VPLUG_MAGIC)
 
+enum {
+    PLUGIN_RELAY,
+    PLUGIN_STUN,
+    PLUGIN_VPN,
+    PLUGIN_DDNS,
+    PLUGIN_MROUTE,
+    PLUGIN_DHASH,
+    PLUGIN_APP,
+    PLUGIN_BUTT
+};
+
 typedef int (*vplugin_reqblk_t)(struct sockaddr_in*, void*);
 struct vpluger;
 struct vpluger_c_ops {
@@ -43,8 +54,9 @@ struct vpluger {
     struct vpluger_s_ops* s_ops;
 };
 
-int  vpluger_init  (struct vpluger*, struct vhost*);
-void vpluger_deinit(struct vpluger*);
+char* vpluger_get_desc(int);
+int   vpluger_init  (struct vpluger*, struct vhost*);
+void  vpluger_deinit(struct vpluger*);
 
 #endif
 

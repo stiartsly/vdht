@@ -4,17 +4,6 @@
 /* message interface for local service controller.*/
 #define IS_LSCTL_MAGIC(val) (val == (uint32_t)0x7fec45fa)
 
-static char* plugin_desc[] = {
-    "relay",
-    "stun",
-    "vpn",
-    "ddns",
-    "multi_route",
-    "data_hash",
-    "app",
-    NULL
-};
-
 static char* dht_query_desc[] = {
     "ping",
     "ping_r",
@@ -201,7 +190,7 @@ int _vlsctl_plug(struct vlsctl* lsctl, void* data, int offset)
 
     ret = host->ops->plug(host, plgnId);
     retE((ret < 0));
-    vlogI(printf("plugin(%s) up.", plugin_desc[plgnId]));
+    vlogI(printf("plugin(%s) up.", vpluger_get_desc(plgnId)));
     return 0;
 }
 
@@ -224,7 +213,7 @@ int _vlsctl_unplug(struct vlsctl* lsctl, void* data, int offset)
 
     ret = host->ops->unplug(host, plgnId);
     retE((ret < 0));
-    vlogI(printf("plugin(%s) down.", plugin_desc[plgnId]));
+    vlogI(printf("plugin(%s) down.", vpluger_get_desc(plgnId)));
     return 0;
 }
 
