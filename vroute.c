@@ -401,7 +401,7 @@ int _vroute_find(struct vroute* route, vnodeId* targetId, vnodeInfo* info)
     peers = &route->bucket[idx].peers;
     for (; i < varray_size(peers); i++) {
         peer = (struct vpeer*)varray_get(peers, i);
-        if (vnodeId_equal(&route->ownId.id, targetId)) {
+        if (vnodeId_equal(&peer->extId.id, targetId)) {
             vnodeInfo_init(info, targetId, &peer->extId.addr, peer->flags, &peer->ver);
             info->flags &= ~PROP_VER;
             break;
@@ -919,6 +919,39 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
 
 /*
  * @route:
+ * @dest :
+ * @hash
+ */
+static
+int _vroute_dht_post_hash(struct vroute* route, vnodeAddr* dest, vnodeHash* hash)
+{
+    vassert(route);
+    vassert(dest);
+    vassert(hash);
+
+    //todo;
+    return 0;
+}
+
+/*
+ * @route:
+ * @dest:
+ * @hash
+ */
+static
+int _vroute_dht_post_hash_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* hashes)
+{
+    vassert(route);
+    vassert(dest);
+    vassert(token);
+    vassert(hashes);
+
+    //todo;
+    return 0;
+}
+
+/*
+ * @route:
  * @dest:
  * @targetId:
  */
@@ -934,6 +967,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
     vassert(dest);
     vassert(target);
 
+    vtoken_make(&token);
     buf = vdht_buf_alloc();
     retE((!buf));
 
@@ -948,7 +982,6 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
-        vlogI(printf("send 'find_closest_nodes'"));
     }
     return 0;
 }
@@ -985,7 +1018,6 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vt
         };
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
-        vlogI(printf("send 'find_closest_nodes' rsp"));
     }
     return 0;
 }
@@ -998,6 +1030,8 @@ struct vroute_dht_ops route_dht_ops = {
     .find_node_rsp          = _vroute_dht_find_node_rsp,
     .get_peers              = _vroute_dht_get_peers,
     .get_peers_rsp          = _vroute_dht_get_peers_rsp,
+    .post_hash              = _vroute_dht_post_hash,
+    .post_hash_rsp          = _vroute_dht_post_hash_rsp,
     .find_closest_nodes     = _vroute_dht_find_closest_nodes,
     .find_closest_nodes_rsp = _vroute_dht_find_closest_nodes_rsp
 };
@@ -1317,7 +1351,7 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
     ret = dec_ops->dec(mu->data, mu->len, &ctxt);
     retE((ret < 0));
     retE((ret >= VDHT_UNKNOWN));
-    vlogI(printf("Received dht msg(%s)", dht_id_desc[ret]));
+    vlogI(printf("Received (%s) msg.\n", dht_id_desc[ret]));
 
     ret = routine[ret](route, &mu->addr->vsin_addr, ctxt);
     dec_ops->dec_done(ctxt);

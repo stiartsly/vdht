@@ -623,7 +623,7 @@ int _aux_unpack_dhtId(struct be_node* dict)
         retE((BE_STR != node->type));
 
         dhtId = VDHT_UNKNOWN;
-        for (; desc[i].desc; i++) {
+        for (; desc->desc; ) {
             if (!strcmp(node->val.s, desc->desc)) {
                 dhtId = desc->dhtId;
                 break;

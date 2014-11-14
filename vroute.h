@@ -79,6 +79,8 @@ struct vroute_dht_ops {
     int (*find_node_rsp)     (struct vroute*, vnodeAddr*, vtoken*, vnodeInfo*);
     int (*get_peers)         (struct vroute*, vnodeAddr*, vnodeHash*);
     int (*get_peers_rsp)     (struct vroute*, vnodeAddr*, vtoken*, struct varray*);
+    int (*post_hash)         (struct vroute*, vnodeAddr*, vnodeHash*);
+    int (*post_hash_rsp)     (struct vroute*, vnodeAddr*, vtoken*, struct varray*);
     int (*find_closest_nodes)(struct vroute*, vnodeAddr*, vnodeId*);
     int (*find_closest_nodes_rsp)(struct vroute*, vnodeAddr*, vtoken*, struct varray*);
 };
