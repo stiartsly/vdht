@@ -1054,3 +1054,28 @@ struct vdht_dec_ops dht_dec_ops = {
     .get_plugin_rsp         = _vdht_dec_get_plugin_rsp
 };
 
+void* vdht_buf_alloc(void)
+{
+    void* buf = NULL;
+
+    buf = malloc(8*BUF_SZ);
+    vlog((!buf), elog_malloc);
+    retE_p((!buf));
+    memset(buf, 0, 8*BUF_SZ);
+
+    return buf + 8;
+}
+
+int vdht_buf_len(void)
+{
+    return (int)(8*BUF_SZ - 8);
+}
+
+void vdht_buf_free(void* buf)
+{
+    vassert(buf);
+
+    free(buf - 8);
+    return ;
+}
+

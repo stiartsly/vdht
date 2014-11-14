@@ -58,40 +58,6 @@ void vplgn_req_init(struct vplgn_req* req, int plgnId, vtoken* token, get_addr_c
     return;
 }
 
-/*
- * helpers to manage the msg buf for plugin dht request and response.
- */
-static
-void* _aux_mbuf_alloc(struct vpluger* pluger)
-{
-    void* mbuf = NULL;
-    vassert(pluger);
-
-    mbuf = malloc(8*BUF_SZ);
-    vlog((!mbuf), elog_malloc);
-    retE_p((!mbuf));
-    memset(mbuf, 0, 8*BUF_SZ);
-
-    //reserve padding for magic and msgId.
-    return mbuf + 8;
-}
-
-static
-int _aux_mbuf_len(void)
-{
-    return (int)(BUF_SZ - 8);
-}
-
-static
-void _aux_mbuf_free(struct vpluger* pluger, void* mbuf)
-{
-    vassert(pluger);
-    vassert(mbuf);
-
-    free(mbuf - 8);
-    return ;
-}
-
 static
 int _aux_req_get_plugin(struct vpluger* pluger, vtoken* token, int plgnId, struct vsockaddr* addr)
 {
@@ -103,11 +69,11 @@ int _aux_req_get_plugin(struct vpluger* pluger, vtoken* token, int plgnId, struc
     vassert(plgnId >= 0);
     vassert(plgnId < PLUGIN_BUTT);
 
-    buf = _aux_mbuf_alloc(pluger);
+    buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = dht_enc_ops.get_plugin(token, plgnId, buf, _aux_mbuf_len());
-    ret1E((ret < 0), _aux_mbuf_free(pluger, buf));
+    ret = dht_enc_ops.get_plugin(token, plgnId, buf, vdht_buf_len());
+    ret1E((ret < 0), vdht_buf_free(buf));
 
     {
         struct vmsg_usr msg = {
@@ -118,7 +84,7 @@ int _aux_req_get_plugin(struct vpluger* pluger, vtoken* token, int plgnId, struc
         };
 
         ret = pluger->msger->ops->push(pluger->msger, &msg);
-        ret1E((ret < 0), _aux_mbuf_free(pluger, buf));
+        ret1E((ret < 0), vdht_buf_free(buf));
     }
     return 0;
 }
@@ -434,10 +400,10 @@ int _vpluger_s_rsp(struct vpluger* pluger, int plgnId, vtoken* token, struct vso
     ret = pluger->s_ops->get(pluger, plgnId, &addr);
     retE((ret < 0));
 
-    buf = _aux_mbuf_alloc(pluger);
+    buf = vdht_buf_alloc();
     retE((!buf));
-    ret = dht_enc_ops.get_plugin_rsp(token, plgnId, &addr, buf, _aux_mbuf_len());
-    ret1E((ret < 0), _aux_mbuf_free(pluger, buf));
+    ret = dht_enc_ops.get_plugin_rsp(token, plgnId, &addr, buf, vdht_buf_len());
+    ret1E((ret < 0), vdht_buf_free(buf));
 
     {
         struct vmsg_usr msg = {
@@ -447,7 +413,7 @@ int _vpluger_s_rsp(struct vpluger* pluger, int plgnId, vtoken* token, struct vso
             .len   = ret
         };
         ret = pluger->msger->ops->push(pluger->msger, &msg);
-        ret1E((ret < 0), _aux_mbuf_free(pluger, buf));
+        ret1E((ret < 0), vdht_buf_free(buf));
     }
     return 0;
 }

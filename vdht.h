@@ -181,4 +181,8 @@ struct vdht_dec_ops {
 
 };
 
+void* vdht_buf_alloc(void);
+int   vdht_buf_len(void);
+void  vdht_buf_free(void*);
+
 #endif
