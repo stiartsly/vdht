@@ -9,16 +9,13 @@ enum {
     VLSCTL_DHT_UP,
     VLSCTL_DHT_DOWN,
     VLSCTL_DHT_EXIT,
+    VLSCTL_DHT_QUERY,
 
     VLSCTL_ADD_NODE,
     VLSCTL_DEL_NODE,
 
     VLSCTL_PLUG,
     VLSCTL_UNPLUG,
-
-    VLSCTL_PING,
-    VLSCTL_FIND_NODE,
-    VLSCTL_FIND_CLOSEST_NODES,
 
     VLSCTL_LOGOUT,
     VLSCTL_CFGOUT,
@@ -30,15 +27,11 @@ struct vlsctl_ops {
     int (*dht_up)    (struct vlsctl*, void*, int);
     int (*dht_down)  (struct vlsctl*, void*, int);
     int (*dht_exit)  (struct vlsctl*, void*, int);
+    int (*dht_query) (struct vlsctl*, void*, int);
     int (*add_node)  (struct vlsctl*, void*, int);
     int (*del_node)  (struct vlsctl*, void*, int);
     int (*plug)      (struct vlsctl*, void*, int);
     int (*unplug)    (struct vlsctl*, void*, int);
-    int (*ping)      (struct vlsctl*, void*, int);
-    int (*find_node) (struct vlsctl*, void*, int);
-    int (*find_closest_nodes)
-                     (struct vlsctl*, void*, int);
-
     int (*log_stdout)(struct vlsctl*, void*, int);
     int (*cfg_stdout)(struct vlsctl*, void*, int);
 };

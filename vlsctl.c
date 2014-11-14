@@ -15,6 +15,20 @@ static char* plugin_desc[] = {
     NULL
 };
 
+static char* dht_query_desc[] = {
+    "ping",
+    "ping_r",
+    "find_node",
+    "find_node_r",
+    "get_peers",
+    "get_peers_r",
+    "post_hash",
+    "post_hash_r",
+    "find_closest_nodes",
+    "find_closest_nodes_r",
+    NULL
+};
+
 static
 int _vlsctl_dht_up(struct vlsctl* lsctl, void* data, int offset)
 {
@@ -54,6 +68,35 @@ int _vlsctl_dht_exit(struct vlsctl* lsctl, void* data, int offset)
     vassert(offset > 0);
 
     ret = host->ops->req_quit(host);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vlsctl_dht_query(struct vlsctl* lsctl, void* data, int offset)
+{
+    struct vhost* host = lsctl->host;
+    struct sockaddr_in sin;
+    char ip[64];
+    int port = 0;
+    int qId  = 0;
+    int ret  = 0;
+    int sz   = 0;
+
+    qId = get_int32(offset_addr(data, offset + sz));
+    sz += sizeof(int32_t);
+    vlogI(printf("[vlsctl] reqeust to send @%s query", dht_query_desc[qId]));
+
+    port = get_int32(offset_addr(data, offset + sz));
+    sz += sizeof(int32_t);
+
+    memset(ip, 0, 64);
+    strcpy(ip, (char*)offset_addr(data, offset + sz));
+    sz += strlen(ip) + 1;
+
+    ret = vsockaddr_convert(ip, port, &sin);
+    retE((ret < 0));
+    ret = host->ops->bogus_query(host, qId, &sin);
     retE((ret < 0));
     return 0;
 }
@@ -183,95 +226,15 @@ int _vlsctl_cfg_stdout(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
-int _vlsctl_dht_ping(struct vlsctl* lsctl, void* data, int offset)
-{
-    struct vhost* host = lsctl->host;
-    struct sockaddr_in sin;
-    char ip[64];
-    int port = 0;
-    int ret  = 0;
-    int sz   = 0;
-
-    vlogI(printf("[vlsctl] reqeust to send @ping query"));
-
-    port = get_int32(offset_addr(data, offset + sz));
-    sz += sizeof(int32_t);
-
-    memset(ip, 0, 64);
-    strcpy(ip, (char*)offset_addr(data, offset + sz));
-    sz += strlen(ip) + 1;
-
-    ret = vsockaddr_convert(ip, port, &sin);
-    retE((ret < 0));
-    ret = host->ops->bogus(host, VDHT_PING, &sin);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vlsctl_dht_find_node(struct vlsctl* lsctl, void* data, int offset)
-{
-    struct vhost* host = lsctl->host;
-    struct sockaddr_in sin;
-    char ip[64];
-    int port = 0;
-    int ret  = 0;
-    int sz   = 0;
-
-    vlogI(printf("[vlsctl] reqeust to send @find_node query"));
-
-    port = get_int32(offset_addr(data, offset + sz));
-    sz += sizeof(int32_t);
-
-    memset(ip, 0, 64);
-    strcpy(ip, (char*)offset_addr(data, offset + sz));
-    sz += strlen(ip) + 1;
-
-    ret = vsockaddr_convert(ip, port, &sin);
-    retE((ret < 0));
-    ret = host->ops->bogus(host, VDHT_FIND_NODE, &sin);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vlsctl_dht_find_closest_nodes(struct vlsctl* lsctl, void* data, int offset)
-{
-    struct vhost* host = lsctl->host;
-    struct sockaddr_in sin;
-    char ip[64];
-    int port = 0;
-    int ret  = 0;
-    int sz   = 0;
-
-    vlogI(printf("[vlsctl] reqeust to send @find_closest_nodes query"));
-
-    port = get_int32(offset_addr(data, offset + sz));
-    sz += sizeof(int32_t);
-
-    memset(ip, 0, 64);
-    strcpy(ip, (char*)offset_addr(data, offset + sz));
-    sz += strlen(ip) + 1;
-
-    ret = vsockaddr_convert(ip, port, &sin);
-    retE((ret < 0));
-    ret = host->ops->bogus(host, VDHT_FIND_CLOSEST_NODES, &sin);
-    retE((ret < 0));
-    return 0;
-}
-
-static
 struct vlsctl_ops lsctl_ops = {
     .dht_up     = _vlsctl_dht_up,
     .dht_down   = _vlsctl_dht_down,
     .dht_exit   = _vlsctl_dht_exit,
+    .dht_query  = _vlsctl_dht_query,
     .add_node   = _vlsctl_add_node,
     .del_node   = _vlsctl_del_node,
     .plug       = _vlsctl_plug,
     .unplug     = _vlsctl_unplug,
-    .ping       = _vlsctl_dht_ping,
-    .find_node  = _vlsctl_dht_find_node,
-    .find_closest_nodes = _vlsctl_dht_find_closest_nodes,
     .log_stdout = _vlsctl_log_stdout,
     .cfg_stdout = _vlsctl_cfg_stdout
 };
@@ -311,6 +274,9 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
         case VLSCTL_DHT_EXIT:
             ret = ctl->ops->dht_exit(ctl, um->data, sz);
             break;
+        case VLSCTL_DHT_QUERY:
+            ret = ctl->ops->dht_query(ctl, um->data, sz);
+            break;
         case VLSCTL_ADD_NODE:
             ret = ctl->ops->add_node(ctl, um->data, sz);
             break;
@@ -322,15 +288,6 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
             break;
         case VLSCTL_UNPLUG:
             ret = ctl->ops->unplug(ctl, um->data, sz);
-            break;
-        case VLSCTL_PING:
-            ret = ctl->ops->ping(ctl, um->data, sz);
-            break;
-        case VLSCTL_FIND_NODE:
-            ret = ctl->ops->find_node(ctl, um->data, sz);
-            break;
-        case VLSCTL_FIND_CLOSEST_NODES:
-            ret = ctl->ops->find_closest_nodes(ctl, um->data, sz);
             break;
         case VLSCTL_LOGOUT:
             ret = ctl->ops->log_stdout(ctl, um->data, sz);

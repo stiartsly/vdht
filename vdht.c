@@ -1,6 +1,7 @@
 #include "vglobal.h"
 #include "vdht.h"
 
+static
 struct vdhtId_desc dhtId_desc[] = {
     {VDHT_PING,                 "ping"                  },
     {VDHT_PING_R,               "ping_rsp"              },

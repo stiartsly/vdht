@@ -185,7 +185,7 @@ int _vhost_version(struct vhost* host, char* buf, int len)
  *
  */
 static
-int _vhost_bogus_dht(struct vhost* host, int what, struct sockaddr_in* dest)
+int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest)
 {
     struct vroute* route = &host->route;
     vnodeAddr nodeAddr;
@@ -222,18 +222,18 @@ int _vhost_bogus_dht(struct vhost* host, int what, struct sockaddr_in* dest)
 
 static
 struct vhost_ops host_ops = {
-    .start     = _vhost_start,
-    .stop      = _vhost_stop,
-    .join      = _vhost_join,
-    .drop      = _vhost_drop,
-    .stabilize = _vhost_stabilize,
-    .plug      = _vhost_plug,
-    .unplug    = _vhost_unplug,
-    .loop      = _vhost_loop,
-    .req_quit  = _vhost_req_quit,
-    .dump      = _vhost_dump,
-    .version   = _vhost_version,
-    .bogus     = _vhost_bogus_dht
+    .start       = _vhost_start,
+    .stop        = _vhost_stop,
+    .join        = _vhost_join,
+    .drop        = _vhost_drop,
+    .stabilize   = _vhost_stabilize,
+    .plug        = _vhost_plug,
+    .unplug      = _vhost_unplug,
+    .loop        = _vhost_loop,
+    .req_quit    = _vhost_req_quit,
+    .dump        = _vhost_dump,
+    .version     = _vhost_version,
+    .bogus_query = _vhost_bogus_query
 };
 
 /*

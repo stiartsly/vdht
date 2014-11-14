@@ -22,16 +22,13 @@ enum {
     VLSCTL_DHT_UP,
     VLSCTL_DHT_DOWN,
     VLSCTL_DHT_EXIT,
+    VLSCTL_DHT_QUERY,
 
     VLSCTL_ADD_NODE,
     VLSCTL_DEL_NODE,
 
     VLSCTL_PLUG,
     VLSCTL_UNPLUG,
-
-    VLSCTL_PING,
-    VLSCTL_FIND_NODE,
-    VLSCTL_FIND_CLOSEST_NODES,
 
     VLSCTL_LOGOUT,
     VLSCTL_CFGOUT,
@@ -47,6 +44,20 @@ enum {
     PLUGIN_DHASH,
     PLUGIN_APP,
     PLUGIN_BUTT
+};
+
+enum {
+    VDHT_PING,
+    VDHT_PING_R,
+    VDHT_FIND_NODE,
+    VDHT_FIND_NODE_R,
+    VDHT_GET_PEERS,
+    VDHT_GET_PEERS_R,
+    VDHT_POST_HASH,
+    VDHT_POST_HASH_R,
+    VDHT_FIND_CLOSEST_NODES,
+    VDHT_FIND_CLOSEST_NODES_R,
+    VDHT_UNKNOWN
 };
 
 static char* cur_unix_path = "/var/run/vdht/lsctl_client";
@@ -464,7 +475,9 @@ int main(int argc, char** argv)
         nitems++;
     }
     if (ping) {
-        *(int32_t*)buf = VLSCTL_PING,
+        *(int32_t*)buf = VLSCTL_DHT_QUERY;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = VDHT_PING;
         buf += sizeof(int32_t);
         *(int32_t*)buf = dest_port;
         buf += sizeof(int32_t);
@@ -473,7 +486,9 @@ int main(int argc, char** argv)
         nitems++;
     }
     if (find_node) {
-        *(int32_t*)buf = VLSCTL_FIND_NODE;
+        *(int32_t*)buf = VLSCTL_DHT_QUERY;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = VDHT_FIND_NODE;
         buf += sizeof(int32_t);
         *(int32_t*)buf = dest_port;
         buf += sizeof(int32_t);
@@ -482,7 +497,10 @@ int main(int argc, char** argv)
         nitems++;
     }
     if (find_nodes) {
-        *(int32_t*)buf = VLSCTL_FIND_CLOSEST_NODES;
+
+        *(int32_t*)buf = VLSCTL_DHT_QUERY;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = VDHT_FIND_CLOSEST_NODES;
         buf += sizeof(int32_t);
         *(int32_t*)buf = dest_port;
         buf += sizeof(int32_t);
