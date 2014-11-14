@@ -1,6 +1,10 @@
 #include "vglobal.h"
 #include "vhost.h"
 
+/*
+ * the routine to start host asynchronizedly.
+ * @host: handle to host.
+ */
 static
 int _vhost_start(struct vhost* host)
 {
@@ -11,10 +15,14 @@ int _vhost_start(struct vhost* host)
 
     ret = node->ops->start(node);
     retE((ret < 0));
-    vlogI(printf("host started"));
+    vlogI(printf("Host started"));
     return 0;
 }
 
+/*
+ * the routine to stop host asynchronizedly.
+ * @host:
+ */
 static
 int _vhost_stop(struct vhost* host)
 {
@@ -24,10 +32,15 @@ int _vhost_stop(struct vhost* host)
 
     ret = node->ops->stop(node);
     retE((ret < 0));
-    vlogI(printf("host stopped"));
+    vlogI(printf("Host stopped"));
     return 0;
 }
 
+/*
+ * the routine to add wellknown node to route table.
+ * @host:
+ * @wellknown_addr: address of node to join.
+ */
 static
 int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
 {
@@ -38,10 +51,15 @@ int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
 
     ret = node->ops->join(node, wellknown_addr);
     retE((ret < 0));
-    vlogI(printf("join a node"));
+    vlogI(printf("Joined a node"));
     return 0;
 }
 
+/*
+ * the routine to drop given node out of route table.
+ * @host:
+ * @addr: address of node to drop.
+ */
 static
 int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
 {
@@ -52,17 +70,16 @@ int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
 
     ret = node->ops->drop(node, addr);
     retE((ret < 0));
-    vlogI(printf("drop a node"));
+    vlogI(printf("Dropped a node"));
     return 0;
 }
 
-static
-int _aux_tick_cb(void* cookie)
-{
-    //todo;
-    return 0;
-}
-
+/*
+ * the routine to register the periodical work with certian interval
+ * to the ticker, which is running peridically at background in the
+ * form of timer.
+ * @host:
+ */
 static
 int _vhost_stabilize(struct vhost* host)
 {
@@ -71,41 +88,55 @@ int _vhost_stabilize(struct vhost* host)
     vassert(host);
 
     node->ops->stabilize(node);
-    ticker->ops->add_cb(ticker, _aux_tick_cb, host);
+    //ticker->ops->add_cb(ticker, _aux_tick_cb, host);
     ticker->ops->start(ticker, host->tick_tmo);
     return 0;
 }
 
+/* the routine to plug a plugin server, which will be added into route
+ * table.
+ * @host:
+ * @waht: plugin ID.
+ */
 static
-int _vhost_plug(struct vhost* host, int pluginId)
+int _vhost_plug(struct vhost* host, int what)
 {
     struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
-    vassert(pluginId >= 0);
-    vassert(pluginId < PLUGIN_BUTT);
+    vassert(what >= 0);
+    vassert(what < PLUGIN_BUTT);
 
-    ret = route->plugin_ops->plug(route, pluginId);
+    ret = route->plugin_ops->plug(route, what);
     retE((ret < 0));
     return 0;
 }
 
+/* the routine to unplug a plugin server, which will be removed out of
+ * route table.
+ * @host:
+ * @waht: plugin ID.
+ */
 static
-int _vhost_unplug(struct vhost* host, int pluginId)
+int _vhost_unplug(struct vhost* host, int what)
 {
     struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
-    vassert(pluginId >= 0);
-    vassert(pluginId < PLUGIN_BUTT);
+    vassert(what >= 0);
+    vassert(what < PLUGIN_BUTT);
 
-    ret = route->plugin_ops->unplug(route, pluginId);
+    ret = route->plugin_ops->unplug(route, what);
     retE((ret < 0));
     return 0;
 }
 
+/*
+ * the routine to dump all infomation about host.
+ * @host:
+ */
 static
 int _vhost_dump(struct vhost* host)
 {
@@ -116,6 +147,7 @@ int _vhost_dump(struct vhost* host)
     memset(ver, 0, 64);
     host->ops->version(host, ver, 64);
     vdump(printf("version: %s", ver));
+
     vsockaddr_dump(&host->ownId.addr);
     host->route.ops->dump(&host->route);
     host->node.ops->dump(&host->node);
@@ -126,6 +158,10 @@ int _vhost_dump(struct vhost* host)
     return 0;
 }
 
+/*
+ * the routine to get into a loop of rpc laundry
+ * @host:
+ */
 static
 int _vhost_loop(struct vhost* host)
 {
@@ -135,26 +171,35 @@ int _vhost_loop(struct vhost* host)
     vassert(host);
     vassert(waiter);
 
-    vlogI(printf("host in laundry."));
+    vlogI(printf("Host in laundry loop"));
     while(!host->to_quit) {
         ret = waiter->ops->laundry(waiter);
         if (ret < 0) {
             continue;
         }
     }
-    vlogI(printf("host quited from laundry."));
+    vlogI(printf("Host quited from laundry loop"));
     return 0;
 }
 
+/*
+ * the routine to reqeust to quit from laundry loop
+ * @host:
+ */
 static
 int _vhost_req_quit(struct vhost* host)
 {
     vassert(host);
     host->to_quit = 1;
-    vlogI(printf("host about to quit."));
+    vlogI(printf("Host about to quit."));
     return 0;
 }
 
+/* the routine to get version
+ * @host:
+ * @buf : buffer to store the version.
+ * @len : buffer length.
+ */
 static
 int _vhost_version(struct vhost* host, char* buf, int len)
 {
@@ -176,9 +221,8 @@ int _vhost_version(struct vhost* host, char* buf, int len)
 }
 
 /*
- *  the routine to send bogus dht query to dest addr, which will be only
- *  used for debug or simulation.
- *
+ * the routine to send bogus query to dest node with give address. It only
+ * can be used as debug usage.
  * @host:
  * @what: what dht query;
  * @dest: dest address of dht query.
@@ -411,8 +455,8 @@ struct vhost* vhost_create(struct vconfig* cfg)
     vnodeAddr_copy(&host->ownId, &nodeAddr);
     host->tick_tmo = tmo;
     host->to_quit  = 0;
-    host->ops = &host_ops;
     host->cfg = cfg;
+    host->ops = &host_ops;
     _aux_init_ver(host, &ver);
 
     ret += vmsger_init (&host->msger);
