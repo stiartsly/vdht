@@ -231,7 +231,7 @@ int _vhost_version(struct vhost* host, char* buf, int len)
 static
 int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest)
 {
-    struct vroute* route = &host->route;
+    struct vroute_dht_ops* ops = host->route.dht_ops;
     vnodeAddr nodeAddr;
     int ret = 0;
 
@@ -243,15 +243,15 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest)
 
     switch(what) {
     case VDHT_PING:
-        ret = route->dht_ops->ping(route, &nodeAddr);
+        ret = ops->ping(&host->route, &nodeAddr);
         break;
 
     case VDHT_FIND_NODE:
-        ret = route->dht_ops->find_node(route, &nodeAddr, &host->ownId.id);
+        ret = ops->find_node(&host->route, &nodeAddr, &host->ownId.id);
         break;
 
     case VDHT_FIND_CLOSEST_NODES:
-        ret = route->dht_ops->find_closest_nodes(route, &nodeAddr, &host->ownId.id);
+        ret = ops->find_closest_nodes(&host->route, &nodeAddr, &host->ownId.id);
         break;
 
     case VDHT_GET_PEERS:

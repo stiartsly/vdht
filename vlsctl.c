@@ -255,24 +255,23 @@ struct vlsctl_ops lsctl_ops = {
 };
 
 static
-int (*lsctl_routine[])(struct vlsctl*, void*, int) = {
-    _vlsctl_dht_up,
-    _vlsctl_dht_down,
-    _vlsctl_dht_exit,
-    _vlsctl_dht_query,
-    _vlsctl_add_node,
-    _vlsctl_del_node,
-    _vlsctl_plug,
-    _vlsctl_unplug,
-    _vlsctl_log_stdout,
-    _vlsctl_cfg_stdout,
-    NULL
-};
-
-static
 int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
 {
     struct vlsctl* ctl = (struct vlsctl*)cookie;
+    int (*routine[])(struct vlsctl*, void*, int) = {
+        ctl->ops->dht_up,
+        ctl->ops->dht_down,
+        ctl->ops->dht_exit,
+        ctl->ops->dht_query,
+        ctl->ops->add_node,
+        ctl->ops->del_node,
+        ctl->ops->plug,
+        ctl->ops->unplug,
+        ctl->ops->log_stdout,
+        ctl->ops->cfg_stdout,
+        NULL
+    };
+
     int nitems = 0;
     int what = 0;
     int ret = 0;
@@ -292,7 +291,7 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
         retE((what < 0));
         retE((what >= VLSCTL_BUTT));
 
-        ret = lsctl_routine[what](ctl, um->data, sz);
+        ret = routine[what](ctl, um->data, sz);
         retE((ret < 0));
         sz += ret;
     }

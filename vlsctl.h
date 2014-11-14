@@ -37,9 +37,9 @@ struct vlsctl_ops {
 };
 
 struct vlsctl {
-    struct vrpc     rpc;
-    struct vmsger   msger;
-    struct vhost*   host;
+    struct vrpc   rpc;
+    struct vmsger msger;
+    struct vhost* host;
 
     struct vsockaddr addr;
     struct vlsctl_ops* ops;
