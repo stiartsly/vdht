@@ -189,7 +189,9 @@ void varray_iterate(struct varray* array, varray_iterate_t cb, void* cookie)
 
     retE_v((!cb));
     for (; i < array->used; i++) {
-        cb(array->items[i], cookie);
+        if (cb(array->items[i], cookie) > 0) {
+            return ;
+        }
     }
     return ;
 }
