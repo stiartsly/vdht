@@ -144,10 +144,14 @@ static
 int _vnode_stabilize(struct vnode* vnd)
 {
     struct vticker* ticker = vnd->ticker;
+    int ret = 0;
+
     vassert(vnd);
     vassert(ticker);
 
-    return ticker->ops->add_cb(ticker, _aux_tick_cb, vnd);
+    ret =  ticker->ops->add_cb(ticker, _aux_tick_cb, vnd);
+    retE((ret < 0));
+    return 0;
 }
 
 /*
@@ -220,7 +224,7 @@ int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, s
     vassert(nodeAddr);
 
     vnodeAddr_copy(&vnd->ownId, nodeAddr);
-    vlock_init (&vnd->lock);
+    vlock_init(&vnd->lock);
     vnd->mode  = VDHT_OFF;
 
     vnd->cfg    = cfg;

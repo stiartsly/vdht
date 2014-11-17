@@ -4,7 +4,7 @@
 enum {
     VPLUGIN_GET_PLUGIN,
     VPLUGIN_GET_PLUGIN_RSP,
-    VPLUGIN_DHT_BUTT
+    VPLUGIN_GET_UNKNOWN
 };
 
 struct vplugin_desc {
