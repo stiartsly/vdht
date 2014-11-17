@@ -100,6 +100,7 @@
 #define htons
 #define errno
 
+#define sqlite3
 #define sqlite3_open
 #define sqlite3_exec
 #define sqlite3_close
