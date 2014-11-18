@@ -131,50 +131,49 @@ void show_usage(void)
     printf("\n");
 }
 
-static char* unx_domain_file_def = "/var/run/vdht/lsctl_client";
-static char  unx_domain_file[256];
-static int   unx_domain_file_opt = 0;
-static int   unx_domain_file_opt_parse(void)
+static char* lsctlc_socket_def = "/var/run/vdht/lsctl_client";
+static char  lsctlc_socket[256];
+static int   lsctlc_socket_sym = 0;
+static int   lsctlc_socket_param(void)
 {
     if (strlen(optarg) + 1 >= 256) {
-        printf("Too long argument\n");
+        printf("Too long for option\n");
         return -1;
     }
-    memset(unx_domain_file, 0, 256);
-    strcpy(unx_domain_file, optarg);
-    unx_domain_file_opt = 1;
+    memset(lsctlc_socket, 0, 256);
+    strcpy(lsctlc_socket, optarg);
+    lsctlc_socket_sym = 1;
     return 0;
 }
-static int unx_domain_file_opt_check(void)
+static int   lsctlc_socket_check(void)
 {
-    if (!unx_domain_file_opt) {
-        strcpy(unx_domain_file, unx_domain_file_def);
-        unx_domain_file_opt = 1;
+    if (!lsctlc_socket_sym) {
+        strcpy(lsctlc_socket, lsctlc_socket_def);
+        lsctlc_socket_sym = 1;
     }
     return 0;
 }
 
-static char* lsctl_file_def = "/var/run/vdht/lsctl_socket";
-static char  lsctl_file[256];
-static int   lsctl_file_opt = 0;
-static int   lsctl_file_opt_parse()
+static char* lsctls_socket_def = "/var/run/vdht/lsctl_socket";
+static char  lsctls_socket[256];
+static int   lsctls_socket_sym = 0;
+static int   lsctls_socket_param(void)
 {
     if (strlen(optarg) + 1 >= 256) {
-        printf("Too long argument\n");
+        printf("Too long for option\n");
         return -1;
     }
 
-    memset(lsctl_file, 0, 256);
-    strcpy(lsctl_file, optarg);
-    lsctl_file_opt = 1;
+    memset(lsctls_socket, 0, 256);
+    strcpy(lsctls_socket, optarg);
+    lsctls_socket_sym = 1;
     return 0;
 }
-
-static int lsctl_file_opt_check(void)
+static int   lsctls_socket_check(void)
 {
-    if (!lsctl_file_opt) {
-        strcpy(lsctl_file, lsctl_file_def);
-        lsctl_file_opt = 1;
+    if (!lsctls_socket_sym) {
+        strcpy(lsctls_socket, lsctls_socket_def);
+        lsctls_socket_sym = 1;
     }
     return 0;
 }
@@ -773,8 +772,8 @@ struct opt_routine {
 };
 
 struct opt_routine opt_rts[] = {
-    {'U', unx_domain_file_opt_parse},
-    {'S', lsctl_file_opt_parse     },
+    {'U', lsctlc_socket_param      },
+    {'S', lsctls_socket_param      },
     {'d', host_online_opt_parse    },
     {'D', host_offline_opt_parse   },
     {'x', host_exit_opt_parse      },
@@ -802,8 +801,8 @@ struct opt_routine opt_rts[] = {
 };
 
 int (*check_routine[])(void) = {
-    unx_domain_file_opt_check,
-    lsctl_file_opt_check,
+    lsctlc_socket_check,
+    lsctls_socket_check,
     host_opt_check,
     plugin_opt_check,
     join_node_opt_check,
@@ -935,10 +934,10 @@ int main(int argc, char** argv)
             perror("socket:");
             exit(-1);
         }
-        unlink(unx_domain_file);
+        unlink(lsctlc_socket);
 
         unix_addr.sun_family = AF_UNIX;
-        strcpy(unix_addr.sun_path, unx_domain_file);
+        strcpy(unix_addr.sun_path, lsctlc_socket);
         ret = bind(fd, (struct sockaddr*)&unix_addr, sizeof(unix_addr));
         if (ret < 0) {
             perror("bind:");
@@ -946,7 +945,7 @@ int main(int argc, char** argv)
             exit(-1);
         }
         dest_addr.sun_family = AF_UNIX;
-        strcpy(dest_addr.sun_path, lsctl_file);
+        strcpy(dest_addr.sun_path, lsctls_socket);
 
         ret = sendto(fd, data, (int)(buf-data), 0, (struct sockaddr*)&dest_addr, sizeof(dest_addr));
         if (ret < 0) {
