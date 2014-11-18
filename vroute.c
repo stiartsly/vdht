@@ -655,49 +655,62 @@ struct vroute_ops route_ops = {
  *
  */
 static
-int _vroute_plug(struct vroute* route, int plugId)
+int _vroute_plug(struct vroute* route, int plgnId)
 {
     vassert(route);
-    vassert(plugId >= 0);
-    vassert(plugId < PLUGIN_BUTT);
+    vassert(plgnId >= 0);
+    vassert(plgnId < PLUGIN_BUTT);
 
-    route->flags |= peer_plugin_prop[plugId];
+    route->flags |= peer_plugin_prop[plgnId];
     return 0;
 }
 
 static
-int _vroute_unplug(struct vroute* route, int plugId)
+int _vroute_unplug(struct vroute* route, int plgnId)
 {
-    uint32_t flags = peer_plugin_prop[plugId];
+    uint32_t flags = peer_plugin_prop[plgnId];
     vassert(route);
-    vassert(plugId >= 0);
-    vassert(plugId < PLUGIN_BUTT);
+    vassert(plgnId >= 0);
+    vassert(plgnId < PLUGIN_BUTT);
 
     route->flags &= ~flags;
     return 0;
 }
 
 static
-int _vroute_get_plugin(struct vroute* route, int plugId, vnodeAddr* addr)
+int _vroute_get_plugin(struct vroute* route, int plgnId, vnodeAddr* addr)
 {
-    //uint32_t flags = to_prop[plugId];
+    uint32_t flags = peer_plugin_prop[plgnId];
+    struct varray* peers = NULL;
+    struct vpeer* peer = NULL;
+    int found = 0;
+    int i = 0;
+    int j = 0;
+
     vassert(route);
     vassert(addr);
-    vassert(plugId >= 0);
-    vassert(plugId < PLUGIN_BUTT);
+    vassert(plgnId >= 0);
+    vassert(plgnId < PLUGIN_BUTT);
 
-    // need to think through the policy to get best dht node.
-    // todo;
-    {
-        //stub
-        char* ip ="192.168.4.125";
-        int port = 12300;
-        int ret = 0;
-        vnodeId_make(&addr->id);
-        ret = vsockaddr_convert(ip, port, &addr->addr);
-        retE((ret < 0));
+    vlock_enter(&route->lock);
+    for (; i < NBUCKETS; i++) {
+        peers = &route->bucket[i].peers;
+        for (j = 0; j < varray_size(peers); j++) {
+            peer = (struct vpeer*)varray_get(peers, j);
+            if (peer->flags & flags) {
+                found = 1;
+                break;
+            }
+        }
+        if (found) {
+            break;
+        }
     }
-    return 0;
+    if (found) {
+        vnodeAddr_copy(addr, &peer->extId);
+    }
+    vlock_leave(&route->lock);
+    return (found ? 0 : -1);
 }
 
 struct vroute_plugin_ops route_plugin_ops = {
