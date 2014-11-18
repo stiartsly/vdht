@@ -159,6 +159,7 @@ static
 int _vlsctl_plug(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
+    struct sockaddr_in sin;
     int plgnId = 0;
     int ret = 0;
     int sz  = 0;
@@ -168,11 +169,15 @@ int _vlsctl_plug(struct vlsctl* lsctl, void* data, int offset)
     vassert(offset > 0);
 
     plgnId = get_int32(offset_addr(data, offset + sz));
+    retE((plgnId <  PLUGIN_RELAY));
+    retE((plgnId >= PLUGIN_BUTT ));
     sz += sizeof(int32_t);
-    retE((plgnId < PLUGIN_RELAY));
-    retE((plgnId >= PLUGIN_BUTT));
 
-    ret = host->ops->plug(host, plgnId);
+    ret = _aux_get_addr(data, offset + sz, &sin);
+    retE((ret < 0));
+    sz += ret;
+
+    ret = host->ops->plug(host, plgnId, &sin);
     retE((ret < 0));
     vlogI(printf("plugin(%s) up.", vpluger_get_desc(plgnId)));
     return 0;
@@ -182,6 +187,7 @@ static
 int _vlsctl_unplug(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
+    struct sockaddr_in sin;
     int plgnId = 0;
     int ret = 0;
     int sz  = 0;
@@ -191,11 +197,15 @@ int _vlsctl_unplug(struct vlsctl* lsctl, void* data, int offset)
     vassert(offset > 0);
 
     plgnId = get_int32(offset_addr(data, offset + sz));
+    retE((plgnId <  PLUGIN_RELAY));
+    retE((plgnId >= PLUGIN_BUTT ));
     sz += sizeof(int32_t);
-    retE((plgnId < PLUGIN_RELAY));
-    retE((plgnId >= PLUGIN_BUTT));
 
-    ret = host->ops->unplug(host, plgnId);
+    ret = _aux_get_addr(data, offset + sz, &sin);
+    retE((ret < 0));
+    sz += ret;
+
+    ret = host->ops->unplug(host, plgnId, &sin);
     retE((ret < 0));
     vlogI(printf("plugin(%s) down.", vpluger_get_desc(plgnId)));
     return 0;

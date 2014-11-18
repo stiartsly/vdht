@@ -99,7 +99,7 @@ int _vhost_stabilize(struct vhost* host)
  * @waht: plugin ID.
  */
 static
-int _vhost_plug(struct vhost* host, int what)
+int _vhost_plug(struct vhost* host, int what, struct sockaddr_in* addr)
 {
     struct vroute* route = &host->route;
     int ret = 0;
@@ -107,6 +107,15 @@ int _vhost_plug(struct vhost* host, int what)
     vassert(host);
     vassert(what >= 0);
     vassert(what < PLUGIN_BUTT);
+
+    {
+        char ip[64];
+        int  port = 0;
+        memset(ip, 0, 64);
+        ret = vsockaddr_unconvert(addr, ip, 64, &port);
+        retE((ret < 0));
+        printf("<%s> host: (%s:%d).\n", __FUNCTION__, ip, port);
+    }
 
     ret = route->plugin_ops->plug(route, what);
     retE((ret < 0));
@@ -119,7 +128,7 @@ int _vhost_plug(struct vhost* host, int what)
  * @waht: plugin ID.
  */
 static
-int _vhost_unplug(struct vhost* host, int what)
+int _vhost_unplug(struct vhost* host, int what, struct sockaddr_in* addr)
 {
     struct vroute* route = &host->route;
     int ret = 0;
@@ -127,6 +136,15 @@ int _vhost_unplug(struct vhost* host, int what)
     vassert(host);
     vassert(what >= 0);
     vassert(what < PLUGIN_BUTT);
+
+    {
+        char ip[64];
+        int  port = 0;
+        memset(ip, 0, 64);
+        ret = vsockaddr_unconvert(addr, ip, 64, &port);
+        retE((ret < 0));
+        printf("<%s> host: (%s:%d).\n", __FUNCTION__, ip, port);
+    }
 
     ret = route->plugin_ops->unplug(route, what);
     retE((ret < 0));

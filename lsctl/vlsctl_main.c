@@ -70,21 +70,33 @@ static int cfg_dump   = 0;
 static int host_up    = 0;
 static int host_down  = 0;
 static int host_quit  = 0;
+
+static char node_ip[64];
+static int  node_port = 0;
 static int add_node   = 0;
 static int del_node   = 0;
-static char node_ip[64];
-static int node_port  = 0;
+
+static char relay_ip[64];
+static int relay_port = 0;
 static int relay_up   = 0;
 static int relay_down = 0;
+
+static char stun_ip[64];
+static int stun_port  = 0;
 static int stun_up    = 0;
 static int stun_down  = 0;
+
+static char vpn_ip[64];
+static int vpn_port   = 0;
 static int vpn_up     = 0;
 static int vpn_down   = 0;
-static int ping       = 0;
+
 static char dest_ip[64];
 static int dest_port  = 0;
+static int ping       = 0;
 static int find_node  = 0;
 static int find_nodes = 0;
+
 static int show_help  = 0;
 static int show_ver   = 0;
 
@@ -123,12 +135,12 @@ void show_usage(void)
     printf("  -S, --host-dump                   request to dump host\n");
     printf("  -a  --add-node=IP:PORT            reqeust to add wellknown node\n");
     printf("  -e  --del-node=IP:PORT            reqeust to delete wellknown node\n");
-    printf("  -r, --relay_up                    request to plug relay service\n");
-    printf("  -R, --relay_down                  request to unplug relay service\n");
-    printf("  -t, --stun_up                     request to plug stun service\n");
-    printf("  -T, --stun_down                   request to unplug stun service\n");
-    printf("  -p, --vpn_up                      request to plug vpn service\n");
-    printf("  -P, --vpn_down                    request to unplug vpn service\n");
+    printf("  -r, --relay_up=IP:PORT            request to plug relay service\n");
+    printf("  -R, --relay_down=IP:PORT          request to unplug relay service\n");
+    printf("  -t, --stun_up=IP:PORT             request to plug stun service\n");
+    printf("  -T, --stun_down=IP:PORT           request to unplug stun service\n");
+    printf("  -p, --vpn_up=IP:PORT              request to plug vpn service\n");
+    printf("  -P, --vpn_down=IP:PORT            request to unplug vpn service\n");
     printf("  -l, --ping=IP:PORT                request to send ping query.\n");
     printf("  -m, --find_node=IP:PORT           request to send find_node query.\n");
     printf("  -n, --find_closest_nodes=IP:PORT  request to send find_closest_nodes query.\n");
@@ -191,7 +203,7 @@ int main(int argc, char** argv)
 
     while(c >= 0) {
 
-        c = getopt_long(argc, argv, "U:SCdDXa:e:rRtTpPl:n:m:hv", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:SCdDXa:e:r:R:t:T:p:P:l:n:m:hv", long_options, &opt_idx);
         if (c < 0) {
             break;
         }
@@ -267,6 +279,11 @@ int main(int argc, char** argv)
                 exit(-1);
             }
             relay_up = 1;
+            ret = parse_ip(optarg, relay_ip, 64, &relay_port);
+            if (ret < 0) {
+                printf("Invalid IP or Port.\n");
+                exit(-1);
+            }
             break;
         case 'R':
             if (relay_up) {
@@ -274,6 +291,11 @@ int main(int argc, char** argv)
                 exit(-1);
             }
             relay_down = 1;
+            ret = parse_ip(optarg, relay_ip, 64, &relay_port);
+            if (ret < 0) {
+                printf("Invalid IP or Port.\n");
+                exit(-1);
+            }
             break;
         case 't':
             if (stun_down) {
@@ -281,6 +303,11 @@ int main(int argc, char** argv)
                 exit(-1);
             }
             stun_up = 1;
+            ret = parse_ip(optarg, stun_ip, 64, &stun_port);
+            if (ret < 0) {
+                printf("Invalid IP or Port.\n");
+                exit(-1);
+            }
             break;
         case 'T':
             if (stun_up) {
@@ -288,6 +315,11 @@ int main(int argc, char** argv)
                 exit(-1);
             }
             stun_down = 1;
+            ret = parse_ip(optarg, stun_ip, 64, &stun_port);
+            if (ret < 0) {
+                printf("Invalid IP or Port.\n");
+                exit(-1);
+            }
             break;
         case 'p':
             if (vpn_down) {
@@ -295,6 +327,11 @@ int main(int argc, char** argv)
                 exit(-1);
             }
             vpn_up = 1;
+            ret = parse_ip(optarg, vpn_ip, 64, &vpn_port);
+            if (ret < 0) {
+                printf("Invalid IP or Port.\n");
+                exit(-1);
+            }
             break;
         case 'P':
             if (vpn_up) {
@@ -302,6 +339,11 @@ int main(int argc, char** argv)
                 exit(-1);
             }
             vpn_down = 1;
+            ret = parse_ip(optarg, vpn_ip, 64, &vpn_port);
+            if (ret < 0) {
+                printf("Invalid IP or Port.\n");
+                exit(-1);
+            }
             break;
         case 'l':
             if (find_node || find_nodes) {
@@ -423,6 +465,10 @@ int main(int argc, char** argv)
         buf += sizeof(int32_t);
         *(int32_t*)buf = PLUGIN_RELAY;
         buf += sizeof(int32_t);
+        *(int32_t*)buf = relay_port;
+        buf += sizeof(int32_t);
+        strcpy(buf, relay_ip);
+        buf += strlen(relay_ip) + 1;
         nitems++;
     }
     if (relay_down) {
@@ -430,6 +476,10 @@ int main(int argc, char** argv)
         buf += sizeof(int32_t);
         *(int32_t*)buf = PLUGIN_RELAY,
         buf += sizeof(int32_t);
+        *(int32_t*)buf = relay_port;
+        buf += sizeof(int32_t);
+        strcpy(buf, relay_ip);
+        buf += strlen(relay_ip) + 1;
         nitems++;
     }
     if (stun_up) {
@@ -437,6 +487,10 @@ int main(int argc, char** argv)
         buf += sizeof(int32_t);
         *(int32_t*)buf = PLUGIN_STUN;
         buf += sizeof(int32_t);
+        *(int32_t*)buf = stun_port;
+        buf += sizeof(int32_t);
+        strcpy(buf, stun_ip);
+        buf += strlen(stun_ip) + 1;
         nitems++;
     }
     if (stun_down) {
@@ -444,6 +498,10 @@ int main(int argc, char** argv)
         buf += sizeof(int32_t);
         *(int32_t*)buf = PLUGIN_STUN;
         buf += sizeof(int32_t);
+        *(int32_t*)buf = stun_port;
+        buf += sizeof(int32_t);
+        strcpy(buf, stun_ip);
+        buf += strlen(stun_ip) + 1;
         nitems++;
     }
     if (vpn_up) {
@@ -451,6 +509,10 @@ int main(int argc, char** argv)
         buf += sizeof(int32_t);
         *(int32_t*)buf = PLUGIN_VPN;
         buf += sizeof(int32_t);
+        *(int32_t*)buf = vpn_port;
+        buf += sizeof(int32_t);
+        strcpy(buf, vpn_ip);
+        buf += strlen(vpn_ip) + 1;
         nitems++;
     }
     if (vpn_down) {
@@ -458,6 +520,10 @@ int main(int argc, char** argv)
         buf += sizeof(int32_t);
         *(int32_t*)buf = PLUGIN_VPN;
         buf += sizeof(int32_t);
+        *(int32_t*)buf = vpn_port;
+        buf += sizeof(int32_t);
+        strcpy(buf, vpn_ip);
+        buf += strlen(vpn_ip) + 1;
         nitems++;
     }
     if (ping) {
