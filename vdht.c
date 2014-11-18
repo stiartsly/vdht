@@ -1050,7 +1050,7 @@ int _vdht_dec_get_plugin_rsp(void* ctxt, vtoken* token, int* plgnId, struct sock
 
     ret = be_node_by_key(plgn, "id", &node);
     retE((ret < 0));
-    retE((BE_INT != plgn->type));
+    retE((BE_INT != node->type));
     *plgnId = node->val.i;
 
     ret = be_node_by_key(plgn, "m", &node);
