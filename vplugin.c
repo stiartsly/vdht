@@ -1,12 +1,6 @@
 #include "vglobal.h"
 #include "vplugin.h"
 
-enum {
-    VPLUGIN_GET_PLUGIN,
-    VPLUGIN_GET_PLUGIN_RSP,
-    VPLUGIN_GET_UNKNOWN
-};
-
 struct vplugin_desc {
     int   plgnId;
     char* desc;
@@ -537,7 +531,7 @@ int _vpluger_msg_cb(void* cookie, struct vmsg_usr* mu)
     retE((ret < 0));
 
     switch(ret) {
-    case VPLUGIN_GET_PLUGIN: {
+    case VDHT_GET_PLUGIN: {
         ret = dec_ops->get_plugin(ctxt, &token, &plgnId);
         dec_ops->dec_done(ctxt);
         retE((ret < 0));
@@ -546,7 +540,7 @@ int _vpluger_msg_cb(void* cookie, struct vmsg_usr* mu)
         retE((ret < 0));
         break;
     }
-    case VPLUGIN_GET_PLUGIN_RSP: {
+    case VDHT_GET_PLUGIN_R: {
         ret = dec_ops->get_plugin_rsp(ctxt, &token, &plgnId, &addr);
         dec_ops->dec_done(ctxt);
         retE((ret < 0));
