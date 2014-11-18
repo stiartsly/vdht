@@ -101,24 +101,18 @@ int _vhost_stabilize(struct vhost* host)
 static
 int _vhost_plug(struct vhost* host, int what, struct sockaddr_in* addr)
 {
-    struct vroute* route = &host->route;
+    struct vpluger* pluger = &host->pluger;
+    struct vroute*  route  = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(what >= 0);
     vassert(what < PLUGIN_BUTT);
 
-    {
-        char ip[64];
-        int  port = 0;
-        memset(ip, 0, 64);
-        ret = vsockaddr_unconvert(addr, ip, 64, &port);
-        retE((ret < 0));
-        printf("<%s> host: (%s:%d).\n", __FUNCTION__, ip, port);
-    }
-
-    ret = route->plugin_ops->plug(route, what);
+    ret = pluger->s_ops->plug(pluger, what, addr);
     retE((ret < 0));
+
+    route->plugin_ops->plug(route, what);
     return 0;
 }
 
@@ -130,24 +124,18 @@ int _vhost_plug(struct vhost* host, int what, struct sockaddr_in* addr)
 static
 int _vhost_unplug(struct vhost* host, int what, struct sockaddr_in* addr)
 {
-    struct vroute* route = &host->route;
+    struct vpluger* pluger = &host->pluger;
+    struct vroute*  route  = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(what >= 0);
     vassert(what < PLUGIN_BUTT);
 
-    {
-        char ip[64];
-        int  port = 0;
-        memset(ip, 0, 64);
-        ret = vsockaddr_unconvert(addr, ip, 64, &port);
-        retE((ret < 0));
-        printf("<%s> host: (%s:%d).\n", __FUNCTION__, ip, port);
-    }
-
-    ret = route->plugin_ops->unplug(route, what);
+    ret = pluger->s_ops->unplug(pluger, what, addr);
     retE((ret < 0));
+
+    route->plugin_ops->unplug(route, what);
     return 0;
 }
 
@@ -171,6 +159,8 @@ int _vhost_dump(struct vhost* host)
     host->node.ops->dump(&host->node);
     host->msger.ops->dump(&host->msger);
     host->waiter.ops->dump(&host->waiter);
+    host->pluger.s_ops->dump(&host->pluger);
+    host->pluger.c_ops->dump(&host->pluger);
     vdump(printf("<- HOST"));
 
     return 0;
@@ -483,7 +473,9 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &nodeAddr);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host);
+    ret += vpluger_init(&host->pluger, host);
     if (ret < 0) {
+        vpluger_deinit(&host->pluger);
         vlsctl_deinit (&host->lsctl);
         vwaiter_deinit(&host->waiter);
         vnode_deinit  (&host->node);
@@ -510,6 +502,7 @@ void vhost_destroy(struct vhost* host)
     host->waiter.ops->remove(&host->waiter, &host->lsctl.rpc);
     host->waiter.ops->remove(&host->waiter, &host->rpc);
 
+    vpluger_deinit(&host->pluger);
     vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);

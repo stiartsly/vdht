@@ -373,7 +373,7 @@ int _vpluger_s_unplug(struct vpluger* pluger, int plgnId, struct sockaddr_in* ad
     }
     if (found) {
         vlist_del(&item->list);
-        free(item);
+        vplugin_free(item);
     }
     vlock_leave(&pluger->plgn_lock);
     return 0;
