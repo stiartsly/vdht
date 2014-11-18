@@ -30,6 +30,7 @@ enum {
 
     VLSCTL_PLUG,
     VLSCTL_UNPLUG,
+    VLSCTL_PLUGIN_REQ,
 
     VLSCTL_CFG_DUMP,
     VLSCTL_BUTT
@@ -97,6 +98,8 @@ static int ping       = 0;
 static int find_node  = 0;
 static int find_nodes = 0;
 
+static int req_plugin = 0;
+
 static int show_help  = 0;
 static int show_ver   = 0;
 
@@ -144,6 +147,7 @@ void show_usage(void)
     printf("  -l, --ping=IP:PORT                request to send ping query.\n");
     printf("  -m, --find_node=IP:PORT           request to send find_node query.\n");
     printf("  -n, --find_closest_nodes=IP:PORT  request to send find_closest_nodes query.\n");
+    printf("  -q,                               request to get best relay server.\n");
     printf("\n");
     printf("Help options\n");
     printf("  -h  --help                        Show this help message.\n");
@@ -203,7 +207,7 @@ int main(int argc, char** argv)
 
     while(c >= 0) {
 
-        c = getopt_long(argc, argv, "U:SCdDXa:e:r:R:t:T:p:P:l:n:m:hv", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:SCdDXa:e:r:R:t:T:p:P:l:n:m:qhv", long_options, &opt_idx);
         if (c < 0) {
             break;
         }
@@ -380,6 +384,9 @@ int main(int argc, char** argv)
                 printf("Invalid IP or Port\n");
                 exit(-1);
             }
+            break;
+        case 'q':
+            req_plugin = 1;
             break;
         case 'h':
             show_help = 1;
@@ -558,6 +565,13 @@ int main(int argc, char** argv)
         buf += sizeof(int32_t);
         strcpy(buf, dest_ip);
         buf += strlen(dest_ip) + 1;
+        nitems++;
+    }
+    if (req_plugin) {
+        *(int32_t*)buf = VLSCTL_PLUGIN_REQ;
+        buf += sizeof(int32_t);
+        *(int32_t*)buf = PLUGIN_RELAY;
+        buf += sizeof(int32_t);
         nitems++;
     }
 

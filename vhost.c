@@ -106,6 +106,7 @@ int _vhost_plug(struct vhost* host, int what, struct sockaddr_in* addr)
     int ret = 0;
 
     vassert(host);
+    vassert(addr);
     vassert(what >= 0);
     vassert(what < PLUGIN_BUTT);
 
@@ -129,6 +130,7 @@ int _vhost_unplug(struct vhost* host, int what, struct sockaddr_in* addr)
     int ret = 0;
 
     vassert(host);
+    vassert(addr);
     vassert(what >= 0);
     vassert(what < PLUGIN_BUTT);
 
@@ -136,6 +138,22 @@ int _vhost_unplug(struct vhost* host, int what, struct sockaddr_in* addr)
     retE((ret < 0));
 
     route->plugin_ops->unplug(route, what);
+    return 0;
+}
+
+static
+int _vhost_req_plugin(struct vhost* host, int what, vplugin_reqblk_t cb, void* cookie)
+{
+    struct vpluger* pluger = &host->pluger;
+    int ret = 0;
+
+    vassert(host);
+    vassert(cb);
+    vassert(what >= 0);
+    vassert(what < PLUGIN_BUTT);
+
+    ret = pluger->c_ops->req(pluger, what, cb, cookie);
+    retE((ret < 0));
     return 0;
 }
 
@@ -281,6 +299,7 @@ struct vhost_ops host_ops = {
     .stabilize   = _vhost_stabilize,
     .plug        = _vhost_plug,
     .unplug      = _vhost_unplug,
+    .req_plugin  = _vhost_req_plugin,
     .loop        = _vhost_loop,
     .req_quit    = _vhost_req_quit,
     .dump        = _vhost_dump,
@@ -328,8 +347,24 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
         *sm = ms;
         return 0;
     }
+    if (VPLUG_MSG(um->msgId)) {
+        sz += sizeof(int32_t);
+        data = unoff_addr(um->data, sz);
+        set_int32(data, um->msgId);
+
+        sz += sizeof(int32_t);
+        data = unoff_addr(um->data, sz);
+        set_uint32(data, VPLUG_MAGIC);
+
+        ms = vmsg_sys_alloc(0);
+        vlog((!ms), elog_vmsg_sys_alloc);
+        retE((!ms));
+        vmsg_sys_init(ms, um->addr, um->len + sz, data);
+        *sm = ms;
+        return 0;
+    }
     //todo;
-    return 0;
+    return -1;
 }
 
 /*

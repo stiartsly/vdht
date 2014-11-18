@@ -17,7 +17,8 @@ enum {
     VMSG_BUTT
 };
 
-#define VDHT_MSG(msgId) (msgId == VMSG_DHT)
+#define VDHT_MSG(msgId)  (msgId == VMSG_DHT)
+#define VPLUG_MSG(msgId) (msgId == VMSG_PLUG)
 
 struct vsockaddr {
     union {

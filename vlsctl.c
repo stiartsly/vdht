@@ -180,7 +180,7 @@ int _vlsctl_plug(struct vlsctl* lsctl, void* data, int offset)
     ret = host->ops->plug(host, plgnId, &sin);
     retE((ret < 0));
     vlogI(printf("plugin(%s) up.", vpluger_get_desc(plgnId)));
-    return 0;
+    return sz;
 }
 
 static
@@ -208,7 +208,46 @@ int _vlsctl_unplug(struct vlsctl* lsctl, void* data, int offset)
     ret = host->ops->unplug(host, plgnId, &sin);
     retE((ret < 0));
     vlogI(printf("plugin(%s) down.", vpluger_get_desc(plgnId)));
+    return sz;
+}
+
+static
+int _aux_req_plugin_cb(struct sockaddr_in* addr, void* cookie)
+{
+    char ip[64];
+    int port = 0;
+    int ret  = 0;
+
+    vassert(addr);
+    memset(ip, 0, 64);
+    ret = vsockaddr_unconvert(addr, ip, 64, &port);
+    retE((ret < 0));
+    printf("req_plugin rsp: %s:%d\n", ip, port);
+
+    //todo;
     return 0;
+}
+
+static
+int _vlsctl_req_plugin(struct vlsctl* lsctl, void* data, int offset)
+{
+    struct vhost* host = lsctl->host;
+    int plgnId = 0;
+    int ret = 0;
+    int sz  = 0;
+
+    vassert(lsctl);
+    vassert(data);
+    vassert(offset > 0);
+
+    plgnId = get_int32(offset_addr(data, offset));
+    retE((plgnId <  PLUGIN_RELAY));
+    retE((plgnId >= PLUGIN_BUTT ));
+    sz += sizeof(int32_t);
+
+    ret = host->ops->req_plugin(host, plgnId, _aux_req_plugin_cb, lsctl);
+    retE((ret < 0));
+    return sz;
 }
 
 static
@@ -234,6 +273,7 @@ struct vlsctl_ops lsctl_ops = {
     .del_node   = _vlsctl_del_node,
     .plug       = _vlsctl_plug,
     .unplug     = _vlsctl_unplug,
+    .req_plugin = _vlsctl_req_plugin,
     .cfg_dump   = _vlsctl_cfg_dump
 };
 
@@ -251,6 +291,7 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
         ctl->ops->del_node,
         ctl->ops->plug,
         ctl->ops->unplug,
+        ctl->ops->req_plugin,
         ctl->ops->cfg_dump,
         NULL
     };

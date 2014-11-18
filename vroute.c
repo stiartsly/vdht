@@ -688,6 +688,15 @@ int _vroute_get_plugin(struct vroute* route, int plugId, vnodeAddr* addr)
 
     // need to think through the policy to get best dht node.
     // todo;
+    {
+        //stub
+        char* ip ="192.168.4.125";
+        int port = 12300;
+        int ret = 0;
+        vnodeId_make(&addr->id);
+        ret = vsockaddr_convert(ip, port, &addr->addr);
+        retE((ret < 0));
+    }
     return 0;
 }
 

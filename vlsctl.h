@@ -17,6 +17,7 @@ enum {
 
     VLSCTL_PLUG,
     VLSCTL_UNPLUG,
+    VLSCTL_PLUGIN_REQ,
 
     VLSCTL_CFG_DUMP,
     VLSCTL_BUTT
@@ -33,6 +34,7 @@ struct vlsctl_ops {
     int (*del_node)  (struct vlsctl*, void*, int);
     int (*plug)      (struct vlsctl*, void*, int);
     int (*unplug)    (struct vlsctl*, void*, int);
+    int (*req_plugin)(struct vlsctl*, void*, int);
     int (*cfg_dump)  (struct vlsctl*, void*, int);
 };
 
