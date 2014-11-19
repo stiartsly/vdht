@@ -66,12 +66,12 @@ struct vroute_dht_ops {
     int (*ping_rsp)          (struct vroute*, vnodeAddr*, vtoken*, vnodeInfo*);
     int (*find_node)         (struct vroute*, vnodeAddr*, vnodeId*);
     int (*find_node_rsp)     (struct vroute*, vnodeAddr*, vtoken*, vnodeInfo*);
+    int (*find_closest_nodes)(struct vroute*, vnodeAddr*, vnodeId*);
+    int (*find_closest_nodes_rsp)(struct vroute*, vnodeAddr*, vtoken*, struct varray*);
     int (*get_peers)         (struct vroute*, vnodeAddr*, vnodeHash*);
     int (*get_peers_rsp)     (struct vroute*, vnodeAddr*, vtoken*, struct varray*);
     int (*post_hash)         (struct vroute*, vnodeAddr*, vnodeHash*);
     int (*post_hash_rsp)     (struct vroute*, vnodeAddr*, vtoken*, struct varray*);
-    int (*find_closest_nodes)(struct vroute*, vnodeAddr*, vnodeId*);
-    int (*find_closest_nodes_rsp)(struct vroute*, vnodeAddr*, vtoken*, struct varray*);
 };
 
 typedef int (*vroute_dht_cb_t)(struct vroute*, struct sockaddr_in*, void*);
@@ -80,12 +80,12 @@ struct vroute_cb_ops {
     int (*ping_rsp)          (struct vroute*, struct sockaddr_in*, void*);
     int (*find_node)         (struct vroute*, struct sockaddr_in*, void*);
     int (*find_node_rsp)     (struct vroute*, struct sockaddr_in*, void*);
+    int (*find_closest_nodes)(struct vroute*, struct sockaddr_in*, void*);
+    int (*find_closest_nodes_rsp)(struct vroute*, struct sockaddr_in*, void*);
     int (*get_peers)         (struct vroute*, struct sockaddr_in*, void*);
     int (*get_peers_rsp)     (struct vroute*, struct sockaddr_in*, void*);
     int (*post_hash)         (struct vroute*, struct sockaddr_in*, void*);
     int (*post_hash_rsp)     (struct vroute*, struct sockaddr_in*, void*);
-    int (*find_closest_nodes)(struct vroute*, struct sockaddr_in*, void*);
-    int (*find_closest_nodes_rsp)(struct vroute*, struct sockaddr_in*, void*);
 };
 
 struct vbucket{
