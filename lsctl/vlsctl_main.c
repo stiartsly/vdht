@@ -131,10 +131,12 @@ void show_usage(void)
     printf("\n");
 }
 
+static int nlsctl_cmds = 0;
+
 static char* lsctlc_socket_def = "/var/run/vdht/lsctl_client";
 static char  lsctlc_socket[256];
 static int   lsctlc_socket_sym = 0;
-static int   lsctlc_socket_param(void)
+static int   lsctlc_socket_param(int opt)
 {
     if (strlen(optarg) + 1 >= 256) {
         printf("Too long for option\n");
@@ -157,7 +159,7 @@ static int   lsctlc_socket_check(void)
 static char* lsctls_socket_def = "/var/run/vdht/lsctl_socket";
 static char  lsctls_socket[256];
 static int   lsctls_socket_sym = 0;
-static int   lsctls_socket_param(void)
+static int   lsctls_socket_param(int opt)
 {
     if (strlen(optarg) + 1 >= 256) {
         printf("Too long for option\n");
@@ -177,184 +179,159 @@ static int   lsctls_socket_check(void)
     }
     return 0;
 }
+static int has_host_online_param  = 0;
+static int has_host_offline_param = 0;
+static int has_host_exit_param    = 0;
+static int has_host_dump_param    = 0;
+static int has_cfg_dump_param     = 0;
+static int host_cmd_param(int opt)
+{
+    switch(opt) {
+    case 'd':
+        has_host_online_param = 1;
+        break;
+    case 'D':
+        has_host_offline_param = 1;
+        break;
+    case 'x':
+        has_host_exit_param = 1;
+        break;
+    case 's':
+        has_host_dump_param = 1;
+        break;
+    case 'c':
+        has_cfg_dump_param = 1;
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+static int has_host_online_cmd  = 0;
+static int has_host_offline_cmd = 0;
+static int has_host_exit_cmd    = 0;
+static int has_host_dump_cmd    = 0;
+static int has_cfg_dump_cmd     = 0;
 
-static int host_online_opt  = 0;
-static int host_offline_opt = 0;
-static int host_exit_opt    = 0;
-static int host_dump_opt    = 0;
-static int config_dump_opt  = 0;
-static int host_online_opt_parse(void)
+static int host_cmd_check(void)
 {
-    host_online_opt = 1;
-    return 0;
-}
-static int host_offline_opt_parse(void)
-{
-
-    host_offline_opt = 1;
-    return 0;
-}
-static int host_exit_opt_parse(void)
-{
-    host_exit_opt = 1;
-    return 0;
-}
-static int host_dump_opt_parse(void)
-{
-    host_dump_opt = 1;
-    return 0;
-}
-static int config_dump_opt_parse(void)
-{
-    config_dump_opt = 1;
-    return 0;
-}
-
-static int host_online_cmd  = 0;
-static int host_offline_cmd = 0;
-static int host_exit_cmd    = 0;
-static int host_dump_cmd    = 0;
-static int config_dump_cmd  = 0;
-
-static int host_opt_check(void)
-{
-    if (host_online_opt) {
-        if (host_offline_opt || host_exit_opt) {
+    if (has_host_online_param) {
+        if (has_host_offline_param || has_host_exit_param) {
             printf("Conflict options\n");
             return -1;
         }
-        host_online_cmd = 1;
+        has_host_online_cmd = 1;
     }
-    if (host_offline_opt) {
-        if (host_online_opt || host_exit_opt) {
+    if (has_host_offline_param) {
+        if (has_host_online_param || has_host_exit_param) {
             printf("Conflict options\n");
             return -1;
         }
-        host_offline_cmd = 1;
+        has_host_offline_cmd = 1;
     }
-    if (host_exit_opt) {
-        if (host_online_opt ||
-            host_offline_opt ||
-            host_dump_opt ||
-            config_dump_opt) {
+    if (has_host_exit_param) {
+        if (has_host_online_param ||
+            has_host_offline_param ||
+            has_host_dump_param ||
+            has_cfg_dump_param) {
             printf("Confilict options\n");
             return -1;
         }
-        host_exit_cmd = 1;
+        has_host_exit_cmd = 1;
     }
-    if (host_dump_opt) {
-        if (host_exit_opt) {
+    if (has_host_dump_param) {
+        if (has_host_exit_param) {
             printf("Conflict options\n");
             return -1;
         }
-        host_dump_cmd = 1;
+        has_host_dump_cmd = 1;
     }
-    if (config_dump_opt) {
-        if (host_exit_opt) {
+    if (has_cfg_dump_param) {
+        if (has_host_exit_param) {
             printf("Conflict options\n");
             return -1;
         }
-        config_dump_cmd = 1;
+        has_cfg_dump_cmd = 1;
     }
     return 0;
 }
 
-static int host_online_cmd_pack(char* data)
+static int host_cmd_pack(char* data)
 {
     int sz = 0;
-    if (!host_online_cmd) {
-        return -1;
+    if (has_host_online_cmd) {
+        *(int32_t*)data = VLSCTL_HOST_UP;
+        data += sizeof(int32_t);
+        sz   += sizeof(int32_t);
+        nlsctl_cmds++;
     }
-    *(int32_t*)data = VLSCTL_HOST_UP;
-    sz += sizeof(int32_t);
-    return sz;
-
-}
-
-static int host_offline_cmd_pack(char* data)
-{
-    int sz = 0;
-    if (!host_offline_cmd) {
-        return -1;
+    if (has_host_offline_cmd) {
+        *(int32_t*)data = VLSCTL_HOST_DOWN;
+        data += sizeof(int32_t);
+        sz   += sizeof(int32_t);
+        nlsctl_cmds++;
     }
-    *(int32_t*)data = VLSCTL_HOST_DOWN;
-    sz += sizeof(int32_t);
-    return sz;
-}
-
-static int host_exit_cmd_pack(char* data)
-{
-    int sz = 0;
-    if (!host_exit_cmd) {
-        return -1;
+    if (has_host_exit_cmd) {
+        *(int32_t*)data = VLSCTL_HOST_EXIT;
+        data += sizeof(int32_t);
+        sz   += sizeof(int32_t);
+        nlsctl_cmds++;
     }
-    *(int32_t*)data = VLSCTL_HOST_EXIT;
-    sz += sizeof(int32_t);
-    return sz;
-}
-
-static int host_dump_cmd_pack(char* data)
-{
-    int sz = 0;
-    if (!host_dump_cmd) {
-        return -1;
+    if (has_host_dump_cmd) {
+        *(int32_t*)data = VLSCTL_HOST_DUMP;
+        data += sizeof(int32_t);
+        sz   += sizeof(int32_t);
+        nlsctl_cmds++;
     }
-    *(int32_t*)data = VLSCTL_HOST_DUMP;
-    sz += sizeof(int32_t);
+    if (has_cfg_dump_cmd) {
+        *(int32_t*)data = VLSCTL_CFG_DUMP;
+        data += sizeof(int32_t);
+        sz   += sizeof(int32_t);
+        nlsctl_cmds++;
+    }
     return sz;
 }
 
-static int config_dump_cmd_pack(char* data)
+static int has_plugin_set_param   = 0;
+static int has_plugin_req_param   = 0;
+static int has_plugin_relay_param = 0;
+static int has_plugin_stun_param  = 0;
+static int has_plugin_vpn_param   = 0;
+static int has_plugin_up_param    = 0;
+static int has_plugin_down_param  = 0;
+static int plugin_cmd_param(int opt)
 {
-    int sz = 0;
-    if (!config_dump_cmd) {
-        return -1;
+    switch(opt) {
+    case 'p':
+        has_plugin_set_param   = 1;
+        break;
+    case 'q':
+        has_plugin_req_param   = 1;
+        break;
+    case 'R':
+        has_plugin_relay_param = 1;
+        break;
+    case 'T':
+        has_plugin_stun_param  = 1;
+        break;
+    case 'P':
+        has_plugin_vpn_param   = 1;
+        break;
+    case 'u':
+        has_plugin_up_param    = 1;
+        break;
+    case 'w':
+        has_plugin_down_param  = 1;
+        break;
+    default:
+        break;
     }
-    *(int32_t*)data = VLSCTL_CFG_DUMP;
-    sz += sizeof(int32_t);
-    return sz;
-}
-
-static int plugin_opt = 0;
-static int plugin_opt_parse(void)
-{
-    plugin_opt = 1;
     return 0;
 }
-static int plugin_relay_opt = 0;
-static int plugin_relay_opt_parse(void)
-{
-    plugin_relay_opt = 1;
-    return 0;
-}
-static int plugin_stun_opt = 0;
-static int plugin_stun_opt_parse(void)
-{
-    plugin_stun_opt = 1;
-    return 0;
-}
-static int plugin_vpn_opt = 0;
-static int plugin_vpn_opt_parse(void)
-{
-    plugin_vpn_opt = 1;
-    return 0;
-}
-static int plugin_up_opt = 0;
-static int plugin_up_opt_parse(void)
-{
-    plugin_up_opt = 1;
-    return 0;
-}
-static int plugin_down_opt = 0;
-static int plugin_down_opt_parse(void)
-{
-    plugin_down_opt = 1;
-    return 0;
-}
-static int addr_opt  = 0;
+static int has_addr_param = 0;
 static char addr_ip[64];
-static int addr_port = 0;
-static int addr_opt_parse(void)
+static char addr_port = 0;
+static int addr_opt_param(int opt)
 {
     char* port_addr = NULL;
 
@@ -381,93 +358,86 @@ static int addr_opt_parse(void)
         printf("Invalid IP\n");
         return -1;
     }
-    addr_opt = 1;
+    has_addr_param = 1;
     return 0;
 }
 
-static int plugin_req_opt = 0;
-static int plugin_req_opt_parse(void)
+static int has_plugin_set_cmd = 0;
+static int has_plugin_req_cmd = 0;
+static int plugin_cmd_check(void)
 {
-    plugin_req_opt = 1;
-    return 0;
-}
-
-static int plugin_cmd     = 0;
-static int plugin_req_cmd = 0;
-static int plugin_opt_check(void)
-{
-    if (plugin_opt && plugin_req_opt) {
+    if (has_plugin_set_param && has_plugin_req_param) {
         printf("Confilict options for '-p' and '-q'\n");
         return -1;
     }
-    if (plugin_opt) {
-        if ((!plugin_relay_opt) &&
-            (!plugin_stun_opt)  &&
-            (!plugin_vpn_opt)) {
+    if (has_plugin_set_param) {
+        if ((!has_plugin_relay_param) &&
+            (!has_plugin_stun_param)  &&
+            (!has_plugin_vpn_param)) {
             printf("Few options\n");
             return -1;
         }
-        if (plugin_relay_opt && plugin_stun_opt) {
+        if (has_plugin_relay_param && has_plugin_stun_param) {
             printf("Conflict options for '--relay' and '--stun'\n");
             return -1;
         }
-        if (plugin_relay_opt && plugin_vpn_opt) {
+        if (has_plugin_relay_param && has_plugin_vpn_param) {
             printf("Conflict options for '--relay' and '--vpn'\n");
             return -1;
         }
-        if (plugin_stun_opt && plugin_vpn_opt) {
+        if (has_plugin_stun_param && has_plugin_vpn_param) {
             printf("Confilict options for '--stun' and '--vpn'\n");
             return -1;
         }
-        if ((!plugin_up_opt) && (!plugin_down_opt)) {
+        if ((!has_plugin_up_param) && (!has_plugin_down_param)) {
             printf("Few options\n");
             return -1;
         }
-        if (plugin_up_opt && plugin_down_opt) {
+        if (has_plugin_up_param && has_plugin_down_param) {
             printf("Conflict options for '--up' and '--down'\n");
             return -1;
         }
-        if (!addr_opt) {
+        if (!has_addr_param) {
             printf("Few options\n");
             return -1;
         }
-        plugin_cmd = 1;
+        has_plugin_set_cmd = 1;
         return 0;
     }
-    if (plugin_req_opt) {
-        if ((!plugin_relay_opt) &&
-            (!plugin_stun_opt)  &&
-            (!plugin_vpn_opt)) {
+    if (has_plugin_req_param) {
+        if ((!has_plugin_relay_param) &&
+            (!has_plugin_stun_param)  &&
+            (!has_plugin_vpn_param)) {
             printf("Few options\n");
             return -1;
         }
-        if (plugin_relay_opt && plugin_stun_opt) {
+        if (has_plugin_relay_param && has_plugin_stun_param) {
             printf("Conflict options for '--relay' and '--stun'\n");
             return -1;
         }
-        if (plugin_relay_opt && plugin_vpn_opt) {
+        if (has_plugin_relay_param && has_plugin_vpn_param) {
             printf("Conflict options for '--relay' and '--vpn'\n");
             return -1;
         }
-        if (plugin_stun_opt && plugin_vpn_opt) {
+        if (has_plugin_stun_param && has_plugin_vpn_param) {
             printf("Confilict options for '--stun' and '--vpn'\n");
             return -1;
         }
-        if (addr_opt) {
+        if (has_addr_param) {
             printf("Redundant argument '--addr'\n");
             return -1;
         }
-        plugin_req_cmd = 1;
+        has_plugin_req_cmd = 1;
         return 0;
     }
-    if ((!plugin_opt) && (!plugin_req_opt)) {
-        if (plugin_relay_opt ||
-            plugin_stun_opt  ||
-            plugin_vpn_opt) {
+    if ((!has_plugin_set_param) && (!has_plugin_req_param)) {
+        if (has_plugin_relay_param ||
+            has_plugin_stun_param  ||
+            has_plugin_vpn_param) {
             printf("Redundant argument\n");
             return -1;
         }
-        if (plugin_up_opt || plugin_down_opt) {
+        if (has_plugin_up_param || has_plugin_down_param) {
             printf("Redundant argument\n");
             return -1;
         }
@@ -478,58 +448,31 @@ static int plugin_opt_check(void)
 static int plugin_cmd_pack(char* data)
 {
     int sz = 0;
-    if (!plugin_cmd) {
-        return -1;
-    }
-    if (plugin_up_opt) {
-        *(int32_t*)data = VLSCTL_PLUG;
-    } else if (plugin_down_opt) {
-        *(int32_t*)data = VLSCTL_UNPLUG;
+    if (has_plugin_set_cmd) {
+        if (has_plugin_up_param) {
+            *(int32_t*)data = VLSCTL_PLUG;
+        } else if (has_plugin_down_param) {
+            *(int32_t*)data = VLSCTL_UNPLUG;
+        } else {
+            return -1;
+        }
+        data += sizeof(int32_t);
+        sz   += sizeof(int32_t);
+        nlsctl_cmds++;
+    } else if (has_plugin_req_cmd) {
+        *(int32_t*)data = VLSCTL_PLUGIN_REQ;
+        data += sizeof(int32_t);
+        sz   += sizeof(int32_t);
+        nlsctl_cmds++;
     } else {
         return -1;
     }
-    data += sizeof(int32_t);
-    sz   += sizeof(int32_t);
 
-    if (plugin_relay_opt) {
+    if (has_plugin_relay_param) {
         *(int32_t*)data = PLUGIN_RELAY;
-    }else if (plugin_stun_opt) {
+    } else if (has_plugin_stun_param) {
         *(int32_t*)data = PLUGIN_STUN;
-    }else if (plugin_vpn_opt) {
-        *(int32_t*)data = PLUGIN_VPN;
-    }else {
-        return -1;
-    }
-    data += sizeof(int32_t);
-    sz   += sizeof(int32_t);
-
-    *(int32_t*)data = addr_port;
-    data += sizeof(int32_t);
-    sz   += sizeof(int32_t);
-
-    strcpy(data, addr_ip);
-    data += strlen(addr_ip) + 1;
-    sz   += strlen(addr_ip) + 1;
-
-    return sz;
-}
-
-static int plugin_req_cmd_pack(char* data)
-{
-    int sz = 0;
-
-    if (!plugin_req_cmd) {
-        return -1;
-    }
-    *(int32_t*)data = VLSCTL_PLUGIN_REQ;
-    data += sizeof(int32_t);
-    sz   += sizeof(int32_t);
-
-    if (plugin_relay_opt) {
-        *(int32_t*)data = PLUGIN_RELAY;
-    } else if (plugin_stun_opt) {
-        *(int32_t*)data = PLUGIN_STUN;
-    } else if (plugin_vpn_opt) {
+    } else if (has_plugin_vpn_param) {
         *(int32_t*)data = PLUGIN_VPN;
     } else {
         return -1;
@@ -537,17 +480,25 @@ static int plugin_req_cmd_pack(char* data)
     data += sizeof(int32_t);
     sz   += sizeof(int32_t);
 
+    if (has_addr_param) {
+        *(int32_t*)data = addr_port;
+        data += sizeof(int32_t);
+        sz   += sizeof(int32_t);
+        strcpy(data, addr_ip);
+        data += strlen(addr_ip) + 1;
+        sz   += strlen(addr_ip) + 1;
+    }
     return sz;
 }
 
 static int join_node_opt = 0;
 static int drop_node_opt = 0;
-static int join_node_opt_parse(void)
+static int join_node_opt_parse(int opt)
 {
     join_node_opt = 1;
     return 0;
 }
-static int drop_node_opt_parse(void)
+static int drop_node_opt_parse(int opt)
 {
     drop_node_opt = 1;
     return 0;
@@ -557,7 +508,7 @@ static int join_node_cmd = 0;
 static int join_node_opt_check(void)
 {
     if (join_node_opt) {
-        if (!addr_opt) {
+        if (!has_addr_param) {
             printf("Few arguments\n");
             return -1;
         }
@@ -569,7 +520,7 @@ static int drop_node_cmd = 0;
 static int drop_node_opt_check(void)
 {
     if (drop_node_opt) {
-        if (!addr_opt) {
+        if (!has_addr_param) {
             printf("Few arguments\n");
             return -1;
         }
@@ -596,6 +547,7 @@ static int join_node_cmd_pack(char* data)
 
     strcpy(data, addr_ip);
     sz   += strlen(addr_ip) + 1;
+    nlsctl_cmds++;
     return sz;
 }
 
@@ -617,89 +569,82 @@ static int drop_node_cmd_pack(char* data)
 
     strcpy(data, addr_ip);
     sz   += strlen(addr_ip) + 1;
+    nlsctl_cmds++;
     return sz;
 }
 
-static int dht_query_opt = 0;
-static int dht_query_opt_parse(void)
+static int has_dht_query_param = 0;
+static int has_dht_ping_param  = 0;
+static int has_dht_find_node_param = 0;
+static int has_dht_find_closest_nodes_param = 0;
+static int has_dht_post_hash_param = 0;
+static int has_dht_get_peers_param = 0;
+static int dht_query_param(int opt)
 {
-    dht_query_opt = 1;
+    switch(opt) {
+    case 't':
+        has_dht_query_param = 1;
+        break;
+    case 'J':
+        has_dht_ping_param = 1;
+        break;
+    case 'K':
+        has_dht_find_node_param =1;
+        break;
+    case 'L':
+        has_dht_find_closest_nodes_param = 1;
+        break;
+    case 'M':
+        has_dht_post_hash_param = 1;
+        break;
+    case 'N':
+        has_dht_get_peers_param = 1;
+        break;
+    default:
+        return -1;
+    }
     return 0;
 }
 
-static int dht_ping_opt = 0;
-static int dht_ping_opt_parse(void)
+static int has_dht_query_cmd = 0;
+static int dht_query_check(void)
 {
-    dht_ping_opt = 1;
-    return 0;
-}
-
-static int dht_find_node_opt = 0;
-static int dht_find_node_opt_parse(void)
-{
-    dht_find_node_opt = 1;
-    return 0;
-}
-
-static int dht_find_closest_nodes_opt = 0;
-static int dht_find_closest_nodes_opt_parse(void)
-{
-    dht_find_closest_nodes_opt = 1;
-    return 0;
-}
-
-static int dht_post_hash_opt = 0;
-static int dht_post_hash_opt_parse(void)
-{
-    dht_post_hash_opt = 1;
-    return 0;
-}
-static int dht_get_peers_opt = 0;
-static int dht_get_peers_opt_parse(void)
-{
-    dht_get_peers_opt = 1;
-    return 0;
-}
-
-static int dht_query_cmd = 0;
-static int dht_opt_check(void)
-{
-    if (!dht_query_opt) {
-        if (dht_ping_opt ||
-            dht_find_node_opt ||
-            dht_find_closest_nodes_opt ||
-            dht_post_hash_opt ||
-            dht_get_peers_opt) {
+    if (!has_dht_query_param) {
+        if (has_dht_ping_param ||
+            has_dht_find_node_param ||
+            has_dht_find_closest_nodes_param ||
+            has_dht_post_hash_param ||
+            has_dht_get_peers_param) {
             printf("Redundant argument\n");
             return -1;
         }
     } else {
-        if ((!dht_ping_opt) &&
-            (!dht_find_node_opt) &&
-            (!dht_find_closest_nodes_opt) &&
-            (!dht_post_hash_opt) &&
-            (!dht_get_peers_opt)) {
+        if ((!has_dht_ping_param) &&
+            (!has_dht_find_node_param) &&
+            (!has_dht_find_closest_nodes_param) &&
+            (!has_dht_post_hash_param) &&
+            (!has_dht_get_peers_param)) {
             printf("Few arguments\n");
             return -1;
         }
-        if ((dht_ping_opt && dht_find_node_opt) ||
-           (dht_ping_opt && dht_find_closest_nodes_opt) ||
-           (dht_ping_opt && dht_post_hash_opt) ||
-           (dht_ping_opt && dht_get_peers_opt) ||
-           (dht_find_node_opt && dht_find_closest_nodes_opt) ||
-           (dht_find_node_opt && dht_post_hash_opt) ||
-           (dht_find_node_opt && dht_get_peers_opt) ||
-           (dht_find_closest_nodes_opt && dht_post_hash_opt) ||
-           (dht_find_closest_nodes_opt && dht_get_peers_opt) ||
-           (dht_post_hash_opt && dht_get_peers_opt)) {
-           printf("Redundant arguments\n");
-           return -1;
+        if ((has_dht_ping_param && has_dht_find_node_param) ||
+            (has_dht_ping_param && has_dht_find_closest_nodes_param) ||
+            (has_dht_ping_param && has_dht_post_hash_param) ||
+            (has_dht_ping_param && has_dht_get_peers_param) ||
+            (has_dht_find_node_param && has_dht_find_closest_nodes_param) ||
+            (has_dht_find_node_param && has_dht_post_hash_param) ||
+            (has_dht_find_node_param && has_dht_get_peers_param) ||
+            (has_dht_find_closest_nodes_param && has_dht_post_hash_param) ||
+            (has_dht_find_closest_nodes_param && has_dht_get_peers_param) ||
+            (has_dht_post_hash_param && has_dht_get_peers_param)) {
+            printf("Redundant arguments\n");
+            return -1;
         }
-        if (!addr_opt) {
+        if (!has_addr_param) {
             printf("Few arguments\n");
             return -1;
         }
-        dht_query_cmd = 1;
+        has_dht_query_cmd = 1;
     }
     return 0;
 }
@@ -707,22 +652,22 @@ static int dht_opt_check(void)
 static int dht_query_cmd_pack(char* data)
 {
     int sz = 0;
-    if (!dht_query_cmd) {
+    if (!has_dht_query_cmd) {
         return -1;
     }
     *(int32_t*)data = VLSCTL_DHT_QUERY;
     data += sizeof(int32_t);
     sz   += sizeof(int32_t);
 
-    if (dht_ping_opt) {
+    if (has_dht_ping_param) {
         *(int32_t*)data = VDHT_PING;
-    }else if (dht_find_node_opt) {
+    }else if (has_dht_find_node_param) {
         *(int32_t*)data = VDHT_FIND_NODE;
-    }else if (dht_find_closest_nodes_opt) {
+    }else if (has_dht_find_closest_nodes_param) {
         *(int32_t*)data = VDHT_FIND_CLOSEST_NODES;
-    }else if (dht_post_hash_opt) {
+    }else if (has_dht_post_hash_param) {
         *(int32_t*)data = VDHT_POST_HASH;
-    }else if (dht_get_peers_opt) {
+    }else if (has_dht_get_peers_param) {
         *(int32_t*)data = VDHT_GET_PEERS;
     }else {
         return -1;
@@ -737,11 +682,12 @@ static int dht_query_cmd_pack(char* data)
     strcpy(data, addr_ip);
     data += strlen(addr_ip) + 1;
     sz   += strlen(addr_ip) + 1;
+    nlsctl_cmds++;
     return sz;
 }
 
 static int show_help_opt = 0;
-static int show_help_opt_parse(void)
+static int show_help_opt_parse(int opt)
 {
     show_help_opt = 1;
     return 0;
@@ -754,7 +700,7 @@ static void show_help_cmd(void)
 }
 
 static int show_version_opt = 0;
-static int show_version_opt_parse(void)
+static int show_version_opt_parse(int opt)
 {
     show_version_opt = 1;
     return 0;
@@ -768,33 +714,33 @@ static void show_version_cmd(void)
 
 struct opt_routine {
     char opt;
-    int (*parse_cb)(void);
+    int (*parse_cb)(int);
 };
 
 struct opt_routine opt_rts[] = {
     {'U', lsctlc_socket_param      },
     {'S', lsctls_socket_param      },
-    {'d', host_online_opt_parse    },
-    {'D', host_offline_opt_parse   },
-    {'x', host_exit_opt_parse      },
-    {'s', host_dump_opt_parse      },
-    {'c', config_dump_opt_parse    },
+    {'d', host_cmd_param           },
+    {'D', host_cmd_param           },
+    {'x', host_cmd_param           },
+    {'s', host_cmd_param           },
+    {'c', host_cmd_param           },
     {'a', join_node_opt_parse      },
     {'e', drop_node_opt_parse      },
-    {'p', plugin_opt_parse         },
-    {'R', plugin_relay_opt_parse   },
-    {'T', plugin_stun_opt_parse    },
-    {'P', plugin_vpn_opt_parse     },
-    {'u', plugin_up_opt_parse      },
-    {'w', plugin_down_opt_parse    },
-    {'m', addr_opt_parse           },
-    {'q', plugin_req_opt_parse     },
-    {'t', dht_query_opt_parse      },
-    {'J', dht_ping_opt_parse       },
-    {'K', dht_find_node_opt_parse  },
-    {'L', dht_find_closest_nodes_opt_parse },
-    {'M', dht_post_hash_opt_parse  },
-    {'N', dht_get_peers_opt_parse  },
+    {'p', plugin_cmd_param         },
+    {'R', plugin_cmd_param         },
+    {'T', plugin_cmd_param         },
+    {'P', plugin_cmd_param         },
+    {'u', plugin_cmd_param         },
+    {'w', plugin_cmd_param         },
+    {'q', plugin_cmd_param         },
+    {'m', addr_opt_param           },
+    {'t', dht_query_param          },
+    {'J', dht_query_param          },
+    {'K', dht_query_param          },
+    {'L', dht_query_param          },
+    {'M', dht_query_param          },
+    {'N', dht_query_param          },
     {'v', show_version_opt_parse   },
     {'h', show_help_opt_parse      },
     {0, 0}
@@ -803,22 +749,17 @@ struct opt_routine opt_rts[] = {
 int (*check_routine[])(void) = {
     lsctlc_socket_check,
     lsctls_socket_check,
-    host_opt_check,
-    plugin_opt_check,
+    host_cmd_check,
+    plugin_cmd_check,
     join_node_opt_check,
     drop_node_opt_check,
-    dht_opt_check,
+    dht_query_check,
     NULL
 };
 
 int (*cmd_routine[])(char*) = {
-    host_online_cmd_pack,
-    host_offline_cmd_pack,
-    host_exit_cmd_pack,
-    host_dump_cmd_pack,
-    config_dump_cmd_pack,
+    host_cmd_pack,
     plugin_cmd_pack,
-    plugin_req_cmd_pack,
     join_node_cmd_pack,
     drop_node_cmd_pack,
     dht_query_cmd_pack,
@@ -827,7 +768,6 @@ int (*cmd_routine[])(char*) = {
 
 static char  data[1024];
 static char* buf = data;
-static int   nitems = 0;
 
 int main(int argc, char** argv)
 {
@@ -866,7 +806,7 @@ int main(int argc, char** argv)
                     if (routine[i].opt != c) {
                         continue;
                     }
-                    ret = routine[i].parse_cb();
+                    ret = routine[i].parse_cb(c);
                     if (ret < 0) {
                         exit(-1);
                     }
@@ -918,10 +858,9 @@ int main(int argc, char** argv)
             if (ret < 0) {
                 continue;
             }
-            nitems++;
             buf += ret;
         }
-        *(int32_t*)nitems_addr = nitems;
+        *(int32_t*)nitems_addr = nlsctl_cmds;
      }
 
      {
