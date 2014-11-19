@@ -26,12 +26,16 @@ static char* dht_id_desc[] = {
     "ping rsp",
     "find_node",
     "find_node rsp",
-    "get_peers",
-    "get_peers rsp",
-    "post_hash",
-    "post_hash_r",
     "find_closest_nodes",
     "find_closest_nodes rsp",
+    "post_service",
+    "post_service_rsp",
+    "post_hash",
+    "post_hash_r",
+    "get_peers",
+    "get_peers rsp",
+    "get_plugin",
+    "get_plugin_rsp",
     NULL,
 };
 
@@ -41,12 +45,14 @@ struct vpeer_flags_desc peer_flags_desc[] = {
     {PROP_PING_R,               "ping_r"              },
     {PROP_FIND_NODE,            "find_node"           },
     {PROP_FIND_NODE_R,          "find_node_r"         },
-    {PROP_GET_PEERS,            "get_peers"           },
-    {PROP_GET_PEERS_R,          "get_peers_r"         },
-    {PROP_POST_HASH,            "post_hash"           },
-    {PROP_POST_HASH_R,          "post_hash_r"         },
     {PROP_FIND_CLOSEST_NODES,   "find_closest_nodes"  },
     {PROP_FIND_CLOSEST_NODES_R, "find_closest_nodes_r"},
+    {PROP_POST_SERVICE,         "post_service"        },
+    {PROP_POST_SERVICE_R,       "post_service_r"      },
+    {PROP_POST_HASH,            "post_hash"           },
+    {PROP_POST_HASH_R,          "post_hash_r"         },
+    {PROP_GET_PEERS,            "get_peers"           },
+    {PROP_GET_PEERS_R,          "get_peers_r"         },
     {PROP_VER,                  "same version"        },
     {PROP_RELAY,                "relay"               },
     {PROP_STUN,                 "stun"                },
@@ -1396,6 +1402,7 @@ struct vroute_cb_ops route_cb_ops = {
 static
 int _aux_route_msg_invoke_cb(void* cookie, struct vmsg_usr* mu)
 {
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vroute* route = (struct vroute*)cookie;
     void* ctxt = NULL;
     int what = 0;
@@ -1419,13 +1426,13 @@ int _aux_route_msg_invoke_cb(void* cookie, struct vmsg_usr* mu)
     vassert(route);
     vassert(mu);
 
-    what = dht_dec_ops.dec(mu->data, mu->len, &ctxt);
+    what = dec_ops->dec(mu->data, mu->len, &ctxt);
     retE((what >= VDHT_UNKNOWN));
     retE((what < 0));
     vlogI(printf("Received (%s) msg.\n", dht_id_desc[what]));
 
     ret = routine[what](route, &mu->addr->vsin_addr, ctxt);
-    dht_dec_ops.dec_done(ctxt);
+    dec_ops->dec_done(ctxt);
     retE((ret < 0));
     return 0;
 }
