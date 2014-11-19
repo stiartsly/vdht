@@ -676,6 +676,31 @@ static int dht_sort_cmd_pack(char* data)
     return sz;
 }
 
+static int msg_header_pack(char* data)
+{
+    int sz = 0;
+
+    *(uint32_t*)data = 0x7fec45fa; //lsctl magic;
+    data += sizeof(uint32_t);
+    sz   += sizeof(uint32_t);
+
+    *(int32_t*)data = 0x45; //VMSG_LSCTL;
+    data += sizeof(int32_t);
+    sz   += sizeof(int32_t);
+
+    return sz;
+}
+
+static int msg_end_mark_pack(char* data)
+{
+    int sz =0;
+    *(int32_t*)data = 0x7fec45fa; //remark end of msg.
+    data += sizeof(int32_t);
+    sz   += sizeof(int32_t);
+
+    return sz;
+}
+
 struct opt_routine {
     char opt;
     int (*parse_cb)(int);
@@ -721,10 +746,12 @@ int (*check_routines[])(void) = {
 };
 
 int (*pack_routines[])(char*) = {
+    msg_header_pack,   // must be first of array.
     host_sort_cmd_pack,
     plgn_sort_cmd_pack,
     node_sort_cmd_pack,
     dht_sort_cmd_pack,
+    msg_end_mark_pack, // must be end of array.
     NULL,
 };
 
@@ -792,31 +819,21 @@ int main(int argc, char** argv)
         int (**pack_cb)(char*) = pack_routines;
         char  data[1024];
         char* buf = data;
+        memset(data, 0, 1024);
 
-        for (i = 0; (check_cb[i] != 0); i++) {
+        for (i = 0; check_cb[i]; i++) {
             ret = check_cb[i]();
             if (ret < 0) {
                 exit(-1);
             }
         }
-
-        memset(data, 0, 1024);
-        *(uint32_t*)buf = 0x7fec45fa; //lsctl magic;
-         buf += sizeof(uint32_t);
-
-        *(int32_t*)buf = 0x45; //VMSG_LSCTL;
-        buf += sizeof(int32_t);
-
-        for (i = 0; pack_cb[i]; i++) {
+        for (i = 0; pack_cb[i] ; i++) {
             ret = pack_cb[i](buf);
             if (ret < 0) {
                 continue;
             }
             buf += ret;
         }
-        *(int32_t*)buf = 0x7fec45fa; //remark end of msg.
-        buf += sizeof(int32_t);
-
         struct sockaddr_un unix_addr;
         struct sockaddr_un dest_addr;
         int fd = 0;
