@@ -203,7 +203,7 @@ static int has_host_offline_param = 0;
 static int has_host_exit_param    = 0;
 static int has_host_dump_param    = 0;
 static int has_cfg_dump_param     = 0;
-static int host_cmd_param(int opt)
+static int host_sort_cmd_param(int opt)
 {
     switch(opt) {
     case 'd':
@@ -232,7 +232,7 @@ static int has_host_exit_cmd    = 0;
 static int has_host_dump_cmd    = 0;
 static int has_cfg_dump_cmd     = 0;
 
-static int host_cmd_check(void)
+static int host_sort_cmd_check(void)
 {
     if (has_host_online_param) {
         if (has_host_offline_param || has_host_exit_param) {
@@ -275,7 +275,7 @@ static int host_cmd_check(void)
     return 0;
 }
 
-static int host_cmd_pack(char* data)
+static int host_sort_cmd_pack(char* data)
 {
     int sz = 0;
     if (has_host_online_cmd) {
@@ -313,7 +313,7 @@ static int has_plugin_stun_param  = 0;
 static int has_plugin_vpn_param   = 0;
 static int has_plugin_up_param    = 0;
 static int has_plugin_down_param  = 0;
-static int plugin_cmd_param(int opt)
+static int plgn_sort_cmd_param(int opt)
 {
     switch(opt) {
     case 'p':
@@ -378,7 +378,7 @@ static int addr_opt_param(int opt)
 
 static int has_plugin_set_cmd = 0;
 static int has_plugin_req_cmd = 0;
-static int plugin_cmd_check(void)
+static int plgn_sort_cmd_check(void)
 {
     if (has_plugin_set_param && has_plugin_req_param) {
         printf("Confilict options for '-p' and '-q'\n");
@@ -459,7 +459,7 @@ static int plugin_cmd_check(void)
     return 0;
 }
 
-static int plugin_cmd_pack(char* data)
+static int plgn_sort_cmd_pack(char* data)
 {
     int sz = 0;
     if (has_plugin_set_cmd) {
@@ -505,7 +505,7 @@ static int plugin_cmd_pack(char* data)
 
 static int has_join_node_param = 0;
 static int has_drop_node_param = 0;
-static int node_op_param(int opt)
+static int node_sort_cmd_param(int opt)
 {
     switch(opt) {
     case 'a':
@@ -521,7 +521,7 @@ static int node_op_param(int opt)
 }
 static int has_join_node_cmd = 0;
 static int has_drop_node_cmd = 0;
-static int node_op_check(void)
+static int node_sort_cmd_check(void)
 {
     if (has_join_node_param) {
         if (!has_addr_param) {
@@ -540,7 +540,7 @@ static int node_op_check(void)
     return 0;
 }
 
-static int node_op_cmd_pack(char* data)
+static int node_sort_cmd_pack(char* data)
 {
     int sz = 0;
 
@@ -570,7 +570,7 @@ static int has_dht_find_node_param = 0;
 static int has_dht_find_closest_nodes_param = 0;
 static int has_dht_post_hash_param = 0;
 static int has_dht_get_peers_param = 0;
-static int dht_query_param(int opt)
+static int dht_sort_cmd_param(int opt)
 {
     switch(opt) {
     case 't':
@@ -598,7 +598,7 @@ static int dht_query_param(int opt)
 }
 
 static int has_dht_query_cmd = 0;
-static int dht_query_check(void)
+static int dht_sort_cmd_check(void)
 {
     if (!has_dht_query_param) {
         if (has_dht_ping_param ||
@@ -640,7 +640,7 @@ static int dht_query_check(void)
     return 0;
 }
 
-static int dht_query_cmd_pack(char* data)
+static int dht_sort_cmd_pack(char* data)
 {
     int sz = 0;
     if (!has_dht_query_cmd) {
@@ -684,27 +684,27 @@ struct opt_routine {
 struct opt_routine param_routines[] = {
     {'U', lsctlc_socket_param },
     {'S', lsctls_socket_param },
-    {'d', host_cmd_param      },
-    {'D', host_cmd_param      },
-    {'x', host_cmd_param      },
-    {'s', host_cmd_param      },
-    {'c', host_cmd_param      },
-    {'a', node_op_param       },
-    {'e', node_op_param       },
-    {'p', plugin_cmd_param    },
-    {'R', plugin_cmd_param    },
-    {'T', plugin_cmd_param    },
-    {'P', plugin_cmd_param    },
-    {'u', plugin_cmd_param    },
-    {'w', plugin_cmd_param    },
-    {'q', plugin_cmd_param    },
+    {'d', host_sort_cmd_param },
+    {'D', host_sort_cmd_param },
+    {'x', host_sort_cmd_param },
+    {'s', host_sort_cmd_param },
+    {'c', host_sort_cmd_param },
+    {'a', node_sort_cmd_param },
+    {'e', node_sort_cmd_param },
+    {'p', plgn_sort_cmd_param },
+    {'R', plgn_sort_cmd_param },
+    {'T', plgn_sort_cmd_param },
+    {'P', plgn_sort_cmd_param },
+    {'u', plgn_sort_cmd_param },
+    {'w', plgn_sort_cmd_param },
+    {'q', plgn_sort_cmd_param },
     {'m', addr_opt_param      },
-    {'t', dht_query_param     },
-    {'J', dht_query_param     },
-    {'K', dht_query_param     },
-    {'L', dht_query_param     },
-    {'M', dht_query_param     },
-    {'N', dht_query_param     },
+    {'t', dht_sort_cmd_param  },
+    {'J', dht_sort_cmd_param  },
+    {'K', dht_sort_cmd_param  },
+    {'L', dht_sort_cmd_param  },
+    {'M', dht_sort_cmd_param  },
+    {'N', dht_sort_cmd_param  },
     {'v', show_ver_param      },
     {'h', show_help_param     },
     {0, 0}
@@ -713,18 +713,18 @@ struct opt_routine param_routines[] = {
 int (*check_routines[])(void) = {
     lsctlc_socket_check,
     lsctls_socket_check,
-    host_cmd_check,
-    plugin_cmd_check,
-    node_op_check,
-    dht_query_check,
+    host_sort_cmd_check,
+    plgn_sort_cmd_check,
+    node_sort_cmd_check,
+    dht_sort_cmd_check,
     NULL
 };
 
 int (*pack_routines[])(char*) = {
-    host_cmd_pack,
-    plugin_cmd_pack,
-    node_op_cmd_pack,
-    dht_query_cmd_pack,
+    host_sort_cmd_pack,
+    plgn_sort_cmd_pack,
+    node_sort_cmd_pack,
+    dht_sort_cmd_pack,
     NULL,
 };
 
