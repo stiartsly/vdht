@@ -1394,10 +1394,11 @@ struct vroute_cb_ops route_cb_ops = {
 };
 
 static
-int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
+int _aux_route_msg_invoke_cb(void* cookie, struct vmsg_usr* mu)
 {
     struct vroute* route = (struct vroute*)cookie;
     void* ctxt = NULL;
+    int what = 0;
     int ret = 0;
 
     vroute_dht_cb_t routine[] = {
@@ -1418,12 +1419,12 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
     vassert(route);
     vassert(mu);
 
-    ret = dht_dec_ops.dec(mu->data, mu->len, &ctxt);
-    retE((ret >= VDHT_UNKNOWN));
-    retE((ret < 0));
-    vlogI(printf("Received (%s) msg.\n", dht_id_desc[ret]));
+    what = dht_dec_ops.dec(mu->data, mu->len, &ctxt);
+    retE((what >= VDHT_UNKNOWN));
+    retE((what < 0));
+    vlogI(printf("Received (%s) msg.\n", dht_id_desc[what]));
 
-    ret = routine[ret](route, &mu->addr->vsin_addr, ctxt);
+    ret = routine[what](route, &mu->addr->vsin_addr, ctxt);
     dht_dec_ops.dec_done(ctxt);
     retE((ret < 0));
     return 0;
@@ -1458,7 +1459,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
         varray_init(&route->bucket[i].peers, 0);
         route->bucket[i].ts = 0;
     }
-    msger->ops->add_cb(route->msger, route, _aux_route_msg_cb, VMSG_DHT);
+    msger->ops->add_cb(route->msger, route, _aux_route_msg_invoke_cb, VMSG_DHT);
     return 0;
 }
 
