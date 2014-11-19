@@ -164,14 +164,10 @@ int _vhost_req_plugin(struct vhost* host, int what, vplugin_reqblk_t cb, void* c
 static
 int _vhost_dump(struct vhost* host)
 {
-    char ver[64];
     vassert(host);
 
     vdump(printf("-> HOST"));
-    memset(ver, 0, 64);
-    host->ops->version(host, ver, 64);
-    vdump(printf("version: %s", ver));
-
+    vdump(printf("version: %s", host->ops->get_version(host)));
     vsockaddr_dump(&host->ownId.addr);
     host->route.ops->dump(&host->route);
     host->node.ops->dump(&host->node);
@@ -227,7 +223,7 @@ int _vhost_req_quit(struct vhost* host)
  * @len : buffer length.
  */
 static
-int _vhost_version(struct vhost* host, char* buf, int len)
+char* _vhost_get_version(struct vhost* host)
 {
     /*
      * version : a.b.c.d.e
@@ -239,11 +235,8 @@ int _vhost_version(struct vhost* host, char* buf, int len)
      */
     const char* version = "0.0.0.1.0";
     vassert(host);
-    vassert(buf);
 
-    retE((len < strlen(version) + 1));
-    strcpy(buf, version);
-    return 0;
+    return (char*)version;
 }
 
 /*
@@ -304,7 +297,7 @@ struct vhost_ops host_ops = {
     .loop        = _vhost_loop,
     .req_quit    = _vhost_req_quit,
     .dump        = _vhost_dump,
-    .version     = _vhost_version,
+    .get_version = _vhost_get_version,
     .bogus_query = _vhost_bogus_query
 };
 
@@ -322,7 +315,7 @@ struct vhost_ops host_ops = {
  *
  */
 static
-int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
+int _aux_vhost_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
 {
     struct vmsg_sys* ms = NULL;
     char* data = NULL;
@@ -375,7 +368,7 @@ int _aux_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
  *
  */
 static
-int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
+int _aux_vhost_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
     void* data = sm->data;
     uint32_t magic = 0;
@@ -408,7 +401,7 @@ int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 }
 
 static
-int _aux_init_tick_tmo(struct vconfig* cfg)
+int _aux_vhost_get_tmo(struct vconfig* cfg)
 {
     char buf[32];
     int tms = 0;
@@ -439,7 +432,7 @@ int _aux_init_tick_tmo(struct vconfig* cfg)
 }
 
 static
-int _aux_init_ownId(struct vconfig* cfg, vnodeAddr* nodeAddr)
+int _aux_vhost_set_addr(struct vconfig* cfg, vnodeAddr* nodeAddr)
 {
     char ip[64];
     int port = 0;
@@ -463,19 +456,6 @@ int _aux_init_ownId(struct vconfig* cfg, vnodeAddr* nodeAddr)
     return 0;
 }
 
-static
-int _aux_init_ver(struct vhost* host, vnodeVer* ver)
-{
-    char str_ver[64];
-    vassert(host);
-
-    memset(str_ver, 0, 64);
-    host->ops->version(host, str_ver, 64);
-    vnodeVer_unstrlize(str_ver, ver);
-
-    return 0;
-}
-
 struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
@@ -485,9 +465,9 @@ struct vhost* vhost_create(struct vconfig* cfg)
     int tmo = 0;
     vassert(cfg);
 
-    ret = _aux_init_ownId(cfg, &nodeAddr);
+    ret = _aux_vhost_set_addr(cfg, &nodeAddr);
     retE_p((ret < 0));
-    tmo = _aux_init_tick_tmo(cfg);
+    tmo = _aux_vhost_get_tmo(cfg);
     retE_p((tmo < 0));
 
     host = (struct vhost*)malloc(sizeof(struct vhost));
@@ -500,7 +480,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->to_quit  = 0;
     host->cfg = cfg;
     host->ops = &host_ops;
-    _aux_init_ver(host, &ver);
+    vnodeVer_unstrlize(host->ops->get_version(host), &ver);
 
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&nodeAddr.addr));
@@ -525,8 +505,8 @@ struct vhost* vhost_create(struct vconfig* cfg)
 
     host->waiter.ops->add(&host->waiter, &host->rpc);
     host->waiter.ops->add(&host->waiter, &host->lsctl.rpc);
-    vmsger_reg_pack_cb  (&host->msger, _aux_msg_pack_cb  , host);
-    vmsger_reg_unpack_cb(&host->msger, _aux_msg_unpack_cb, host);
+    vmsger_reg_pack_cb  (&host->msger, _aux_vhost_msg_pack_cb  , host);
+    vmsger_reg_unpack_cb(&host->msger, _aux_vhost_msg_unpack_cb, host);
 
     return host;
 }

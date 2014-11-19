@@ -106,7 +106,7 @@ int _vlsctl_dht_query(struct vlsctl* lsctl, void* data, int offset)
 
     ret = host->ops->bogus_query(host, qId, &sin);
     retE((ret < 0));
-    return 0;
+    return sz;
 }
 
 static
