@@ -943,6 +943,39 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vt
  * @hash :
  */
 static
+int _vroute_dht_post_hash(struct vroute* route, vnodeAddr* dest, vnodeHash* hash)
+{
+    vassert(route);
+    vassert(dest);
+    vassert(hash);
+
+    //todo;
+    return 0;
+}
+
+/*
+ * @route:
+ * @dest:
+ * @hash
+ */
+static
+int _vroute_dht_post_hash_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* hashes)
+{
+    vassert(route);
+    vassert(dest);
+    vassert(token);
+    vassert(hashes);
+
+    //todo;
+    return 0;
+}
+
+/*
+ * @route:
+ * @dest :
+ * @hash :
+ */
+static
 int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash)
 {
     struct vdht_enc_ops* enc_ops = &dht_enc_ops;
@@ -1011,39 +1044,6 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     return 0;
 }
 
-/*
- * @route:
- * @dest :
- * @hash
- */
-static
-int _vroute_dht_post_hash(struct vroute* route, vnodeAddr* dest, vnodeHash* hash)
-{
-    vassert(route);
-    vassert(dest);
-    vassert(hash);
-
-    //todo;
-    return 0;
-}
-
-/*
- * @route:
- * @dest:
- * @hash
- */
-static
-int _vroute_dht_post_hash_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* hashes)
-{
-    vassert(route);
-    vassert(dest);
-    vassert(token);
-    vassert(hashes);
-
-    //todo;
-    return 0;
-}
-
 static
 struct vroute_dht_ops route_dht_ops = {
     .ping                   = _vroute_dht_ping,
@@ -1052,10 +1052,10 @@ struct vroute_dht_ops route_dht_ops = {
     .find_node_rsp          = _vroute_dht_find_node_rsp,
     .find_closest_nodes     = _vroute_dht_find_closest_nodes,
     .find_closest_nodes_rsp = _vroute_dht_find_closest_nodes_rsp,
-    .get_peers              = _vroute_dht_get_peers,
-    .get_peers_rsp          = _vroute_dht_get_peers_rsp,
     .post_hash              = _vroute_dht_post_hash,
-    .post_hash_rsp          = _vroute_dht_post_hash_rsp
+    .post_hash_rsp          = _vroute_dht_post_hash_rsp,
+    .get_peers              = _vroute_dht_get_peers,
+    .get_peers_rsp          = _vroute_dht_get_peers_rsp
 };
 
 
@@ -1261,6 +1261,28 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, struct sockaddr_in* 
 }
 
 static
+int _vroute_cb_post_hash(struct vroute* route, struct sockaddr_in* from, void* ctxt)
+{
+    vassert(route);
+    vassert(from);
+    vassert(ctxt);
+
+    //TODO;
+    return 0;
+}
+
+static
+int _vroute_cb_post_hash_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
+{
+    vassert(route);
+    vassert(from);
+    vassert(ctxt);
+
+    //TODO;
+    return 0;
+}
+
+static
 int _vroute_cb_get_peers(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
@@ -1311,28 +1333,6 @@ int _vroute_cb_get_peers_rsp(struct vroute* route, struct sockaddr_in* from, voi
 }
 
 static
-int _vroute_cb_post_hash(struct vroute* route, struct sockaddr_in* from, void* ctxt)
-{
-    vassert(route);
-    vassert(from);
-    vassert(ctxt);
-
-    //TODO;
-    return 0;
-}
-
-static
-int _vroute_cb_post_hash_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
-{
-    vassert(route);
-    vassert(from);
-    vassert(ctxt);
-
-    //TODO;
-    return 0;
-}
-
-static
 struct vroute_cb_ops route_cb_ops = {
     .ping                   = _vroute_cb_ping,
     .ping_rsp               = _vroute_cb_ping_rsp,
@@ -1340,10 +1340,10 @@ struct vroute_cb_ops route_cb_ops = {
     .find_node_rsp          = _vroute_cb_find_node_rsp,
     .find_closest_nodes     = _vroute_cb_find_closest_nodes,
     .find_closest_nodes_rsp = _vroute_cb_find_closest_nodes_rsp,
-    .get_peers              = _vroute_cb_get_peers,
-    .get_peers_rsp          = _vroute_cb_get_peers_rsp,
     .post_hash              = _vroute_cb_post_hash,
-    .post_hash_rsp          = _vroute_cb_post_hash_rsp
+    .post_hash_rsp          = _vroute_cb_post_hash_rsp,
+    .get_peers              = _vroute_cb_get_peers,
+    .get_peers_rsp          = _vroute_cb_get_peers_rsp
 };
 
 static

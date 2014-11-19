@@ -14,10 +14,10 @@ struct vdhtId_desc dhtId_desc[] = {
     {VDHT_FIND_NODE_R,          "find_node_rsp"         },
     {VDHT_FIND_CLOSEST_NODES,   "find_closest_nodes"    },
     {VDHT_FIND_CLOSEST_NODES_R, "find_closest_nodes_rsp"},
-    {VDHT_GET_PEERS,            "get_peers"             },
-    {VDHT_GET_PEERS_R,          "get_peers_rsp"         },
     {VDHT_POST_HASH,            "post_hash"             },
     {VDHT_POST_HASH_R,          "post_hash_rsp"         },
+    {VDHT_GET_PEERS,            "get_peers"             },
+    {VDHT_GET_PEERS_R,          "get_peers_rsp"         },
     {VDHT_GET_PLUGIN,           "get_plugin"            },
     {VDHT_GET_PLUGIN_R,         "get_plugin_rsp"        },
     {VDHT_UNKNOWN, NULL}
