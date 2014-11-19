@@ -212,25 +212,23 @@ int _vlsctl_unplug(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
-int _aux_req_plugin_cb(struct sockaddr_in* addr, void* cookie)
-{
-    char ip[64];
-    int port = 0;
-    int ret  = 0;
-
-    vassert(addr);
-    memset(ip, 0, 64);
-    ret = vsockaddr_unconvert(addr, ip, 64, &port);
-    retE((ret < 0));
-    printf("req_plugin rsp: %s:%d\n", ip, port);
-
-    //todo;
-    return 0;
-}
-
-static
 int _vlsctl_req_plugin(struct vlsctl* lsctl, void* data, int offset)
 {
+    int _aux_req_plugin_cb(struct sockaddr_in* addr, void* cookie)
+    {
+        char ip[64];
+        int port = 0;
+        int ret  = 0;
+
+        vassert(addr);
+        memset(ip, 0, 64);
+        ret = vsockaddr_unconvert(addr, ip, 64, &port);
+        retE((ret < 0));
+        printf("req_plugin rsp: %s:%d\n", ip, port);
+
+        //todo;
+        return 0;
+    }
     struct vhost* host = lsctl->host;
     int plgnId = 0;
     int ret = 0;
@@ -319,7 +317,7 @@ struct vlsctl_ops lsctl_ops = {
     .dsptch_msg = _vlsctl_dispatch_msg
 };
 
-int _aux_vlsctl_msg_cb(void* cookie, struct vmsg_usr* um)
+int _aux_vlsctl_msg_invoke_cb(void* cookie, struct vmsg_usr* um)
 {
     struct vlsctl* lsctl = (struct vlsctl*)cookie;
     int ret = 0;
@@ -330,7 +328,7 @@ int _aux_vlsctl_msg_cb(void* cookie, struct vmsg_usr* um)
 }
 
 static
-int _aux_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
+int _aux_vlsctl_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
     uint32_t magic = 0;
     void* data = sm->data;
@@ -382,8 +380,8 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
         return -1;
     }
 
-    vmsger_reg_unpack_cb  (&ctl->msger, _aux_msg_unpack_cb, ctl);
-    ctl->msger.ops->add_cb(&ctl->msger, ctl, _aux_vlsctl_msg_cb, VMSG_LSCTL);
+    vmsger_reg_unpack_cb  (&ctl->msger, _aux_vlsctl_msg_unpack_cb, ctl);
+    ctl->msger.ops->add_cb(&ctl->msger, ctl, _aux_vlsctl_msg_invoke_cb, VMSG_LSCTL);
     return 0;
 }
 
