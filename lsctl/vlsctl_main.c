@@ -139,8 +139,6 @@ void show_version(void)
     return ;
 }
 
-static int nlsctl_cmds = 0;
-
 static int has_help_param = 0;
 static int has_ver_param  = 0;
 static int show_help_param(int opt)
@@ -284,31 +282,26 @@ static int host_cmd_pack(char* data)
         *(int32_t*)data = VLSCTL_HOST_UP;
         data += sizeof(int32_t);
         sz   += sizeof(int32_t);
-        nlsctl_cmds++;
     }
     if (has_host_offline_cmd) {
         *(int32_t*)data = VLSCTL_HOST_DOWN;
         data += sizeof(int32_t);
         sz   += sizeof(int32_t);
-        nlsctl_cmds++;
     }
     if (has_host_exit_cmd) {
         *(int32_t*)data = VLSCTL_HOST_EXIT;
         data += sizeof(int32_t);
         sz   += sizeof(int32_t);
-        nlsctl_cmds++;
     }
     if (has_host_dump_cmd) {
         *(int32_t*)data = VLSCTL_HOST_DUMP;
         data += sizeof(int32_t);
         sz   += sizeof(int32_t);
-        nlsctl_cmds++;
     }
     if (has_cfg_dump_cmd) {
         *(int32_t*)data = VLSCTL_CFG_DUMP;
         data += sizeof(int32_t);
         sz   += sizeof(int32_t);
-        nlsctl_cmds++;
     }
     return sz;
 }
@@ -479,12 +472,10 @@ static int plugin_cmd_pack(char* data)
         }
         data += sizeof(int32_t);
         sz   += sizeof(int32_t);
-        nlsctl_cmds++;
     } else if (has_plugin_req_cmd) {
         *(int32_t*)data = VLSCTL_PLUGIN_REQ;
         data += sizeof(int32_t);
         sz   += sizeof(int32_t);
-        nlsctl_cmds++;
     } else {
         return -1;
     }
@@ -555,10 +546,8 @@ static int node_op_cmd_pack(char* data)
 
     if (has_join_node_cmd) {
         *(int32_t*)data = VLSCTL_NODE_JOIN;
-        nlsctl_cmds++;
     } else if (has_drop_node_cmd) {
         *(int32_t*)data = VLSCTL_NODE_DROP;
-        nlsctl_cmds++;
     } else {
         return -1;
     }
@@ -684,7 +673,6 @@ static int dht_query_cmd_pack(char* data)
     strcpy(data, addr_ip);
     data += strlen(addr_ip) + 1;
     sz   += strlen(addr_ip) + 1;
-    nlsctl_cmds++;
     return sz;
 }
 
@@ -740,56 +728,50 @@ int (*cmd_routine[])(char*) = {
     NULL,
 };
 
-static char  data[1024];
-static char* buf = data;
-
 int main(int argc, char** argv)
 {
+    int opt_idx = 0;
     int ret = 0;
     int i = 0;
+    int c = 0;
 
     if (argc <= 1) {
         printf("Few arguments\n");
         show_usage();
         exit(-1);
     }
-    {
-        int opt_idx = 0;
-        int c = 0;
-        int i = 0;
 
-        while(c >= 0) {
-            c = getopt_long(argc, argv, "U:S:dDxscaepRTPuwm:qtJKLMNvh", long_options, &opt_idx);
-            if (c < 0) {
+    while(c >= 0) {
+        c = getopt_long(argc, argv, "U:S:dDxscaepRTPuwm:qtJKLMNvh", long_options, &opt_idx);
+        if (c < 0) {
+            break;
+        } else if (c == 0) {
+            if (long_options[opt_idx].flag != 0) {
                 break;
-            } else if (c == 0) {
-                if (long_options[opt_idx].flag != 0) {
-                    break;
-                }
-                printf ("option %s", long_options[opt_idx].name);
-                if (optarg) {
-                    printf (" with arg %s", optarg);
-                }
-                printf ("\n");
-                continue;
             }
-            else {
-                struct opt_routine* routine = opt_rts;
-                for (i = 0; routine[i].parse_cb; i++) {
-                    if (routine[i].opt != c) {
-                        continue;
-                    }
-                    ret = routine[i].parse_cb(c);
-                    if (ret < 0) {
-                        exit(-1);
-                    }
-                    break;
+            printf ("option %s", long_options[opt_idx].name);
+            if (optarg) {
+                printf (" with arg %s", optarg);
+            }
+            printf ("\n");
+            continue;
+        }
+        else {
+            struct opt_routine* routine = opt_rts;
+            for (i = 0; routine[i].parse_cb; i++) {
+                if (routine[i].opt != c) {
+                    continue;
                 }
-                if (!routine[i].parse_cb) {
+                ret = routine[i].parse_cb(c);
+                if (ret < 0) {
                     exit(-1);
                 }
+                break;
             }
-         }
+            if (!routine[i].parse_cb) {
+                exit(-1);
+            }
+        }
      }
 
      if (optind < argc) {
@@ -817,16 +799,14 @@ int main(int argc, char** argv)
 
      {
         int (**routine)(char*) = cmd_routine;
-        int32_t* nitems_addr = NULL;
+        char  data[1024];
+        char* buf = data;
 
-        memset(buf, 0, 1024);
+        memset(data, 0, 1024);
         *(uint32_t*)buf = 0x7fec45fa; //lsctl magic;
          buf += sizeof(uint32_t);
 
         *(int32_t*)buf = 0x45; //VMSG_LSCTL;
-        buf += sizeof(int32_t);
-
-        nitems_addr = (int32_t*)buf;
         buf += sizeof(int32_t);
 
         for (i = 0; routine[i]; i++) {
@@ -836,10 +816,9 @@ int main(int argc, char** argv)
             }
             buf += ret;
         }
-        *(int32_t*)nitems_addr = nlsctl_cmds;
-     }
+        *(int32_t*)buf = 0x7fec45fa; //remark end of msg.
+        buf += sizeof(int32_t);
 
-     {
         struct sockaddr_un unix_addr;
         struct sockaddr_un dest_addr;
         int fd = 0;

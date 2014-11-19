@@ -296,7 +296,6 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
         NULL
     };
 
-    int nitems = 0;
     int what = 0;
     int ret = 0;
     int sz  = 0;
@@ -304,22 +303,18 @@ int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
     vassert(ctl);
     vassert(um);
 
-    nitems = get_int32(um->data);
-    sz += sizeof(int32_t);
-    vlogI(printf("[lsctl] received lsctl request (%d)", nitems));
-
-    while(nitems-- > 0) {
-        what = get_uint32(offset_addr(um->data, sz));
-        sz += sizeof(uint32_t);
-
+    what = get_int32(um->data);
+    while(!IS_LSCTL_MAGIC((uint32_t)what)) {
+        sz += sizeof(int32_t);
         retE((what < 0));
         retE((what >= VLSCTL_BUTT));
 
         ret = routine[what](ctl, um->data, sz);
         retE((ret < 0));
         sz += ret;
-    }
 
+        what = get_int32(offset_addr(um->data, sz));
+    }
     return 0;
 }
 
