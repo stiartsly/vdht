@@ -89,6 +89,7 @@ struct option long_options[] = {
     {"help",                no_argument,       0,        'h'},
     {0, 0, 0, 0}
 };
+static
 void show_usage(void)
 {
     printf("Usage: vlsctlc [OPTION...]\n");
@@ -126,12 +127,32 @@ void show_usage(void)
     printf("  -t  --get_peers          --addr=IP:PORT   request to send get_peers query\n");
     printf("\n");
     printf(" Help Options:\n");
-    printf("  -H, --help                                show this help message\n");
-    printf("  -V, --version                             Print version\n");
+    printf("  -h, --help                                show this help message\n");
+    printf("  -v, --version                             Print version\n");
     printf("\n");
 }
 
+static
+void show_version(void)
+{
+    printf("Version: 0.0.1\n");
+    return ;
+}
+
 static int nlsctl_cmds = 0;
+
+static int has_help_param = 0;
+static int has_ver_param  = 0;
+static int show_help_param(int opt)
+{
+    has_help_param = 1;
+    return 0;
+}
+static int show_ver_param(int opt)
+{
+    has_ver_param = 1;
+    return 0;
+}
 
 static char* lsctlc_socket_def = "/var/run/vdht/lsctl_client";
 static char  lsctlc_socket[256];
@@ -667,63 +688,37 @@ static int dht_query_cmd_pack(char* data)
     return sz;
 }
 
-static int show_help_opt = 0;
-static int show_help_opt_parse(int opt)
-{
-    show_help_opt = 1;
-    return 0;
-}
-
-static void show_help_cmd(void)
-{
-    show_usage();
-    return ;
-}
-
-static int show_version_opt = 0;
-static int show_version_opt_parse(int opt)
-{
-    show_version_opt = 1;
-    return 0;
-}
-
-static void show_version_cmd(void)
-{
-    printf("Version: 0.0.1\n");
-    return ;
-}
-
 struct opt_routine {
     char opt;
     int (*parse_cb)(int);
 };
 
 struct opt_routine opt_rts[] = {
-    {'U', lsctlc_socket_param    },
-    {'S', lsctls_socket_param    },
-    {'d', host_cmd_param         },
-    {'D', host_cmd_param         },
-    {'x', host_cmd_param         },
-    {'s', host_cmd_param         },
-    {'c', host_cmd_param         },
-    {'a', node_op_param          },
-    {'e', node_op_param          },
-    {'p', plugin_cmd_param       },
-    {'R', plugin_cmd_param       },
-    {'T', plugin_cmd_param       },
-    {'P', plugin_cmd_param       },
-    {'u', plugin_cmd_param       },
-    {'w', plugin_cmd_param       },
-    {'q', plugin_cmd_param       },
-    {'m', addr_opt_param         },
-    {'t', dht_query_param        },
-    {'J', dht_query_param        },
-    {'K', dht_query_param        },
-    {'L', dht_query_param        },
-    {'M', dht_query_param        },
-    {'N', dht_query_param        },
-    {'v', show_version_opt_parse },
-    {'h', show_help_opt_parse    },
+    {'U', lsctlc_socket_param },
+    {'S', lsctls_socket_param },
+    {'d', host_cmd_param      },
+    {'D', host_cmd_param      },
+    {'x', host_cmd_param      },
+    {'s', host_cmd_param      },
+    {'c', host_cmd_param      },
+    {'a', node_op_param       },
+    {'e', node_op_param       },
+    {'p', plugin_cmd_param    },
+    {'R', plugin_cmd_param    },
+    {'T', plugin_cmd_param    },
+    {'P', plugin_cmd_param    },
+    {'u', plugin_cmd_param    },
+    {'w', plugin_cmd_param    },
+    {'q', plugin_cmd_param    },
+    {'m', addr_opt_param      },
+    {'t', dht_query_param     },
+    {'J', dht_query_param     },
+    {'K', dht_query_param     },
+    {'L', dht_query_param     },
+    {'M', dht_query_param     },
+    {'N', dht_query_param     },
+    {'v', show_ver_param      },
+    {'h', show_help_param     },
     {0, 0}
 };
 
@@ -764,7 +759,6 @@ int main(int argc, char** argv)
         int i = 0;
 
         while(c >= 0) {
-
             c = getopt_long(argc, argv, "U:S:dDxscaepRTPuwm:qtJKLMNvh", long_options, &opt_idx);
             if (c < 0) {
                 break;
@@ -792,13 +786,25 @@ int main(int argc, char** argv)
                     break;
                 }
                 if (!routine[i].parse_cb) {
-                    printf("Invalid Arguments\n");
                     exit(-1);
                 }
             }
          }
      }
 
+     if (optind < argc) {
+            printf("Too many arguments.\n");
+            show_usage();
+            exit(-1);
+     }
+     if (has_help_param) {
+        show_usage();
+        return 0;
+     }
+     if (has_ver_param) {
+        show_version();
+        return 0;
+     }
      {
         int (**routine)(void) = check_routine;
         for (i = 0; (routine[i] != 0); i++) {
@@ -806,15 +812,6 @@ int main(int argc, char** argv)
             if (ret < 0) {
                 exit(-1);
             }
-        }
-
-        if (show_help_opt) {
-            show_help_cmd();
-            return 0;
-        }
-        if (show_version_opt) {
-            show_version_cmd();
-            return 0;
         }
      }
 
