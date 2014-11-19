@@ -681,7 +681,7 @@ struct opt_routine {
     int (*parse_cb)(int);
 };
 
-struct opt_routine opt_rts[] = {
+struct opt_routine param_routines[] = {
     {'U', lsctlc_socket_param },
     {'S', lsctls_socket_param },
     {'d', host_cmd_param      },
@@ -710,7 +710,7 @@ struct opt_routine opt_rts[] = {
     {0, 0}
 };
 
-int (*check_routine[])(void) = {
+int (*check_routines[])(void) = {
     lsctlc_socket_check,
     lsctls_socket_check,
     host_cmd_check,
@@ -720,7 +720,7 @@ int (*check_routine[])(void) = {
     NULL
 };
 
-int (*cmd_routine[])(char*) = {
+int (*pack_routines[])(char*) = {
     host_cmd_pack,
     plugin_cmd_pack,
     node_op_cmd_pack,
@@ -757,7 +757,7 @@ int main(int argc, char** argv)
             continue;
         }
         else {
-            struct opt_routine* routine = opt_rts;
+            struct opt_routine* routine = param_routines;
             for (i = 0; routine[i].parse_cb; i++) {
                 if (routine[i].opt != c) {
                     continue;
@@ -788,19 +788,17 @@ int main(int argc, char** argv)
         return 0;
      }
      {
-        int (**routine)(void) = check_routine;
-        for (i = 0; (routine[i] != 0); i++) {
-            ret = routine[i]();
+        int (**check_cb)(void) = check_routines;
+        int (**pack_cb)(char*) = pack_routines;
+        char  data[1024];
+        char* buf = data;
+
+        for (i = 0; (check_cb[i] != 0); i++) {
+            ret = check_cb[i]();
             if (ret < 0) {
                 exit(-1);
             }
         }
-     }
-
-     {
-        int (**routine)(char*) = cmd_routine;
-        char  data[1024];
-        char* buf = data;
 
         memset(data, 0, 1024);
         *(uint32_t*)buf = 0x7fec45fa; //lsctl magic;
@@ -809,8 +807,8 @@ int main(int argc, char** argv)
         *(int32_t*)buf = 0x45; //VMSG_LSCTL;
         buf += sizeof(int32_t);
 
-        for (i = 0; routine[i]; i++) {
-            ret = routine[i](buf);
+        for (i = 0; pack_cb[i]; i++) {
+            ret = pack_cb[i](buf);
             if (ret < 0) {
                 continue;
             }
