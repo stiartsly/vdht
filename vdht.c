@@ -12,12 +12,12 @@ struct vdhtId_desc dhtId_desc[] = {
     {VDHT_PING_R,               "ping_rsp"              },
     {VDHT_FIND_NODE,            "find_node"             },
     {VDHT_FIND_NODE_R,          "find_node_rsp"         },
+    {VDHT_FIND_CLOSEST_NODES,   "find_closest_nodes"    },
+    {VDHT_FIND_CLOSEST_NODES_R, "find_closest_nodes_rsp"},
     {VDHT_GET_PEERS,            "get_peers"             },
     {VDHT_GET_PEERS_R,          "get_peers_rsp"         },
     {VDHT_POST_HASH,            "post_hash"             },
     {VDHT_POST_HASH_R,          "post_hash_rsp"         },
-    {VDHT_FIND_CLOSEST_NODES,   "find_closest_nodes"    },
-    {VDHT_FIND_CLOSEST_NODES_R, "find_closest_nodes_rsp"},
     {VDHT_GET_PLUGIN,           "get_plugin"            },
     {VDHT_GET_PLUGIN_R,         "get_plugin_rsp"        },
     {VDHT_UNKNOWN, NULL}
@@ -321,49 +321,6 @@ int _vdht_enc_find_node_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, vo
 }
 
 /*
- * @token :
- * @src : id of source node that send ping query.
- * @hash:
- * @buf:
- * @len:
- */
-static
-int _vdht_enc_get_peers(vtoken* token,vnodeId* srcId, vnodeHash* hash, void* buf, int sz)
-{
-    vassert(token);
-    vassert(srcId);
-    vassert(hash);
-    vassert(buf);
-    vassert(sz> 0);
-    //todo;
-    return 0;
-}
-
-/*
- * @token :
- * @srcId :
- * @result:
- * @buf:
- * @sz:
- */
-static
-int _vdht_enc_get_peers_rsp(
-        vtoken* token,
-        vnodeId* srcId,
-        struct varray* result,
-        void* buf,
-        int sz)
-{
-    vassert(token);
-    vassert(srcId);
-    vassert(result);
-    vassert(buf);
-    vassert(sz > 0);
-    //todo;
-    return 0;
-}
-
-/*
  * @token:
  * @srcId: Id of node sending query.
  * @target: Id of queried node.
@@ -493,7 +450,50 @@ int _vdht_enc_find_closest_nodes_rsp(
 }
 
 
- /* 1. request special plug info
+/*
+ * @token :
+ * @src : id of source node that send ping query.
+ * @hash:
+ * @buf:
+ * @len:
+ */
+static
+int _vdht_enc_get_peers(vtoken* token,vnodeId* srcId, vnodeHash* hash, void* buf, int sz)
+{
+    vassert(token);
+    vassert(srcId);
+    vassert(hash);
+    vassert(buf);
+    vassert(sz> 0);
+    //todo;
+    return 0;
+}
+
+/*
+ * @token :
+ * @srcId :
+ * @result:
+ * @buf:
+ * @sz:
+ */
+static
+int _vdht_enc_get_peers_rsp(
+        vtoken* token,
+        vnodeId* srcId,
+        struct varray* result,
+        void* buf,
+        int sz)
+{
+    vassert(token);
+    vassert(srcId);
+    vassert(result);
+    vassert(buf);
+    vassert(sz > 0);
+    //todo;
+    return 0;
+}
+
+/* 1. request special plug info
  *  Query = { "t": "80407320171565445232",
  *            "y": "q",
  *            "q": "get_plugin"
@@ -591,10 +591,10 @@ struct vdht_enc_ops dht_enc_ops = {
     .ping_rsp               = _vdht_enc_ping_rsp,
     .find_node              = _vdht_enc_find_node,
     .find_node_rsp          = _vdht_enc_find_node_rsp,
-    .get_peers              = _vdht_enc_get_peers,
-    .get_peers_rsp          = _vdht_enc_get_peers_rsp,
     .find_closest_nodes     = _vdht_enc_find_closest_nodes,
     .find_closest_nodes_rsp = _vdht_enc_find_closest_nodes_rsp,
+    .get_peers              = _vdht_enc_get_peers,
+    .get_peers_rsp          = _vdht_enc_get_peers_rsp,
     .get_plugin             = _vdht_enc_get_plugin,
     .get_plugin_rsp         = _vdht_enc_get_plugin_rsp
 };
@@ -859,42 +859,6 @@ int _vdht_dec_find_node_rsp(void* ctxt, vtoken* token, vnodeId* srcId, vnodeInfo
  * @sz:
  * @token:
  * @srcId:
- * @hash:
- */
-static
-int _vdht_dec_get_peers(void* ctxt, vtoken* token, vnodeId* srcId, vnodeHash* hash)
-{
-    vassert(token > 0);
-    vassert(srcId);
-    vassert(hash);
-
-    //todo;
-    return 0;
-}
-
-/*
- * @buf:
- * @sz:
- * @token:
- * @srcId:
- * @result:
- */
-static
-int _vdht_dec_get_peers_rsp(void* ctxt, vtoken* token, vnodeId* srcId, struct varray* result)
-{
-    vassert(token);
-    vassert(srcId);
-    vassert(result);
-
-    //todo;
-    return 0;
-}
-
-/*
- * @buf:
- * @sz:
- * @token:
- * @srcId:
  * @closest:
  */
 static
@@ -961,6 +925,43 @@ int _vdht_dec_find_closest_nodes_rsp(void* ctxt, vtoken* token, vnodeId* srcId, 
         varray_add_tail(closest, info);
     }
 
+    return 0;
+}
+
+
+/*
+ * @buf:
+ * @sz:
+ * @token:
+ * @srcId:
+ * @hash:
+ */
+static
+int _vdht_dec_get_peers(void* ctxt, vtoken* token, vnodeId* srcId, vnodeHash* hash)
+{
+    vassert(token > 0);
+    vassert(srcId);
+    vassert(hash);
+
+    //todo;
+    return 0;
+}
+
+/*
+ * @buf:
+ * @sz:
+ * @token:
+ * @srcId:
+ * @result:
+ */
+static
+int _vdht_dec_get_peers_rsp(void* ctxt, vtoken* token, vnodeId* srcId, struct varray* result)
+{
+    vassert(token);
+    vassert(srcId);
+    vassert(result);
+
+    //todo;
     return 0;
 }
 
@@ -1099,10 +1100,10 @@ struct vdht_dec_ops dht_dec_ops = {
     .ping_rsp               = _vdht_dec_ping_rsp,
     .find_node              = _vdht_dec_find_node,
     .find_node_rsp          = _vdht_dec_find_node_rsp,
-    .get_peers              = _vdht_dec_get_peers,
-    .get_peers_rsp          = _vdht_dec_get_peers_rsp,
     .find_closest_nodes     = _vdht_dec_find_closest_nodes,
     .find_closest_nodes_rsp = _vdht_dec_find_closest_nodes_rsp,
+    .get_peers              = _vdht_dec_get_peers,
+    .get_peers_rsp          = _vdht_dec_get_peers_rsp,
     .get_plugin             = _vdht_dec_get_plugin,
     .get_plugin_rsp         = _vdht_dec_get_plugin_rsp
 };
