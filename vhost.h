@@ -19,7 +19,7 @@ struct vhost_ops {
     int   (*stabilize)  (struct vhost*);
     int   (*plug)       (struct vhost*, int, struct sockaddr_in*);
     int   (*unplug)     (struct vhost*, int, struct sockaddr_in*);
-    int   (*req_plugin) (struct vhost*, int, vplugin_reqblk_t, void*);
+    int   (*req_plugin) (struct vhost*, int, struct sockaddr_in*);
     int   (*loop)       (struct vhost*);
     int   (*req_quit)   (struct vhost*);
     int   (*dump)       (struct vhost*);

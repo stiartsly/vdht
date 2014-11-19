@@ -409,3 +409,19 @@ int vnodeInfo_init(vnodeInfo* info, vnodeId* id, struct sockaddr_in* addr, uint3
     info->flags = flags;
     return 0;
 }
+
+/*
+ *
+ */
+
+void vserviceId_make(vserviceId* id)
+{
+    vnodeId_make((vnodeId*)id);
+    return ;
+}
+
+void vserviceId_dump(vserviceId *id)
+{
+    //tood;
+    return ;
+}

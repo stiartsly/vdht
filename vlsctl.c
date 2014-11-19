@@ -214,23 +214,9 @@ int _vlsctl_service_unavailable(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vlsctl_service_pick(struct vlsctl* lsctl, void* data, int offset)
 {
-    int _aux_req_plugin_cb(struct sockaddr_in* addr, void* cookie)
-    {
-        char ip[64];
-        int port = 0;
-        int ret  = 0;
-
-        vassert(addr);
-        memset(ip, 0, 64);
-        ret = vsockaddr_unconvert(addr, ip, 64, &port);
-        retE((ret < 0));
-        printf("req_plugin rsp: %s:%d\n", ip, port);
-
-        //todo;
-        return 0;
-    }
     struct vhost* host = lsctl->host;
-    int plgnId = 0;
+    struct sockaddr_in addr;
+    int what = 0;
     int ret = 0;
     int sz  = 0;
 
@@ -238,13 +224,14 @@ int _vlsctl_service_pick(struct vlsctl* lsctl, void* data, int offset)
     vassert(data);
     vassert(offset > 0);
 
-    plgnId = get_int32(offset_addr(data, offset));
-    retE((plgnId <  PLUGIN_RELAY));
-    retE((plgnId >= PLUGIN_BUTT ));
+    what = get_int32(offset_addr(data, offset));
+    retE((what <  PLUGIN_RELAY));
+    retE((what >= PLUGIN_BUTT ));
     sz += sizeof(int32_t);
 
-    ret = host->ops->req_plugin(host, plgnId, _aux_req_plugin_cb, lsctl);
+    ret = host->ops->req_plugin(host, what, &addr);
     retE((ret < 0));
+    vsockaddr_dump(&addr);
     return sz;
 }
 
