@@ -449,6 +449,30 @@ int _vdht_enc_find_closest_nodes_rsp(
     return ret;
 }
 
+static
+int _vdht_enc_post_service(vtoken* token, vserviceInfo* service, void* buf, int sz)
+{
+    vassert(token);
+    vassert(service);
+    vassert(buf);
+    vassert(sz > 0);
+
+    //todo;
+    return 0;
+}
+
+static
+int _vdht_enc_post_service_rsp(vtoken* token, struct varray* services, void* buf, int sz)
+{
+    vassert(token);
+    vassert(services);
+    vassert(buf);
+    vassert(sz > 0);
+
+    //todo;
+    return 0;
+}
+
 
 /*
  * @token :
@@ -593,6 +617,8 @@ struct vdht_enc_ops dht_enc_ops = {
     .find_node_rsp          = _vdht_enc_find_node_rsp,
     .find_closest_nodes     = _vdht_enc_find_closest_nodes,
     .find_closest_nodes_rsp = _vdht_enc_find_closest_nodes_rsp,
+    .post_service           = _vdht_enc_post_service,
+    .post_service_rsp       = _vdht_enc_post_service_rsp,
     .get_peers              = _vdht_enc_get_peers,
     .get_peers_rsp          = _vdht_enc_get_peers_rsp,
     .get_plugin             = _vdht_enc_get_plugin,
@@ -928,6 +954,28 @@ int _vdht_dec_find_closest_nodes_rsp(void* ctxt, vtoken* token, vnodeId* srcId, 
     return 0;
 }
 
+static
+int _vdht_dec_post_service(void* ctxt, vtoken* token, vserviceInfo* service)
+{
+    vassert(ctxt);
+    vassert(token);
+    vassert(service);
+
+    //todo;
+    return 0;
+}
+
+static
+int _vdht_dec_post_service_rsp(void* ctxt, vtoken* token, struct varray* services)
+{
+    vassert(ctxt);
+    vassert(token);
+    vassert(services);
+
+    //todo;
+    return 0;
+}
+
 
 /*
  * @buf:
@@ -1102,6 +1150,8 @@ struct vdht_dec_ops dht_dec_ops = {
     .find_node_rsp          = _vdht_dec_find_node_rsp,
     .find_closest_nodes     = _vdht_dec_find_closest_nodes,
     .find_closest_nodes_rsp = _vdht_dec_find_closest_nodes_rsp,
+    .post_service           = _vdht_dec_post_service,
+    .post_service_rsp       = _vdht_dec_post_service_rsp,
     .get_peers              = _vdht_dec_get_peers,
     .get_peers_rsp          = _vdht_dec_get_peers_rsp,
     .get_plugin             = _vdht_dec_get_plugin,

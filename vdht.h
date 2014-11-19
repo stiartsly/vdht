@@ -68,6 +68,18 @@ struct vdht_enc_ops {
             void* buf,
             int   sz);
 
+    int (*post_service)(
+            vtoken* token,
+            vserviceInfo* service,
+            void* buf,
+            int   sz);
+
+    int (*post_service_rsp)(
+            vtoken* token,
+            struct varray* services,
+            void* buf,
+            int   sz);
+
     int (*get_peers)(
             vtoken* token,
             vnodeId* srcId,
@@ -149,6 +161,18 @@ struct vdht_dec_ops {
             vtoken* token,
             vnodeId* srcId,
             struct varray* result
+        );
+
+    int (*post_service) (
+            void* ctxt,
+            vtoken* token,
+            vserviceInfo* service
+        );
+
+    int (*post_service_rsp)(
+            void* ctxt,
+            vtoken* token,
+            struct varray* services
         );
 
     int (*get_peers)(

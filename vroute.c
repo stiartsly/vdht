@@ -731,6 +731,27 @@ struct vroute_plugin_ops route_plugin_ops = {
  * @dest : address to target node.
  */
 static
+int _aux_vroute_snd_dht_msg(struct vroute* route, struct sockaddr_in* addr, void* buf, int len)
+{
+    struct vmsg_usr msg = {
+        .addr  = to_vsockaddr_from_sin(addr),
+        .msgId = VMSG_DHT,
+        .data  = buf,
+        .len   = len
+    };
+    int ret = 0;
+
+    vassert(route);
+    vassert(addr);
+    vassert(buf);
+    vassert(len > 0);
+
+    ret = route->msger->ops->push(route->msger, &msg);
+    retE((ret < 0));
+    return 0;
+}
+
+static
 int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
 {
     struct vdht_enc_ops* enc_ops = &dht_enc_ops;
@@ -747,17 +768,9 @@ int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
 
     ret = enc_ops->ping(&token, &route->ownId.id, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&dest->addr),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-        vlogI(printf("send 'ping'"));
-    }
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @ping query"));
     return 0;
 }
 
@@ -784,17 +797,9 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
 
     ret = enc_ops->ping_rsp(token, info, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&dest->addr),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-        vlogI(printf("send 'ping rsp'"));
-    }
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @ping_rsp"));
     return 0;
 }
 
@@ -822,17 +827,9 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
 
     ret = enc_ops->find_node(&token, &route->ownId.id, target, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&dest->addr),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-        vlogI(printf("send 'find_node'"));
-    }
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @find_node query"));
     return 0;
 }
 
@@ -857,17 +854,9 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
 
     ret = enc_ops->find_node_rsp(token, &route->ownId.id, info, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&dest->addr),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-        vlogI(printf("send 'find_node rsp'"));
-    }
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @find_node_rsp"));
     return 0;
 }
 
@@ -894,16 +883,9 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
 
     ret = enc_ops->find_closest_nodes(&token, &route->ownId.id, target, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&dest->addr),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @find_closest_nodes query"));
     return 0;
 }
 
@@ -930,38 +912,56 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vt
 
     ret = enc_ops->find_closest_nodes_rsp(token, &route->ownId.id, closest, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&dest->addr),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @find_closest_nodes_rsp"));
     return 0;
 }
 
 static
-int _vroute_dht_post_service(struct vroute* route, vnodeAddr* dest, vserviceInfo* info)
+int _vroute_dht_post_service(struct vroute* route, vnodeAddr* dest, vserviceInfo* service)
 {
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
+    void* buf = NULL;
+    vtoken token;
+    int ret = 0;
+
     vassert(route);
     vassert(dest);
-    vassert(info);
+    vassert(service);
 
-    //todo;
+    vtoken_make(&token);
+    buf = vdht_buf_alloc();
+    retE((!buf));
+
+    ret = enc_ops->post_service(&token, service, buf, vdht_buf_len());
+    ret1E((ret < 0), vdht_buf_free(buf));
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @post_service query"));
     return 0;
 }
 
 static
 int _vroute_dht_post_service_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* services)
 {
+    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
+    void* buf = NULL;
+    int ret = 0;
+
     vassert(route);
     vassert(dest);
+    vassert(token);
     vassert(services);
 
-    //todo;
+    buf = vdht_buf_alloc();
+    retE((!buf));
+
+    ret = enc_ops->post_service_rsp(token, services, buf, vdht_buf_len());
+    ret1E((ret < 0), vdht_buf_free(buf));
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @post_service_rsp"));
     return 0;
 }
 
@@ -1021,17 +1021,9 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
 
     ret = enc_ops->get_peers(&token, &route->ownId.id, hash, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&dest->addr),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-        vlogI(printf("send 'get_peers'"));
-    }
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @get_peers"));
     return 0;
 }
 
@@ -1058,17 +1050,9 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
 
     ret = enc_ops->get_peers_rsp(token, &route->ownId.id, peers, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&dest->addr),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-        vlogI(printf("send 'get_peers' rsp"));
-    }
+    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
+    ret1E((ret < 0), vdht_buf_free(buf));
+    vlogI(printf("send @get_peers_rsp"));
     return 0;
 }
 
