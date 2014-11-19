@@ -36,6 +36,7 @@ struct vlsctl_ops {
     int (*unplug)    (struct vlsctl*, void*, int);
     int (*req_plugin)(struct vlsctl*, void*, int);
     int (*cfg_dump)  (struct vlsctl*, void*, int);
+    int (*dsptch_msg)(struct vlsctl*, void*, int);
 };
 
 struct vlsctl {

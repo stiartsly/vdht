@@ -263,6 +263,47 @@ int _vlsctl_cfg_dump(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
+int _vlsctl_dispatch_msg(struct vlsctl* lsctl, void* data, int offset)
+{
+    int (*routine_cb[])(struct vlsctl*, void*, int) = {
+        lsctl->ops->host_up,
+        lsctl->ops->host_down,
+        lsctl->ops->host_exit,
+        lsctl->ops->host_dump,
+        lsctl->ops->dht_query,
+        lsctl->ops->add_node,
+        lsctl->ops->del_node,
+        lsctl->ops->plug,
+        lsctl->ops->unplug,
+        lsctl->ops->req_plugin,
+        lsctl->ops->cfg_dump,
+        NULL
+    };
+    int what = 0;
+    int ret = 0;
+    int sz = 0;
+
+    vassert(lsctl);
+    vassert(data);
+    vassert(!offset);
+
+    what = get_int32(data);
+    while(!IS_LSCTL_MAGIC((uint32_t)what)) {
+        sz += sizeof(int32_t);
+        retE((what < 0));
+        retE((what >= VLSCTL_BUTT));
+
+        ret = routine_cb[what](lsctl, data, sz);
+        retE((ret < 0));
+        sz += ret;
+
+        what = get_int32(offset_addr(data, sz));
+
+    }
+    return 0;
+}
+
+static
 struct vlsctl_ops lsctl_ops = {
     .host_up    = _vlsctl_host_up,
     .host_down  = _vlsctl_host_down,
@@ -274,47 +315,17 @@ struct vlsctl_ops lsctl_ops = {
     .plug       = _vlsctl_plug,
     .unplug     = _vlsctl_unplug,
     .req_plugin = _vlsctl_req_plugin,
-    .cfg_dump   = _vlsctl_cfg_dump
+    .cfg_dump   = _vlsctl_cfg_dump,
+    .dsptch_msg = _vlsctl_dispatch_msg
 };
 
-static
-int _aux_msg_parse_cb(void* cookie, struct vmsg_usr* um)
+int _aux_vlsctl_msg_cb(void* cookie, struct vmsg_usr* um)
 {
-    struct vlsctl* ctl = (struct vlsctl*)cookie;
-    int (*routine[])(struct vlsctl*, void*, int) = {
-        ctl->ops->host_up,
-        ctl->ops->host_down,
-        ctl->ops->host_exit,
-        ctl->ops->host_dump,
-        ctl->ops->dht_query,
-        ctl->ops->add_node,
-        ctl->ops->del_node,
-        ctl->ops->plug,
-        ctl->ops->unplug,
-        ctl->ops->req_plugin,
-        ctl->ops->cfg_dump,
-        NULL
-    };
-
-    int what = 0;
+    struct vlsctl* lsctl = (struct vlsctl*)cookie;
     int ret = 0;
-    int sz  = 0;
 
-    vassert(ctl);
-    vassert(um);
-
-    what = get_int32(um->data);
-    while(!IS_LSCTL_MAGIC((uint32_t)what)) {
-        sz += sizeof(int32_t);
-        retE((what < 0));
-        retE((what >= VLSCTL_BUTT));
-
-        ret = routine[what](ctl, um->data, sz);
-        retE((ret < 0));
-        sz += ret;
-
-        what = get_int32(offset_addr(um->data, sz));
-    }
+    ret = lsctl->ops->dsptch_msg(lsctl, um->data, 0);
+    retE((ret < 0));
     return 0;
 }
 
@@ -372,7 +383,7 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
     }
 
     vmsger_reg_unpack_cb  (&ctl->msger, _aux_msg_unpack_cb, ctl);
-    ctl->msger.ops->add_cb(&ctl->msger, ctl, _aux_msg_parse_cb, VMSG_LSCTL);
+    ctl->msger.ops->add_cb(&ctl->msger, ctl, _aux_vlsctl_msg_cb, VMSG_LSCTL);
     return 0;
 }
 
