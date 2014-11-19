@@ -32,6 +32,8 @@ struct vlsctl_ops {
     int (*dht_query) (struct vlsctl*, void*, int);
     int (*add_node)  (struct vlsctl*, void*, int);
     int (*del_node)  (struct vlsctl*, void*, int);
+    int (*service_announce)   (struct vlsctl*, void*, int);
+    int (*service_unavailable)(struct vlsctl*, void*, int);
     int (*plug)      (struct vlsctl*, void*, int);
     int (*unplug)    (struct vlsctl*, void*, int);
     int (*req_plugin)(struct vlsctl*, void*, int);

@@ -156,39 +156,39 @@ int _vlsctl_del_node(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
-int _vlsctl_plug(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_service_announce(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
-    int plgnId = 0;
+    int what = 0;
     int ret = 0;
-    int sz  = 0;
+    int sz = 0;
 
     vassert(lsctl);
     vassert(data);
     vassert(offset > 0);
 
-    plgnId = get_int32(offset_addr(data, offset + sz));
-    retE((plgnId <  PLUGIN_RELAY));
-    retE((plgnId >= PLUGIN_BUTT ));
+    what = get_int32(offset_addr(data, offset));
+    retE((what <  PLUGIN_RELAY));
+    retE((what >= PLUGIN_BUTT));
     sz += sizeof(int32_t);
 
     ret = _aux_get_addr(data, offset + sz, &sin);
     retE((ret < 0));
     sz += ret;
 
-    ret = host->ops->plug(host, plgnId, &sin);
+    ret = host->ops->plug(host, what, &sin);
     retE((ret < 0));
-    vlogI(printf("plugin(%s) up.", vpluger_get_desc(plgnId)));
+    vlogI(printf("service (%s) published", vpluger_get_desc(what)));
     return sz;
 }
 
 static
-int _vlsctl_unplug(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_service_unavailable(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
-    int plgnId = 0;
+    int what = 0;
     int ret = 0;
     int sz  = 0;
 
@@ -196,18 +196,18 @@ int _vlsctl_unplug(struct vlsctl* lsctl, void* data, int offset)
     vassert(data);
     vassert(offset > 0);
 
-    plgnId = get_int32(offset_addr(data, offset + sz));
-    retE((plgnId <  PLUGIN_RELAY));
-    retE((plgnId >= PLUGIN_BUTT ));
+    what = get_int32(offset_addr(data, offset + sz));
+    retE((what <  PLUGIN_RELAY));
+    retE((what >= PLUGIN_BUTT ));
     sz += sizeof(int32_t);
 
     ret = _aux_get_addr(data, offset + sz, &sin);
     retE((ret < 0));
     sz += ret;
 
-    ret = host->ops->unplug(host, plgnId, &sin);
+    ret = host->ops->unplug(host, what, &sin);
     retE((ret < 0));
-    vlogI(printf("plugin(%s) down.", vpluger_get_desc(plgnId)));
+    vlogI(printf("service (%s) unavailable.", vpluger_get_desc(what)));
     return sz;
 }
 
@@ -271,8 +271,8 @@ int _vlsctl_dispatch_msg(struct vlsctl* lsctl, void* data, int offset)
         lsctl->ops->dht_query,
         lsctl->ops->add_node,
         lsctl->ops->del_node,
-        lsctl->ops->plug,
-        lsctl->ops->unplug,
+        lsctl->ops->service_announce,
+        lsctl->ops->service_unavailable,
         lsctl->ops->req_plugin,
         lsctl->ops->cfg_dump,
         NULL
@@ -310,8 +310,8 @@ struct vlsctl_ops lsctl_ops = {
     .dht_query  = _vlsctl_dht_query,
     .add_node   = _vlsctl_add_node,
     .del_node   = _vlsctl_del_node,
-    .plug       = _vlsctl_plug,
-    .unplug     = _vlsctl_unplug,
+    .service_announce    = _vlsctl_service_announce,
+    .service_unavailable = _vlsctl_service_unavailable,
     .req_plugin = _vlsctl_req_plugin,
     .cfg_dump   = _vlsctl_cfg_dump,
     .dsptch_msg = _vlsctl_dispatch_msg

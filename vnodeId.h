@@ -101,7 +101,7 @@ int  vnodeInfo_init(vnodeInfo*, vnodeId*, struct sockaddr_in*, uint32_t, vnodeVe
  struct vserviceInfo {
     serviceId id;
     struct sockaddr_in addr;
-    //todo;
+    int usage;
  };
  typedef struct vserviceInfo vserviceInfo;
 
