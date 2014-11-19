@@ -937,6 +937,28 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vt
     return 0;
 }
 
+static
+int _vroute_dht_post_service(struct vroute* route, vnodeAddr* dest, vserviceInfo* info)
+{
+    vassert(route);
+    vassert(dest);
+    vassert(info);
+
+    //todo;
+    return 0;
+}
+
+static
+int _vroute_dht_post_service_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* services)
+{
+    vassert(route);
+    vassert(dest);
+    vassert(services);
+
+    //todo;
+    return 0;
+}
+
 /*
  * @route:
  * @dest :
@@ -1052,6 +1074,8 @@ struct vroute_dht_ops route_dht_ops = {
     .find_node_rsp          = _vroute_dht_find_node_rsp,
     .find_closest_nodes     = _vroute_dht_find_closest_nodes,
     .find_closest_nodes_rsp = _vroute_dht_find_closest_nodes_rsp,
+    .post_service           = _vroute_dht_post_service,
+    .post_service_rsp       = _vroute_dht_post_service_rsp,
     .post_hash              = _vroute_dht_post_hash,
     .post_hash_rsp          = _vroute_dht_post_hash_rsp,
     .get_peers              = _vroute_dht_get_peers,
@@ -1259,6 +1283,27 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, struct sockaddr_in* 
     varray_deinit(&closest);
     return 0;
 }
+static
+int _vroute_cb_post_service(struct vroute* route, struct sockaddr_in* from, void* ctxt)
+{
+    vassert(route);
+    vassert(from);
+    vassert(ctxt);
+
+    //todo;
+    return 0;
+}
+
+static
+int _vroute_cb_post_service_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
+{
+    vassert(route);
+    vassert(from);
+    vassert(ctxt);
+
+    //todo;
+    return 0;
+}
 
 static
 int _vroute_cb_post_hash(struct vroute* route, struct sockaddr_in* from, void* ctxt)
@@ -1340,6 +1385,8 @@ struct vroute_cb_ops route_cb_ops = {
     .find_node_rsp          = _vroute_cb_find_node_rsp,
     .find_closest_nodes     = _vroute_cb_find_closest_nodes,
     .find_closest_nodes_rsp = _vroute_cb_find_closest_nodes_rsp,
+    .post_service           = _vroute_cb_post_service,
+    .post_service_rsp       = _vroute_cb_post_service_rsp,
     .post_hash              = _vroute_cb_post_hash,
     .post_hash_rsp          = _vroute_cb_post_hash_rsp,
     .get_peers              = _vroute_cb_get_peers,
@@ -1360,6 +1407,8 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
         route->cb_ops->find_node_rsp,
         route->cb_ops->find_closest_nodes,
         route->cb_ops->find_closest_nodes_rsp,
+        route->cb_ops->post_service,
+        route->cb_ops->post_service_rsp,
         route->cb_ops->get_peers,
         route->cb_ops->get_peers_rsp,
         route->cb_ops->post_hash,

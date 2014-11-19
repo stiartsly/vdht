@@ -19,6 +19,7 @@ typedef struct vnodeId vnodeMetric;
 typedef struct vnodeId vnodeVer;
 typedef struct vnodeId vnodeHash;
 typedef struct vnodeId vtoken;
+typedef struct vnodeId serviceId;
 
 /*
  * vnode addr
@@ -92,5 +93,17 @@ void vtoken_dump   (vtoken*);
 vnodeInfo* vnodeInfo_alloc(void);
 void vnodeInfo_free(vnodeInfo*);
 int  vnodeInfo_init(vnodeInfo*, vnodeId*, struct sockaddr_in*, uint32_t, vnodeVer*);
+
+
+/*
+ * vserviceInfo
+ */
+ struct vserviceInfo {
+    serviceId id;
+    struct sockaddr_in addr;
+    //todo;
+ };
+ typedef struct vserviceInfo vserviceInfo;
+
 
 #endif

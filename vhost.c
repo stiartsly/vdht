@@ -280,6 +280,7 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest)
         ret = ops->find_closest_nodes(&host->route, &nodeAddr, &host->ownId.id);
         break;
 
+    case VDHT_POST_SERVICE:
     case VDHT_POST_HASH:
     case VDHT_GET_PEERS:
     default:
