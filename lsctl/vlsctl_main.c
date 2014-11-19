@@ -104,8 +104,8 @@ void show_usage(void)
     printf("  -c, --dump-config                         request to dump config information\n");
     printf("\n");
     printf(" About other dht nodes options:\n");
-    printf("  -a, --add-node                            request to join node\n");
-    printf("  -e, --del-node                            request to drop node\n");
+    printf("  -a, --add-node           --addr=IP:PORT   request to join node\n");
+    printf("  -e, --del-node           --addr=IP:PORT   request to drop node\n");
     printf("\n");
     printf(" About plugin options:\n");
     printf("  -p  --relay    --up      --addr=IP:PORT   request to post a relay service\n");
@@ -491,53 +491,56 @@ static int plugin_cmd_pack(char* data)
     return sz;
 }
 
-static int join_node_opt = 0;
-static int drop_node_opt = 0;
-static int join_node_opt_parse(int opt)
+static int has_join_node_param = 0;
+static int has_drop_node_param = 0;
+static int node_op_param(int opt)
 {
-    join_node_opt = 1;
+    switch(opt) {
+    case 'a':
+        has_join_node_param = 1;
+        break;
+    case 'e':
+        has_drop_node_param = 1;
+        break;
+    default:
+        return -1;
+    }
     return 0;
 }
-static int drop_node_opt_parse(int opt)
+static int has_join_node_cmd = 0;
+static int has_drop_node_cmd = 0;
+static int node_op_check(void)
 {
-    drop_node_opt = 1;
-    return 0;
-}
-
-static int join_node_cmd = 0;
-static int join_node_opt_check(void)
-{
-    if (join_node_opt) {
+    if (has_join_node_param) {
         if (!has_addr_param) {
             printf("Few arguments\n");
             return -1;
         }
-        join_node_cmd = 1;
+        has_join_node_cmd = 1;
     }
-    return 0;
-}
-static int drop_node_cmd = 0;
-static int drop_node_opt_check(void)
-{
-    if (drop_node_opt) {
+    if (has_drop_node_param) {
         if (!has_addr_param) {
             printf("Few arguments\n");
             return -1;
         }
-        drop_node_cmd = 1;
+        has_drop_node_cmd = 1;
     }
     return 0;
 }
 
-static int join_node_cmd_pack(char* data)
+static int node_op_cmd_pack(char* data)
 {
     int sz = 0;
 
-    if (!join_node_cmd) {
+    if (has_join_node_cmd) {
+        *(int32_t*)data = VLSCTL_NODE_JOIN;
+        nlsctl_cmds++;
+    } else if (has_drop_node_cmd) {
+        *(int32_t*)data = VLSCTL_NODE_DROP;
+        nlsctl_cmds++;
+    } else {
         return -1;
     }
-
-    *(int32_t*)data = VLSCTL_NODE_JOIN;
     data += sizeof(int32_t);
     sz   += sizeof(int32_t);
 
@@ -546,30 +549,8 @@ static int join_node_cmd_pack(char* data)
     sz   += sizeof(int32_t);
 
     strcpy(data, addr_ip);
+    data += strlen(addr_ip) + 1;
     sz   += strlen(addr_ip) + 1;
-    nlsctl_cmds++;
-    return sz;
-}
-
-static int drop_node_cmd_pack(char* data)
-{
-    int sz = 0;
-
-    if (!drop_node_cmd) {
-        return -1;
-    }
-
-    *(int32_t*)data = VLSCTL_NODE_DROP;
-    data += sizeof(int32_t);
-    sz   += sizeof(int32_t);
-
-    *(int32_t*)data = addr_port;
-    data += sizeof(int32_t);
-    sz   += sizeof(int32_t);
-
-    strcpy(data, addr_ip);
-    sz   += strlen(addr_ip) + 1;
-    nlsctl_cmds++;
     return sz;
 }
 
@@ -718,31 +699,31 @@ struct opt_routine {
 };
 
 struct opt_routine opt_rts[] = {
-    {'U', lsctlc_socket_param      },
-    {'S', lsctls_socket_param      },
-    {'d', host_cmd_param           },
-    {'D', host_cmd_param           },
-    {'x', host_cmd_param           },
-    {'s', host_cmd_param           },
-    {'c', host_cmd_param           },
-    {'a', join_node_opt_parse      },
-    {'e', drop_node_opt_parse      },
-    {'p', plugin_cmd_param         },
-    {'R', plugin_cmd_param         },
-    {'T', plugin_cmd_param         },
-    {'P', plugin_cmd_param         },
-    {'u', plugin_cmd_param         },
-    {'w', plugin_cmd_param         },
-    {'q', plugin_cmd_param         },
-    {'m', addr_opt_param           },
-    {'t', dht_query_param          },
-    {'J', dht_query_param          },
-    {'K', dht_query_param          },
-    {'L', dht_query_param          },
-    {'M', dht_query_param          },
-    {'N', dht_query_param          },
-    {'v', show_version_opt_parse   },
-    {'h', show_help_opt_parse      },
+    {'U', lsctlc_socket_param    },
+    {'S', lsctls_socket_param    },
+    {'d', host_cmd_param         },
+    {'D', host_cmd_param         },
+    {'x', host_cmd_param         },
+    {'s', host_cmd_param         },
+    {'c', host_cmd_param         },
+    {'a', node_op_param          },
+    {'e', node_op_param          },
+    {'p', plugin_cmd_param       },
+    {'R', plugin_cmd_param       },
+    {'T', plugin_cmd_param       },
+    {'P', plugin_cmd_param       },
+    {'u', plugin_cmd_param       },
+    {'w', plugin_cmd_param       },
+    {'q', plugin_cmd_param       },
+    {'m', addr_opt_param         },
+    {'t', dht_query_param        },
+    {'J', dht_query_param        },
+    {'K', dht_query_param        },
+    {'L', dht_query_param        },
+    {'M', dht_query_param        },
+    {'N', dht_query_param        },
+    {'v', show_version_opt_parse },
+    {'h', show_help_opt_parse    },
     {0, 0}
 };
 
@@ -751,8 +732,7 @@ int (*check_routine[])(void) = {
     lsctls_socket_check,
     host_cmd_check,
     plugin_cmd_check,
-    join_node_opt_check,
-    drop_node_opt_check,
+    node_op_check,
     dht_query_check,
     NULL
 };
@@ -760,8 +740,7 @@ int (*check_routine[])(void) = {
 int (*cmd_routine[])(char*) = {
     host_cmd_pack,
     plugin_cmd_pack,
-    join_node_cmd_pack,
-    drop_node_cmd_pack,
+    node_op_cmd_pack,
     dht_query_cmd_pack,
     NULL,
 };
