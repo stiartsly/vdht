@@ -212,7 +212,7 @@ int _vlsctl_service_unavailable(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
-int _vlsctl_req_plugin(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_service_pick(struct vlsctl* lsctl, void* data, int offset)
 {
     int _aux_req_plugin_cb(struct sockaddr_in* addr, void* cookie)
     {
@@ -273,7 +273,7 @@ int _vlsctl_dispatch_msg(struct vlsctl* lsctl, void* data, int offset)
         lsctl->ops->del_node,
         lsctl->ops->service_announce,
         lsctl->ops->service_unavailable,
-        lsctl->ops->req_plugin,
+        lsctl->ops->service_pick,
         lsctl->ops->cfg_dump,
         NULL
     };
@@ -312,7 +312,7 @@ struct vlsctl_ops lsctl_ops = {
     .del_node   = _vlsctl_del_node,
     .service_announce    = _vlsctl_service_announce,
     .service_unavailable = _vlsctl_service_unavailable,
-    .req_plugin = _vlsctl_req_plugin,
+    .service_pick        = _vlsctl_service_pick,
     .cfg_dump   = _vlsctl_cfg_dump,
     .dsptch_msg = _vlsctl_dispatch_msg
 };

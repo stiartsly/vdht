@@ -34,9 +34,7 @@ struct vlsctl_ops {
     int (*del_node)  (struct vlsctl*, void*, int);
     int (*service_announce)   (struct vlsctl*, void*, int);
     int (*service_unavailable)(struct vlsctl*, void*, int);
-    int (*plug)      (struct vlsctl*, void*, int);
-    int (*unplug)    (struct vlsctl*, void*, int);
-    int (*req_plugin)(struct vlsctl*, void*, int);
+    int (*service_pick)       (struct vlsctl*, void*, int);
     int (*cfg_dump)  (struct vlsctl*, void*, int);
     int (*dsptch_msg)(struct vlsctl*, void*, int);
 };
