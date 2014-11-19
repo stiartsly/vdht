@@ -346,7 +346,7 @@ static int plgn_sort_cmd_param(int opt)
 }
 static int has_addr_param = 0;
 static char addr_ip[64];
-static char addr_port = 0;
+static int addr_port = 0;
 static int addr_opt_param(int opt)
 {
     char* port_addr = NULL;
@@ -365,6 +365,7 @@ static int addr_opt_param(int opt)
         printf("Invalid IP\n");
         return -1;
     }
+    memset(addr_ip, 0, 64);
     strncpy(addr_ip, optarg, (int)(port_addr - optarg));
     port_addr += 1;
 
