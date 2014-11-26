@@ -465,6 +465,36 @@ void vserviceId_make(vserviceId* svcId)
     return ;       
 }
 
+int vserviceId_strlize(vserviceId* id, char* buf, int len)
+{
+    int i = 0;
+    vassert(id);
+    vassert(buf);
+    vassert(len > 0);
+
+    retE((len + 1 < VNODE_ID_LEN));
+    for (; i < VNODE_ID_LEN; i++) {
+        buf[i] = id->data[i] + '0';
+    }
+    buf[i] = '\0';
+    return 0;
+}
+
+int vserviceId_unstrlize(const char* id_str, vserviceId* id)
+{
+    int i = 0;
+    vassert(id_str);
+    vassert(id);
+
+    retE((strlen(id_str) != VNODE_ID_LEN));
+    for(; i < VNODE_ID_LEN; i++) {
+        retE((id_str[i] < '0'));
+        retE((id_str[i] > '9'));
+        id->data[i] = id_str[i] - '0';
+    }
+    return 0;
+}
+
 void vserviceId_dump(vserviceId* svcId)
 {
     int i = 0;

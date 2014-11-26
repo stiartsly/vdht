@@ -301,6 +301,19 @@ struct be_node* be_create_ver(vnodeVer* ver)
     return node;
 }
 
+struct be_node* be_create_vserviceId(vserviceId* svc_id)
+{
+    struct be_node* node = NULL;
+    char buf[64];
+    vassert(svc_id);
+
+    memset(buf, 0, 64);
+    vserviceId_strlize(svc_id, buf, 64);
+    node = be_create_str(buf);
+    retE_p((!node));
+    return node;
+}
+
 int be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
 {
     struct be_dict* d = NULL;
@@ -452,7 +465,7 @@ int be_unpack_token(struct be_node* node, vtoken* token)
     return 0;
 }
 
-int be_unpack_nodeId(struct be_node* node, vnodeId* id)
+int be_unpack_vnodeId(struct be_node* node, vnodeId* id)
 {
     char* s = NULL;
     int ret = 0;
@@ -467,6 +480,24 @@ int be_unpack_nodeId(struct be_node* node, vnodeId* id)
     retE((ret != strlen(node->val.s)));
 
     ret = vnodeId_unstrlize(node->val.s, id);
+    retE((ret < 0));
+    return 0;
+}
+
+int be_unpack_vserviceId(struct be_node* node, vserviceId* id)
+{
+    char* s = NULL;
+    int ret = 0;
+
+    vassert(node);
+    vassert(id);
+
+    retE((BE_STR != node->type));
+    s = unoff_addr(node->val.s, sizeof(int32_t));
+    ret = get_int32(s);
+    retE((ret != strlen(node->val.s)));
+
+    ret = vserviceId_unstrlize(node->val.s, id);
     retE((ret < 0));
     return 0;
 }

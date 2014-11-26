@@ -107,8 +107,10 @@ void vnodeInfo_dump(vnodeInfo*);
     int usage;
  };
  typedef struct vserviceInfo vserviceInfo;
- void vserviceId_make(vserviceId*);
- void vserviceId_dump(vserviceId*);
+ void vserviceId_make   (vserviceId*);
+ void vserviceId_dump   (vserviceId*);
+ int  vserviceId_strlize(vserviceId*, char*, int);
+ int  vserviceId_unstrlize(const char*, vserviceId*);
 
  vserviceInfo* vserviceInfo_alloc(void);
  void vserviceInfo_free(vserviceInfo*);
