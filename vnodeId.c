@@ -287,6 +287,17 @@ int vnodeVer_unstrlize(const char* ver_str, vnodeVer* ver)
     return 0;
 }
 
+void vnodeVer_dump(vnodeVer* ver)
+{
+    char sver[64];
+    vassert(ver);
+
+    memset(sver, 0, 64);
+    vnodeVer_strlize(ver, sver, 64);
+    vdump(printf("ver:%s", sver));
+
+    return;
+}
 
 /*
  *  for token
@@ -396,32 +407,114 @@ void vnodeInfo_free(vnodeInfo* info)
     return ;
 }
 
+void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
+{
+    vassert(dest);
+    vassert(src);
+
+    vnodeId_copy(&dest->id, &src->id);
+    vsockaddr_copy(&dest->addr, &src->addr);
+    vnodeVer_copy(&dest->ver, &src->ver);
+    dest->flags = src->flags;
+    return ;
+}
+
 int vnodeInfo_init(vnodeInfo* info, vnodeId* id, struct sockaddr_in* addr, uint32_t flags, vnodeVer* ver)
 {
     vassert(info);
     vassert(id);
     vassert(addr);
-    vassert(ver);
+    vassert(ver || !ver);
 
     vnodeId_copy(&info->id, id);
     vsockaddr_copy(&info->addr, addr);
-    vnodeVer_copy(&info->ver, ver);
+    if (!ver) {
+        vnodeVer_unstrlize("0.0.0.0.0", &info->ver);
+    } else {
+        vnodeVer_copy(&info->ver, ver);
+    }
     info->flags = flags;
     return 0;
 }
 
+void vnodeInfo_dump(vnodeInfo* info)
+{
+    vassert(info);
+
+    vnodeId_dump(&info->id);
+    vsockaddr_dump(&info->addr);
+    vnodeVer_dump(&info->ver);
+    vdump(printf("flags: 0x%x", info->flags));
+    return ;
+}
+
 /*
- *
+ * for vserviceInfo
  */
-
-void vserviceId_make(vserviceId* id)
+void vserviceId_make(vserviceId* svcId)
 {
-    vnodeId_make((vnodeId*)id);
+    char* data = NULL;
+    int i = 0;
+    vassert(svcId);
+
+    srand(time(NULL)); // TODO: need use mac as srand seed.
+    data = (char*)svcId->data;
+    for (; i < VNODE_ID_LEN; i++) {
+        data[i] = rand() % 9;
+    }
+    return ;       
+}
+
+void vserviceId_dump(vserviceId* svcId)
+{
+    int i = 0;
+    vassert(svcId);
+
+    printf("##Service ID:");
+    for (; i < VNODE_ID_LEN; i++) {
+        printf("%c", svcId->data[i] + '0');
+        if ((i % 4 == 3) && (i +1 != VNODE_ID_LEN)){
+            printf("-");
+        }
+    }
+    printf("\n");
+    return;       
+}
+
+static MEM_AUX_INIT(serviceInfo_maux, sizeof(vserviceInfo), 0);
+vserviceInfo* vserviceInfo_alloc(void)
+{
+    vserviceInfo* info = NULL;
+
+    info = (vserviceInfo*)vmem_aux_alloc(&serviceInfo_maux);
+    ret1E_p((!info), elog_vmem_aux_alloc);
+    return info;
+}
+
+void vserviceInfo_free(vserviceInfo* svc_info)
+{
+    vmem_aux_free(&serviceInfo_maux, svc_info);
+    return ;   
+}
+
+int vserviceInfo_init(vserviceInfo* svc_info, int what, struct sockaddr_in* addr)
+{
+    vassert(svc_info);
+    vassert(addr);
+
+    vserviceId_make(&svc_info->id);
+    vsockaddr_copy(&svc_info->addr, addr);
+    svc_info->usage = what;
+    return 0;
+}
+
+void vserviceInfo_dump(vserviceInfo* svc_info)
+{
+    vassert(svc_info);
+    vnodeId_dump(&svc_info->id);
+    vsockaddr_dump(&svc_info->addr);
+    vdump(printf("what:%d", svc_info->usage));
+
     return ;
 }
 
-void vserviceId_dump(vserviceId *id)
-{
-    //tood;
-    return ;
-}

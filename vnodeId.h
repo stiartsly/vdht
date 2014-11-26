@@ -76,6 +76,7 @@ void vnodeVer_copy   (vnodeVer*, vnodeVer*);
 int  vnodeVer_equal  (vnodeVer*, vnodeVer*);
 int  vnodeVer_strlize(vnodeVer*, char*, int);
 int  vnodeVer_unstrlize(const char*, vnodeVer*);
+void vnodeVer_dump   (vnodeVer*);
 
 /*
  * token
@@ -92,7 +93,9 @@ void vtoken_dump   (vtoken*);
  */
 vnodeInfo* vnodeInfo_alloc(void);
 void vnodeInfo_free(vnodeInfo*);
+void vnodeInfo_copy(vnodeInfo*, vnodeInfo*);
 int  vnodeInfo_init(vnodeInfo*, vnodeId*, struct sockaddr_in*, uint32_t, vnodeVer*);
+void vnodeInfo_dump(vnodeInfo*);
 
 
 /*
@@ -106,5 +109,10 @@ int  vnodeInfo_init(vnodeInfo*, vnodeId*, struct sockaddr_in*, uint32_t, vnodeVe
  typedef struct vserviceInfo vserviceInfo;
  void vserviceId_make(vserviceId*);
  void vserviceId_dump(vserviceId*);
+
+ vserviceInfo* vserviceInfo_alloc(void);
+ void vserviceInfo_free(vserviceInfo*);
+ int  vserviceInfo_init(vserviceInfo*, int, struct sockaddr_in*);
+ void vserviceInfo_dump(vserviceInfo*);
 
 #endif

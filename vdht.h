@@ -15,13 +15,9 @@ enum {
     VDHT_FIND_CLOSEST_NODES,
     VDHT_FIND_CLOSEST_NODES_R,
     VDHT_POST_SERVICE,
-    VDHT_POST_SERVICE_RSP,
     VDHT_POST_HASH,
-    VDHT_POST_HASH_R,
     VDHT_GET_PEERS,
     VDHT_GET_PEERS_R,
-    VDHT_GET_PLUGIN,
-    VDHT_GET_PLUGIN_R,
     VDHT_UNKNOWN
 };
 
@@ -70,13 +66,15 @@ struct vdht_enc_ops {
 
     int (*post_service)(
             vtoken* token,
+            vnodeId* srcId,
             vserviceInfo* service,
             void* buf,
             int   sz);
 
-    int (*post_service_rsp)(
+    int (*post_hash)(
             vtoken* token,
-            struct varray* services,
+            vnodeId* srcId,
+            vnodeHash* hash,
             void* buf,
             int   sz);
 
@@ -91,19 +89,6 @@ struct vdht_enc_ops {
             vtoken* token,
             vnodeId* srcId,
             struct varray* result,
-            void* buf,
-            int   sz);
-
-    int (*get_plugin)(
-            vtoken* token,
-            int plgnId,
-            void* buf,
-            int   sz);
-
-    int (*get_plugin_rsp)(
-            vtoken* token,
-            int plgnId,
-            struct sockaddr_in* addr,
             void* buf,
             int   sz);
 };
@@ -166,13 +151,15 @@ struct vdht_dec_ops {
     int (*post_service) (
             void* ctxt,
             vtoken* token,
+            vnodeId* srcId,
             vserviceInfo* service
         );
 
-    int (*post_service_rsp)(
+    int (*post_hash)(
             void* ctxt,
             vtoken* token,
-            struct varray* services
+            vnodeId* srcId,
+            vnodeHash* hash
         );
 
     int (*get_peers)(
@@ -188,18 +175,6 @@ struct vdht_dec_ops {
             vnodeId* srcId,
             struct varray* result
         );
-
-    int (*get_plugin)(
-            void* ctxt,
-            vtoken* token,
-            int* plgnId);
-
-    int (*get_plugin_rsp)(
-            void* ctxt,
-            vtoken* token,
-            int* plgnId,
-            struct sockaddr_in* addr);
-
 };
 
 char* vdht_get_desc(int);

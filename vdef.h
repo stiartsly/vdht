@@ -88,7 +88,7 @@
 #define vdump(s)
 #endif
 
-#define varg_decl(argv, idx, type, var)  type var = (type)argv[idx]
+#define varg_decl(argv, idx, type, var)  type var = (type)((void**)argv)[idx]
 #define type_decl(type, var, src)        type var = (type)src
 
 

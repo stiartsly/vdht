@@ -19,8 +19,6 @@ enum vnode_mode {
     VDHT_M_BUTT
 };
 
-//typedef int (*vpeer_cb_t)(void*, vpeer*);
-
 struct vnode;
 struct vnode_ops {
     int (*start)    (struct vnode*);
@@ -29,7 +27,6 @@ struct vnode_ops {
     int (*drop)     (struct vnode*, struct sockaddr_in*);
     int (*stabilize)(struct vnode*);
     int (*dump)     (struct vnode*);
-//   int (*get_peers)(struct vnode*, vnodeHash*, vpeer_cb_t, void*);
 };
 
 struct vnode {

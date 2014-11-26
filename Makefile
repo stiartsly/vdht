@@ -14,7 +14,6 @@ vdht_objs = \
     vroute.o  \
     vlsctl.o  \
     vticker.o \
-    vplugin.o \
     vnodeId.o 
 
 .PHONY: all vdhtd vlsctlc clean

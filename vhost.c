@@ -101,15 +101,15 @@ int _vhost_stabilize(struct vhost* host)
 static
 int _vhost_plug(struct vhost* host, int what, struct sockaddr_in* addr)
 {
-    struct vpluger* pluger = &host->pluger;
+    struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(addr);
-    vassert(what >= 0);
-    vassert(what < PLUGIN_BUTT);
+    retE((what < 0));
+    retE((what >= PLUGIN_BUTT));
 
-    ret = pluger->ops->reg_service(pluger, what, addr);
+    ret = route->ops->reg_service(route, what, addr);
     retE((ret < 0));
     return 0;
 }
@@ -122,31 +122,31 @@ int _vhost_plug(struct vhost* host, int what, struct sockaddr_in* addr)
 static
 int _vhost_unplug(struct vhost* host, int what, struct sockaddr_in* addr)
 {
-    struct vpluger* pluger = &host->pluger;
+    struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(addr);
-    vassert(what >= 0);
-    vassert(what < PLUGIN_BUTT);
+    retE((what < 0));
+    retE((what >= PLUGIN_BUTT));
 
-    ret = pluger->ops->unreg_service(pluger, what, addr);
+    ret = route->ops->unreg_service(route, what, addr);
     retE((ret < 0));
     return 0;
 }
 
 static
-int _vhost_req_plugin(struct vhost* host, int what, struct sockaddr_in* addr)
+int _vhost_get_service(struct vhost* host, int what, struct sockaddr_in* addr)
 {
-    struct vpluger* pluger = &host->pluger;
+    struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(addr);
-    vassert(what >= 0);
-    vassert(what < PLUGIN_BUTT);
+    retE((what < 0));
+    retE((what >= PLUGIN_BUTT));
 
-    ret = pluger->ops->get_service(pluger, what, addr);
+    ret = route->ops->get_service(route, what, addr);
     retE((ret < 0));
     return 0;
 }
@@ -161,13 +161,11 @@ int _vhost_dump(struct vhost* host)
     vassert(host);
 
     vdump(printf("-> HOST"));
-    vdump(printf("version: %s", host->ops->get_version(host)));
     vsockaddr_dump(&host->ownId.addr);
     host->route.ops->dump(&host->route);
     host->node.ops->dump(&host->node);
     host->msger.ops->dump(&host->msger);
     host->waiter.ops->dump(&host->waiter);
-    host->pluger.ops->dump(&host->pluger);
     vdump(printf("<- HOST"));
 
     return 0;
@@ -243,27 +241,27 @@ char* _vhost_get_version(struct vhost* host)
 static
 int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest)
 {
-    struct vroute_dht_ops* ops = host->route.dht_ops;
-    vnodeAddr nodeAddr;
+    struct vroute* route = &host->route;
+    vnodeAddr addr;
     int ret = 0;
 
     vassert(host);
     vassert(dest);
 
-    vnodeId_make(&nodeAddr.id);
-    vsockaddr_copy(&nodeAddr.addr, dest);
+    vnodeId_make(&addr.id);
+    vsockaddr_copy(&addr.addr, dest);
 
     switch(what) {
     case VDHT_PING:
-        ret = ops->ping(&host->route, &nodeAddr);
+        ret = route->dht_ops->ping(route, &addr);
         break;
 
     case VDHT_FIND_NODE:
-        ret = ops->find_node(&host->route, &nodeAddr, &host->ownId.id);
+        ret = route->dht_ops->find_node(route, &addr, &host->ownId.id);
         break;
 
     case VDHT_FIND_CLOSEST_NODES:
-        ret = ops->find_closest_nodes(&host->route, &nodeAddr, &host->ownId.id);
+        ret = route->dht_ops->find_closest_nodes(route, &addr, &host->ownId.id);
         break;
 
     case VDHT_POST_SERVICE:
@@ -286,7 +284,7 @@ struct vhost_ops host_ops = {
     .stabilize   = _vhost_stabilize,
     .plug        = _vhost_plug,
     .unplug      = _vhost_unplug,
-    .req_plugin  = _vhost_req_plugin,
+    .get_service = _vhost_get_service,
     .loop        = _vhost_loop,
     .req_quit    = _vhost_req_quit,
     .dump        = _vhost_dump,
@@ -334,22 +332,6 @@ int _aux_vhost_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** 
         *sm = ms;
         return 0;
     }
-    if (VPLUG_MSG(um->msgId)) {
-        sz += sizeof(int32_t);
-        data = unoff_addr(um->data, sz);
-        set_int32(data, um->msgId);
-
-        sz += sizeof(int32_t);
-        data = unoff_addr(um->data, sz);
-        set_uint32(data, VPLUG_MAGIC);
-
-        ms = vmsg_sys_alloc(0);
-        vlog((!ms), elog_vmsg_sys_alloc);
-        retE((!ms));
-        vmsg_sys_init(ms, um->addr, um->len + sz, data);
-        *sm = ms;
-        return 0;
-    }
     //todo;
     return -1;
 }
@@ -384,11 +366,6 @@ int _aux_vhost_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
         vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
         return 0;
     }
-    if (IS_PLUG_MSG(magic)) {
-        vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
-        return 0;
-    }
-
     //todo;
     return 0;
 }
@@ -452,13 +429,14 @@ int _aux_vhost_set_addr(struct vconfig* cfg, vnodeAddr* nodeAddr)
 struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
-    vnodeAddr nodeAddr;
-    vnodeVer ver;
-    int ret = 0;
+    vnodeAddr addr;
+    vnodeInfo info;
+    vnodeVer  ver;
     int tmo = 0;
+    int ret = 0;
     vassert(cfg);
 
-    ret = _aux_vhost_set_addr(cfg, &nodeAddr);
+    ret = _aux_vhost_set_addr(cfg, &addr);
     retE_p((ret < 0));
     tmo = _aux_vhost_get_tmo(cfg);
     retE_p((tmo < 0));
@@ -468,23 +446,22 @@ struct vhost* vhost_create(struct vconfig* cfg)
     retE_p((!host));
     memset(host, 0, sizeof(*host));
 
-    vnodeAddr_copy(&host->ownId, &nodeAddr);
+    vnodeAddr_copy(&host->ownId, &addr);
     host->tick_tmo = tmo;
     host->to_quit  = 0;
     host->cfg = cfg;
     host->ops = &host_ops;
     vnodeVer_unstrlize(host->ops->get_version(host), &ver);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, 0, &ver);
 
     ret += vmsger_init (&host->msger);
-    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&nodeAddr.addr));
+    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&addr.addr));
     ret += vticker_init(&host->ticker);
-    ret += vroute_init (&host->route, cfg, &host->msger, &nodeAddr, &ver);
-    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &nodeAddr);
+    ret += vroute_init (&host->route, cfg, &host->msger, &info);
+    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &addr);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host);
-    ret += vpluger_init(&host->pluger, &host->route);
     if (ret < 0) {
-        vpluger_deinit(&host->pluger);
         vlsctl_deinit (&host->lsctl);
         vwaiter_deinit(&host->waiter);
         vnode_deinit  (&host->node);
@@ -511,7 +488,6 @@ void vhost_destroy(struct vhost* host)
     host->waiter.ops->remove(&host->waiter, &host->lsctl.rpc);
     host->waiter.ops->remove(&host->waiter, &host->rpc);
 
-    vpluger_deinit(&host->pluger);
     vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);

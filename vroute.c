@@ -6,16 +6,6 @@
 #define MAX_CAPC ((int)8)
 #define vmin(a, b)   ((a < b) ? a: b)
 
-struct vpeer{
-    vnodeAddr extId;
-    vnodeVer  ver;
-    uint32_t  flags;
-
-    time_t    snd_ts;
-    time_t    rcv_ts;
-    int       ntries;
-};
-
 struct vpeer_flags_desc {
     uint32_t  prop;
     char*     desc;
@@ -64,7 +54,7 @@ struct vpeer_flags_desc peer_flags_desc[] = {
     {PROP_UNREACHABLE, 0}
 };
 
-static uint32_t peer_plugin_prop[] = {
+static uint32_t peer_service_prop[] = {
     PROP_RELAY,
     PROP_STUN,
     PROP_VPN,
@@ -75,9 +65,53 @@ static uint32_t peer_plugin_prop[] = {
     PROP_PLUG_MASK
 };
 
+struct vplugin_desc {
+    int   what;
+    char* desc;
+};
+
+static
+struct vplugin_desc plugin_desc[] = {
+    { PLUGIN_RELAY,  "relay"           },
+    { PLUGIN_STUN,   "stun"            },
+    { PLUGIN_VPN,    "vpn"             },
+    { PLUGIN_DDNS,   "ddns"            },
+    { PLUGIN_MROUTE, "multiple routes" },
+    { PLUGIN_DHASH,  "data hash"       },
+    { PLUGIN_APP,    "app"             },
+    { PLUGIN_BUTT, 0}
+};
+
+char* vpluger_get_desc(int what)
+{
+    struct vplugin_desc* desc = plugin_desc;
+
+    for (; desc->desc; ) {
+        if (desc->what == what) {
+            break;
+        }
+        desc++;
+    }
+    if (!desc->desc) {
+        return "unkown plugin";
+    }
+    return desc->desc;
+}
+
 /*
  * for vpeer
  */
+struct vpeer{
+    vnodeId   id;
+    vnodeVer  ver;
+    struct sockaddr_in addr;
+    uint32_t  flags;
+
+    time_t    snd_ts;
+    time_t    rcv_ts;
+    int       ntries;
+};
+
 static MEM_AUX_INIT(peer_cache, sizeof(struct vpeer), 0);
 static
 struct vpeer* vpeer_alloc(void)
@@ -87,6 +121,7 @@ struct vpeer* vpeer_alloc(void)
     peer = (struct vpeer*)vmem_aux_alloc(&peer_cache);
     vlog((!peer), elog_vmem_aux_alloc);
     retE_p((!peer));
+    memset(peer, 0, sizeof(struct vpeer));
     return peer;
 }
 /*
@@ -108,15 +143,22 @@ void vpeer_free(struct vpeer* peer)
  * @flags:
  */
 static
-void vpeer_init(struct vpeer* peer, vnodeAddr* addr, time_t snd_ts, time_t rcv_ts, int flags)
+void vpeer_init(
+        struct vpeer* peer,
+        vnodeId* id,
+        struct sockaddr_in* addr,
+        uint32_t flags,
+        time_t snd_ts,
+        time_t rcv_ts)
 {
     vassert(peer);
     vassert(addr);
 
-    vnodeAddr_copy(&peer->extId, addr);
+    vnodeId_copy(&peer->id, id);
+    vsockaddr_copy(&peer->addr, addr);
+    peer->flags  = flags;
     peer->snd_ts = snd_ts;
     peer->rcv_ts = rcv_ts;
-    peer->flags  = flags;
     peer->ntries = 0;
     return ;
 }
@@ -142,14 +184,11 @@ void vpeer_dump_flags(uint32_t flags)
 static
 void vpeer_dump(struct vpeer* peer)
 {
-    char buf[64];
-    int  port = 0;
     vassert(peer);
 
     vdump(printf("-> PEER"));
-    vnodeId_dump(&peer->extId.id);
-    vsockaddr_unconvert(&peer->extId.addr, buf, 64, &port);
-    vdump(printf("addr:%s:%d", buf,port));
+    vnodeId_dump(&peer->id);
+    vsockaddr_dump(&peer->addr);
     vpeer_dump_flags(peer->flags);
     vdump(printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet"));
     vdump(printf("timestamp[rcv]: %s",  ctime(&peer->rcv_ts)));
@@ -159,27 +198,19 @@ void vpeer_dump(struct vpeer* peer)
 }
 
 static
-int _aux_route_add_cb(void* item, void* cookie)
+int _aux_space_add_node_cb(void* item, void* cookie)
 {
     struct vpeer* peer = (struct vpeer*)item;
-    vnodeAddr* addr      = (vnodeAddr*)((void**)cookie)[0];
-    uint32_t* min_flags  =  (uint32_t*)((void**)cookie)[1];
-    int*      max_period = (int*)((void**)cookie)[2];
-    time_t*   now        = (time_t*)((void**)cookie)[3];
-    int*      found      = (int*)((void**)cookie)[4];
-    struct vpeer** to    = (struct vpeer**)((void**)cookie)[5];
+    varg_decl(cookie, 0, vnodeInfo*, node_info);
+    varg_decl(cookie, 1, uint32_t*,  min_flags);
+    varg_decl(cookie, 2, int*,       max_period);
+    varg_decl(cookie, 3, time_t*,    now);
+    varg_decl(cookie, 4, int*,       found);
+    varg_decl(cookie, 5, struct vpeer**, to);
 
-    vassert(peer);
-    vassert(addr);
-    vassert(min_flags);
-    vassert(max_period);
-    vassert(now);
-    vassert(found);
-    vassert(to);
-
-    if (vnodeId_equal(&peer->extId.id, &addr->id)) {
-        *found = 1;
+    if (vnodeId_equal(&peer->id, &node_info->id)) {
         *to = peer;
+        *found = 1;
         return 1;
     }
 
@@ -194,34 +225,80 @@ int _aux_route_add_cb(void* item, void* cookie)
     return 0;
 }
 
-/*
- *
- */
 static
-int _aux_route_load_cb(void* priv, int col, char** value, char** field)
+int _aux_space_broadcast_cb(void* item, void* cookie)
 {
-    struct vroute* route = (struct vroute*)priv;
-    char* ip =   (char*)((void**)value)[1];
-    char* port = (char*)((void**)value)[2];
-    char* id   = (char*)((void**)value)[3];
-    vnodeAddr node_addr;
-    int iport = 0;
+    struct vpeer* peer = (struct vpeer*)item;
+    varg_decl(cookie, 0, struct vroute*, route);
+    varg_decl(cookie, 1, void*, svci);
+    vnodeAddr addr;
 
-    vassert(route);
-    vassert(ip && port && id);
-
-    errno = 0;
-    iport = strtol(port, NULL, 10);
-    retE((errno));
-    vsockaddr_convert(ip, iport, &node_addr.addr);
-    vnodeId_unstrlize(id, &node_addr.id);
-
-    route->ops->add(route, &node_addr, 0);
+    if (peer->flags == PROP_UNREACHABLE) {
+        return 0;
+    }
+    vnodeAddr_init(&addr, &peer->id, &peer->addr);
+    route->dht_ops->post_service(route, &addr, (vserviceInfo*)svci);
     return 0;
 }
 
 static
-int _aux_route_store_cb(void* item, void* cookie)
+int _aux_space_tick_cb(void* item, void* cookie)
+{
+    struct vpeer*  peer  = (struct vpeer*)item;
+    varg_decl(cookie, 0, struct vroute_space*, space);
+    varg_decl(cookie, 1, struct vroute*, route);
+    varg_decl(cookie, 2, time_t*, now);
+    vnodeAddr addr;
+
+    vassert(peer);
+    vassert(space);
+    vassert(now);
+
+    if (peer->ntries >  space->max_snd_tms) { //unreachable.
+        return 0;
+    }
+    if (peer->ntries == space->max_snd_tms) {
+        peer->flags = PROP_UNREACHABLE;
+        return 0;
+    }
+    if ((!peer->snd_ts) ||
+        (*now - peer->rcv_ts > MAX_RCV_PERIOD)) {
+        vnodeAddr_init(&addr, &peer->id, &peer->addr);
+        route->dht_ops->ping(route, &addr);
+        peer->snd_ts = *now;
+        peer->ntries++;
+    }
+    return 0;
+}
+/*
+ *
+ */
+static
+int _aux_space_load_cb(void* priv, int col, char** value, char** field)
+{
+    struct vroute_space* space = (struct vroute_space*)priv;
+    char* ip =   (char*)((void**)value)[1];
+    char* port = (char*)((void**)value)[2];
+    char* id   = (char*)((void**)value)[3];
+    char* ver  = (char*)((void**)value)[4];
+    vnodeInfo node_info;
+    int iport = 0;
+
+    errno = 0;
+    iport = strtol(port, NULL, 10);
+    retE((errno));
+
+    node_info.flags = 0;
+    vnodeId_unstrlize(id, &node_info.id);
+    vsockaddr_convert(ip, iport, &node_info.addr);
+    vnodeVer_unstrlize(ver, &node_info.ver);
+
+    space->ops->add_node(space, &node_info);
+    return 0;
+}
+
+static
+int _aux_space_store_cb(void* item, void* cookie)
 {
     struct vpeer* peer = (struct vpeer*)item;
     sqlite3* db = (sqlite3*)cookie;
@@ -229,6 +306,7 @@ int _aux_route_store_cb(void* item, void* cookie)
     char* err = NULL;
     char id[64];
     char ip[64];
+    char ver[64];
     int  port = 0;
     int  off = 0;
     int  ret = 0;
@@ -236,59 +314,26 @@ int _aux_route_store_cb(void* item, void* cookie)
     vassert(peer);
     vassert(db);
 
-    memset(id, 0, 64);
-    vnodeId_strlize(&peer->extId.id, id, 64);
-    memset(ip, 0, 64);
-    vsockaddr_unconvert(&peer->extId.addr, ip, 64, &port);
+    memset(id,  0, 64);
+    vnodeId_strlize(&peer->id, id, 64);
+    memset(ip,  0, 64);
+    vsockaddr_unconvert(&peer->addr, ip, 64, &port);
+    memset(ver, 0, 64);
+    vnodeVer_strlize(&peer->ver, ver, 64);
 
+    memset(sql_buf, 0, BUF_SZ);
     off += sprintf(sql_buf + off, "insert into '%s' ", VPEER_TB);
-    off += sprintf(sql_buf + off, " ('host', 'port', 'nodeId') ");
+    off += sprintf(sql_buf + off, " ('host', 'port', 'nodeId', 'ver') ");
     off += sprintf(sql_buf + off, " values (");
     off += sprintf(sql_buf + off, " '%s',", ip);
     off += sprintf(sql_buf + off, " '%i',", port);
-    off += sprintf(sql_buf + off, " '%s')", id);
+    off += sprintf(sql_buf + off, " '%s',", id);
+    off += sprintf(sql_buf + off, " '%s')", ver);
 
     ret = sqlite3_exec(db, sql_buf, 0, 0, &err);
     vlog((ret && err), printf("db err:%s\n", err));
     vlog((ret), elog_sqlite3_exec);
     retE((ret));
-    return 0;
-}
-
-static
-int _aux_route_tick_cb(void* item, void* cookie)
-{
-    struct vpeer*  peer  = (struct vpeer*)item;
-    struct vroute* route = (struct vroute*)((void**)cookie)[0];
-    time_t* now  = (time_t*)((void**)cookie)[1];
-
-    vassert(peer);
-    vassert(route);
-    vassert(now);
-
-    if (peer->ntries > route->max_snd_times) { //unreacheable.
-        vassert(peer->snd_ts);
-        vassert(PROP_UNREACHABLE == peer->flags);
-    } else if (peer->ntries == route->max_snd_times) {
-        vassert(peer->snd_ts);
-        peer->flags = PROP_UNREACHABLE;
-    } else {
-        if ((!peer->snd_ts) || (*now - peer->rcv_ts > MAX_RCV_PERIOD)) {
-            route->dht_ops->ping(route, &peer->extId);
-            peer->snd_ts = *now;
-            peer->ntries++;
-        }
-    }
-    return 0;
-}
-
-static
-int _aux_route_dump_cb(void* item, void* cookie)
-{
-    struct vpeer* peer = (struct vpeer*)item;
-    vassert(peer);
-
-    vpeer_dump(peer);
     return 0;
 }
 
@@ -299,54 +344,55 @@ int _aux_route_dump_cb(void* item, void* cookie)
  * @flags: properties that node has.
  */
 static
-int _vroute_add(struct vroute* route, vnodeAddr* node, int flags)
+int _vroute_space_add_node(struct vroute_space* space, vnodeInfo* info)
 {
     struct varray* peers = NULL;
-    struct vpeer*  peer  = NULL;
     struct vpeer*  to    = NULL;
     time_t now = time(NULL);
+    uint32_t flags = info->flags;
     uint32_t min_flags = 0;
     int max_period = 0;
     int found = 0;
     int updt  = 0;
     int idx = 0;
 
-    vassert(route);
-    vassert(node);
+    vassert(space);
+    vassert(info);
 
-    idx = vnodeId_bucket(&route->ownId.id, &node->id);
-    vlock_enter(&route->lock);
-    peers = &route->bucket[idx].peers;
+    if (vnodeVer_equal(&space->own->ver, &info->ver)) {
+        flags |= PROP_VER;
+    }
+
+    idx = vnodeId_bucket(&space->own->id, &info->id);
+    peers = &space->bucket[idx].peers;
     {
         void* argv[] = {
-            node,
+            info,
             &min_flags,
             &max_period,
             &now,
             &found,
             &to
         };
-        varray_iterate(peers, _aux_route_add_cb, argv);
-        if (found) {
-            vpeer_init(to, node, to->snd_ts, now, to->flags | flags);
+        varray_iterate(peers, _aux_space_add_node_cb, argv);
+        if (found) { //found
+            vpeer_init(to, &info->id, &info->addr, to->snd_ts, now, to->flags | flags);
             updt = 1;
-        } else if (to) {
-            vpeer_init(to, node, 0, now, flags);
+        } else if (to) { //replace this one.
+            vpeer_init(to, &info->id, &info->addr, 0, now, flags);
             updt = 1;
-        } else {
-            peer = vpeer_alloc();
-            vlog((!peer), elog_vpeer_alloc);
-            ret1E((!peer), vlock_leave(&route->lock));
-
-            vpeer_init(peer, node, 0, now, flags);
-            varray_add_tail(peers, peer);
+        } else { // insert new one.
+            to = vpeer_alloc();
+            vlog((!to), elog_vpeer_alloc);
+            retE((!to));
+            vpeer_init(to, &info->id, &info->addr, 0, now, flags);
+            varray_add_tail(peers, to);
             updt = 1;
         }
         if (updt) {
-            route->bucket[idx].ts = now;
+            space->bucket[idx].ts = now;
         }
     }
-    vlock_leave(&route->lock);
     return 0;
 }
 
@@ -357,30 +403,29 @@ int _vroute_add(struct vroute* route, vnodeAddr* node, int flags)
  *
  */
 static
-int _vroute_remove(struct vroute* route, vnodeAddr* node_addr)
+int _vroute_space_del_node(struct vroute_space* space, vnodeAddr* addr)
 {
     struct varray* peers = NULL;
     struct vpeer*  peer  = NULL;
+    vnodeAddr peer_addr;
     int idx = 0;
     int i   = 0;
 
-    vassert(route);
-    vassert(node_addr);
+    vassert(space);
+    vassert(addr);
 
-    idx = vnodeId_bucket(&route->ownId.id, &node_addr->id);
-    vlock_enter(&route->lock);
-    peers = &route->bucket[idx].peers;
+    idx = vnodeId_bucket(&space->own->id, &addr->id);
+    peers = &space->bucket[idx].peers;
     for (; i < varray_size(peers); i++) {
         peer = (struct vpeer*)varray_get(peers, i);
-        if (vnodeAddr_equal(&peer->extId, node_addr)) {
+        vnodeAddr_init(&peer_addr, &peer->id, &peer->addr);
+        if (vnodeAddr_equal(&peer_addr, addr)) {
             break;
         }
     }
     if (i < varray_size(peers)) {
-        varray_del(peers, i);
-        vpeer_free(peer);
+        vpeer_free(varray_del(peers, i));
     }
-    vlock_leave(&route->lock);
     return 0;
 }
 
@@ -391,31 +436,152 @@ int _vroute_remove(struct vroute* route, vnodeAddr* node_addr)
  * @info:
  */
 static
-int _vroute_find(struct vroute* route, vnodeId* targetId, vnodeInfo* info)
+int _vroute_space_get_node(struct vroute_space* space, vnodeId* target, vnodeInfo* info)
 {
     struct varray* peers = NULL;
-    struct vpeer* peer = NULL;
+    struct vpeer*  peer  = NULL;
+    int ret = -1;
     int idx = 0;
     int i = 0;
 
-    vassert(route);
-    vassert(targetId);
+    vassert(space);
+    vassert(target);
     vassert(info);
 
-    idx = vnodeId_bucket(&route->ownId.id, targetId);
-    vlock_enter(&route->lock);
-    peers = &route->bucket[idx].peers;
+    idx = vnodeId_bucket(&space->own->id, target);
+    peers = &space->bucket[idx].peers;
     for (; i < varray_size(peers); i++) {
         peer = (struct vpeer*)varray_get(peers, i);
-        if (vnodeId_equal(&peer->extId.id, targetId)) {
-            vnodeInfo_init(info, targetId, &peer->extId.addr, peer->flags, &peer->ver);
+        if (vnodeId_equal(&peer->id, target)) {
+            vnodeInfo_init(info, target, &peer->addr, peer->flags, &peer->ver);
             info->flags &= ~PROP_VER;
+            ret = 0;
             break;
         }
-        peer = NULL;
     }
-    vlock_leave(&route->lock);
-    return (peer ? 0 : -1);
+    return ret;
+}
+
+static
+int _vroute_space_get_neighbors(struct vroute_space* space, vnodeId* target, struct varray* closest, int num)
+{
+    struct vpeer_track {
+        vnodeMetric metric;
+        int bucket_idx;
+        int item_idx;
+    };
+
+    int _aux_space_track_cmp_cb(void* a, void* b, void* cookie)
+    {
+        struct vpeer_track* item = (struct vpeer_track*)a;
+        struct vpeer_track* tgt  = (struct vpeer_track*)b;
+
+        return vnodeMetric_cmp(&tgt->metric, &item->metric);
+    }
+
+    void _aux_space_peer_free_cb(void* item, void* cookie)
+    {
+        struct vpeer_track* track = (struct vpeer_track*)item;
+        struct vmem_aux* maux = (struct vmem_aux*)cookie;
+
+        vmem_aux_free(maux, track);
+    }
+
+    struct vsorted_array array;
+    struct vmem_aux maux;
+    int i = 0;
+    int j = 0;
+
+    struct vpeer_track* track = NULL;
+    struct varray* peers = NULL;
+    struct vpeer* item = NULL;
+
+    vassert(space);
+    vassert(target);
+    vassert(closest);
+    vassert(num > 0);
+
+    vmem_aux_init(&maux, sizeof(struct vpeer_track), 0);
+    vsorted_array_init(&array, 0,  _aux_space_track_cmp_cb, space);
+
+    for (; i < NBUCKETS; i++) {
+        peers = &space->bucket[i].peers;
+        for (; j < varray_size(peers); j++) {
+            track = (struct vpeer_track*)vmem_aux_alloc(&maux);
+            item  = (struct vpeer*)varray_get(peers, j);
+            vnodeId_dist(&item->id, target, &track->metric);
+            track->bucket_idx = i;
+            track->item_idx   = j;
+            vsorted_array_add(&array, track);
+        }
+    }
+    for (i = 0; i < vmin(num, vsorted_array_size(&array)); i++) {
+        vnodeInfo* info = NULL;
+        uint32_t flags = 0;
+        track = (struct vpeer_track*)vsorted_array_get(&array, i);
+        peers = &space->bucket[track->bucket_idx].peers;
+        item  = (struct vpeer*)varray_get(peers, track->item_idx);
+        info  = vnodeInfo_alloc();
+        flags = item->flags & ~PROP_VER;
+        vnodeInfo_init(info, &item->id, &item->addr, flags, &item->ver);
+        varray_add_tail(closest, info);
+    }
+    vsorted_array_zero(&array, _aux_space_peer_free_cb, &maux);
+    vmem_aux_deinit(&maux);
+    return 0;
+}
+
+static
+int _vroute_space_broadcast(struct vroute_space* space, void* svci)
+{
+    struct varray* peers = NULL;
+    int i = 0;
+
+    vassert(space);
+    vassert(svci);
+
+    for (; i < NBUCKETS; i++) {
+        void* argv[] = {
+            space->route,
+            svci
+        };
+        peers = &space->bucket[i].peers;
+        varray_iterate(peers, _aux_space_broadcast_cb, argv);
+    }
+    return 0;
+}
+
+static
+int _vroute_space_tick(struct vroute_space* space)
+{
+    struct vroute* route = space->route;
+    struct varray* peers = NULL;
+    struct vpeer*  peer  = NULL;
+    time_t now = time(NULL);
+    vnodeAddr addr;
+    int i  = 0;
+    vassert(space);
+
+    for (; i < NBUCKETS; i++) {
+        void* argv[] = {
+            space,
+            space->route,
+            &now
+        };
+
+        peers = &space->bucket[i].peers;
+        varray_iterate(peers, _aux_space_tick_cb, argv);
+
+        if (varray_size(peers) <= 0) {
+            continue;
+        }
+        if ((space->bucket[i].ts + MAX_RCV_PERIOD) >= now) {
+            continue;
+        }
+        vnodeAddr_init(&addr, &peer->id, &peer->addr);
+        route->dht_ops->find_closest_nodes(route, &addr, &space->own->id);
+    }
+    return 0;
 }
 
 /*
@@ -425,20 +591,21 @@ int _vroute_find(struct vroute* route, vnodeId* targetId, vnodeInfo* info)
  *
  */
 static
-int _vroute_load(struct vroute* route)
+int _vroute_space_load(struct vroute_space* space)
 {
     char sql_buf[BUF_SZ];
     sqlite3* db = NULL;
     char* err = NULL;
     int ret = 0;
-    vassert(route);
+    vassert(space);
 
-    ret = sqlite3_open(route->db, &db);
+    ret = sqlite3_open(space->db, &db);
     vlog((ret), elog_sqlite3_open);
     retE((ret));
 
+    memset(sql_buf, 0, BUF_SZ);
     sprintf(sql_buf, "select * from %s", VPEER_TB);
-    ret = sqlite3_exec(db, sql_buf, _aux_route_load_cb, route, &err);
+    ret = sqlite3_exec(db, sql_buf, _aux_space_load_cb, space, &err);
     vlog((ret && err), printf("db err:%s\n", err));
     vlog((ret), elog_sqlite3_exec);
     sqlite3_close(db);
@@ -452,24 +619,22 @@ int _vroute_load(struct vroute* route)
  * @file
  */
 static
-int _vroute_store(struct vroute* route)
+int _vroute_space_store(struct vroute_space* space)
 {
     struct varray* peers = NULL;
     sqlite3* db = NULL;
     int ret = 0;
     int i = 0;
-    vassert(route);
+    vassert(space);
 
-    ret = sqlite3_open(route->db, &db);
+    ret = sqlite3_open(space->db, &db);
     vlog((ret), elog_sqlite3_open);
     retE((ret));
 
-    vlock_enter(&route->lock);
     for (; i < NBUCKETS; i++) {
-        peers = &route->bucket[i].peers;
-        varray_iterate(peers, _aux_route_store_cb, db);
+        peers = &space->bucket[i].peers;
+        varray_iterate(peers, _aux_space_store_cb, db);
     }
-    vlock_leave(&route->lock);
     sqlite3_close(db);
     vlogI(printf("writeback route infos"));
     return 0;
@@ -480,23 +645,19 @@ int _vroute_store(struct vroute* route)
  * @route:
  */
 static
-int _vroute_clear(struct vroute* route)
+void _vroute_space_clear(struct vroute_space* space)
 {
     struct varray* peers = NULL;
-    struct vpeer* peer = NULL;
     int i  = 0;
-    vassert(route);
+    vassert(space);
 
-    vlock_enter(&route->lock);
     for (; i < NBUCKETS; i++) {
-        peers = &route->bucket[i].peers;
+        peers = &space->bucket[i].peers;
         while(varray_size(peers) > 0) {
-            peer = (struct vpeer*)varray_pop_tail(peers);
-            vpeer_free(peer);
+            vpeer_free((struct vpeer*)varray_pop_tail(peers));
         }
     }
-    vlock_leave(&route->lock);
-    return 0;
+    return ;
 }
 
 /*
@@ -504,252 +665,587 @@ int _vroute_clear(struct vroute* route)
  * @route:
  */
 static
-int _vroute_dump(struct vroute* route)
+void _vroute_space_dump(struct vroute_space* space)
 {
     struct varray* peers = NULL;
     int i = 0;
-    vassert(route);
+    int j = 0;
+    vassert(space);
 
-    vdump(printf("-> ROUTE"));
-    vpeer_dump_flags(route->flags);
-    vlock_enter(&route->lock);
-    for (; i < NBUCKETS; i++) {
-        peers = &route->bucket[i].peers;
-        varray_iterate(peers, _aux_route_dump_cb, route);
+    vdump(printf("-> NODE SPACE"));
+    for (i = 0; i < NBUCKETS; i++) {
+        peers = &space->bucket[i].peers;
+        for (j = 0; j < varray_size(peers); j++) {
+            vpeer_dump((struct vpeer*)varray_get(peers, j));
+        }
     }
-    vlock_leave(&route->lock);
-    vdump(printf("<- ROUTE"));
+    vdump(printf("<- NODE SPACE"));
 
+    return ;
+}
+
+struct vroute_space_ops route_space_ops = {
+    .add_node      = _vroute_space_add_node,
+    .del_node      = _vroute_space_del_node,
+    .get_node      = _vroute_space_get_node,
+    .get_neighbors = _vroute_space_get_neighbors,
+    .broadcast     = _vroute_space_broadcast,
+    .tick          = _vroute_space_tick,
+    .load          = _vroute_space_load,
+    .store         = _vroute_space_store,
+    .clear         = _vroute_space_clear,
+    .dump          = _vroute_space_dump
+};
+
+int vroute_space_init(struct vroute_space* space, struct vroute* route, struct vconfig* cfg, vnodeInfo* node_info)
+{
+    int i = 0;
+
+    vassert(space);
+    vassert(cfg);
+    vassert(node_info);
+
+    cfg->ops->get_str_ext(cfg, "route.db_file", space->db, BUF_SZ, DEF_ROUTE_DB_FILE);
+    cfg->ops->get_int_ext(cfg, "route.bucket_size", &space->bucket_sz, DEF_ROUTE_BUCKET_CAPC);
+    cfg->ops->get_int_ext(cfg, "route.max_send_times", &space->max_snd_tms, DEF_ROUTE_MAX_SND_TIMES);
+
+    for (; i < NBUCKETS; i++) {
+        varray_init(&space->bucket[i].peers, 8);
+        space->bucket[i].ts = 0;
+    }
+    space->route = route;
+    space->own = node_info;
+    space->ops = &route_space_ops;
+    return 0;
+}
+
+void vroute_space_deinit(struct vroute_space* space)
+{
+    int i = 0;
+    vassert(space);
+
+    space->ops->clear(space);
+    for (; i < NBUCKETS; i++) {
+        varray_deinit(&space->bucket[i].peers);
+    }
+    return ;
+}
+
+
+/*
+ * for plug_item
+ */
+struct vservice {
+    struct sockaddr_in addr;
+    int what;
+    uint32_t flags;
+    time_t rcv_ts;
+};
+
+static MEM_AUX_INIT(service_cache, sizeof(struct vservice), 8);
+static
+struct vservice* vservice_alloc(void)
+{
+    struct vservice* item = NULL;
+
+    item = (struct vservice*)vmem_aux_alloc(&service_cache);
+    vlog((!item), elog_vmem_aux_alloc);
+    retE_p((!item));
+    return item;
+}
+
+static
+void vservice_free(struct vservice* item)
+{
+    vassert(item);
+    vmem_aux_free(&service_cache, item);
+    return ;
+}
+
+static
+void vservice_init(struct vservice* item, int what, struct sockaddr_in* addr, time_t ts, uint32_t flags)
+{
+    vassert(item);
+    vassert(addr);
+
+    vsockaddr_copy(&item->addr, addr);
+    item->what   = what;
+    item->rcv_ts = ts;
+    item->flags  = flags;
+    return ;
+}
+
+static
+void vservice_dump(struct vservice* item)
+{
+    vassert(item);
+    vdump(printf("-> SERVICE"));
+    vdump(printf("category:%s", vpluger_get_desc(item->what)));
+    vdump(printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts)));
+    vsockaddr_dump(&item->addr);
+    vdump(printf("<- SERVICE"));
+    return;
+}
+
+static
+int _aux_mart_add_service_cb(void* item, void* cookie)
+{
+    struct vservice* svc = (struct vservice*)item;
+    varg_decl(cookie, 0, vserviceInfo*, svci);
+    varg_decl(cookie, 1, struct vservice**, to);
+    varg_decl(cookie, 2, time_t*, now);
+    varg_decl(cookie, 3, int32_t*, min_tdff);
+    varg_decl(cookie, 4, int*, found);
+
+    if ((svc->what == svci->usage)
+        && vsockaddr_equal(&svc->addr, &svci->addr)) {
+        *to = svc;
+        *found = 1;
+        return 1;
+    }
+    if ((*now - svc->rcv_ts) < *min_tdff) {
+        *to = svc;
+        *min_tdff = *now - svc->rcv_ts;
+    }
+    return 0;
+}
+
+static
+int _aux_mart_get_service_cb(void* item, void* cookie)
+{
+    struct vservice* svc = (struct vservice*)item;
+    varg_decl(cookie, 1, struct vservice**, to);
+    varg_decl(cookie, 2, time_t*, now);
+    varg_decl(cookie, 3, int32_t*, min_tdff);
+
+    if ((*now - svc->rcv_ts) < *min_tdff) {
+        *to = svc;
+        *min_tdff = *now - svc->rcv_ts;
+    }
+    return 0;
+}
+
+static
+int _vroute_mart_add_service_node(struct vroute_mart* mart, vserviceInfo* svci)
+{
+    struct varray* svcs = NULL;
+    struct vservice* to = NULL;
+    time_t now = time(NULL);
+    int32_t min_tdff = (int32_t)0x7fffffff;
+    int found = 0;
+    int updt = 0;
+    int ret  = -1;
+
+    vassert(mart);
+    vassert(svci);
+    retE((svci->usage < 0));
+    retE((svci->usage >= PLUGIN_BUTT));
+
+    svcs = &mart->bucket[svci->usage].srvcs;
+    {
+        void* argv[] = {
+            svci,
+            &to,
+            &now,
+            &min_tdff,
+            &found
+        };
+        varray_iterate(svcs, _aux_mart_add_service_cb, argv);
+        if (found) {
+            to->rcv_ts = now;
+            updt = 1;
+        } else if (to) {
+            vservice_init(to, svci->usage, &svci->addr, now, 0);
+            updt = 1;
+        } else {
+            to = vservice_alloc();
+            retE((!to));
+            vservice_init(to, svci->usage, &svci->addr, now, 0);
+            varray_add_tail(svcs, to);
+            updt = 1;
+        };
+    }
+    if (updt) {
+        mart->bucket[svci->usage].ts = now;
+        ret = 0;
+    }
+    return ret;
+}
+
+static
+int _vroute_mart_get_serivce_node(struct vroute_mart* mart, int what, vserviceInfo* svci)
+{
+    struct varray* svcs = NULL;
+    struct vservice* to = NULL;
+    time_t now = time(NULL);
+    int32_t min_tdff = (int32_t)0x7fffffff;
+    int ret = -1;
+
+    vassert(mart);
+    vassert(svci);
+
+    svcs = &mart->bucket[what].srvcs;
+    {
+        void* argv[] = {
+            &to,
+            &now,
+            &min_tdff
+        };
+        varray_iterate(svcs, _aux_mart_get_service_cb, argv);
+        if (to) {
+            vserviceInfo_init(svci, what, &to->addr);
+            ret = 0;
+        }
+    }
+    return ret;
+}
+
+/*
+ * clear all plugs
+ * @pluger: handler to plugin structure.
+ */
+static
+void _vroute_mart_clear(struct vroute_mart* mart)
+{
+    struct varray* svcs = NULL;
+    int i = 0;
+    vassert(mart);
+
+    for (; i < PLUGIN_BUTT; i++) {
+        svcs = &mart->bucket[i].srvcs;
+        while(varray_size(svcs) > 0) {
+            vservice_free((struct vservice*)varray_del(svcs, 0));
+        }
+    }
+    return;
+}
+
+/*
+ * dump pluger
+ * @pluger: handler to plugin structure.
+ */
+static
+void _vroute_mart_dump(struct vroute_mart* mart)
+{
+    struct varray* svcs = NULL;
+    int i = 0;
+    int j = 0;
+
+    vassert(mart);
+
+    vdump(printf("-> SERVICES"));
+    for (i = 0; i < PLUGIN_BUTT; i++) {
+        svcs = &mart->bucket[i].srvcs;
+        for (j = 0; j < varray_size(svcs); j++) {
+            vservice_dump((struct vservice*)varray_get(svcs, j));
+        }
+    }
+    vdump(printf("<- SERVICES"));
+    return;
+}
+
+static
+struct vroute_mart_ops route_mart_ops = {
+    .add_srvc_node = _vroute_mart_add_service_node,
+    .get_srvc_node = _vroute_mart_get_serivce_node,
+    .clear         = _vroute_mart_clear,
+    .dump          = _vroute_mart_dump
+};
+
+int vroute_mart_init(struct vroute_mart* mart, struct vconfig* cfg)
+{
+    int i = 0;
+
+    vassert(mart);
+    vassert(cfg);
+
+    for (; i < PLUGIN_BUTT; i++) {
+        varray_init(&mart->bucket[i].srvcs, 8);
+        mart->bucket[i].ts = 0;
+    }
+    cfg->ops->get_int_ext(cfg, "route.bucket_size", &mart->bucket_sz, DEF_ROUTE_BUCKET_CAPC);
+    mart->ops = &route_mart_ops;
+
+    return 0;
+}
+
+void vroute_mart_deinit(struct vroute_mart* mart)
+{
+    int i = 0;
+
+    mart->ops->clear(mart);
+    for (; i < PLUGIN_BUTT; i++) {
+        varray_deinit(&mart->bucket[i].srvcs);
+    }
+    return ;
+}
+
+int _aux_route_tick_cb(void* item, void* cookie)
+{
+    struct vroute_space* space = (struct vroute_space*)cookie;
+    int ret = 0;
+    vassert(space);
+
+    ret = space->ops->broadcast(space, item);
+    retE((ret < 0));
     return 0;
 }
 
 /*
+ * the routine to add a node to routing table.
+ * @route: routing table.
+ * @node:  node address to add to routing table.
+ * @flags: properties that node has.
+ */
+static
+int _vroute_join_node(struct vroute* route, vnodeAddr* node_addr)
+{
+    struct vroute_space* space = &route->space;
+    vnodeInfo node_info;
+    vnodeVer ver;
+    int ret = 0;
+
+    vassert(route);
+    vassert(node_addr);
+
+    memset(&ver, 0, sizeof(ver));
+    vnodeInfo_init(&node_info, &node_addr->id, &node_addr->addr, 0, &ver);
+
+    vlock_enter(&route->lock);
+    ret = space->ops->add_node(space, &node_info);
+    vlock_leave(&route->lock);
+    retE((ret < 0));
+    return 0;
+}
+
+/*
+ * the routine to remove a node given by @node_addr from route table.
+ * @route:
+ * @node_addr:
  *
  */
 static
+int _vroute_drop_node(struct vroute* route, vnodeAddr* node_addr)
+{
+    struct vroute_space* space = &route->space;
+    int ret = 0;
+
+    vassert(route);
+    vassert(node_addr);
+
+    vlock_enter(&route->lock);
+    ret = space->ops->del_node(space, node_addr);
+    vlock_leave(&route->lock);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vroute_reg_service(struct vroute* route, int what, struct sockaddr_in* addr)
+{
+    vserviceInfo* svc = NULL;
+    int i = 0;
+
+    vassert(route);
+    vassert(addr);
+    retE((what < 0));
+    retE((what >= PLUGIN_BUTT));
+
+    vlock_enter(&route->lock);
+    route->own_node.flags |= peer_service_prop[what];
+    for (; i < varray_size(&route->own_svcs); i++){
+        svc = (vserviceInfo*)varray_get(&route->own_svcs, i);
+        if ((svc->usage == what) &&
+            (vsockaddr_equal(&svc->addr, addr))) {
+            break;
+        }
+    }
+    if (i >= varray_size(&route->own_svcs)) {
+        svc = vserviceInfo_alloc();
+        retE((!svc));
+        vserviceInfo_init(svc, what, addr);
+        varray_add_tail(&route->own_svcs, svc);
+    }
+    vlock_leave(&route->lock);
+    return 0;
+}
+
+static
+int _vroute_unreg_service(struct vroute* route, int what, struct sockaddr_in* addr)
+{
+    vserviceInfo* svc = NULL;
+    int i = 0;
+
+    vassert(route);
+    vassert(addr);
+    retE((what < 0));
+    retE((what >= PLUGIN_BUTT));
+
+    vlock_enter(&route->lock);
+    route->own_node.flags &= ~(peer_service_prop[what]);
+    for (; i < varray_size(&route->own_svcs); i++) {
+        svc = (vserviceInfo*)varray_get(&route->own_svcs, i);
+        if ((svc->usage == what) &&
+            (vsockaddr_equal(&svc->addr, addr))) {
+            break;
+        }
+    }
+    if (i < varray_size(&route->own_svcs)) {
+        svc = (vserviceInfo*)varray_del(&route->own_svcs, i);
+        vserviceInfo_free(svc);
+    }
+    vlock_leave(&route->lock);
+    return 0;
+}
+
+static
+int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr)
+{
+    struct vroute_mart* mart = &route->mart;
+    vserviceInfo svc;
+    int ret = 0;
+
+    vassert(route);
+    vassert(addr);
+    retE((what < 0));
+    retE((what >= PLUGIN_BUTT));
+
+    vlock_enter(&route->lock);
+    ret = mart->ops->get_srvc_node(mart, what, &svc);
+    vlock_leave(&route->lock);
+    retE((ret < 0));
+
+    vsockaddr_copy(addr, &svc.addr);
+    return 0;
+}
+
+static
+int _vroute_load(struct vroute* route)
+{
+    struct vroute_space* space = &route->space;
+    int ret = 0;
+    vassert(route);
+
+    vlock_enter(&route->lock);
+    ret = space->ops->load(space);
+    vlock_leave(&route->lock);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vroute_store(struct vroute* route)
+{
+    struct vroute_space* space = &route->space;
+    int ret = 0;
+    vassert(route);
+
+    vlock_enter(&route->lock);
+    ret = space->ops->store(space);
+    vlock_leave(&route->lock);
+    retE((ret < 0));
+    return 0;
+}
+
+static
 int _vroute_tick(struct vroute* route)
 {
-    struct varray* peers = NULL;
-    struct vpeer* peer = NULL;
-    time_t now = time(NULL);
-    int i  = 0;
+    struct vroute_space* space = &route->space;
     vassert(route);
 
     vlock_enter(&route->lock);
-    for (; i < NBUCKETS; i++) {
-        void* argv[] = {
-            route,
-            &now
-        };
-        peers = &route->bucket[i].peers;
-        varray_iterate(peers, _aux_route_tick_cb, argv);
-
-        if ((varray_size(peers) > 0)
-          && (route->bucket[i].ts + MAX_RCV_PERIOD < now)) {
-            peer = (struct vpeer*)varray_get_rand(peers);
-            route->dht_ops->find_closest_nodes(route, &peer->extId, &route->ownId.id);
-        }
-    }
+    space->ops->tick(space);
+    varray_iterate(&route->own_svcs, _aux_route_tick_cb, space);
     vlock_leave(&route->lock);
     return 0;
 }
 
 static
-int _vroute_get_peers(struct vroute* route, vnodeHash* hash, struct varray* array, int num)
+void _vroute_clear(struct vroute* route)
 {
+    struct vroute_space* space = &route->space;
+    struct vroute_mart*  mart  = &route->mart;
     vassert(route);
-    vassert(hash);
-    vassert(array);
-    vassert(num > 0);
 
-    //todo;
-    return 0;
+    vlock_enter(&route->lock);
+    space->ops->clear(space);
+    mart->ops->clear(mart);
+    vlock_leave(&route->lock);
+    return;
 }
 
 static
-int _vroute_find_closest_nodes(struct vroute* route, vnodeId* targetId, struct varray* closest, int num)
+void _vroute_dump(struct vroute* route)
 {
-    struct vpeer_track {
-        vnodeMetric metric;
-        int bucket_idx;
-        int item_idx;
+    struct vroute_space* space = &route->space;
+    struct vroute_mart*  mart  = &route->mart;
+    int i = 0;
+    vassert(route);
+
+    vlock_enter(&route->lock);
+    vdump(printf("-> OWN NODE INFO"));
+    vnodeInfo_dump(&route->own_node);
+    vdump(printf("<- OWN NODE INFO"));
+    vdump(printf("-> OWN SERVCIES"));
+    for (; i < varray_size(&route->own_svcs); i++) {
+        vserviceInfo_dump((vserviceInfo*)varray_get(&route->own_svcs, i));
+    }
+    vdump(printf("<- OWN SERVICES"));
+
+    space->ops->dump(space);
+    mart->ops->clear(mart);
+    vlock_leave(&route->lock);
+    return;
+}
+
+static
+int _vroute_dispatch(struct vroute* route, struct vmsg_usr* mu)
+{
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
+    void* ctxt = NULL;
+    int what = 0;
+    int ret = 0;
+    vroute_dht_cb_t routine[] = {
+        route->cb_ops->ping,
+        route->cb_ops->ping_rsp,
+        route->cb_ops->find_node,
+        route->cb_ops->find_node_rsp,
+        route->cb_ops->find_closest_nodes,
+        route->cb_ops->find_closest_nodes_rsp,
+        route->cb_ops->post_service,
+        route->cb_ops->post_hash,
+        route->cb_ops->get_peers,
+        route->cb_ops->get_peers_rsp
     };
 
-    int _aux_track_cmp_cb(void* a, void* b, void* cookie)
-    {
-        type_decl(struct vpeer_track*, item, a);
-        type_decl(struct vpeer_track*, tgt,  b);
-        vassert(item);
-        vassert(tgt);
-
-        return vnodeMetric_cmp(&tgt->metric, &item->metric);
-    }
-
-    void _aux_vpeer_free_cb(void* item, void* cookie)
-    {
-        type_decl(struct vpeer_track*, track, item  );
-        type_decl(struct vmem_aux*   , maux,  cookie);
-        vassert(maux);
-        vassert(maux);
-
-        vmem_aux_free(maux, track);
-        return ;
-    }
-
-    struct vsorted_array array;
-    struct vmem_aux maux;
-    int i = 0;
-    int j = 0;
-
-    struct vpeer_track* track = NULL;
-    struct varray* peers = NULL;
-    struct vpeer* item = NULL;
-
     vassert(route);
-    vassert(targetId);
-    vassert(closest);
-    vassert(num > 0);
+    vassert(mu);
 
-    vmem_aux_init(&maux, sizeof(struct vpeer_track), 0);
-    vsorted_array_init(&array, 0,  _aux_track_cmp_cb, route);
+    what = dec_ops->dec(mu->data, mu->len, &ctxt);
+    retE((what >= VDHT_UNKNOWN));
+    retE((what < 0));
+    vlogI(printf("Received (%s) msg.\n", dht_id_desc[what]));
 
-    vlock_enter(&route->lock);
-    for (; i < NBUCKETS; i++) {
-        peers = &route->bucket[i].peers;
-        for (; j < varray_size(peers); j++) {
-            track = (struct vpeer_track*)vmem_aux_alloc(&maux);
-            item  = (struct vpeer*)varray_get(peers, j);
-            vnodeId_dist(&item->extId.id, targetId, &track->metric);
-            track->bucket_idx = i;
-            track->item_idx   = j;
-            vsorted_array_add(&array, track);
-        }
-    }
-    for (i = 0; i < vmin(num, vsorted_array_size(&array)); i++) {
-        vnodeInfo* info = NULL;
-        uint32_t flags = 0;
-        track = (struct vpeer_track*)vsorted_array_get(&array, i);
-        peers = &route->bucket[track->bucket_idx].peers;
-        item  = (struct vpeer*)varray_get(peers, track->item_idx);
-        info  = vnodeInfo_alloc();
-        flags = item->flags & ~PROP_VER;
-        vnodeInfo_init(info, &item->extId.id, &item->extId.addr, flags, &item->ver);
-        varray_add_tail(closest, info);
-    }
-    vlock_leave(&route->lock);
-    vsorted_array_zero(&array, _aux_vpeer_free_cb, &maux);
-    vmem_aux_deinit(&maux);
+    ret = routine[what](route, &mu->addr->vsin_addr, ctxt);
+    dec_ops->dec_done(ctxt);
+    retE((ret < 0));
     return 0;
 }
 
 static
 struct vroute_ops route_ops = {
-    .add    = _vroute_add,
-    .remove = _vroute_remove,
-    .find   = _vroute_find,
-    .load   = _vroute_load,
-    .store  = _vroute_store,
-    .clear  = _vroute_clear,
-    .dump   = _vroute_dump,
-    .tick   = _vroute_tick,
-
-    .get_peers          = _vroute_get_peers,
-    .find_closest_nodes = _vroute_find_closest_nodes
+    .join_node     = _vroute_join_node,
+    .drop_node     = _vroute_drop_node,
+    .reg_service   = _vroute_reg_service,
+    .unreg_service = _vroute_unreg_service,
+    .get_service   = _vroute_get_service,
+    .dsptch        = _vroute_dispatch,
+    .load          = _vroute_load,
+    .store         = _vroute_store,
+    .tick          = _vroute_tick,
+    .clear         = _vroute_clear,
+    .dump          = _vroute_dump
 };
-
-/*
- *
- */
-static
-int _vroute_plug(struct vroute* route, int plgnId)
-{
-    vassert(route);
-    vassert(plgnId >= 0);
-    vassert(plgnId < PLUGIN_BUTT);
-
-    route->flags |= peer_plugin_prop[plgnId];
-    return 0;
-}
-
-static
-int _vroute_unplug(struct vroute* route, int plgnId)
-{
-    uint32_t flags = peer_plugin_prop[plgnId];
-    vassert(route);
-    vassert(plgnId >= 0);
-    vassert(plgnId < PLUGIN_BUTT);
-
-    route->flags &= ~flags;
-    return 0;
-}
-
-static
-int _vroute_get_plugin(struct vroute* route, int plgnId, vnodeAddr* addr)
-{
-    uint32_t flags = peer_plugin_prop[plgnId];
-    struct varray* peers = NULL;
-    struct vpeer* peer = NULL;
-    int found = 0;
-    int i = 0;
-    int j = 0;
-
-    vassert(route);
-    vassert(addr);
-    vassert(plgnId >= 0);
-    vassert(plgnId < PLUGIN_BUTT);
-
-    vlock_enter(&route->lock);
-    for (; i < NBUCKETS; i++) {
-        peers = &route->bucket[i].peers;
-        for (j = 0; j < varray_size(peers); j++) {
-            peer = (struct vpeer*)varray_get(peers, j);
-            if (peer->flags & flags) {
-                found = 1;
-                break;
-            }
-        }
-        if (found) {
-            break;
-        }
-    }
-    if (found) {
-        vnodeAddr_copy(addr, &peer->extId);
-    }
-    vlock_leave(&route->lock);
-    return (found ? 0 : -1);
-}
-
-struct vroute_plugin_ops route_plugin_ops = {
-    .plug   = _vroute_plug,
-    .unplug = _vroute_unplug,
-    .get    = _vroute_get_plugin
-};
-
-/*
- * the routine to pack and send ping query to target node (asynchronizedly)
- * @route:
- * @dest : address to target node.
- */
-static
-int _aux_vroute_snd_dht_msg(struct vroute* route, struct sockaddr_in* addr, void* buf, int len)
-{
-    struct vmsg_usr msg = {
-        .addr  = to_vsockaddr_from_sin(addr),
-        .msgId = VMSG_DHT,
-        .data  = buf,
-        .len   = len
-    };
-    int ret = 0;
-
-    vassert(route);
-    vassert(addr);
-    vassert(buf);
-    vassert(len > 0);
-
-    ret = route->msger->ops->push(route->msger, &msg);
-    retE((ret < 0));
-    return 0;
-}
 
 static
 int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
@@ -766,13 +1262,22 @@ int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->ping(&token, &route->ownId.id, buf, vdht_buf_len());
+    ret = enc_ops->ping(&token, &route->own_node.id, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
-    vlogI(printf("send @ping query"));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
+    vlogI(printf("send @ping"));
     return 0;
 }
+
 
 /*
  * the routine to pack and send ping response back to source node.
@@ -797,8 +1302,16 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
 
     ret = enc_ops->ping_rsp(token, info, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
     vlogI(printf("send @ping_rsp"));
     return 0;
 }
@@ -825,11 +1338,19 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->find_node(&token, &route->ownId.id, target, buf, vdht_buf_len());
+    ret = enc_ops->find_node(&token, &route->own_node.id, target, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
-    vlogI(printf("send @find_node query"));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
+    vlogI(printf("send @find_node"));
     return 0;
 }
 
@@ -852,10 +1373,18 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->find_node_rsp(token, &route->ownId.id, info, buf, vdht_buf_len());
+    ret = enc_ops->find_node_rsp(token, &route->own_node.id, info, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
     vlogI(printf("send @find_node_rsp"));
     return 0;
 }
@@ -881,11 +1410,19 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->find_closest_nodes(&token, &route->ownId.id, target, buf, vdht_buf_len());
+    ret = enc_ops->find_closest_nodes(&token, &route->own_node.id, target, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
-    vlogI(printf("send @find_closest_nodes query"));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
+    vlogI(printf("send @find_closest_nodes"));
     return 0;
 }
 
@@ -896,7 +1433,11 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
  * @closest:
  */
 static
-int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* closest)
+int _vroute_dht_find_closest_nodes_rsp(
+        struct vroute* route,
+        vnodeAddr* dest,
+        vtoken* token,
+        struct varray* closest)
 {
     struct vdht_enc_ops* enc_ops = &dht_enc_ops;
     void*  buf = NULL;
@@ -910,10 +1451,18 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeAddr* dest, vt
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->find_closest_nodes_rsp(token, &route->ownId.id, closest, buf, vdht_buf_len());
+    ret = enc_ops->find_closest_nodes_rsp(token, &route->own_node.id, closest, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
     vlogI(printf("send @find_closest_nodes_rsp"));
     return 0;
 }
@@ -934,34 +1483,19 @@ int _vroute_dht_post_service(struct vroute* route, vnodeAddr* dest, vserviceInfo
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->post_service(&token, service, buf, vdht_buf_len());
+    ret = enc_ops->post_service(&token, &route->own_node.id, service, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
-    vlogI(printf("send @post_service query"));
-    return 0;
-}
-
-static
-int _vroute_dht_post_service_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* services)
-{
-    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
-    void* buf = NULL;
-    int ret = 0;
-
-    vassert(route);
-    vassert(dest);
-    vassert(token);
-    vassert(services);
-
-    buf = vdht_buf_alloc();
-    retE((!buf));
-
-    ret = enc_ops->post_service_rsp(token, services, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
-    vlogI(printf("send @post_service_rsp"));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
+    vlogI(printf("send @post_service"));
     return 0;
 }
 
@@ -976,23 +1510,6 @@ int _vroute_dht_post_hash(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
     vassert(route);
     vassert(dest);
     vassert(hash);
-
-    //todo;
-    return 0;
-}
-
-/*
- * @route:
- * @dest:
- * @hash
- */
-static
-int _vroute_dht_post_hash_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* hashes)
-{
-    vassert(route);
-    vassert(dest);
-    vassert(token);
-    vassert(hashes);
 
     //todo;
     return 0;
@@ -1019,10 +1536,18 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->get_peers(&token, &route->ownId.id, hash, buf, vdht_buf_len());
+    ret = enc_ops->get_peers(&token, &route->own_node.id, hash, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
     vlogI(printf("send @get_peers"));
     return 0;
 }
@@ -1034,7 +1559,11 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
  * @peers:
  */
 static
-int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, struct varray* peers)
+int _vroute_dht_get_peers_rsp(
+        struct vroute* route,
+        vnodeAddr* dest,
+        vtoken* token,
+        struct varray* peers)
 {
     struct vdht_enc_ops* enc_ops = &dht_enc_ops;
     void* buf = NULL;
@@ -1048,10 +1577,18 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->get_peers_rsp(token, &route->ownId.id, peers, buf, vdht_buf_len());
+    ret = enc_ops->get_peers_rsp(token, &route->own_node.id, peers, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
-    ret = _aux_vroute_snd_dht_msg(route, &dest->addr, buf, ret);
-    ret1E((ret < 0), vdht_buf_free(buf));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&dest->addr),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
     vlogI(printf("send @get_peers_rsp"));
     return 0;
 }
@@ -1065,13 +1602,10 @@ struct vroute_dht_ops route_dht_ops = {
     .find_closest_nodes     = _vroute_dht_find_closest_nodes,
     .find_closest_nodes_rsp = _vroute_dht_find_closest_nodes_rsp,
     .post_service           = _vroute_dht_post_service,
-    .post_service_rsp       = _vroute_dht_post_service_rsp,
     .post_hash              = _vroute_dht_post_hash,
-    .post_hash_rsp          = _vroute_dht_post_hash_rsp,
     .get_peers              = _vroute_dht_get_peers,
     .get_peers_rsp          = _vroute_dht_get_peers_rsp
 };
-
 
 static
 void _aux_vnodeInfo_free(void* info, void* cookie)
@@ -1080,7 +1614,6 @@ void _aux_vnodeInfo_free(void* info, void* cookie)
     vnodeInfo_free((vnodeInfo*)info);
     return ;
 }
-
 /*
  * @route:
  * @closest:
@@ -1090,8 +1623,8 @@ static
 int _vroute_cb_ping(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    vnodeAddr* me = &route->ownId;
-    vnodeAddr node;
+    struct vroute_space* space = &route->space;
+    vnodeAddr addr;
     vnodeInfo info;
     vtoken token;
     int ret = 0;
@@ -1100,13 +1633,14 @@ int _vroute_cb_ping(struct vroute* route, struct sockaddr_in* from, void* ctxt)
     vassert(from);
     vassert(ctxt);
 
-    vsockaddr_copy(&node.addr, from);
-    ret = dec_ops->ping(ctxt, &token, &node.id);
+    vsockaddr_copy(&addr.addr, from);
+    ret = dec_ops->ping(ctxt, &token, &addr.id);
     retE((ret < 0));
-    ret = route->ops->add(route, &node, PROP_PING);
+
+    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_PING, NULL);
+    ret = space->ops->add_node(space, &info);
     retE((ret < 0));
-    vnodeInfo_init(&info, &me->id, &me->addr, route->flags, &route->version);
-    ret = route->dht_ops->ping_rsp(route, &node, &token, &info);
+    ret = route->dht_ops->ping_rsp(route, &addr, &token, &route->own_node);
     retE((ret < 0));
     return 0;
 }
@@ -1115,9 +1649,8 @@ static
 int _vroute_cb_ping_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    uint32_t flags = 0;
+    struct vroute_space* space = &route->space;
     vnodeInfo info;
-    vnodeAddr node;
     vtoken token;
     int ret = 0;
 
@@ -1127,13 +1660,8 @@ int _vroute_cb_ping_rsp(struct vroute* route, struct sockaddr_in* from, void* ct
 
     ret = dec_ops->ping_rsp(ctxt, &token, &info);
     retE((ret < 0));
-
-    flags = (info.flags | PROP_PING_R);
-    vnodeAddr_init(&node, &info.id, &info.addr);
-    if (vnodeVer_equal(&info.ver, &route->version)) {
-        flags |=  PROP_VER;
-    }
-    ret = route->ops->add(route, &node, flags);
+    info.flags |= PROP_PING_R;
+    ret = space->ops->add_node(space, &info);
     retE((ret < 0));
     return 0;
 }
@@ -1142,8 +1670,9 @@ static
 int _vroute_cb_find_node(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
+    struct vroute_space* space = &route->space;
     struct varray closest;
-    vnodeAddr node;
+    vnodeAddr addr;
     vnodeInfo info;
     vnodeId target;
     vtoken token;
@@ -1153,22 +1682,24 @@ int _vroute_cb_find_node(struct vroute* route, struct sockaddr_in* from, void* c
     vassert(from);
     vassert(ctxt);
 
-    vsockaddr_copy(&node.addr, from);
-    ret = dec_ops->find_node(ctxt, &token, &node.id, &target);
+    vsockaddr_copy(&addr.addr, from);
+    ret = dec_ops->find_node(ctxt, &token, &addr.id, &target);
     retE((ret < 0));
-    ret = route->ops->add(route, &node, PROP_FIND_NODE);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_FIND_NODE, NULL);
+    ret = space->ops->add_node(space, &info);
     retE((ret < 0));
-    ret = route->ops->find(route, &target, &info);
+
+    ret = space->ops->get_node(space, &target, &info);
     if (ret >= 0) {
-        ret = route->dht_ops->find_node_rsp(route, &node, &token, &info);
+        ret = route->dht_ops->find_node_rsp(route, &addr, &token, &info);
         retE((ret < 0));
         return 0;
     }
     // otherwise, send @find_closest_nodes_rsp response instead.
     varray_init(&closest, MAX_CAPC);
-    ret = route->ops->find_closest_nodes(route, &target, &closest, MAX_CAPC);
+    ret = space->ops->get_neighbors(space, &target, &closest, MAX_CAPC);
     ret1E((ret < 0), varray_deinit(&closest));
-    ret = route->dht_ops->find_closest_nodes_rsp(route, &node, &token, &closest);
+    ret = route->dht_ops->find_closest_nodes_rsp(route, &addr, &token, &closest);
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
     varray_deinit(&closest);
     retE((ret < 0));
@@ -1179,34 +1710,39 @@ static
 int _vroute_cb_find_node_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
+    struct vroute_space* space = &route->space;
     vnodeInfo info;
-    vnodeAddr node;
+    vnodeAddr addr;
     vtoken token;
-    uint32_t flags = 0;
     int ret = 0;
 
-    vsockaddr_copy(&node.addr, from);
-    ret = dec_ops->find_node_rsp(ctxt, &token, &node.id, &info);
+    vassert(route);
+    vassert(from);
+    vassert(ctxt);
+
+    vsockaddr_copy(&addr.addr, from);
+    ret = dec_ops->find_node_rsp(ctxt, &token, &addr.id, &info);
     retE((ret < 0));
-    ret = route->ops->add(route, &node, PROP_FIND_NODE_R);
+    ret = space->ops->add_node(space, &info);
     retE((ret < 0));
 
-    flags = info.flags;
-    vnodeAddr_init(&node, &info.id, &info.addr);
-    if (vnodeVer_equal(&info.ver, &route->version)) {
-        flags |= PROP_VER;
-    }
-    ret = route->ops->add(route, &node, flags);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_FIND_NODE_R, NULL);
+    ret = space->ops->add_node(space, &info);
     retE((ret < 0));
     return 0;
 }
 
 static
-int _vroute_cb_find_closest_nodes(struct vroute* route, struct sockaddr_in* from, void* ctxt)
+int _vroute_cb_find_closest_nodes(
+        struct vroute* route,
+        struct sockaddr_in* from,
+        void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
+    struct vroute_space* space = &route->space;
     struct varray closest;
-    vnodeAddr node;
+    vnodeAddr addr;
+    vnodeInfo info;
     vnodeId target;
     vtoken token;
     int ret = 0;
@@ -1215,17 +1751,17 @@ int _vroute_cb_find_closest_nodes(struct vroute* route, struct sockaddr_in* from
     vassert(from);
     vassert(ctxt);
 
-    vsockaddr_copy(&node.addr, from);
-    ret = dec_ops->find_closest_nodes(ctxt, &token, &node.id, &target);
+    vsockaddr_copy(&addr.addr, from);
+    ret = dec_ops->find_closest_nodes(ctxt, &token, &addr.id, &target);
     retE((ret < 0));
-    ret = route->ops->add(route, &node, PROP_FIND_CLOSEST_NODES);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_FIND_CLOSEST_NODES, NULL);
+    ret = space->ops->add_node(space, &info);
     retE((ret < 0));
 
     varray_init(&closest, MAX_CAPC);
-    ret = route->ops->find_closest_nodes(route, &target, &closest, MAX_CAPC);
+    ret = space->ops->get_neighbors(space, &target, &closest, MAX_CAPC);
     ret1E((ret < 0), varray_deinit(&closest));
-
-    ret = route->dht_ops->find_closest_nodes_rsp(route, &node, &token, &closest);
+    ret = route->dht_ops->find_closest_nodes_rsp(route, &addr, &token, &closest);
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
     varray_deinit(&closest);
     retE((ret < 0));
@@ -1233,11 +1769,16 @@ int _vroute_cb_find_closest_nodes(struct vroute* route, struct sockaddr_in* from
 }
 
 static
-int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
+int _vroute_cb_find_closest_nodes_rsp(
+        struct vroute* route,
+        struct sockaddr_in* from,
+        void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
+    struct vroute_space* space = &route->space;
     struct varray closest;
-    vnodeAddr node;
+    vnodeInfo info;
+    vnodeAddr addr;
     vtoken token;
     int ret = 0;
     int i = 0;
@@ -1246,52 +1787,50 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, struct sockaddr_in* 
     vassert(from);
     vassert(ctxt);
 
-    vsockaddr_copy(&node.addr, from);
+    vsockaddr_copy(&addr.addr, from);
     varray_init(&closest, MAX_CAPC);
-    ret = dec_ops->find_closest_nodes_rsp(ctxt, &token, &node.id, &closest);
+    ret = dec_ops->find_closest_nodes_rsp(ctxt, &token, &addr.id, &closest);
     retE((ret < 0));
-    ret = route->ops->add(route, &node, PROP_FIND_CLOSEST_NODES_R);
-    if (ret < 0) {
-        varray_zero(&closest, _aux_vnodeInfo_free, NULL);
-        varray_deinit(&closest);
-        return -1;
-    }
 
     for (; i < varray_size(&closest); i++) {
-        vnodeInfo* info = NULL;
-        uint32_t  flags = 0;
-
-        info = (vnodeInfo*)varray_get(&closest, i);
-        vnodeAddr_init(&node, &info->id, &info->addr);
-        flags = info->flags;
-        if (vnodeVer_equal(&info->ver, &route->version)) {
-            flags = info->flags | PROP_VER;
-        }
-        route->ops->add(route, &node, flags);
+        space->ops->add_node(space, (vnodeInfo*)varray_get(&closest, i));
     }
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
     varray_deinit(&closest);
+
+    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_FIND_CLOSEST_NODES_R, NULL);
+    ret = space->ops->add_node(space, &info);
+    retE((ret < 0));
     return 0;
 }
+
 static
 int _vroute_cb_post_service(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
+    struct vroute_space* space = &route->space;
+    struct vroute_mart*  mart  = &route->mart;
+    vserviceInfo svc;
+    vnodeAddr addr;
+    vnodeInfo info;
+    vtoken token;
+    int ret = 0;
+
     vassert(route);
     vassert(from);
     vassert(ctxt);
 
-    //todo;
-    return 0;
-}
+    vsockaddr_copy(&addr.addr, from);
+    ret = dec_ops->post_service(ctxt, &token, &addr.id, &svc);
+    retE((ret < 0));
+    retE((svc.usage < 0));
+    retE((svc.usage >= PLUGIN_BUTT));
 
-static
-int _vroute_cb_post_service_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
-{
-    vassert(route);
-    vassert(from);
-    vassert(ctxt);
-
-    //todo;
+    ret = mart->ops->add_srvc_node(mart, &svc);
+    retE((ret < 0));
+    vnodeInfo_init(&info, &addr.id, &addr.addr, peer_service_prop[svc.usage], NULL);
+    ret = space->ops->add_node(space, &info);
+    retE((ret < 0));
     return 0;
 }
 
@@ -1307,52 +1846,13 @@ int _vroute_cb_post_hash(struct vroute* route, struct sockaddr_in* from, void* c
 }
 
 static
-int _vroute_cb_post_hash_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
-{
-    vassert(route);
-    vassert(from);
-    vassert(ctxt);
-
-    //TODO;
-    return 0;
-}
-
-static
 int _vroute_cb_get_peers(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
-    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    struct varray peers;
-    vnodeHash hash;
-    vnodeAddr node;
-    vtoken token;
-    int ret = 0;
-
     vassert(route);
     vassert(from);
     vassert(ctxt);
 
-    vsockaddr_copy(&node.addr, from);
-    ret = dec_ops->get_peers(ctxt, &token, &node.id, &hash);
-    retE((ret < 0));
-    ret = route->ops->add(route, &node, PROP_GET_PEERS);
-    retE((ret < 0));
-
-    varray_init(&peers, MAX_CAPC);
-    ret = route->ops->get_peers(route, &hash, &peers, MAX_CAPC);
-    if (ret >= 0) {
-        ret = route->dht_ops->get_peers_rsp(route, &node, &token, &peers);
-        varray_zero(&peers, _aux_vnodeInfo_free, NULL);
-        varray_deinit(&peers);
-        retE((ret < 0));
-        return 0;
-    }
-    // otherwise, send @find_closest_nodes_rsp instead.
-    ret = route->ops->find_closest_nodes(route, &node.id, &peers, MAX_CAPC);
-    ret1E((ret < 0), varray_deinit(&peers));
-    ret = route->dht_ops->find_closest_nodes_rsp(route, &node, &token, &peers);
-    varray_zero(&peers, _aux_vnodeInfo_free, NULL);
-    varray_deinit(&peers);
-    retE((ret < 0));
+    //todo;
     return 0;
 }
 
@@ -1376,81 +1876,48 @@ struct vroute_cb_ops route_cb_ops = {
     .find_closest_nodes     = _vroute_cb_find_closest_nodes,
     .find_closest_nodes_rsp = _vroute_cb_find_closest_nodes_rsp,
     .post_service           = _vroute_cb_post_service,
-    .post_service_rsp       = _vroute_cb_post_service_rsp,
     .post_hash              = _vroute_cb_post_hash,
-    .post_hash_rsp          = _vroute_cb_post_hash_rsp,
     .get_peers              = _vroute_cb_get_peers,
     .get_peers_rsp          = _vroute_cb_get_peers_rsp
 };
 
+
+
 static
-int _aux_route_msg_invoke_cb(void* cookie, struct vmsg_usr* mu)
+int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
-    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vroute* route = (struct vroute*)cookie;
-    void* ctxt = NULL;
-    int what = 0;
     int ret = 0;
-
-    vroute_dht_cb_t routine[] = {
-        route->cb_ops->ping,
-        route->cb_ops->ping_rsp,
-        route->cb_ops->find_node,
-        route->cb_ops->find_node_rsp,
-        route->cb_ops->find_closest_nodes,
-        route->cb_ops->find_closest_nodes_rsp,
-        route->cb_ops->post_service,
-        route->cb_ops->post_service_rsp,
-        route->cb_ops->get_peers,
-        route->cb_ops->get_peers_rsp,
-        route->cb_ops->post_hash,
-        route->cb_ops->post_hash_rsp
-    };
-
     vassert(route);
     vassert(mu);
 
-    what = dec_ops->dec(mu->data, mu->len, &ctxt);
-    retE((what >= VDHT_UNKNOWN));
-    retE((what < 0));
-    vlogI(printf("Received (%s) msg.\n", dht_id_desc[what]));
-
-    ret = routine[what](route, &mu->addr->vsin_addr, ctxt);
-    dec_ops->dec_done(ctxt);
+    ret = route->ops->dsptch(route, mu);
     retE((ret < 0));
     return 0;
 }
 
-int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger, vnodeAddr* addr, vnodeVer* ver)
+int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger, vnodeInfo* own_info)
 {
-    int ret = 0;
-    int i = 0;
-
     vassert(route);
     vassert(msger);
-    vassert(addr);
+    vassert(own_info);
 
-    vnodeAddr_copy(&route->ownId, addr);
-    vnodeVer_copy (&route->version, ver);
-    route->flags   |= PROP_DHT_MASK;
-    route->cfg      = cfg;
-    route->msger    = msger;
-    route->ops      = &route_ops;
-    route->dht_ops  = &route_dht_ops;
-    route->cb_ops   = &route_cb_ops;
-    route->plugin_ops = &route_plugin_ops;
-
-    ret += cfg->ops->get_str_ext(cfg, "route.db_file", route->db, BUF_SZ, DEF_ROUTE_DB_FILE);
-    ret += cfg->ops->get_int_ext(cfg, "route.bucket_size", &route->bucket_sz, DEF_ROUTE_BUCKET_CAPC);
-    ret += cfg->ops->get_int_ext(cfg, "route.max_send_times", &route->max_snd_times, DEF_ROUTE_MAX_SND_TIMES);
-    retE((ret < 0));
+    vnodeInfo_copy(&route->own_node, own_info);
+    route->own_node.flags |= PROP_DHT_MASK;
+    varray_init(&route->own_svcs, 4);
 
     vlock_init(&route->lock);
-    for (; i < NBUCKETS; i++) {
-        varray_init(&route->bucket[i].peers, 0);
-        route->bucket[i].ts = 0;
-    }
-    msger->ops->add_cb(route->msger, route, _aux_route_msg_invoke_cb, VMSG_DHT);
+    vroute_space_init(&route->space, route, cfg, &route->own_node);
+    vroute_mart_init (&route->mart, cfg);
+
+    route->ops     = &route_ops;
+    route->dht_ops = &route_dht_ops;
+    route->cb_ops  = &route_cb_ops;
+
+    route->cfg   = cfg;
+    route->msger = msger;
+
+    msger->ops->add_cb(route->msger, route, _aux_route_msg_cb, VMSG_DHT);
     return 0;
 }
 
@@ -1459,10 +1926,12 @@ void vroute_deinit(struct vroute* route)
     int i = 0;
     vassert(route);
 
-    route->ops->clear(route);
-    for (; i < NBUCKETS; i++) {
-        varray_deinit(&route->bucket[i].peers);
+    vroute_space_deinit(&route->space);
+    vroute_mart_deinit(&route->mart);
+    for (; i < varray_size(&route->own_svcs); i++) {
+        vserviceInfo_free((vserviceInfo*)varray_get(&route->own_svcs, i));
     }
+    varray_deinit(&route->own_svcs);
     vlock_deinit(&route->lock);
     return ;
 }

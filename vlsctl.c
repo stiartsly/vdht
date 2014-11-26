@@ -229,7 +229,7 @@ int _vlsctl_service_pick(struct vlsctl* lsctl, void* data, int offset)
     retE((what >= PLUGIN_BUTT ));
     sz += sizeof(int32_t);
 
-    ret = host->ops->req_plugin(host, what, &addr);
+    ret = host->ops->get_service(host, what, &addr);
     retE((ret < 0));
     vsockaddr_dump(&addr);
     return sz;

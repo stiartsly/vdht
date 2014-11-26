@@ -50,7 +50,7 @@ int _vnode_join(struct vnode* vnd, struct sockaddr_in* addr)
 
     vnodeId_make(&nodeAddr.id);
     vsockaddr_copy(&nodeAddr.addr, addr);
-    return vnd->route->ops->add(vnd->route, &nodeAddr, 0);
+    return vnd->route->ops->join_node(vnd->route, &nodeAddr);
 }
 
 /*
@@ -70,7 +70,7 @@ int _vnode_drop(struct vnode* vnd, struct sockaddr_in* addr)
 
     vnodeId_make(&nodeAddr.id);
     vsockaddr_copy(&nodeAddr.addr, addr);
-    return vnd->route->ops->remove(vnd->route, &nodeAddr);
+    return vnd->route->ops->drop_node(vnd->route, &nodeAddr);
 }
 
 /*
@@ -177,7 +177,6 @@ struct vnode_ops node_ops = {
     .drop      = _vnode_drop,
     .stabilize = _vnode_stabilize,
     .dump      = _vnode_dump
-//    .get_peers = _vnode_get_peers
 };
 
 static

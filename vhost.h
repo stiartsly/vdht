@@ -6,7 +6,6 @@
 #include "vmsger.h"
 #include "vticker.h"
 #include "vlsctl.h"
-#include "vplugin.h"
 
 #define HOST_SZ ((int)128)
 
@@ -19,7 +18,7 @@ struct vhost_ops {
     int   (*stabilize)  (struct vhost*);
     int   (*plug)       (struct vhost*, int, struct sockaddr_in*);
     int   (*unplug)     (struct vhost*, int, struct sockaddr_in*);
-    int   (*req_plugin) (struct vhost*, int, struct sockaddr_in*);
+    int   (*get_service)(struct vhost*, int, struct sockaddr_in*);
     int   (*loop)       (struct vhost*);
     int   (*req_quit)   (struct vhost*);
     int   (*dump)       (struct vhost*);
@@ -39,7 +38,6 @@ struct vhost {
     struct vroute  route;
     struct vnode   node;
     struct vlsctl  lsctl;
-    struct vpluger pluger;
 
     struct vconfig*   cfg;
     struct vhost_ops* ops;
