@@ -381,22 +381,26 @@ int be_encode(struct be_node *node, char *buf, int len)
     case BE_STR: {
         int _len = get_int32(unoff_addr(node->val.s, sizeof(int32_t)));
         ret = snprintf(buf+off, len-off, "%i:", _len);
-        retE((ret < 0));
+        vlog((ret >= len-off), elog_snprintf);
+        retE((ret >= len-off));
         off += ret;
         ret = snprintf(buf+off, len-off, "%s", node->val.s);
-        retE((ret < 0));
+        vlog((ret >= len-off), elog_snprintf);
+        retE((ret >= len-off));
         off += ret;
         break;
     }
     case BE_INT:
         ret = snprintf(buf+off, len-off, "i%ie", node->val.i);
-        retE((ret < 0));
+        vlog((ret >= len-off), elog_snprintf);
+        retE((ret >= len-off));
         off += ret;
         break;
     case BE_LIST: {
         int i = 0;
         ret = snprintf(buf+off, len-off, "l");
-        retE((ret < 0));
+        vlog((ret >= len-off), elog_snprintf);
+        retE((ret >= len-off));
         off += ret;
         for (; node->val.l[i]; i++) {
             ret = be_encode(node->val.l[i], buf+off, len-off);
@@ -404,20 +408,23 @@ int be_encode(struct be_node *node, char *buf, int len)
             off += ret;
         }
         ret = snprintf(buf+off, len-off, "e");
-        retE((ret < 0));
+        vlog((ret >= len-off), elog_snprintf);
+        retE((ret >= len-off));
         off += ret;
         break;
     }
     case BE_DICT: {
         int i = 0;
         ret = snprintf(buf+off, len-off, "d");
-        retE((ret < 0));
+        vlog((ret >= len-off), elog_snprintf);
+        retE((ret >= len-off));
         off += ret;
         for (i = 0; node->val.d[i].val; i++) {
             char* _key = node->val.d[i].key;
             int   _len = get_int32(unoff_addr(_key, sizeof(int32_t)));
             ret = snprintf(buf + off, len - off, "%i:%s", _len, _key);
-            retE((ret < 0));
+            vlog((ret >= len-off), elog_snprintf);
+            retE((ret >= len-off));
             off += ret;
 
             ret = be_encode(node->val.d[i].val, buf+off, len-off);
@@ -425,7 +432,8 @@ int be_encode(struct be_node *node, char *buf, int len)
             off += ret;
         }
         ret = snprintf(buf+off, len-off, "e");
-        retE((ret < 0));
+        vlog((ret >= len-off), elog_snprintf);
+        retE((ret >= len-off));
         off += ret;
         break;
     }

@@ -198,7 +198,8 @@ int vsockaddr_strlize(struct sockaddr_in* addr, char* buf, int len)
     retE((ret < 0));
     sz  = strlen(buf);
     ret = snprintf(buf + sz, len - sz, ":%d", port);
-    retE((ret < 0));
+    vlog((ret >= len-sz), elog_snprintf);
+    retE((ret >= len-sz));
     return 0;
 }
 
