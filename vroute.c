@@ -672,14 +672,14 @@ void _vroute_space_dump(struct vroute_space* space)
     int j = 0;
     vassert(space);
 
-    vdump(printf("-> NODE SPACE"));
+    vdump(printf("-> ROUTING SPACE"));
     for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
             vpeer_dump((struct vpeer*)varray_get(peers, j));
         }
     }
-    vdump(printf("<- NODE SPACE"));
+    vdump(printf("<- ROUTING SPACE"));
 
     return ;
 }
@@ -933,14 +933,14 @@ void _vroute_mart_dump(struct vroute_mart* mart)
 
     vassert(mart);
 
-    vdump(printf("-> SERVICES"));
+    vdump(printf("-> ROUTING MART"));
     for (i = 0; i < PLUGIN_BUTT; i++) {
         svcs = &mart->bucket[i].srvcs;
         for (j = 0; j < varray_size(svcs); j++) {
             vservice_dump((struct vservice*)varray_get(svcs, j));
         }
     }
-    vdump(printf("<- SERVICES"));
+    vdump(printf("<- ROUTING MART"));
     return;
 }
 
@@ -1182,19 +1182,23 @@ void _vroute_dump(struct vroute* route)
     int i = 0;
     vassert(route);
 
+    vdump(printf("-> ROUTE"));
     vlock_enter(&route->lock);
-    vdump(printf("-> OWN NODE INFO"));
+    vdump(printf("-> MINE"));
+    vdump(printf("-> NODE"));
     vnodeInfo_dump(&route->own_node);
-    vdump(printf("<- OWN NODE INFO"));
-    vdump(printf("-> OWN SERVCIES"));
+    vdump(printf("<- NODE"));
+    vdump(printf("-> SERVICES"));
     for (; i < varray_size(&route->own_svcs); i++) {
         vserviceInfo_dump((vserviceInfo*)varray_get(&route->own_svcs, i));
     }
-    vdump(printf("<- OWN SERVICES"));
+    vdump(printf("<- SERVICES"));
+    vdump(printf("<- MINE"));
 
     space->ops->dump(space);
-    mart->ops->clear(mart);
+    mart->ops->dump(mart);
     vlock_leave(&route->lock);
+    vdump(printf("<- ROUTE"));
     return;
 }
 
