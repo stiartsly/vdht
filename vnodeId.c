@@ -306,87 +306,56 @@ void vnodeVer_dump(vnodeVer* ver)
  */
 void vtoken_make(vtoken* token)
 {
-    char* data = NULL;
-    int i = 0;
     vassert(token);
-
-    srand(time(NULL)); // TODO: need use mac as srand seed.
-    data = (char*)token->data;
-    for (; i < VNODE_ID_LEN; i++) {
-        data[i] = rand() % 9;
-    }
+    vnodeId_make((vnodeId*)token);
     return ;
 
 }
 
 void vtoken_copy(vtoken* dst, vtoken* src)
 {
-    int i = 0;
     vassert(dst);
     vassert(src);
 
-    for (; i < VNODE_ID_LEN; i++) {
-        dst->data[i] = src->data[i];
-    }
+    vnodeId_copy((vnodeId*)dst, (vnodeId*)src);
     return ;
 }
 
 int vtoken_equal(vtoken* a, vtoken* b)
 {
-    int i = 0;
     vassert(a);
     vassert(b);
 
-    for (; i < VNODE_ID_LEN; i++) {
-        if (a->data[i] != b->data[i]) {
-            return 0;
-        }
-    }
-    return 1;
+    return vnodeId_equal((vnodeId*)a, (vnodeId*)b);
 }
 int vtoken_strlize(vtoken* token, char* buf, int len)
 {
-    int i = 0;
     vassert(token);
     vassert(buf);
     vassert(len > 0);
 
-    retE((len + 1 < VNODE_ID_LEN));
-    for (; i < VNODE_ID_LEN; i++) {
-        buf[i] = token->data[i] + '0';
-    }
-    buf[i] = '\0';
-    return 0;
+    return vnodeId_strlize((vnodeId*)token, buf, len);
 }
 
 int vtoken_unstrlize(const char* token_str, vtoken* token)
 {
-    int i = 0;
     vassert(token_str);
     vassert(token);
 
-    retE((strlen(token_str) != VNODE_ID_LEN));
-    for(; i < VNODE_ID_LEN; i++) {
-        retE((token_str[i] < '0'));
-        retE((token_str[i] > '9'));
-        token->data[i] = token_str[i] - '0';
-    }
-    return 0;
+    return vnodeId_unstrlize(token_str, (vnodeId*)token);
 }
 
 void vtoken_dump(vtoken* token)
 {
-    int i = 0;
+    char buf[64];
+    int ret = 0;
     vassert(token);
 
-    printf("##ID:");
-    for (; i < VNODE_ID_LEN; i++) {
-        printf("%c", token->data[i] + '0');
-        if ((i % 4 == 3) && (i +1 != VNODE_ID_LEN)){
-            printf("-");
-        }
-    }
-    printf("\n");
+    memset(buf, 0, 64);
+    ret = snprintf(buf, 64, "Token:");
+    vnodeId_strlize((vnodeId*)token, buf + ret, 64-ret);
+    vdump(printf("%s",buf));
+
     return;
 }
 
@@ -455,61 +424,39 @@ void vnodeInfo_dump(vnodeInfo* info)
  */
 void vserviceId_make(vserviceId* svcId)
 {
-    char* data = NULL;
-    int i = 0;
     vassert(svcId);
-
-    srand(time(NULL)); // TODO: need use mac as srand seed.
-    data = (char*)svcId->data;
-    for (; i < VNODE_ID_LEN; i++) {
-        data[i] = rand() % 9;
-    }
-    return ;
+    vnodeId_make((vnodeId*)svcId);
+    return;
 }
 
 int vserviceId_strlize(vserviceId* id, char* buf, int len)
 {
-    int i = 0;
     vassert(id);
     vassert(buf);
     vassert(len > 0);
 
-    retE((len + 1 < VNODE_ID_LEN));
-    for (; i < VNODE_ID_LEN; i++) {
-        buf[i] = id->data[i] + '0';
-    }
-    buf[i] = '\0';
-    return 0;
+    return vnodeId_strlize((vnodeId*)id, buf, len);
 }
 
 int vserviceId_unstrlize(const char* id_str, vserviceId* id)
 {
-    int i = 0;
     vassert(id_str);
     vassert(id);
 
-    retE((strlen(id_str) != VNODE_ID_LEN));
-    for(; i < VNODE_ID_LEN; i++) {
-        retE((id_str[i] < '0'));
-        retE((id_str[i] > '9'));
-        id->data[i] = id_str[i] - '0';
-    }
-    return 0;
+    return vnodeId_unstrlize(id_str, (vnodeId*)id);
 }
 
 void vserviceId_dump(vserviceId* svcId)
 {
-    int i = 0;
+    char buf[64];
+    int ret = 0;
     vassert(svcId);
 
-    printf("##Service ID:");
-    for (; i < VNODE_ID_LEN; i++) {
-        printf("%c", svcId->data[i] + '0');
-        if ((i % 4 == 3) && (i +1 != VNODE_ID_LEN)){
-            printf("-");
-        }
-    }
-    printf("\n");
+    memset(buf, 0, 64);
+    ret = snprintf(buf, 64, "ServiceId:");
+    vnodeId_strlize((vnodeId*)svcId, buf + ret, 64-ret);
+    vdump(printf("%s",buf));
+
     return;
 }
 
