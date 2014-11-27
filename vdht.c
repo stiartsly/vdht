@@ -486,17 +486,19 @@ int _vdht_enc_find_closest_nodes_rsp(
  * @buf:
  * @len:
  *
- * find_node Query = {"t":"875675086641542182221",",
+ * find_node Query = {"t":"55317361186737765465",",
  *                    "y":"q",
  *                    "q":"post_service",
- *                    "a": {"id":"abcdefghij0123456789",
- *                          "service" :{"id": "abcdefghij0123456789"
+ *                    "a": {"id":"77552558420327273112",
+ *                          "service" :{"id": "688530648014571404681"
  *                                    "m" : "192.168.4.125:12444",
- *                                    "f" : "00000001"
+ *                                    "f" : "0"
  *                                   }
  *                         }
  *                   }
- * bencoded = d1:ad2:id20:abcdefghij01234567896:target20:mnopqrstuvwxyz123456e1:q9:find_node1:t2:aa1:y1:qe
+ * bencoded = d1:t20:553173611867377654651:y1:q1:q12:post_service1:ad2:i\
+ *            d20:775525584203272731127:serviced2:id20:68853064801457140\
+ *            4681:m15:192.168.4.125:124441:fi0eeee
  */
 static
 int _vdht_enc_post_service(
@@ -534,7 +536,7 @@ int _vdht_enc_post_service(
 
     node = _aux_create_vserviceInfo(service);
     be_add_keypair(rslt, "service", node);
-    be_add_keypair(dict, "r", rslt);
+    be_add_keypair(dict, "a", rslt);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
