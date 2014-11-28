@@ -60,6 +60,7 @@
 #define strcpy
 #define strncpy
 #define snprintf
+#define sscanf
 #define strcmp
 #define strtol
 #define strchr

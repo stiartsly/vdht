@@ -208,7 +208,8 @@ int _aux_space_add_node_cb(void* item, void* cookie)
     varg_decl(cookie, 4, int*,       found);
     varg_decl(cookie, 5, struct vpeer**, to);
 
-    if (vnodeId_equal(&peer->id, &node_info->id)) {
+    if (vnodeId_equal(&peer->id, &node_info->id) ||
+        vsockaddr_equal(&peer->addr, &node_info->addr)) {
         *to = peer;
         *found = 1;
         return 1;
@@ -1640,7 +1641,6 @@ int _vroute_cb_ping(struct vroute* route, struct sockaddr_in* from, void* ctxt)
     vsockaddr_copy(&addr.addr, from);
     ret = dec_ops->ping(ctxt, &token, &addr.id);
     retE((ret < 0));
-
     vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_PING, NULL);
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
@@ -1665,7 +1665,7 @@ int _vroute_cb_ping_rsp(struct vroute* route, struct sockaddr_in* from, void* ct
     ret = dec_ops->ping_rsp(ctxt, &token, &info);
     retE((ret < 0));
     info.flags |= PROP_PING_R;
-    vsockaddr_copy(&info->addr, from);
+    vsockaddr_copy(&info.addr, from);
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
     return 0;

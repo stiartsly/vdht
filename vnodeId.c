@@ -10,7 +10,7 @@ void vnodeId_make(vnodeId* id)
     srand(time(NULL)); // TODO: need use mac as srand seed.
     data = (char*)id->data;
     for (; i < VNODE_ID_LEN; i++) {
-        data[i] = rand() % 15;
+        data[i] = (char)(rand() % 16);
     }
     return ;
 }
@@ -96,28 +96,34 @@ int vnodeId_strlize(vnodeId* id, char* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
+    memset(buf, 0, len);
     for (; i < VNODE_ID_LEN; i++) {
         ret = snprintf(buf+sz, len-sz, "%x", id->data[i]);
         vlog((ret >= len-sz), elog_snprintf);
         retE((ret >= len-sz));
         sz += ret;
     }
+    retE((strlen(buf) != VNODE_ID_LEN));
     return 0;
 }
 
 int vnodeId_unstrlize(const char* id_str, vnodeId* id)
 {
+    char tmp[4];
     int ret = 0;
     int i = 0;
     vassert(id_str);
     vassert(id);
 
+    memset(tmp, 0, 4);
     retE((strlen(id_str) != VNODE_ID_LEN));
     for(; i < VNODE_ID_LEN; i++) {
-        char data = id_str[i];
-        ret = sscanf(&data, "%x", (int*)&id->data[i]);
+        int idata = 0;
+        *tmp = id_str[i];
+        ret = sscanf(tmp, "%x", &idata);
         vlog((!ret), elog_sscanf);
         retE((!ret));
+        id->data[i] = (char)idata;
     }
     return 0;
 }
