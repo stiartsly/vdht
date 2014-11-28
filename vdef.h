@@ -108,6 +108,7 @@
 #define elog_timer_delete   perror("[timer_delete]")
 
 #define elog_snprintf       vlogE(printf("snprintf"))
+#define elog_sscanf         vlogE(printf("sscanf"))
 #define elog_malloc         vlogE(printf("malloc"))
 #define elog_realloc        vlogE(printf("realloc]"))
 #define elog_inet_aton      vlogE(printf("inet_aton"))

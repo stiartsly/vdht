@@ -1665,6 +1665,7 @@ int _vroute_cb_ping_rsp(struct vroute* route, struct sockaddr_in* from, void* ct
     ret = dec_ops->ping_rsp(ctxt, &token, &info);
     retE((ret < 0));
     info.flags |= PROP_PING_R;
+    vsockaddr_copy(&info->addr, from);
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
     return 0;

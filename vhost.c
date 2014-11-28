@@ -184,14 +184,14 @@ int _vhost_loop(struct vhost* host)
     vassert(host);
     vassert(waiter);
 
-    vlogI(printf("Host in laundry loop"));
+    vlogI(printf("Host laundrying"));
     while(!host->to_quit) {
         ret = waiter->ops->laundry(waiter);
         if (ret < 0) {
             continue;
         }
     }
-    vlogI(printf("Host quited from laundry loop"));
+    vlogI(printf("Host quited from laundrying"));
     return 0;
 }
 

@@ -98,6 +98,7 @@ int vnodeId_strlize(vnodeId* id, char* buf, int len)
 
     for (; i < VNODE_ID_LEN; i++) {
         ret = snprintf(buf+sz, len-sz, "%x", id->data[i]);
+        vlog((ret >= len-sz), elog_snprintf);
         retE((ret >= len-sz));
         sz += ret;
     }
@@ -115,6 +116,7 @@ int vnodeId_unstrlize(const char* id_str, vnodeId* id)
     for(; i < VNODE_ID_LEN; i++) {
         char data = id_str[i];
         ret = sscanf(&data, "%x", (int*)&id->data[i]);
+        vlog((!ret), elog_sscanf);
         retE((!ret));
     }
     return 0;
