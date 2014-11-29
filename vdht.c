@@ -104,7 +104,7 @@ struct be_node* _aux_create_vnodeInfo(vnodeInfo* info)
 }
 
 static
-struct be_node* _aux_create_vserviceInfo(vserviceInfo* info)
+struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* info)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -113,7 +113,7 @@ struct be_node* _aux_create_vserviceInfo(vserviceInfo* info)
     dict = be_create_dict();
     retE_p((!dict));
 
-    node = be_create_vserviceId(&info->id);
+    node = be_create_vsrvcId(&info->id);
     be_add_keypair(dict, "id", node);
     node = be_create_addr(&info->addr);
     be_add_keypair(dict, "m", node);
@@ -504,7 +504,7 @@ static
 int _vdht_enc_post_service(
         vtoken* token,
         vnodeId* srcId,
-        vserviceInfo* service,
+        vsrvcInfo* service,
         void* buf,
         int sz)
 {
@@ -534,7 +534,7 @@ int _vdht_enc_post_service(
     node = be_create_vnodeId(srcId);
     be_add_keypair(rslt, "id", node);
 
-    node = _aux_create_vserviceInfo(service);
+    node = _aux_create_vsrvcInfo(service);
     be_add_keypair(rslt, "service", node);
     be_add_keypair(dict, "a", rslt);
 
@@ -692,7 +692,7 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
 }
 
 static
-int _aux_unpack_vserviceInfo(struct be_node* dict, vserviceInfo* info)
+int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* info)
 {
     struct be_node* node = NULL;
     int ret = 0;
@@ -703,7 +703,7 @@ int _aux_unpack_vserviceInfo(struct be_node* dict, vserviceInfo* info)
 
     ret = be_node_by_key(dict, "id", &node);
     retE((ret < 0));
-    ret = be_unpack_vserviceId(node, &info->id);
+    ret = be_unpack_vsrvcId(node, &info->id);
     retE((ret < 0));
     ret = be_node_by_key(dict, "m", &node);
     retE((ret < 0));
@@ -996,7 +996,7 @@ int _vdht_dec_post_service(
         void* ctxt,
         vtoken* token,
         vnodeId* srcId,
-        vserviceInfo* service)
+        vsrvcInfo* service)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
@@ -1014,7 +1014,7 @@ int _vdht_dec_post_service(
 
     ret = be_node_by_2keys(dict, "r", "service", &node);
     retE((ret < 0));
-    ret = _aux_unpack_vserviceInfo(node, service);
+    ret = _aux_unpack_vsrvcInfo(node, service);
     retE((ret < 0));
 
     return 0;

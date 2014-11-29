@@ -3,36 +3,62 @@
 
 #include <netinet/in.h>
 
-#define VNODE_ID_LEN    20
-#define VNODE_ID_INTLEN 5
-#define VNODE_ID_BITLEN 160
-#define VTOKEN_LEN  VNODE_ID_LEN
+#define VTOKEN_LEN    20
+#define VTOKEN_INTLEN 5
+#define VTOKEN_BITLEN 160
 
-/*
- * vnodeId
- */
-struct vnodeId {
-    unsigned char data[VNODE_ID_LEN];
+struct vtoken {
+    unsigned char data[VTOKEN_LEN];
 };
-typedef struct vnodeId vnodeId;
-typedef struct vnodeId vnodeMetric;
-typedef struct vnodeId vnodeVer;
-typedef struct vnodeId vnodeHash;
-typedef struct vnodeId vtoken;
-typedef struct vnodeId vserviceId;
+typedef struct vtoken vtoken;
+
+void vtoken_make   (vtoken*);
+int  vtoken_equal  (vtoken*, vtoken*);
+void vtoken_copy   (vtoken*, vtoken*);
+void vtoken_dump   (vtoken*);
+int  vtoken_strlize(vtoken*, char*, int);
+int  vtoken_unstrlize(const char*, vtoken*);
 
 /*
- * vnode addr
+ * for vnodeId
  */
+typedef struct vtoken vnodeId;
+typedef struct vtoken vnodeMetric;
 
+void vnodeId_dist  (vnodeId*, vnodeId*, vnodeMetric*);
+int  vnodeId_bucket(vnodeId*, vnodeId*);
+int  vnodeMetric_cmp(vnodeMetric*, vnodeMetric*);
+
+/*
+ * for vnodeHash
+ */
+typedef struct vtoken vnodeHash;
+
+/*
+ * for vnodeVer
+ */
+typedef struct vtoken vnodeVer;
+
+void vnodeVer_dump     (vnodeVer*);
+int  vnodeVer_strlize  (vnodeVer*, char*, int);
+int  vnodeVer_unstrlize(const char*, vnodeVer*);
+
+/*
+ * for vnodeAddr
+ */
 struct vnodeAddr {
     vnodeId id;
     struct sockaddr_in addr;
 };
 typedef struct vnodeAddr vnodeAddr;
 
+int  vnodeAddr_equal(vnodeAddr*, vnodeAddr*);
+void vnodeAddr_dump (vnodeAddr*);
+void vnodeAddr_copy (vnodeAddr*, vnodeAddr*);
+int  vnodeAddr_init (vnodeAddr*, vnodeId*, struct sockaddr_in*);
+
 /*
- * vnode info
+ * for vnodeInfo
  */
 struct vnodeInfo  {
     vnodeId  id;
@@ -42,79 +68,31 @@ struct vnodeInfo  {
 };
 typedef struct vnodeInfo vnodeInfo;
 
-
-/*
- * vnodeId funcs
- */
-void vnodeId_make  (vnodeId*);
-void vnodeId_dist  (vnodeId*, vnodeId*, vnodeMetric*);
-int  vnodeId_bucket(vnodeId*, vnodeId*);
-int  vnodeId_equal (vnodeId*, vnodeId*);
-void vnodeId_dump  (vnodeId*);
-void vnodeId_copy  (vnodeId*, vnodeId*);
-int  vnodeId_strlize(vnodeId*, char*, int);
-int  vnodeId_unstrlize(const char*, vnodeId*);
-
-/*
- * vnodeMetric
- */
-int  vnodeMetric_cmp(vnodeMetric*, vnodeMetric*);
-
-
-/*
- * vnodeAddr funcs
- */
-int  vnodeAddr_equal(vnodeAddr*, vnodeAddr*);
-void vnodeAddr_dump (vnodeAddr*);
-void vnodeAddr_copy (vnodeAddr*, vnodeAddr*);
-int  vnodeAddr_init (vnodeAddr*, vnodeId*, struct sockaddr_in*);
-
-/*
- * version
- */
-void vnodeVer_copy   (vnodeVer*, vnodeVer*);
-int  vnodeVer_equal  (vnodeVer*, vnodeVer*);
-int  vnodeVer_strlize(vnodeVer*, char*, int);
-int  vnodeVer_unstrlize(const char*, vnodeVer*);
-void vnodeVer_dump   (vnodeVer*);
-
-/*
- * token
- */
-void vtoken_make   (vtoken*);
-void vtoken_copy   (vtoken*, vtoken*);
-int  vtoken_equal  (vtoken*, vtoken*);
-int  vtoken_strlize(vtoken*, char*, int);
-int  vtoken_unstrlize(const char*, vtoken*);
-void vtoken_dump   (vtoken*);
-
-/*
- * vnodeInfo
- */
 vnodeInfo* vnodeInfo_alloc(void);
 void vnodeInfo_free(vnodeInfo*);
 void vnodeInfo_copy(vnodeInfo*, vnodeInfo*);
 int  vnodeInfo_init(vnodeInfo*, vnodeId*, struct sockaddr_in*, uint32_t, vnodeVer*);
 void vnodeInfo_dump(vnodeInfo*);
 
+/*
+ * for vsrvcId
+ */
+typedef struct vtoken vsrvcId;
 
 /*
- * vserviceInfo
+ * for vsrvcInfo
  */
- struct vserviceInfo {
-    vserviceId id;
+ struct vsrvcInfo {
+    vsrvcId id;
     struct sockaddr_in addr;
     int usage;
  };
- typedef struct vserviceInfo vserviceInfo;
- void vserviceId_make   (vserviceId*);
- void vserviceId_dump   (vserviceId*);
- int  vserviceId_strlize(vserviceId*, char*, int);
- int  vserviceId_unstrlize(const char*, vserviceId*);
+ typedef struct vsrvcInfo vsrvcInfo;
 
- vserviceInfo* vserviceInfo_alloc(void);
- void vserviceInfo_free(vserviceInfo*);
- int  vserviceInfo_init(vserviceInfo*, int, struct sockaddr_in*);
- void vserviceInfo_dump(vserviceInfo*);
+ vsrvcInfo* vsrvcInfo_alloc(void);
+ void vsrvcInfo_free(vsrvcInfo*);
+ int  vsrvcInfo_init(vsrvcInfo*, int, struct sockaddr_in*);
+ void vsrvcInfo_dump(vsrvcInfo*);
 
 #endif
+

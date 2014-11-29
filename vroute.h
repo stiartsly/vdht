@@ -89,8 +89,8 @@ void vroute_space_deinit(struct vroute_space*);
  */
 struct vroute_mart;
 struct vroute_mart_ops {
-    int  (*add_srvc_node)(struct vroute_mart*, vserviceInfo*);
-    int  (*get_srvc_node)(struct vroute_mart*, int, vserviceInfo*);
+    int  (*add_srvc_node)(struct vroute_mart*, vsrvcInfo*);
+    int  (*get_srvc_node)(struct vroute_mart*, int, vsrvcInfo*);
     void (*clear)        (struct vroute_mart*);
     void (*dump)         (struct vroute_mart*);
 };
@@ -134,7 +134,7 @@ struct vroute_dht_ops {
     int (*find_node_rsp) (struct vroute*, vnodeAddr*, vtoken*, vnodeInfo*);
     int (*find_closest_nodes)(struct vroute*, vnodeAddr*, vnodeId*);
     int (*find_closest_nodes_rsp)(struct vroute*, vnodeAddr*, vtoken*, struct varray*);
-    int (*post_service)  (struct vroute*, vnodeAddr*, vserviceInfo*);
+    int (*post_service)  (struct vroute*, vnodeAddr*, vsrvcInfo*);
     int (*post_hash)     (struct vroute*, vnodeAddr*, vnodeHash*);
     int (*get_peers)     (struct vroute*, vnodeAddr*, vnodeHash*);
     int (*get_peers_rsp) (struct vroute*, vnodeAddr*, vtoken*, struct varray*);

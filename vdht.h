@@ -67,7 +67,7 @@ struct vdht_enc_ops {
     int (*post_service)(
             vtoken* token,
             vnodeId* srcId,
-            vserviceInfo* service,
+            vsrvcInfo* service,
             void* buf,
             int   sz);
 
@@ -152,7 +152,7 @@ struct vdht_dec_ops {
             void* ctxt,
             vtoken* token,
             vnodeId* srcId,
-            vserviceInfo* service
+            vsrvcInfo* service
         );
 
     int (*post_hash)(

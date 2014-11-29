@@ -49,7 +49,7 @@ int _vnode_join(struct vnode* vnd, struct sockaddr_in* addr)
         return 0;
     }
 
-    vnodeId_make(&node_addr.id);
+    vtoken_make(&node_addr.id);
     vsockaddr_copy(&node_addr.addr, addr);
     ret = route->ops->join_node(route, &node_addr);
     retE((ret < 0));
@@ -74,7 +74,7 @@ int _vnode_drop(struct vnode* vnd, struct sockaddr_in* addr)
         return 0;
     }
 
-    vnodeId_make(&node_addr.id);
+    vtoken_make(&node_addr.id);
     vsockaddr_copy(&node_addr.addr, addr);
     ret = route->ops->drop_node(route, &node_addr);
     retE((ret < 0));

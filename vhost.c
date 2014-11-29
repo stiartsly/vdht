@@ -248,7 +248,7 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest)
     vassert(host);
     vassert(dest);
 
-    vnodeId_make(&addr.id);
+    vtoken_make(&addr.id);
     vsockaddr_copy(&addr.addr, dest);
 
     switch(what) {
@@ -422,7 +422,7 @@ int _aux_vhost_set_addr(struct vconfig* cfg, vnodeAddr* nodeAddr)
     vlog((ret < 0), elog_vsockaddr_convert);
     retE((ret < 0));
 
-    vnodeId_make(&nodeAddr->id);
+    vtoken_make(&nodeAddr->id);
     return 0;
 }
 
