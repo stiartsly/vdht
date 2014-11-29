@@ -21,7 +21,7 @@ struct vhost_ops {
     int   (*get_service)(struct vhost*, int, struct sockaddr_in*);
     int   (*loop)       (struct vhost*);
     int   (*req_quit)   (struct vhost*);
-    int   (*dump)       (struct vhost*);
+    void  (*dump)       (struct vhost*);
     char* (*get_version)(struct vhost*);
     int   (*bogus_query)(struct vhost*, int, struct sockaddr_in*);
 };

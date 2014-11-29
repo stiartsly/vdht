@@ -156,7 +156,7 @@ int _vhost_get_service(struct vhost* host, int what, struct sockaddr_in* addr)
  * @host:
  */
 static
-int _vhost_dump(struct vhost* host)
+void _vhost_dump(struct vhost* host)
 {
     vassert(host);
 
@@ -168,7 +168,7 @@ int _vhost_dump(struct vhost* host)
     host->waiter.ops->dump(&host->waiter);
     vdump(printf("<- HOST"));
 
-    return 0;
+    return;
 }
 
 /*

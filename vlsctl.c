@@ -28,6 +28,9 @@ int _aux_get_addr(void* data, int offset, struct sockaddr_in* addr)
     return sz;
 }
 
+/*
+ * forward the request to make host online
+ */
 static
 int _vlsctl_host_up(struct vlsctl* lsctl, void* data, int offset)
 {
@@ -42,6 +45,9 @@ int _vlsctl_host_up(struct vlsctl* lsctl, void* data, int offset)
     return 0;
 }
 
+/*
+ *  forward the request to make host offline.
+ */
 static
 int _vlsctl_host_down(struct vlsctl* lsctl, void* data, int offset)
 {
@@ -56,6 +62,9 @@ int _vlsctl_host_down(struct vlsctl* lsctl, void* data, int offset)
     return 0;
 }
 
+/*
+ * forward the request to make vdhtd exit.
+ */
 static
 int _vlsctl_host_exit(struct vlsctl* lsctl, void* data, int offset)
 {
@@ -71,8 +80,11 @@ int _vlsctl_host_exit(struct vlsctl* lsctl, void* data, int offset)
     return 0;
 }
 
+/*
+ * forward the reqeust to dump all infos about host, so as to debug
+ */
 static
-int _vlsctl_host_dump(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_dump_host(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     vassert(lsctl);
@@ -83,8 +95,12 @@ int _vlsctl_host_dump(struct vlsctl* lsctl, void* data, int offset)
     return 0;
 }
 
+/*
+ * forward the request to send query to the node with given address.
+ * this request is purely for debug.
+ */
 static
-int _vlsctl_dht_query(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_bogus_query(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -98,7 +114,7 @@ int _vlsctl_dht_query(struct vlsctl* lsctl, void* data, int offset)
 
     qId = get_int32(offset_addr(data, offset + sz));
     sz += sizeof(int32_t);
-    vlogI(printf("[vlsctl] reqeust to send @%s query", vdht_get_desc(qId)));
+    vlogI(printf("[vlsctl] request to send query(@%s)", vdht_get_desc(qId)));
 
     ret = _aux_get_addr(data, offset + sz, &sin);
     retE((ret < 0));
@@ -109,8 +125,12 @@ int _vlsctl_dht_query(struct vlsctl* lsctl, void* data, int offset)
     return sz;
 }
 
+/*
+ * forward the request to add wellknown node or node with given address
+ * into dht routing table.
+ */
 static
-int _vlsctl_add_node(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_join_node(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -132,8 +152,12 @@ int _vlsctl_add_node(struct vlsctl* lsctl, void* data, int offset)
     return sz;
 }
 
+/*
+ * forward the reqeust to remove wellknown node or node with given address
+ * from dht routing table.
+ */
 static
-int _vlsctl_del_node(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_drop_node(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -155,8 +179,13 @@ int _vlsctl_del_node(struct vlsctl* lsctl, void* data, int offset)
     return sz;
 }
 
+/*
+ *  forward to announcemaent about service information after service has been
+ *  established and therefor can be provided for other nodes. The service can
+ *  relay, stun, ddns, ...
+ */
 static
-int _vlsctl_service_announce(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_service_pub(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -183,8 +212,11 @@ int _vlsctl_service_announce(struct vlsctl* lsctl, void* data, int offset)
     return sz;
 }
 
+/*
+ * forward to the declaration of service for being unavaiable.
+ */
 static
-int _vlsctl_service_unavailable(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_service_unavai(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -211,8 +243,11 @@ int _vlsctl_service_unavailable(struct vlsctl* lsctl, void* data, int offset)
     return sz;
 }
 
+/*
+ * forward the request to get the best service option for special kind.
+ */
 static
-int _vlsctl_service_pick(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_service_prefer(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in addr;
@@ -235,8 +270,11 @@ int _vlsctl_service_pick(struct vlsctl* lsctl, void* data, int offset)
     return sz;
 }
 
+/*
+ * forward the reqeust to dump config
+ */
 static
-int _vlsctl_cfg_dump(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_dump_cfg(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     vassert(lsctl);
@@ -248,20 +286,20 @@ int _vlsctl_cfg_dump(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static
-int _vlsctl_dispatch_msg(struct vlsctl* lsctl, void* data, int offset)
+int _vlsctl_dispatch(struct vlsctl* lsctl, void* data, int offset)
 {
     int (*routine_cb[])(struct vlsctl*, void*, int) = {
         lsctl->ops->host_up,
         lsctl->ops->host_down,
         lsctl->ops->host_exit,
-        lsctl->ops->host_dump,
-        lsctl->ops->dht_query,
-        lsctl->ops->add_node,
-        lsctl->ops->del_node,
-        lsctl->ops->service_announce,
-        lsctl->ops->service_unavailable,
-        lsctl->ops->service_pick,
-        lsctl->ops->cfg_dump,
+        lsctl->ops->dump_host,
+        lsctl->ops->bogus_query,
+        lsctl->ops->join_node,
+        lsctl->ops->drop_node,
+        lsctl->ops->srvc_pub,
+        lsctl->ops->srvc_unavai,
+        lsctl->ops->srvc_prefer,
+        lsctl->ops->dump_host,
         NULL
     };
     int what = 0;
@@ -290,32 +328,32 @@ int _vlsctl_dispatch_msg(struct vlsctl* lsctl, void* data, int offset)
 
 static
 struct vlsctl_ops lsctl_ops = {
-    .host_up    = _vlsctl_host_up,
-    .host_down  = _vlsctl_host_down,
-    .host_exit  = _vlsctl_host_exit,
-    .host_dump  = _vlsctl_host_dump,
-    .dht_query  = _vlsctl_dht_query,
-    .add_node   = _vlsctl_add_node,
-    .del_node   = _vlsctl_del_node,
-    .service_announce    = _vlsctl_service_announce,
-    .service_unavailable = _vlsctl_service_unavailable,
-    .service_pick        = _vlsctl_service_pick,
-    .cfg_dump   = _vlsctl_cfg_dump,
-    .dsptch_msg = _vlsctl_dispatch_msg
+    .host_up      = _vlsctl_host_up,
+    .host_down    = _vlsctl_host_down,
+    .host_exit    = _vlsctl_host_exit,
+    .dump_host    = _vlsctl_dump_host,
+    .bogus_query  = _vlsctl_bogus_query,
+    .join_node    = _vlsctl_join_node,
+    .drop_node    = _vlsctl_drop_node,
+    .srvc_pub     = _vlsctl_service_pub,
+    .srvc_unavai  = _vlsctl_service_unavai,
+    .srvc_prefer  = _vlsctl_service_prefer,
+    .dump_cfg     = _vlsctl_dump_cfg,
+    .dispatch     = _vlsctl_dispatch
 };
 
-int _aux_vlsctl_msg_invoke_cb(void* cookie, struct vmsg_usr* um)
+int _aux_lsctl_usr_msg_cb(void* cookie, struct vmsg_usr* um)
 {
     struct vlsctl* lsctl = (struct vlsctl*)cookie;
     int ret = 0;
 
-    ret = lsctl->ops->dsptch_msg(lsctl, um->data, 0);
+    ret = lsctl->ops->dispatch(lsctl, um->data, 0);
     retE((ret < 0));
     return 0;
 }
 
 static
-int _aux_vlsctl_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
+int _aux_lsctl_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
     uint32_t magic = 0;
     void* data = sm->data;
@@ -343,19 +381,15 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
 {
     struct vconfig_ops* ops = host->cfg->ops;
     struct sockaddr_un* sun = &ctl->addr.vsun_addr;
-    char unix_path[BUF_SZ];
     int ret = 0;
 
     vassert(ctl);
     vassert(host);
 
-    memset(unix_path, 0, BUF_SZ);
-    ret = ops->get_str_ext(host->cfg, "lsctl.unix_path", unix_path, BUF_SZ, DEF_LSCTL_UNIX_PATH);
-    retE((ret < 0));
-    retE((strlen(unix_path) + 1 >= sizeof(sun->sun_path)));
-
     sun->sun_family = AF_UNIX;
-    strcpy(sun->sun_path, unix_path);
+    ret = ops->get_str_ext(host->cfg, "lsctl.unix_path", sun->sun_path, 105, DEF_LSCTL_UNIX_PATH);
+    retE((ret < 0));
+
     ctl->host = host;
     ctl->ops  = &lsctl_ops;
 
@@ -367,8 +401,8 @@ int vlsctl_init(struct vlsctl* ctl, struct vhost* host)
         return -1;
     }
 
-    vmsger_reg_unpack_cb  (&ctl->msger, _aux_vlsctl_msg_unpack_cb, ctl);
-    ctl->msger.ops->add_cb(&ctl->msger, ctl, _aux_vlsctl_msg_invoke_cb, VMSG_LSCTL);
+    vmsger_reg_unpack_cb  (&ctl->msger,   _aux_lsctl_unpack_msg_cb, ctl);
+    ctl->msger.ops->add_cb(&ctl->msger, ctl, _aux_lsctl_usr_msg_cb, VMSG_LSCTL);
     return 0;
 }
 

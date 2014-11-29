@@ -25,18 +25,18 @@ enum {
 
 struct vlsctl;
 struct vlsctl_ops {
-    int (*host_up)   (struct vlsctl*, void*, int);
-    int (*host_down) (struct vlsctl*, void*, int);
-    int (*host_exit) (struct vlsctl*, void*, int);
-    int (*host_dump) (struct vlsctl*, void*, int);
-    int (*dht_query) (struct vlsctl*, void*, int);
-    int (*add_node)  (struct vlsctl*, void*, int);
-    int (*del_node)  (struct vlsctl*, void*, int);
-    int (*service_announce)   (struct vlsctl*, void*, int);
-    int (*service_unavailable)(struct vlsctl*, void*, int);
-    int (*service_pick)       (struct vlsctl*, void*, int);
-    int (*cfg_dump)  (struct vlsctl*, void*, int);
-    int (*dsptch_msg)(struct vlsctl*, void*, int);
+    int (*host_up)    (struct vlsctl*, void*, int);
+    int (*host_down)  (struct vlsctl*, void*, int);
+    int (*host_exit)  (struct vlsctl*, void*, int);
+    int (*dump_host)  (struct vlsctl*, void*, int);
+    int (*bogus_query)(struct vlsctl*, void*, int);
+    int (*join_node)  (struct vlsctl*, void*, int);
+    int (*drop_node)  (struct vlsctl*, void*, int);
+    int (*srvc_pub)   (struct vlsctl*, void*, int);
+    int (*srvc_unavai)(struct vlsctl*, void*, int);
+    int (*srvc_prefer)(struct vlsctl*, void*, int);
+    int (*dump_cfg)   (struct vlsctl*, void*, int);
+    int (*dispatch)   (struct vlsctl*, void*, int);
 };
 
 struct vlsctl {
