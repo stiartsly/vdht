@@ -143,19 +143,6 @@ struct vroute_dht_ops {
 };
 
 typedef int (*vroute_dht_cb_t)(struct vroute*, struct sockaddr_in*, void*);
-struct vroute_cb_ops {
-    int (*ping)          (struct vroute*, struct sockaddr_in*, void*);
-    int (*ping_rsp)      (struct vroute*, struct sockaddr_in*, void*);
-    int (*find_node)     (struct vroute*, struct sockaddr_in*, void*);
-    int (*find_node_rsp) (struct vroute*, struct sockaddr_in*, void*);
-    int (*find_closest_nodes)(struct vroute*, struct sockaddr_in*, void*);
-    int (*find_closest_nodes_rsp)(struct vroute*, struct sockaddr_in*, void*);
-    int (*post_service)  (struct vroute*, struct sockaddr_in*, void*);
-    int (*post_hash)     (struct vroute*, struct sockaddr_in*, void*);
-    int (*get_peers)     (struct vroute*, struct sockaddr_in*, void*);
-    int (*get_peers_rsp) (struct vroute*, struct sockaddr_in*, void*);
-};
-
 struct vroute {
     vnodeInfo     own_node;
     struct varray own_svcs;
@@ -167,7 +154,7 @@ struct vroute {
 
     struct vroute_ops*     ops;
     struct vroute_dht_ops* dht_ops;
-    struct vroute_cb_ops*  cb_ops;
+    vroute_dht_cb_t*       cb_ops;
 
     struct vconfig* cfg;
     struct vmsger*  msger;

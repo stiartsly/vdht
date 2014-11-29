@@ -1210,19 +1210,6 @@ int _vroute_dispatch(struct vroute* route, struct vmsg_usr* mu)
     void* ctxt = NULL;
     int what = 0;
     int ret = 0;
-    vroute_dht_cb_t routine[] = {
-        route->cb_ops->ping,
-        route->cb_ops->ping_rsp,
-        route->cb_ops->find_node,
-        route->cb_ops->find_node_rsp,
-        route->cb_ops->find_closest_nodes,
-        route->cb_ops->find_closest_nodes_rsp,
-        route->cb_ops->post_service,
-        route->cb_ops->post_hash,
-        route->cb_ops->get_peers,
-        route->cb_ops->get_peers_rsp
-    };
-
     vassert(route);
     vassert(mu);
 
@@ -1231,7 +1218,7 @@ int _vroute_dispatch(struct vroute* route, struct vmsg_usr* mu)
     retE((what < 0));
     vlogI(printf("Received (%s) msg.\n", dht_id_desc[what]));
 
-    ret = routine[what](route, &mu->addr->vsin_addr, ctxt);
+    ret = route->cb_ops[what](route, &mu->addr->vsin_addr, ctxt);
     dec_ops->dec_done(ctxt);
     retE((ret < 0));
     return 0;
@@ -1873,20 +1860,19 @@ int _vroute_cb_get_peers_rsp(struct vroute* route, struct sockaddr_in* from, voi
 }
 
 static
-struct vroute_cb_ops route_cb_ops = {
-    .ping                   = _vroute_cb_ping,
-    .ping_rsp               = _vroute_cb_ping_rsp,
-    .find_node              = _vroute_cb_find_node,
-    .find_node_rsp          = _vroute_cb_find_node_rsp,
-    .find_closest_nodes     = _vroute_cb_find_closest_nodes,
-    .find_closest_nodes_rsp = _vroute_cb_find_closest_nodes_rsp,
-    .post_service           = _vroute_cb_post_service,
-    .post_hash              = _vroute_cb_post_hash,
-    .get_peers              = _vroute_cb_get_peers,
-    .get_peers_rsp          = _vroute_cb_get_peers_rsp
+vroute_dht_cb_t route_cb_ops[] = {
+    _vroute_cb_ping,
+    _vroute_cb_ping_rsp,
+    _vroute_cb_find_node,
+    _vroute_cb_find_node_rsp,
+    _vroute_cb_find_closest_nodes,
+    _vroute_cb_find_closest_nodes_rsp,
+    _vroute_cb_post_service,
+    _vroute_cb_post_hash,
+    _vroute_cb_get_peers,
+    _vroute_cb_get_peers_rsp,
+    NULL
 };
-
-
 
 static
 int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
@@ -1917,7 +1903,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
 
     route->ops     = &route_ops;
     route->dht_ops = &route_dht_ops;
-    route->cb_ops  = &route_cb_ops;
+    route->cb_ops  = route_cb_ops;
 
     route->cfg   = cfg;
     route->msger = msger;
