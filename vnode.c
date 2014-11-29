@@ -1,8 +1,6 @@
 #include "vglobal.h"
 #include "vnode.h"
 
-#define TICK_INTERVAL ((int)10)
-
 static
 char* node_mode_desc[] = {
     "offline",
@@ -40,7 +38,10 @@ int _vnode_start(struct vnode* vnd)
 static
 int _vnode_join(struct vnode* vnd, struct sockaddr_in* addr)
 {
-    vnodeAddr nodeAddr;
+    struct vroute* route = vnd->route;
+    vnodeAddr node_addr;
+    int ret = 0;
+
     vassert(vnd);
     vassert(addr);
 
@@ -48,9 +49,11 @@ int _vnode_join(struct vnode* vnd, struct sockaddr_in* addr)
         return 0;
     }
 
-    vnodeId_make(&nodeAddr.id);
-    vsockaddr_copy(&nodeAddr.addr, addr);
-    return vnd->route->ops->join_node(vnd->route, &nodeAddr);
+    vnodeId_make(&node_addr.id);
+    vsockaddr_copy(&node_addr.addr, addr);
+    ret = route->ops->join_node(route, &node_addr);
+    retE((ret < 0));
+    return 0;
 }
 
 /*
@@ -60,7 +63,10 @@ int _vnode_join(struct vnode* vnd, struct sockaddr_in* addr)
 static
 int _vnode_drop(struct vnode* vnd, struct sockaddr_in* addr)
 {
-    vnodeAddr nodeAddr;
+    struct vroute* route = vnd->route;
+    vnodeAddr node_addr;
+    int ret = 0;
+
     vassert(vnd);
     vassert(addr);
 
@@ -68,9 +74,11 @@ int _vnode_drop(struct vnode* vnd, struct sockaddr_in* addr)
         return 0;
     }
 
-    vnodeId_make(&nodeAddr.id);
-    vsockaddr_copy(&nodeAddr.addr, addr);
-    return vnd->route->ops->drop_node(vnd->route, &nodeAddr);
+    vnodeId_make(&node_addr.id);
+    vsockaddr_copy(&node_addr.addr, addr);
+    ret = route->ops->drop_node(route, &node_addr);
+    retE((ret < 0));
+    return 0;
 }
 
 /*
@@ -92,7 +100,7 @@ int _vnode_stop(struct vnode* vnd)
 }
 
 static
-int _aux_tick_cb(void* cookie)
+int _aux_node_tick_cb(void* cookie)
 {
     struct vnode* vnd = (struct vnode*)cookie;
     time_t now = time(NULL);
@@ -149,7 +157,7 @@ int _vnode_stabilize(struct vnode* vnd)
     vassert(vnd);
     vassert(ticker);
 
-    ret =  ticker->ops->add_cb(ticker, _aux_tick_cb, vnd);
+    ret = ticker->ops->add_cb(ticker, _aux_node_tick_cb, vnd);
     retE((ret < 0));
     return 0;
 }
@@ -215,14 +223,14 @@ int _aux_get_tick_interval(struct vconfig* cfg)
  * @ticker:
  * @addr:
  */
-int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, struct vroute* route, vnodeAddr* nodeAddr)
+int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, struct vroute* route, vnodeAddr* node_addr)
 {
     vassert(vnd);
     vassert(cfg);
     vassert(ticker);
-    vassert(nodeAddr);
+    vassert(node_addr);
 
-    vnodeAddr_copy(&vnd->ownId, nodeAddr);
+    vnodeAddr_copy(&vnd->ownId, node_addr);
     vlock_init(&vnd->lock);
     vnd->mode  = VDHT_OFF;
 

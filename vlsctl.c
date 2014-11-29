@@ -147,8 +147,6 @@ int _vlsctl_join_node(struct vlsctl* lsctl, void* data, int offset)
 
     ret = host->ops->join(host, &sin);
     retE((ret < 0));
-
-    vlogI(printf("[vlsctl] host joined a node"));
     return sz;
 }
 
@@ -174,8 +172,6 @@ int _vlsctl_drop_node(struct vlsctl* lsctl, void* data, int offset)
 
     ret = host->ops->drop(host, &sin);
     retE((ret < 0));
-
-    vlogI(printf("[vlsctl] host dropped a node"));
     return sz;
 }
 
