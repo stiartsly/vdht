@@ -343,24 +343,21 @@ static
 int _aux_lsctl_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
     uint32_t magic = 0;
-    void* data = sm->data;
     int  msgId = 0;
     int  sz = 0;
 
     vassert(sm);
     vassert(um);
 
-    magic = get_uint32(data);
+    magic = get_uint32(offset_addr(sm->data, sz));
     retE((!IS_LSCTL_MAGIC(magic)));
-    data = offset_addr(data, sizeof(uint32_t));
     sz += sizeof(uint32_t);
 
-    msgId = get_int32(data);
+    msgId = get_int32(offset_addr(sm->data, sz));
     retE((msgId != VMSG_LSCTL));
-    data = offset_addr(data, sizeof(int32_t));
     sz += sizeof(int32_t);
 
-    vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
+    vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, offset_addr(sm->data, sz));
     return 0;
 }
 
