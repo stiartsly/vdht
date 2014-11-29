@@ -165,6 +165,7 @@ void* varray_del(struct varray* array, int idx)
         array->items[i] = array->items[i+1];
     }
     array->items[i] = NULL;
+    array->used--;
     return item;
 }
 
@@ -179,6 +180,7 @@ void* varray_pop_tail(struct varray* array)
     }
     item = array->items[--array->used];
     array->items[array->used] = NULL;
+    array->used--;
     return item;
 }
 

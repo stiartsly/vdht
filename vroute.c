@@ -379,7 +379,7 @@ int _vroute_space_add_node(struct vroute_space* space, vnodeInfo* info)
         if (found) { //found
             vpeer_init(to, &info->id, &info->addr, to->snd_ts, now, to->flags | flags);
             updt = 1;
-        } else if (to) { //replace this one.
+        } else if (to) { //replace worst one.
             vpeer_init(to, &info->id, &info->addr, 0, now, flags);
             updt = 1;
         } else { // insert new one.
