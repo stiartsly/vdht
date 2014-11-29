@@ -57,8 +57,7 @@ static uint32_t peer_service_prop[] = {
     PROP_DDNS,
     PROP_MROUTE,
     PROP_DHASH,
-    PROP_APP,
-    PROP_PLUG_MASK
+    PROP_APP
 };
 
 struct vplugin_desc {
@@ -164,16 +163,27 @@ void vpeer_dump_flags(uint32_t flags)
 {
     struct vpeer_flags_desc* desc = peer_flags_desc;
     static char buf[BUF_SZ];
+    int found = 0;
 
     memset(buf, 0, BUF_SZ);
+    strcat(buf, "[");
+    if (desc->prop & flags) {
+        strcat(buf, desc->desc);
+        found = 1;
+    }
+    desc++;
     while(desc->desc) {
         if (desc->prop & flags) {
+            strcat(buf, ",");
             strcat(buf, desc->desc);
-            strcat(buf, ":");
         }
         desc++;
     }
-    vdump(printf("flags: %s", buf));
+    if (!found) {
+        strcat(buf, "empty");
+    }
+    strcat(buf, "]");
+    vdump(printf("flags:%s", buf));
     return ;
 }
 
@@ -1212,7 +1222,7 @@ int _vroute_dispatch(struct vroute* route, struct vmsg_usr* mu)
     what = dec_ops->dec(mu->data, mu->len, &ctxt);
     retE((what >= VDHT_UNKNOWN));
     retE((what < 0));
-    vlogI(printf("Received (%s) msg.\n", dht_id_desc[what]));
+    vlogI(printf("Received (%s) msg", dht_id_desc[what]));
 
     ret = route->cb_ops[what](route, &mu->addr->vsin_addr, ctxt);
     dec_ops->dec_done(ctxt);
@@ -1890,7 +1900,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     vassert(own_info);
 
     vnodeInfo_copy(&route->own_node, own_info);
-    route->own_node.flags |= PROP_DHT_MASK;
+    route->own_node.flags = PROP_DHT_MASK;
     varray_init(&route->own_svcs, 4);
 
     vlock_init(&route->lock);

@@ -377,6 +377,7 @@ vnodeInfo* vnodeInfo_alloc(void)
 
     info = (vnodeInfo*)vmem_aux_alloc(&nodeInfo_maux);
     ret1E_p((!info), elog_vmem_aux_alloc);
+    memset(info, 0, sizeof(*info));
     return info;
 }
 
@@ -475,6 +476,7 @@ vserviceInfo* vserviceInfo_alloc(void)
 
     info = (vserviceInfo*)vmem_aux_alloc(&serviceInfo_maux);
     ret1E_p((!info), elog_vmem_aux_alloc);
+    memset(info, 0, sizeof(*info));
     return info;
 }
 
