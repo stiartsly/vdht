@@ -189,11 +189,13 @@ int vnodeVer_strlize(vnodeVer* ver, char* buf, int len)
 
     for (; i < VTOKEN_INTLEN; i++) {
         ret = snprintf(buf + offset, len - offset, ".");
-        retE((ret < 0));
+        vlog((ret >= len-offset), elog_snprintf);
+        retE((ret >= len-offset));
         offset += ret;
 
         ret = snprintf(buf + offset, len - offset, "%d", ver->data[i]);
-        retE((ret < 0));
+        vlog((ret >= len-offset), elog_snprintf);
+        retE((ret >= len-offset));
         offset += ret;
     }
     return 0;
@@ -209,6 +211,7 @@ int vnodeVer_unstrlize(const char* ver_str, vnodeVer* ver)
 
     errno = 0;
     ret = strtol(s, &s, 10);
+    vlog((errno), elog_strtol);
     retE((errno));
     ver->data[i] = ret;
     i++;
@@ -219,6 +222,7 @@ int vnodeVer_unstrlize(const char* ver_str, vnodeVer* ver)
 
         errno = 0;
         ret = strtol(s, &s, 10);
+        vlog((errno), elog_strtol);
         retE((errno));
         ver->data[i] = ret;
         i++;
@@ -247,11 +251,7 @@ int  vnodeAddr_equal(vnodeAddr* a, vnodeAddr* b)
     vassert(a);
     vassert(b);
 
-    if (vtoken_equal(&a->id, &b->id) ||
-        vsockaddr_equal(&a->addr,&b->addr)) {
-        return 1;
-    }
-    return 0;
+    return (vtoken_equal(&a->id, &b->id) || vsockaddr_equal(&a->addr,&b->addr));
 }
 
 void vnodeAddr_copy (vnodeAddr* a, vnodeAddr* b)
@@ -273,6 +273,7 @@ void vnodeAddr_dump (vnodeAddr* addr)
     vassert(addr);
     vtoken_dump(&addr->id);
     ret = vsockaddr_unconvert(&addr->addr, ip, 64, &port);
+    vlog((ret < 0), elog_vsockaddr_unconvert);
     retE_v((ret < 0));
     printf("##Addr: %s:%d\n", ip, port);
     return ;
@@ -298,7 +299,8 @@ vnodeInfo* vnodeInfo_alloc(void)
     vnodeInfo* info = NULL;
 
     info = (vnodeInfo*)vmem_aux_alloc(&node_info_cache);
-    ret1E_p((!info), elog_vmem_aux_alloc);
+    vlog((!info), elog_vmem_aux_alloc);
+    retE_p((!info));
     memset(info, 0, sizeof(*info));
     return info;
 }
@@ -359,7 +361,8 @@ vsrvcInfo* vsrvcInfo_alloc(void)
     vsrvcInfo* info = NULL;
 
     info = (vsrvcInfo*)vmem_aux_alloc(&srvc_info_cache);
-    ret1E_p((!info), elog_vmem_aux_alloc);
+    vlog((!info), elog_vmem_aux_alloc);
+    retE_p((!info));
     memset(info, 0, sizeof(*info));
     return info;
 }

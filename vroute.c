@@ -585,6 +585,7 @@ int _vroute_space_tick(struct vroute_space* space)
         if ((space->bucket[i].ts + MAX_RCV_PERIOD) >= now) {
             continue;
         }
+        peer = varray_get_rand(peers);
         vnodeAddr_init(&addr, &peer->id, &peer->addr);
         route->dht_ops->find_closest_nodes(route, &addr, &space->own->id);
     }
@@ -1069,6 +1070,7 @@ int _vroute_reg_service(struct vroute* route, int what, struct sockaddr_in* addr
     }
     if (i >= varray_size(&route->own_svcs)) {
         svc = vsrvcInfo_alloc();
+        vlog((!svc), elog_vsrvcInfo_alloc);
         retE((!svc));
         vsrvcInfo_init(svc, what, addr);
         varray_add_tail(&route->own_svcs, svc);
@@ -1256,10 +1258,10 @@ int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
     vassert(route);
     vassert(dest);
 
-    vtoken_make(&token);
     buf = vdht_buf_alloc();
     retE((!buf));
 
+    vtoken_make(&token);
     ret = enc_ops->ping(&token, &route->own_node.id, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
@@ -1332,10 +1334,10 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
     vassert(dest);
     vassert(target);
 
-    vtoken_make(&token);
     buf = vdht_buf_alloc();
     retE((!buf));
 
+    vtoken_make(&token);
     ret = enc_ops->find_node(&token, &route->own_node.id, target, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
@@ -1404,10 +1406,10 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
     vassert(dest);
     vassert(target);
 
-    vtoken_make(&token);
     buf = vdht_buf_alloc();
     retE((!buf));
 
+    vtoken_make(&token);
     ret = enc_ops->find_closest_nodes(&token, &route->own_node.id, target, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
@@ -1477,10 +1479,10 @@ int _vroute_dht_post_service(struct vroute* route, vnodeAddr* dest, vsrvcInfo* s
     vassert(dest);
     vassert(service);
 
-    vtoken_make(&token);
     buf = vdht_buf_alloc();
     retE((!buf));
 
+    vtoken_make(&token);
     ret = enc_ops->post_service(&token, &route->own_node.id, service, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
@@ -1530,10 +1532,10 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
     vassert(dest);
     vassert(hash);
 
-    vtoken_make(&token);
     buf = vdht_buf_alloc();
     retE((!buf));
 
+    vtoken_make(&token);
     ret = enc_ops->get_peers(&token, &route->own_node.id, hash, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {

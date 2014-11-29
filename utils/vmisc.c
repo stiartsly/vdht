@@ -195,6 +195,7 @@ int vsockaddr_strlize(struct sockaddr_in* addr, char* buf, int len)
     vassert(len > 0);
 
     ret = vsockaddr_unconvert(addr, buf, len, &port);
+    vlog((ret < 0), elog_vsockaddr_unconvert);
     retE((ret < 0));
     sz  = strlen(buf);
     ret = snprintf(buf + sz, len - sz, ":%d", port);
@@ -222,9 +223,11 @@ int vsockaddr_unstrlize(const char* ip_addr, struct sockaddr_in* addr)
     s += 1;
     errno = 0;
     port = strtol(s, NULL, 10);
+    vlog((errno), elog_strtol);
     retE((errno));
 
     ret = vsockaddr_convert(ip, port, addr);
+    vlog((ret < 0), elog_vsockaddr_convert);
     retE((ret < 0));
     return 0;
 }
@@ -238,6 +241,7 @@ int vsockaddr_dump(struct sockaddr_in* addr)
 
     memset(ip, 0, 64);
     ret = vsockaddr_unconvert(addr, ip, 64, &port);
+    vlog((ret < 0), elog_vsockaddr_unconvert);
     retE((ret < 0));
     vdump(printf("ADDR:%s:%d", ip, port));
     return 0;

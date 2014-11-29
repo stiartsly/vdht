@@ -73,6 +73,7 @@
 #define bind
 #define close
 #define fcntl
+#define ioctl
 #define setsockopt
 #define sendto
 #define recvfrom

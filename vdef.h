@@ -107,6 +107,7 @@
 #define elog_timer_settime  perror("[timer_settime]")
 #define elog_timer_delete   perror("[timer_delete]")
 
+#define elog_strtol         vlogE(printf("strtol"))
 #define elog_snprintf       vlogE(printf("snprintf"))
 #define elog_sscanf         vlogE(printf("sscanf"))
 #define elog_malloc         vlogE(printf("malloc"))
@@ -129,7 +130,9 @@
 #define elog_vhostaddr_get_next   vlogE(printf("vhostaddr_get_next"))
 #define elog_vsockaddr_convert    vlogE(printf("vsockaddr_convert"))
 #define elog_vsockaddr_unconvert  vlogE(printf("vsockaddr_unconvert"))
-#define elog_vservice_alloc vlogE(printf("vservice_alloc"))
+#define elog_vservice_alloc       vlogE(printf("vservice_alloc"))
+#define elog_vsrvcInfo_alloc      vlogE(printf("vsrvcInfo_alloc"))
+#define elog_vnodeInfo_alloc      vlogE(printf("vnodeInfo_alloc"))
 
 #define elog_vmsg_cb_alloc  vlogE(printf("vmsg_cb_alloc"))
 #define elog_vmsg_sys_alloc vlogE(printf("vmsg_sys_alloc"))

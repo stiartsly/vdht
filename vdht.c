@@ -26,7 +26,7 @@ char* vdht_get_desc(int dhtId)
     struct vdhtId_desc* desc = dhtId_desc;
     int i = 0;
 
-    if ((dhtId < VDHT_PING) || (dhtId >= VDHT_UNKNOWN)) {
+    if ((dhtId < 0) || (dhtId >= VDHT_UNKNOWN)) {
         return "unknown dht";
     }
 
@@ -981,6 +981,7 @@ int _vdht_dec_find_closest_nodes_rsp(
         node = list->val.l[i];
         retE((BE_DICT != node->type));
         info = vnodeInfo_alloc();
+        vlog((!info), elog_vnodeInfo_alloc);
         retE((!info));
 
         ret = _aux_unpack_vnodeInfo(node, info);
