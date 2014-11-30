@@ -473,43 +473,6 @@ int be_unpack_token(struct be_node* node, vtoken* token)
     return 0;
 }
 
-int be_unpack_vnodeId(struct be_node* node, vnodeId* id)
-{
-    char* s = NULL;
-    int ret = 0;
-
-    vassert(node);
-    vassert(id);
-
-    retE((BE_STR != node->type));
-
-    s = unoff_addr(node->val.s, sizeof(int32_t));
-    ret = get_int32(s);
-    retE((ret != strlen(node->val.s)));
-
-    ret = vtoken_unstrlize(node->val.s, id);
-    retE((ret < 0));
-    return 0;
-}
-
-int be_unpack_vsrvcId(struct be_node* node, vsrvcId* id)
-{
-    char* s = NULL;
-    int ret = 0;
-
-    vassert(node);
-    vassert(id);
-
-    retE((BE_STR != node->type));
-    s = unoff_addr(node->val.s, sizeof(int32_t));
-    ret = get_int32(s);
-    retE((ret != strlen(node->val.s)));
-
-    ret = vtoken_unstrlize(node->val.s, id);
-    retE((ret < 0));
-    return 0;
-}
-
 int be_unpack_version(struct be_node* node, vnodeVer* ver)
 {
     char* s = NULL;

@@ -657,7 +657,7 @@ int _aux_unpack_vnodeId(struct be_node* dict, char* key1, char* key2, vnodeId* i
     retE((ret < 0));
     retE((BE_STR != node->type));
 
-    ret = be_unpack_vnodeId(node, id);
+    ret = be_unpack_token(node, id);
     retE((ret < 0));
     return 0;
 }
@@ -674,7 +674,7 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
 
     ret = be_node_by_key(dict, "id", &node);
     retE((ret < 0));
-    ret = be_unpack_vnodeId(node, &info->id);
+    ret = be_unpack_token(node, &info->id);
     retE((ret < 0));
     ret = be_node_by_key(dict, "m", &node);
     retE((ret < 0));
@@ -703,7 +703,7 @@ int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* info)
 
     ret = be_node_by_key(dict, "id", &node);
     retE((ret < 0));
-    ret = be_unpack_vsrvcId(node, &info->id);
+    ret = be_unpack_token(node, &info->id);
     retE((ret < 0));
     ret = be_node_by_key(dict, "m", &node);
     retE((ret < 0));

@@ -1,6 +1,15 @@
 #include "vglobal.h"
 #include "vnode.h"
 
+enum vnode_mode {
+    VDHT_OFF,
+    VDHT_UP,
+    VDHT_RUN,
+    VDHT_DOWN,
+    VDHT_ERR,
+    VDHT_M_BUTT
+};
+
 static
 char* node_mode_desc[] = {
     "offline",
@@ -104,7 +113,6 @@ int _aux_node_tick_cb(void* cookie)
 {
     struct vnode* vnd = (struct vnode*)cookie;
     time_t now = time(NULL);
-    int ret = 0;
     vassert(vnd);
 
     vlock_enter(&vnd->lock);
@@ -115,8 +123,7 @@ int _aux_node_tick_cb(void* cookie)
         break;
     }
     case VDHT_UP: {
-        ret = vnd->route->ops->load(vnd->route);
-        if (ret < 0) {
+        if (vnd->route->ops->load(vnd->route) < 0) {
             vnd->mode = VDHT_ERR;
             break;
         }
@@ -212,6 +219,7 @@ int _aux_get_tick_interval(struct vconfig* cfg)
     }
     errno = 0;
     ret = strtol(buf, NULL, 10);
+    vlog((errno), elog_strtol);
     retE((errno));
 
     return (ret * tms);

@@ -51,10 +51,8 @@ int be_encode        (struct be_node*, char*, int);
 
 int be_unpack_int    (struct be_node*, int*);
 int be_unpack_token  (struct be_node*, vtoken*);
-int be_unpack_vnodeId(struct be_node*, vnodeId*);
 int be_unpack_addr   (struct be_node*, struct sockaddr_in*);
 int be_unpack_version(struct be_node*, vnodeVer*);
-int be_unpack_vsrvcId(struct be_node*, vsrvcId*);
 
 int be_node_by_key   (struct be_node*, char*, struct be_node**);
 int be_node_by_2keys (struct be_node*, char*, char*, struct be_node**);
