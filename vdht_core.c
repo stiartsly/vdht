@@ -275,19 +275,6 @@ struct be_node* be_create_addr(struct sockaddr_in* addr)
     return node;
 }
 
-struct be_node* be_create_vnodeId(vnodeId* srcId)
-{
-    struct be_node* node = NULL;
-    char buf[64];
-    vassert(srcId);
-
-    memset(buf, 0, 64);
-    vtoken_strlize(srcId, buf, 64);
-    node = be_create_str(buf);
-    retE_p((!node));
-    return node;
-}
-
 struct be_node* be_create_ver(vnodeVer* ver)
 {
     struct be_node* node = NULL;
@@ -296,19 +283,6 @@ struct be_node* be_create_ver(vnodeVer* ver)
 
     memset(buf, 0, 64);
     vnodeVer_strlize(ver, buf, 64);
-    node = be_create_str(buf);
-    retE_p((!node));
-    return node;
-}
-
-struct be_node* be_create_vsrvcId(vsrvcId* svc_id)
-{
-    struct be_node* node = NULL;
-    char buf[64];
-    vassert(svc_id);
-
-    memset(buf, 0, 64);
-    vtoken_strlize(svc_id, buf, 64);
     node = be_create_str(buf);
     retE_p((!node));
     return node;
@@ -473,7 +447,7 @@ int be_unpack_token(struct be_node* node, vtoken* token)
     return 0;
 }
 
-int be_unpack_version(struct be_node* node, vnodeVer* ver)
+int be_unpack_ver(struct be_node* node, vnodeVer* ver)
 {
     char* s = NULL;
     int ret = 0;
