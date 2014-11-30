@@ -85,11 +85,14 @@ int _vhost_stabilize(struct vhost* host)
 {
     struct vticker* ticker = &host->ticker;
     struct vnode* node = &host->node;
+    int ret = 0;
     vassert(host);
 
-    node->ops->stabilize(node);
+    ret = node->ops->stabilize(node);
+    retE((ret < 0));
     //ticker->ops->add_cb(ticker, _aux_tick_cb, host);
-    ticker->ops->start(ticker, host->tick_tmo);
+    ret = ticker->ops->start(ticker, host->tick_tmo);
+    retE((ret < 0));
     return 0;
 }
 

@@ -7,8 +7,6 @@
 #include "vticker.h"
 #include "vlsctl.h"
 
-#define HOST_SZ ((int)128)
-
 struct vhost;
 struct vhost_ops {
     int   (*start)      (struct vhost*);

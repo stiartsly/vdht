@@ -614,10 +614,11 @@ int _vroute_space_load(struct vroute_space* space)
     memset(sql_buf, 0, BUF_SZ);
     sprintf(sql_buf, "select * from %s", VPEER_TB);
     ret = sqlite3_exec(db, sql_buf, _aux_space_load_cb, space, &err);
-    vlog((ret && err), printf("db err:%s\n", err));
+    vlog((ret && err), printf("load db err:%s\n", err));
     vlog((ret), elog_sqlite3_exec);
     sqlite3_close(db);
     retE((ret));
+    vlogI(printf("loaded route infos"));
     return 0;
 }
 

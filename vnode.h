@@ -8,17 +8,6 @@
 #include "vmsger.h"
 #include "vsys.h"
 
-#define VDHT_TICK_INTERVAL ((int)10)
-
-enum vnode_mode {
-    VDHT_OFF,
-    VDHT_UP,
-    VDHT_RUN,
-    VDHT_DOWN,
-    VDHT_ERR,
-    VDHT_M_BUTT
-};
-
 struct vnode;
 struct vnode_ops {
     int (*start)    (struct vnode*);
