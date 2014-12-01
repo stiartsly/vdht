@@ -91,7 +91,7 @@ void vservice_dump(struct vservice* item)
 }
 
 static
-int _aux_srvc_space_add_service_cb(void* item, void* cookie)
+int _aux_srvc_add_service_cb(void* item, void* cookie)
 {
     struct vservice* svc = (struct vservice*)item;
     varg_decl(cookie, 0, vsrvcInfo*, svci);
@@ -114,7 +114,7 @@ int _aux_srvc_space_add_service_cb(void* item, void* cookie)
 }
 
 static
-int _aux_srvc_space_get_service_cb(void* item, void* cookie)
+int _aux_srvc_get_service_cb(void* item, void* cookie)
 {
     struct vservice* svc = (struct vservice*)item;
     varg_decl(cookie, 1, struct vservice**, to);
@@ -129,7 +129,7 @@ int _aux_srvc_space_get_service_cb(void* item, void* cookie)
 }
 
 static
-int _vroute_srvc_space_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* svci)
+int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* svci)
 {
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
@@ -153,7 +153,7 @@ int _vroute_srvc_space_add_service_node(struct vroute_srvc_space* space, vsrvcIn
             &min_tdff,
             &found
         };
-        varray_iterate(svcs, _aux_srvc_space_add_service_cb, argv);
+        varray_iterate(svcs, _aux_srvc_add_service_cb, argv);
         if (found) {
             to->rcv_ts = now;
             updt = 1;
@@ -176,7 +176,7 @@ int _vroute_srvc_space_add_service_node(struct vroute_srvc_space* space, vsrvcIn
 }
 
 static
-int _vroute_srvc_space_get_serivce_node(struct vroute_srvc_space* space, int what, vsrvcInfo* svci)
+int _vroute_srvc_get_serivce_node(struct vroute_srvc_space* space, int what, vsrvcInfo* svci)
 {
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
@@ -194,7 +194,7 @@ int _vroute_srvc_space_get_serivce_node(struct vroute_srvc_space* space, int wha
             &now,
             &min_tdff
         };
-        varray_iterate(svcs, _aux_srvc_space_get_service_cb, argv);
+        varray_iterate(svcs, _aux_srvc_get_service_cb, argv);
         if (to) {
             vsrvcInfo_init(svci, what, &to->addr);
             ret = 0;
@@ -208,7 +208,7 @@ int _vroute_srvc_space_get_serivce_node(struct vroute_srvc_space* space, int wha
  * @pluger: handler to plugin structure.
  */
 static
-void _vroute_srvc_space_clear(struct vroute_srvc_space* space)
+void _vroute_srvc_clear(struct vroute_srvc_space* space)
 {
     struct varray* svcs = NULL;
     int i = 0;
@@ -228,7 +228,7 @@ void _vroute_srvc_space_clear(struct vroute_srvc_space* space)
  * @pluger: handler to plugin structure.
  */
 static
-void _vroute_srvc_space_dump(struct vroute_srvc_space* space)
+void _vroute_srvc_dump(struct vroute_srvc_space* space)
 {
     struct varray* svcs = NULL;
     int i = 0;
@@ -249,10 +249,10 @@ void _vroute_srvc_space_dump(struct vroute_srvc_space* space)
 
 static
 struct vroute_srvc_space_ops route_srvc_space_ops = {
-    .add_srvc_node = _vroute_srvc_space_add_service_node,
-    .get_srvc_node = _vroute_srvc_space_get_serivce_node,
-    .clear         = _vroute_srvc_space_clear,
-    .dump          = _vroute_srvc_space_dump
+    .add_srvc_node = _vroute_srvc_add_service_node,
+    .get_srvc_node = _vroute_srvc_get_serivce_node,
+    .clear         = _vroute_srvc_clear,
+    .dump          = _vroute_srvc_dump
 };
 
 int vroute_srvc_space_init(struct vroute_srvc_space* space, struct vconfig* cfg)
