@@ -3,22 +3,6 @@
 
 #define MAX_CAPC ((int)8)
 
-static char* dht_id_desc[] = {
-    "ping",
-    "ping rsp",
-    "find_node",
-    "find_node rsp",
-    "find_closest_nodes",
-    "find_closest_nodes rsp",
-    "post_service",
-    "post_hash",
-    "get_peers",
-    "get_peers rsp",
-    "get_plugin",
-    "get_plugin_rsp",
-    NULL,
-};
-
 static uint32_t peer_service_prop[] = {
     PROP_RELAY,
     PROP_STUN,
@@ -265,7 +249,7 @@ int _vroute_dispatch(struct vroute* route, struct vmsg_usr* mu)
     what = dec_ops->dec(mu->data, mu->len, &ctxt);
     retE((what >= VDHT_UNKNOWN));
     retE((what < 0));
-    vlogI(printf("Received (@%s) msg", dht_id_desc[what]));
+    vlogI(printf("Received @%s", vdht_get_desc(what)));
 
     ret = route->cb_ops[what](route, &mu->addr->vsin_addr, ctxt);
     dec_ops->dec_done(ctxt);
