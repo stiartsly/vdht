@@ -1062,10 +1062,10 @@ int _vdht_dec_post_service(
 
     ret = _aux_unpack_vtoken(dict, token);
     retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "r", "id", srcId);
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
     retE((ret < 0));
 
-    ret = be_node_by_2keys(dict, "r", "service", &node);
+    ret = be_node_by_2keys(dict, "a", "service", &node);
     retE((ret < 0));
     ret = _aux_unpack_vsrvcInfo(node, service);
     retE((ret < 0));
