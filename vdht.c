@@ -129,12 +129,12 @@ struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* info)
  * @buf:
  * @len:
  *
- * ping Query = {"t":"80407320171565445232",
+ * ping Query = {"t":"1f4357a1bd2f006a3572",
  *               "y":"q",
  *               "q":"ping",
- *               "a":{"id":"78876038483004838102"}}
- * bencoded = d1:t20:804073201715654452321:y1:q1:q4:ping1:ad2:id20:7887603848300
- * 4838102ee
+ *               "a":{"id":"7ba29c1b9215a2e7621"}}
+ * bencoded = d1:t20:1f4357a1bd2f006a35721:y1:q1:q4:ping1:ad2:id20:7ba29c1b9215
+ *            a2e7621eee
  */
 static
 int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
@@ -174,22 +174,21 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
 
 /*
  * @token:
- * @srcId: Id of node replying query.
+ * @srcId:  Id of node replying query.
  * @result: queried result
  * @buf:
  * @len:
- *
- * response = {"t":"875675086641542182221",
+ * response = {"t":"3eb2c2beb25d3ffeb4f5",
  *             "y":"r",
- *             "r":{"node" :{"id": "74281510116552046580",
+ *             "r":{"node" :{"id": "ce3dbcf618862baf69e8",
  *                            "m": "192.168.4.125:12300",
- *                            "v": "9:0.0.0.1.0",
+ *                            "v": "0.0.0.1.0",
  *                            "f": "1023"
  *                          }
  *                 }
  *            }
- * bencoded = d1:t20:875675086641542182221:y1:r1:rd4:noded2:id20:742815101165520
- * 465801:m19:192.168.4.125:123001:v9:0.0.0.1.01:fi1023eeee
+ * bencoded = d1:t20:3eb2c2beb25d3ffeb4f51:y1:r1:rd4:noded2:id20:ce3dbcf618862b
+ *            af69e81:m19:192.168.4.125:123001:v9:0.0.0.1.01:fi1023eeee
  */
 static
 int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result,void* buf, int   sz)
@@ -226,19 +225,20 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result,void* buf, int   sz)
 
 /*
  * @token:
- * @srcId: Id of node sending query.
+ * @srcId:  Id of node sending query.
  * @target: Id of queried node.
  * @buf:
  * @len:
  *
- * find_node Query = {"t":"aa",
+ * find_node Query = {"t":"9948eb5973da8f3c3c0a",
  *                    "y":"q",
  *                    "q":"find_node",
- *                    "a": {"id":"abcdefghij0123456789",
- *                          "target":"mnopqrstuvwxyz123456"
+ *                    "a": {"id":"7ba29c1b9215a2e7621e",
+ *                          "target":"7ba29c1b9215a2e7621"
  *                         }
  *                   }
- * bencoded = d1:ad2:id20:abcdefghij01234567896:target20:mnopqrstuvwxyz123456e1:q9:find_node1:t2:aa1:y1:qe
+ * bencoded =  d1:t20:9948eb5973da8f3c3c0a1:y1:q1:q9:find_node1:ad2:id20:7ba29c
+ *             1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
 int _vdht_enc_find_node(
@@ -291,17 +291,19 @@ int _vdht_enc_find_node(
  * @buf:
  * @sz:
  *
- *  response = {"t":"aa",
- *             "y":"r",
- *             "r":{"id":"abcdefghij0123456789",
- *                  "node" :{"id": "abcdefghij0123456789",
- *                            "m": "0120342301031234",
- *                            "v": "20013243413143414",
- *                            "f": "00000001"
+ *  response = {"t":"9948eb5973da8f3c3c0a",
+ *              "y":"r",
+ *              "r":{"id":"ce3dbcf618862baf69e8",
+ *                  "node" :{"id": "7ba29c1b9215a2e7621e",
+ *                            "m": "192.168.4.46:12300",
+ *                            "v": "0.0.0.1.0",
+ *                            "f": "0"
  *                          }
  *                 }
  *            }
- * bencoded = d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe
+ * bencoded = d1:t20:9948eb5973da8f3c3c0a1:y1:r1:rd2:id20:ce3dbcf618862baf69e84
+ *            :noded2:id20:7ba29c1b9215a2e7621e1:m18:192.168.4.46:123001:v9:0.0
+ *            .0.0.01:fi0eeee
  */
 static
 int _vdht_enc_find_node_rsp(
@@ -352,14 +354,15 @@ int _vdht_enc_find_node_rsp(
  * @buf:
  * @len:
  *
- * find_node Query = {"t":"aa",
+ * find_node Query = {"t":"971ee80a808da2eb7fb2",
  *                    "y":"q",
  *                    "q":"find_closest_nodes",
- *                    "a": {"id":"abcdefghij0123456789",
- *                          "target":"mnopqrstuvwxyz123456"
+ *                    "a": {"id":"7ba29c1b9215a2e7621e",
+ *                          "target":"7ba29c1b9215a2e7621"
  *                         }
  *                   }
- * bencoded = d1:ad2:id20:abcdefghij01234567896:target20:mnopqrstuvwxyz123456e1:q9:find_node1:t2:aa1:y1:qe
+ * bencoded = :d1:t20:971ee80a808da2eb7fb21:y1:q1:q18:find_closest_nodes1:ad2:i
+ *            d20:7ba29c1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
 int _vdht_enc_find_closest_nodes(
@@ -412,22 +415,20 @@ int _vdht_enc_find_closest_nodes(
  * @buf:
  * @sz:
  *
- *  response = {"t":"aa",
+ *  response = {"t":"30c6443e29cc307571e3",
  *              "y":"r",
- *              "r":{"id":"abcdefghij0123456789",
- *                  "nodes" :["id": "abcdefghij0123456789",
- *                            "m": "0120342301031234",
- *                            "v": "20013243413143414",
+ *              "r":{"id":"ce3dbcf618862baf69e8",
+ *                  "nodes" :["id": "5a7f5578eace25999477",
+ *                            "m":  "192.168.4.46:12300",
+ *                            "v":  "0.0.0.0.01",
  *                            "f": "00000001"
- *                          ],
- *                          ["id": "jddafiejklj0123456789",
- *                            "m": "0120342301031234",
- *                            "v": "21013243413143414",
- *                            "f": "00000101"
- *                          ],...
+ *                           ],
+ *                           ...
  *                 }
  *            }
- * bencoded = d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe
+ * bencoded = d1:t20:30c6443e29cc307571e31:y1:r1:rd2:id20:ce3dbcf618862baf69e8
+ *            5:nodesld2:id20:5a7f5578eace259994771:m18:192.168.4.46:123001:v
+ *            9:0.0.0.0.01:fi1417421748eeeee
  */
 static
 int _vdht_enc_find_closest_nodes_rsp(
@@ -486,19 +487,19 @@ int _vdht_enc_find_closest_nodes_rsp(
  * @buf:
  * @len:
  *
- * find_node Query = {"t":"55317361186737765465",",
- *                    "y":"q",
- *                    "q":"post_service",
- *                    "a": {"id":"77552558420327273112",
- *                          "service" :{"id": "688530648014571404681"
- *                                    "m" : "192.168.4.125:12444",
- *                                    "f" : "0"
- *                                   }
- *                         }
- *                   }
- * bencoded = d1:t20:553173611867377654651:y1:q1:q12:post_service1:ad2:i\
- *            d20:775525584203272731127:serviced2:id20:68853064801457140\
- *            4681:m15:192.168.4.125:124441:fi0eeee
+ * Query = {"t":"b6e0855abbf93b8e6754",",
+ *          "y":"q",
+ *          "q":"post_service",
+ *          "a": {"id":"7ba29c1b9215a2e7621e",
+ *                "service" :{"id": "e532d7c80cf02e8652d3"
+ *                            "m" : "192.168.4.46:14444",
+ *                            "f" : "0"
+ *                           }
+ *               }
+ *         }
+ * bencoded = d1:t20:b6e0855abbf93b8e67541:y1:q1:q12:post_service1:ad2:id20:
+ *            7ba29c1b9215a2e7621e7:serviced2:id20:e532d7c80cf02e8652d31:m17:
+ *            192.168.4.46:144441:fi0eeee
  */
 static
 int _vdht_enc_post_service(
@@ -760,17 +761,16 @@ int _aux_unpack_dhtId(struct be_node* dict)
 }
 
 /*
- * @buf:
- * @len:
+ * @ctxt:  decoder context
  * @token:
- * @srcId
+ * @srcId: source nodeId
  *
- * ping Query = {"t":"80407320171565445232",
+ * ping Query = {"t":"1f4357a1bd2f006a3572",
  *               "y":"q",
  *               "q":"ping",
- *               "a":{"id":"78876038483004838102"}}
- * bencoded = d1:t20:804073201715654452321:y1:q1:q4:ping1:ad2:id20:7887603848300
- * 4838102ee
+ *               "a":{"id":"7ba29c1b9215a2e7621"}}
+ * bencoded = d1:t20:1f4357a1bd2f006a35721:y1:q1:q4:ping1:ad2:id20:7ba29c1b9215
+ *            a2e7621eee
  */
 static
 int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
@@ -791,21 +791,21 @@ int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
 }
 
 /*
- * @buf:
- * @sz:
+ * @ctxt:  decoder context
  * @token:
- * @result:
- * response = {"t":"875675086641542182221",
+ * @result: node infos of destination node.
+ *
+ * response = {"t":"3eb2c2beb25d3ffeb4f5",
  *             "y":"r",
- *             "r":{"node" :{"id": "74281510116552046580",
- *                            "m": "19:192.168.4.125:12300",
- *                            "v": "9:0.0.0.1.0",
+ *             "r":{"node" :{"id": "ce3dbcf618862baf69e8",
+ *                            "m": "192.168.4.125:12300",
+ *                            "v": "0.0.0.1.0",
  *                            "f": "1023"
  *                          }
  *                 }
  *            }
- * bencoded = d1:t20:875675086641542182221:y1:r1:rd4:noded2:id20:742815101165520
- * 465801:m19:192.168.4.125:123001:v9:0.0.0.1.01:fi1023eeee
+ * bencoded = d1:t20:3eb2c2beb25d3ffeb4f51:y1:r1:rd4:noded2:id20:ce3dbcf618862b
+ *            af69e81:m19:192.168.4.125:123001:v9:0.0.0.1.01:fi1023eeee
  */
 static
 int _vdht_dec_ping_rsp(void* ctxt, vtoken* token, vnodeInfo* result)
@@ -830,11 +830,20 @@ int _vdht_dec_ping_rsp(void* ctxt, vtoken* token, vnodeInfo* result)
 }
 
 /*
- * @buf:
- * @sz:
+ * @ctxt: decoder context
  * @token:
- * @srcId:
- * @targetId:
+ * @srcId: source nodeId
+ * @targetId: target node Id
+ *
+ * find_node Query = {"t":"9948eb5973da8f3c3c0a",
+ *                    "y":"q",
+ *                    "q":"find_node",
+ *                    "a": {"id":"7ba29c1b9215a2e7621e",
+ *                          "target":"7ba29c1b9215a2e7621"
+ *                         }
+ *                   }
+ * bencoded =  d1:t20:9948eb5973da8f3c3c0a1:y1:q1:q9:find_node1:ad2:id20:7ba29c
+ *             1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
 int _vdht_dec_find_node(
@@ -862,23 +871,24 @@ int _vdht_dec_find_node(
 }
 
 /*
- * @buf:
- * @sz:
+ * @ctxt:
  * @token:
  * @srcId:
  * @result:
  *
- * response = {"t":"aa",
- *             "y":"r",
- *             "r":{"id":"abcdefghij0123456789",
- *                  "node" :{"id": "abcdefghij0123456789",
- *                            "m": "0120342301031234",
- *                            "v": "20013243413143414",
- *                            "f": "00000001"
+  *  response = {"t":"9948eb5973da8f3c3c0a",
+ *              "y":"r",
+ *              "r":{"id":"ce3dbcf618862baf69e8",
+ *                  "node" :{"id": "7ba29c1b9215a2e7621e",
+ *                            "m": "192.168.4.46:12300",
+ *                            "v": "0.0.0.1.0",
+ *                            "f": "0"
  *                          }
  *                 }
  *            }
- * bencoded = d1:ad2:id20:abcdefghij0123456789e1:q4:ping1:t2:aa1:y1:qe
+ * bencoded = d1:t20:9948eb5973da8f3c3c0a1:y1:r1:rd2:id20:ce3dbcf618862baf69e84
+ *            :noded2:id20:7ba29c1b9215a2e7621e1:m18:192.168.4.46:123001:v9:0.0
+ *            .0.0.01:fi0eeee
  */
 static
 int _vdht_dec_find_node_rsp(
@@ -910,11 +920,20 @@ int _vdht_dec_find_node_rsp(
 }
 
 /*
- * @buf:
- * @sz:
+ * @ctxt:
  * @token:
  * @srcId:
  * @closest:
+ *
+ * find_node Query = {"t":"971ee80a808da2eb7fb2",
+ *                    "y":"q",
+ *                    "q":"find_closest_nodes",
+ *                    "a": {"id":"7ba29c1b9215a2e7621e",
+ *                          "target":"7ba29c1b9215a2e7621"
+ *                         }
+ *                   }
+ * bencoded = :d1:t20:971ee80a808da2eb7fb21:y1:q1:q18:find_closest_nodes1:ad2:i
+ *            d20:7ba29c1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
 int _vdht_dec_find_closest_nodes(
@@ -954,15 +973,13 @@ int _vdht_dec_find_closest_nodes(
  *                            "m":  "192.168.4.46:12300",
  *                            "v":  "0.0.0.0.01",
  *                            "f": "00000001"
- *                          ],
- *                          ["id": "jddafiejklj0123456789",
- *                            "m": "0120342301031234",
- *                            "v": "21013243413143414",
- *                            "f": "00000101"
- *                          ],...
+ *                           ],
+ *                           ...
  *                 }
  *            }
- * bencoded = d1:t20:30c6443e29cc307571e31:y1:r1:rd2:id20:ce3dbcf618862baf69e85:nodesld2:id20:5a7f5578eace259994771:m18:192.168.4.46:123001:v9:0.0.0.0.01:fi1417421748eeeee
+ * bencoded = d1:t20:30c6443e29cc307571e31:y1:r1:rd2:id20:ce3dbcf618862baf69e8\
+ *            5:nodesld2:id20:5a7f5578eace259994771:m18:192.168.4.46:123001:v\
+ *            9:0.0.0.0.01:fi1417421748eeeee
  */
 static
 int _vdht_dec_find_closest_nodes_rsp(
@@ -1008,6 +1025,25 @@ int _vdht_dec_find_closest_nodes_rsp(
     return 0;
 }
 
+/* @ctxt:
+ * @token:
+ * @srcId:
+ * @service:
+ *
+ * Query = {"t":"b6e0855abbf93b8e6754",",
+ *          "y":"q",
+ *          "q":"post_service",
+ *          "a": {"id":"7ba29c1b9215a2e7621e",
+ *                "service" :{"id": "e532d7c80cf02e8652d3"
+ *                            "m" : "192.168.4.46:14444",
+ *                            "f" : "0"
+ *                           }
+ *               }
+ *         }
+ * bencoded = d1:t20:b6e0855abbf93b8e67541:y1:q1:q12:post_service1:ad2:id20:
+ *            7ba29c1b9215a2e7621e7:serviced2:id20:e532d7c80cf02e8652d31:m17:
+ *            192.168.4.46:144441:fi0eeee
+ */
 static
 int _vdht_dec_post_service(
         void* ctxt,
