@@ -51,63 +51,60 @@ enum {
 char* vpluger_get_desc(int);
 
 struct vroute;
-struct vroute_space;
-struct vroute_space_ops {
-    int  (*add_node)     (struct vroute_space*, vnodeInfo*);
-    int  (*del_node)     (struct vroute_space*, vnodeAddr*);
-    int  (*get_node)     (struct vroute_space*, vnodeId*, vnodeInfo*);
-    int  (*get_neighbors)(struct vroute_space*, vnodeId*, struct varray*, int);
-    int  (*broadcast)    (struct vroute_space*, void*);
-    int  (*tick)         (struct vroute_space*);
-    int  (*load)         (struct vroute_space*);
-    int  (*store)        (struct vroute_space*);
-    void (*clear)        (struct vroute_space*);
-    void (*dump)         (struct vroute_space*);
+struct vroute_node_space;
+struct vroute_node_space_ops {
+    int  (*add_node)     (struct vroute_node_space*, vnodeInfo*);
+    int  (*del_node)     (struct vroute_node_space*, vnodeAddr*);
+    int  (*get_node)     (struct vroute_node_space*, vnodeId*, vnodeInfo*);
+    int  (*get_neighbors)(struct vroute_node_space*, vnodeId*, struct varray*, int);
+    int  (*broadcast)    (struct vroute_node_space*, void*);
+    int  (*tick)         (struct vroute_node_space*);
+    int  (*load)         (struct vroute_node_space*);
+    int  (*store)        (struct vroute_node_space*);
+    void (*clear)        (struct vroute_node_space*);
+    void (*dump)         (struct vroute_node_space*);
 };
 
-struct vroute_space_bucket {
-    struct varray peers;
-    time_t ts;
-};
-
-struct vroute_space {
+struct vroute_node_space {
     vnodeInfo* own;
     char db[BUF_SZ];
     int  bucket_sz;
     int  max_snd_tms;
 
     struct vroute* route;
-    struct vroute_space_bucket bucket[NBUCKETS];
-    struct vroute_space_ops* ops;
+    struct vroute_node_space_bucket {
+        struct varray peers;
+        time_t ts;
+    } bucket[NBUCKETS];
+    struct vroute_node_space_ops* ops;
 };
 
-int  vroute_space_init  (struct vroute_space*, struct vroute*, struct vconfig*, vnodeInfo*);
-void vroute_space_deinit(struct vroute_space*);
+int  vroute_node_space_init  (struct vroute_node_space*, struct vroute*, struct vconfig*, vnodeInfo*);
+void vroute_node_space_deinit(struct vroute_node_space*);
 
 /*
  *
  */
-struct vroute_mart;
-struct vroute_mart_ops {
-    int  (*add_srvc_node)(struct vroute_mart*, vsrvcInfo*);
-    int  (*get_srvc_node)(struct vroute_mart*, int, vsrvcInfo*);
-    void (*clear)        (struct vroute_mart*);
-    void (*dump)         (struct vroute_mart*);
+struct vroute_srvc_space;
+struct vroute_srvc_space_ops {
+    int  (*add_srvc_node)(struct vroute_srvc_space*, vsrvcInfo*);
+    int  (*get_srvc_node)(struct vroute_srvc_space*, int, vsrvcInfo*);
+    void (*clear)        (struct vroute_srvc_space*);
+    void (*dump)         (struct vroute_srvc_space*);
 };
 
-struct vroute_mart_bucket {
-    struct varray srvcs;
-    time_t ts;
-};
-struct vroute_mart {
+struct vroute_srvc_space {
     int bucket_sz;
 
-    struct vroute_mart_bucket bucket[PLUGIN_BUTT];
-    struct vroute_mart_ops* ops;
+    struct vroute_srvc_space_bucket {
+        struct varray srvcs;
+        time_t ts;
+    } bucket[PLUGIN_BUTT];
+    struct vroute_srvc_space_ops* ops;
 };
 
-int  vroute_mart_init  (struct vroute_mart*, struct vconfig*);
-void vroute_mart_deinit(struct vroute_mart*);
+int  vroute_srvc_space_init  (struct vroute_srvc_space*, struct vconfig*);
+void vroute_srvc_space_deinit(struct vroute_srvc_space*);
 
 /*
  * for routing table.
@@ -145,8 +142,8 @@ struct vroute {
     vnodeInfo     own_node;
     struct varray own_svcs;
 
-    struct vroute_space space;
-    struct vroute_mart  mart;
+    struct vroute_node_space  node_space;
+    struct vroute_srvc_space  srvc_space;
 
     struct vlock lock;
 

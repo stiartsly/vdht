@@ -192,7 +192,7 @@ static
 int _aux_space_tick_cb(void* item, void* cookie)
 {
     struct vpeer*  peer  = (struct vpeer*)item;
-    varg_decl(cookie, 0, struct vroute_space*, space);
+    varg_decl(cookie, 0, struct vroute_node_space*, space);
     varg_decl(cookie, 1, struct vroute*, route);
     varg_decl(cookie, 2, time_t*, now);
     vnodeAddr addr;
@@ -223,7 +223,7 @@ int _aux_space_tick_cb(void* item, void* cookie)
 static
 int _aux_space_load_cb(void* priv, int col, char** value, char** field)
 {
-    struct vroute_space* space = (struct vroute_space*)priv;
+    struct vroute_node_space* space = (struct vroute_node_space*)priv;
     char* ip =   (char*)((void**)value)[1];
     char* port = (char*)((void**)value)[2];
     char* id   = (char*)((void**)value)[3];
@@ -291,7 +291,7 @@ int _aux_space_store_cb(void* item, void* cookie)
  * @flags: properties that node has.
  */
 static
-int _vroute_space_add_node(struct vroute_space* space, vnodeInfo* info)
+int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info)
 {
     struct varray* peers = NULL;
     struct vpeer*  to    = NULL;
@@ -350,7 +350,7 @@ int _vroute_space_add_node(struct vroute_space* space, vnodeInfo* info)
  *
  */
 static
-int _vroute_space_del_node(struct vroute_space* space, vnodeAddr* addr)
+int _vroute_node_space_del_node(struct vroute_node_space* space, vnodeAddr* addr)
 {
     struct varray* peers = NULL;
     struct vpeer*  peer  = NULL;
@@ -383,7 +383,7 @@ int _vroute_space_del_node(struct vroute_space* space, vnodeAddr* addr)
  * @info:
  */
 static
-int _vroute_space_get_node(struct vroute_space* space, vnodeId* target, vnodeInfo* info)
+int _vroute_node_space_get_node(struct vroute_node_space* space, vnodeId* target, vnodeInfo* info)
 {
     struct varray* peers = NULL;
     struct vpeer*  peer  = NULL;
@@ -410,7 +410,7 @@ int _vroute_space_get_node(struct vroute_space* space, vnodeId* target, vnodeInf
 }
 
 static
-int _vroute_space_get_neighbors(struct vroute_space* space, vnodeId* target, struct varray* closest, int num)
+int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* target, struct varray* closest, int num)
 {
     struct vpeer_track {
         vnodeMetric metric;
@@ -479,7 +479,7 @@ int _vroute_space_get_neighbors(struct vroute_space* space, vnodeId* target, str
 }
 
 static
-int _vroute_space_broadcast(struct vroute_space* space, void* svci)
+int _vroute_node_space_broadcast(struct vroute_node_space* space, void* svci)
 {
     struct varray* peers = NULL;
     int i = 0;
@@ -499,7 +499,7 @@ int _vroute_space_broadcast(struct vroute_space* space, void* svci)
 }
 
 static
-int _vroute_space_tick(struct vroute_space* space)
+int _vroute_node_space_tick(struct vroute_node_space* space)
 {
     struct vroute* route = space->route;
     struct varray* peers = NULL;
@@ -538,7 +538,7 @@ int _vroute_space_tick(struct vroute_space* space)
  *
  */
 static
-int _vroute_space_load(struct vroute_space* space)
+int _vroute_node_space_load(struct vroute_node_space* space)
 {
     char sql_buf[BUF_SZ];
     sqlite3* db = NULL;
@@ -566,7 +566,7 @@ int _vroute_space_load(struct vroute_space* space)
  * @file
  */
 static
-int _vroute_space_store(struct vroute_space* space)
+int _vroute_node_space_store(struct vroute_node_space* space)
 {
     struct varray* peers = NULL;
     sqlite3* db = NULL;
@@ -592,7 +592,7 @@ int _vroute_space_store(struct vroute_space* space)
  * @route:
  */
 static
-void _vroute_space_clear(struct vroute_space* space)
+void _vroute_node_space_clear(struct vroute_node_space* space)
 {
     struct varray* peers = NULL;
     int i  = 0;
@@ -612,7 +612,7 @@ void _vroute_space_clear(struct vroute_space* space)
  * @route:
  */
 static
-void _vroute_space_dump(struct vroute_space* space)
+void _vroute_node_space_dump(struct vroute_node_space* space)
 {
     struct varray* peers = NULL;
     int i = 0;
@@ -631,20 +631,20 @@ void _vroute_space_dump(struct vroute_space* space)
     return ;
 }
 
-struct vroute_space_ops route_space_ops = {
-    .add_node      = _vroute_space_add_node,
-    .del_node      = _vroute_space_del_node,
-    .get_node      = _vroute_space_get_node,
-    .get_neighbors = _vroute_space_get_neighbors,
-    .broadcast     = _vroute_space_broadcast,
-    .tick          = _vroute_space_tick,
-    .load          = _vroute_space_load,
-    .store         = _vroute_space_store,
-    .clear         = _vroute_space_clear,
-    .dump          = _vroute_space_dump
+struct vroute_node_space_ops route_space_ops = {
+    .add_node      = _vroute_node_space_add_node,
+    .del_node      = _vroute_node_space_del_node,
+    .get_node      = _vroute_node_space_get_node,
+    .get_neighbors = _vroute_node_space_get_neighbors,
+    .broadcast     = _vroute_node_space_broadcast,
+    .tick          = _vroute_node_space_tick,
+    .load          = _vroute_node_space_load,
+    .store         = _vroute_node_space_store,
+    .clear         = _vroute_node_space_clear,
+    .dump          = _vroute_node_space_dump
 };
 
-int vroute_space_init(struct vroute_space* space, struct vroute* route, struct vconfig* cfg, vnodeInfo* node_info)
+int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route, struct vconfig* cfg, vnodeInfo* node_info)
 {
     int i = 0;
 
@@ -666,7 +666,7 @@ int vroute_space_init(struct vroute_space* space, struct vroute* route, struct v
     return 0;
 }
 
-void vroute_space_deinit(struct vroute_space* space)
+void vroute_node_space_deinit(struct vroute_node_space* space)
 {
     int i = 0;
     vassert(space);

@@ -91,7 +91,7 @@ void vservice_dump(struct vservice* item)
 }
 
 static
-int _aux_mart_add_service_cb(void* item, void* cookie)
+int _aux_srvc_space_add_service_cb(void* item, void* cookie)
 {
     struct vservice* svc = (struct vservice*)item;
     varg_decl(cookie, 0, vsrvcInfo*, svci);
@@ -114,7 +114,7 @@ int _aux_mart_add_service_cb(void* item, void* cookie)
 }
 
 static
-int _aux_mart_get_service_cb(void* item, void* cookie)
+int _aux_srvc_space_get_service_cb(void* item, void* cookie)
 {
     struct vservice* svc = (struct vservice*)item;
     varg_decl(cookie, 1, struct vservice**, to);
@@ -129,7 +129,7 @@ int _aux_mart_get_service_cb(void* item, void* cookie)
 }
 
 static
-int _vroute_mart_add_service_node(struct vroute_mart* mart, vsrvcInfo* svci)
+int _vroute_srvc_space_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* svci)
 {
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
@@ -139,12 +139,12 @@ int _vroute_mart_add_service_node(struct vroute_mart* mart, vsrvcInfo* svci)
     int updt = 0;
     int ret  = -1;
 
-    vassert(mart);
+    vassert(space);
     vassert(svci);
     retE((svci->usage < 0));
     retE((svci->usage >= PLUGIN_BUTT));
 
-    svcs = &mart->bucket[svci->usage].srvcs;
+    svcs = &space->bucket[svci->usage].srvcs;
     {
         void* argv[] = {
             svci,
@@ -153,7 +153,7 @@ int _vroute_mart_add_service_node(struct vroute_mart* mart, vsrvcInfo* svci)
             &min_tdff,
             &found
         };
-        varray_iterate(svcs, _aux_mart_add_service_cb, argv);
+        varray_iterate(svcs, _aux_srvc_space_add_service_cb, argv);
         if (found) {
             to->rcv_ts = now;
             updt = 1;
@@ -169,14 +169,14 @@ int _vroute_mart_add_service_node(struct vroute_mart* mart, vsrvcInfo* svci)
         };
     }
     if (updt) {
-        mart->bucket[svci->usage].ts = now;
+        space->bucket[svci->usage].ts = now;
         ret = 0;
     }
     return ret;
 }
 
 static
-int _vroute_mart_get_serivce_node(struct vroute_mart* mart, int what, vsrvcInfo* svci)
+int _vroute_srvc_space_get_serivce_node(struct vroute_srvc_space* space, int what, vsrvcInfo* svci)
 {
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
@@ -184,17 +184,17 @@ int _vroute_mart_get_serivce_node(struct vroute_mart* mart, int what, vsrvcInfo*
     int32_t min_tdff = (int32_t)0x7fffffff;
     int ret = -1;
 
-    vassert(mart);
+    vassert(space);
     vassert(svci);
 
-    svcs = &mart->bucket[what].srvcs;
+    svcs = &space->bucket[what].srvcs;
     {
         void* argv[] = {
             &to,
             &now,
             &min_tdff
         };
-        varray_iterate(svcs, _aux_mart_get_service_cb, argv);
+        varray_iterate(svcs, _aux_srvc_space_get_service_cb, argv);
         if (to) {
             vsrvcInfo_init(svci, what, &to->addr);
             ret = 0;
@@ -208,14 +208,14 @@ int _vroute_mart_get_serivce_node(struct vroute_mart* mart, int what, vsrvcInfo*
  * @pluger: handler to plugin structure.
  */
 static
-void _vroute_mart_clear(struct vroute_mart* mart)
+void _vroute_srvc_space_clear(struct vroute_srvc_space* space)
 {
     struct varray* svcs = NULL;
     int i = 0;
-    vassert(mart);
+    vassert(space);
 
     for (; i < PLUGIN_BUTT; i++) {
-        svcs = &mart->bucket[i].srvcs;
+        svcs = &space->bucket[i].srvcs;
         while(varray_size(svcs) > 0) {
             vservice_free((struct vservice*)varray_del(svcs, 0));
         }
@@ -228,17 +228,17 @@ void _vroute_mart_clear(struct vroute_mart* mart)
  * @pluger: handler to plugin structure.
  */
 static
-void _vroute_mart_dump(struct vroute_mart* mart)
+void _vroute_srvc_space_dump(struct vroute_srvc_space* space)
 {
     struct varray* svcs = NULL;
     int i = 0;
     int j = 0;
 
-    vassert(mart);
+    vassert(space);
 
     vdump(printf("-> ROUTING MART"));
     for (i = 0; i < PLUGIN_BUTT; i++) {
-        svcs = &mart->bucket[i].srvcs;
+        svcs = &space->bucket[i].srvcs;
         for (j = 0; j < varray_size(svcs); j++) {
             vservice_dump((struct vservice*)varray_get(svcs, j));
         }
@@ -248,37 +248,37 @@ void _vroute_mart_dump(struct vroute_mart* mart)
 }
 
 static
-struct vroute_mart_ops route_mart_ops = {
-    .add_srvc_node = _vroute_mart_add_service_node,
-    .get_srvc_node = _vroute_mart_get_serivce_node,
-    .clear         = _vroute_mart_clear,
-    .dump          = _vroute_mart_dump
+struct vroute_srvc_space_ops route_srvc_space_ops = {
+    .add_srvc_node = _vroute_srvc_space_add_service_node,
+    .get_srvc_node = _vroute_srvc_space_get_serivce_node,
+    .clear         = _vroute_srvc_space_clear,
+    .dump          = _vroute_srvc_space_dump
 };
 
-int vroute_mart_init(struct vroute_mart* mart, struct vconfig* cfg)
+int vroute_srvc_space_init(struct vroute_srvc_space* space, struct vconfig* cfg)
 {
     int i = 0;
 
-    vassert(mart);
+    vassert(space);
     vassert(cfg);
 
     for (; i < PLUGIN_BUTT; i++) {
-        varray_init(&mart->bucket[i].srvcs, 8);
-        mart->bucket[i].ts = 0;
+        varray_init(&space->bucket[i].srvcs, 8);
+        space->bucket[i].ts = 0;
     }
-    cfg->ops->get_int_ext(cfg, "route.bucket_size", &mart->bucket_sz, DEF_ROUTE_BUCKET_CAPC);
-    mart->ops = &route_mart_ops;
+    cfg->ops->get_int_ext(cfg, "route.bucket_size", &space->bucket_sz, DEF_ROUTE_BUCKET_CAPC);
+    space->ops = &route_srvc_space_ops;
 
     return 0;
 }
 
-void vroute_mart_deinit(struct vroute_mart* mart)
+void vroute_srvc_space_deinit(struct vroute_srvc_space* space)
 {
     int i = 0;
 
-    mart->ops->clear(mart);
+    space->ops->clear(space);
     for (; i < PLUGIN_BUTT; i++) {
-        varray_deinit(&mart->bucket[i].srvcs);
+        varray_deinit(&space->bucket[i].srvcs);
     }
     return ;
 }

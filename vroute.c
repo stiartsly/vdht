@@ -15,7 +15,7 @@ static uint32_t peer_service_prop[] = {
 
 int _aux_route_tick_cb(void* item, void* cookie)
 {
-    struct vroute_space* space = (struct vroute_space*)cookie;
+    struct vroute_node_space* space = (struct vroute_node_space*)cookie;
     int ret = 0;
     vassert(space);
 
@@ -33,7 +33,7 @@ int _aux_route_tick_cb(void* item, void* cookie)
 static
 int _vroute_join_node(struct vroute* route, vnodeAddr* node_addr)
 {
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* space = &route->node_space;
     vnodeInfo node_info;
     vnodeVer ver;
     int ret = 0;
@@ -60,7 +60,7 @@ int _vroute_join_node(struct vroute* route, vnodeAddr* node_addr)
 static
 int _vroute_drop_node(struct vroute* route, vnodeAddr* node_addr)
 {
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* space = &route->node_space;
     int ret = 0;
 
     vassert(route);
@@ -135,7 +135,7 @@ int _vroute_unreg_service(struct vroute* route, int what, struct sockaddr_in* ad
 static
 int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr)
 {
-    struct vroute_mart* mart = &route->mart;
+    struct vroute_srvc_space* srvc_space = &route->srvc_space;
     vsrvcInfo svc;
     int ret = 0;
 
@@ -145,7 +145,7 @@ int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr
     retE((what >= PLUGIN_BUTT));
 
     vlock_enter(&route->lock);
-    ret = mart->ops->get_srvc_node(mart, what, &svc);
+    ret = srvc_space->ops->get_srvc_node(srvc_space, what, &svc);
     vlock_leave(&route->lock);
     retE((ret < 0));
 
@@ -156,12 +156,12 @@ int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr
 static
 int _vroute_load(struct vroute* route)
 {
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* node_space = &route->node_space;
     int ret = 0;
     vassert(route);
 
     vlock_enter(&route->lock);
-    ret = space->ops->load(space);
+    ret = node_space->ops->load(node_space);
     vlock_leave(&route->lock);
     retE((ret < 0));
     return 0;
@@ -170,12 +170,12 @@ int _vroute_load(struct vroute* route)
 static
 int _vroute_store(struct vroute* route)
 {
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* node_space = &route->node_space;
     int ret = 0;
     vassert(route);
 
     vlock_enter(&route->lock);
-    ret = space->ops->store(space);
+    ret = node_space->ops->store(node_space);
     vlock_leave(&route->lock);
     retE((ret < 0));
     return 0;
@@ -184,12 +184,12 @@ int _vroute_store(struct vroute* route)
 static
 int _vroute_tick(struct vroute* route)
 {
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* node_space = &route->node_space;
     vassert(route);
 
     vlock_enter(&route->lock);
-    space->ops->tick(space);
-    varray_iterate(&route->own_svcs, _aux_route_tick_cb, space);
+    node_space->ops->tick(node_space);
+    varray_iterate(&route->own_svcs, _aux_route_tick_cb, node_space);
     vlock_leave(&route->lock);
     return 0;
 }
@@ -197,13 +197,13 @@ int _vroute_tick(struct vroute* route)
 static
 void _vroute_clear(struct vroute* route)
 {
-    struct vroute_space* space = &route->space;
-    struct vroute_mart*  mart  = &route->mart;
+    struct vroute_node_space* node_space = &route->node_space;
+    struct vroute_srvc_space* srvc_space = &route->srvc_space;
     vassert(route);
 
     vlock_enter(&route->lock);
-    space->ops->clear(space);
-    mart->ops->clear(mart);
+    node_space->ops->clear(node_space);
+    srvc_space->ops->clear(srvc_space);
     vlock_leave(&route->lock);
     return;
 }
@@ -211,8 +211,8 @@ void _vroute_clear(struct vroute* route)
 static
 void _vroute_dump(struct vroute* route)
 {
-    struct vroute_space* space = &route->space;
-    struct vroute_mart*  mart  = &route->mart;
+    struct vroute_node_space* node_space = &route->node_space;
+    struct vroute_srvc_space* srvc_space  = &route->srvc_space;
     int i = 0;
     vassert(route);
 
@@ -229,8 +229,8 @@ void _vroute_dump(struct vroute* route)
     vdump(printf("<- SERVICES"));
     vdump(printf("<- MINE"));
 
-    space->ops->dump(space);
-    mart->ops->dump(mart);
+    node_space->ops->dump(node_space);
+    srvc_space->ops->dump(srvc_space);
     vlock_leave(&route->lock);
     vdump(printf("<- ROUTE"));
     return;
@@ -241,17 +241,16 @@ int _vroute_dispatch(struct vroute* route, struct vmsg_usr* mu)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     void* ctxt = NULL;
-    int what = 0;
     int ret = 0;
     vassert(route);
     vassert(mu);
 
-    what = dec_ops->dec(mu->data, mu->len, &ctxt);
-    retE((what >= VDHT_UNKNOWN));
-    retE((what < 0));
-    vlogI(printf("Received @%s", vdht_get_desc(what)));
+    ret = dec_ops->dec(mu->data, mu->len, &ctxt);
+    retE((ret >= VDHT_UNKNOWN));
+    retE((ret < 0));
+    vlogI(printf("received @%s", vdht_get_desc(ret)));
 
-    ret = route->cb_ops[what](route, &mu->addr->vsin_addr, ctxt);
+    ret = route->cb_ops[ret](route, &mu->addr->vsin_addr, ctxt);
     dec_ops->dec_done(ctxt);
     retE((ret < 0));
     return 0;
@@ -648,7 +647,7 @@ static
 int _vroute_cb_ping(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* space = &route->node_space;
     vnodeAddr addr;
     vnodeInfo info;
     vtoken token;
@@ -673,7 +672,7 @@ static
 int _vroute_cb_ping_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* space = &route->node_space;
     vnodeInfo info;
     vtoken token;
     int ret = 0;
@@ -695,7 +694,7 @@ static
 int _vroute_cb_find_node(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* space = &route->node_space;
     struct varray closest;
     vnodeAddr addr;
     vnodeInfo info;
@@ -735,7 +734,7 @@ static
 int _vroute_cb_find_node_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* space = &route->node_space;
     vnodeInfo info;
     vnodeAddr addr;
     vtoken token;
@@ -764,7 +763,7 @@ int _vroute_cb_find_closest_nodes(
         void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* space = &route->node_space;
     struct varray closest;
     vnodeAddr addr;
     vnodeInfo info;
@@ -800,7 +799,7 @@ int _vroute_cb_find_closest_nodes_rsp(
         void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    struct vroute_space* space = &route->space;
+    struct vroute_node_space* space = &route->node_space;
     struct varray closest;
     vnodeInfo info;
     vnodeAddr addr;
@@ -833,8 +832,8 @@ static
 int _vroute_cb_post_service(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    struct vroute_space* space = &route->space;
-    struct vroute_mart*  mart  = &route->mart;
+    struct vroute_node_space* node_space = &route->node_space;
+    struct vroute_srvc_space* srvc_space = &route->srvc_space;
     vsrvcInfo svc;
     vnodeAddr addr;
     vnodeInfo info;
@@ -851,10 +850,10 @@ int _vroute_cb_post_service(struct vroute* route, struct sockaddr_in* from, void
     retE((svc.usage < 0));
     retE((svc.usage >= PLUGIN_BUTT));
 
-    ret = mart->ops->add_srvc_node(mart, &svc);
+    ret = srvc_space->ops->add_srvc_node(srvc_space, &svc);
     retE((ret < 0));
     vnodeInfo_init(&info, &addr.id, &addr.addr, peer_service_prop[svc.usage], NULL);
-    ret = space->ops->add_node(space, &info);
+    ret = node_space->ops->add_node(node_space, &info);
     retE((ret < 0));
     return 0;
 }
@@ -931,8 +930,8 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     varray_init(&route->own_svcs, 4);
 
     vlock_init(&route->lock);
-    vroute_space_init(&route->space, route, cfg, &route->own_node);
-    vroute_mart_init (&route->mart, cfg);
+    vroute_node_space_init(&route->node_space, route, cfg, &route->own_node);
+    vroute_srvc_space_init(&route->srvc_space, cfg);
 
     route->ops     = &route_ops;
     route->dht_ops = &route_dht_ops;
@@ -950,8 +949,8 @@ void vroute_deinit(struct vroute* route)
     int i = 0;
     vassert(route);
 
-    vroute_space_deinit(&route->space);
-    vroute_mart_deinit(&route->mart);
+    vroute_node_space_deinit(&route->node_space);
+    vroute_srvc_space_deinit(&route->srvc_space);
     for (; i < varray_size(&route->own_svcs); i++) {
         vsrvcInfo_free((vsrvcInfo*)varray_get(&route->own_svcs, i));
     }
