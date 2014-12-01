@@ -942,11 +942,27 @@ int _vdht_dec_find_closest_nodes(
 }
 
 /*
- * @buf:
- * @sz:
- * @token:
- * @srcId:
- * @closest:
+ * @ctxt:  decoder context
+ * @token: msg token;
+ * @srcId: source vnodeId
+ * @closest: array of nodes that close to current node.
+ *
+ *  response = {"t":"30c6443e29cc307571e3",
+ *              "y":"r",
+ *              "r":{"id":"ce3dbcf618862baf69e8",
+ *                  "nodes" :["id": "5a7f5578eace25999477",
+ *                            "m":  "192.168.4.46:12300",
+ *                            "v":  "0.0.0.0.01",
+ *                            "f": "00000001"
+ *                          ],
+ *                          ["id": "jddafiejklj0123456789",
+ *                            "m": "0120342301031234",
+ *                            "v": "21013243413143414",
+ *                            "f": "00000101"
+ *                          ],...
+ *                 }
+ *            }
+ * bencoded = d1:t20:30c6443e29cc307571e31:y1:r1:rd2:id20:ce3dbcf618862baf69e85:nodesld2:id20:5a7f5578eace259994771:m18:192.168.4.46:123001:v9:0.0.0.0.01:fi1417421748eeeee
  */
 static
 int _vdht_dec_find_closest_nodes_rsp(
@@ -971,11 +987,11 @@ int _vdht_dec_find_closest_nodes_rsp(
     ret = _aux_unpack_vnodeId(dict, "r", "id", srcId);
     retE((ret < 0));
 
-    ret = be_node_by_2keys(dict, "r", "node", &list);
+    ret = be_node_by_2keys(dict, "r", "nodes", &list);
     retE((ret < 0));
     retE((BE_LIST != list->type));
 
-    for (; node->val.l[i]; i++) {
+    for (; list->val.l[i]; i++) {
         vnodeInfo* info = NULL;
 
         node = list->val.l[i];

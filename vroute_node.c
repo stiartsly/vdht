@@ -448,7 +448,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
     vassert(closest);
     vassert(num > 0);
 
-    vmem_aux_init(&maux, sizeof(struct vpeer_track), 0);
+    vmem_aux_init(&maux, sizeof(struct vpeer_track), 8);
     vsorted_array_init(&array, 0,  _aux_space_track_cmp_cb, space);
 
     for (; i < NBUCKETS; i++) {
