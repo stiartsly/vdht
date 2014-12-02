@@ -11,6 +11,17 @@
 
 #define DEF_DHT_PORT            ((int)12300)
 
+#define DEF_COLLECT_CPU_CRITERIA   (5)
+#define DEF_COLLECT_MEM_CRITERIA   (5)
+#define DEF_COLLECT_IO_CRITERIA    (5)
+#define DEF_COLLECT_UP_CRITERIA    (5)
+#define DEF_COLLECT_DOWN_CRITERIA  (5)
+
+#define DEF_COLLECT_CPU_FACTOR     (6)
+#define DEF_COLLECT_MEM_FACTOR     (5)
+#define DEF_COLLECT_IO_FACTOR      (2)
+#define DEF_COLLECT_UP_FACTOR      (4)
+#define DEF_COLLECT_DOWN_FACTOR    (4)
 
 struct vconfig;
 struct vconfig_ops {

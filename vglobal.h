@@ -43,6 +43,7 @@
 #include "vlsctl.h"
 #include "vnodeId.h"
 #include "vticker.h"
+#include "vcollect.h"
 
 #if 0
 #define timer_t

@@ -16,7 +16,8 @@ vdht_objs = \
     vroute_srvc.o  \
     vlsctl.o  \
     vticker.o \
-    vnodeId.o 
+    vnodeId.o \
+    vcollect.o 
 
 .PHONY: all vdhtd vlsctlc clean
 

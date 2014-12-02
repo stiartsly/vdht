@@ -66,5 +66,13 @@ int  vtimer_restart(struct vtimer*, int timeout);
 int  vtimer_stop   (struct vtimer*);
 void vtimer_deinit (struct vtimer*);
 
+/*
+ * vsys
+ */
+int vsys_get_cpu_ratio(int*);
+int vsys_get_mem_ratio(int*);
+int vsys_get_io_ratio (int*);
+int vsys_get_net_ratio(int*, int*);
+
 #endif
 

@@ -6,6 +6,7 @@
 #include "vmsger.h"
 #include "vticker.h"
 #include "vlsctl.h"
+#include "vcollect.h"
 
 struct vhost;
 struct vhost_ops {
@@ -29,13 +30,14 @@ struct vhost {
     int  to_quit;
     int  tick_tmo;
 
-    struct vmsger  msger;
-    struct vrpc    rpc;
-    struct vwaiter waiter;
-    struct vticker ticker;
-    struct vroute  route;
-    struct vnode   node;
-    struct vlsctl  lsctl;
+    struct vmsger   msger;
+    struct vrpc     rpc;
+    struct vwaiter  waiter;
+    struct vticker  ticker;
+    struct vroute   route;
+    struct vnode    node;
+    struct vlsctl   lsctl;
+    struct vcollect collect;
 
     struct vconfig*   cfg;
     struct vhost_ops* ops;

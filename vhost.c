@@ -74,6 +74,21 @@ int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
     return 0;
 }
 
+static
+int _aux_host_tick_cb(void* cookie)
+{
+    struct vhost* host = (struct vhost*)cookie;
+    struct vcollect* collect = &host->collect;
+    int ret = 0;
+
+    vassert(host);
+    ret = collect->ops->collect_data(collect);
+    retE((ret < 0));
+
+    //todo;
+    return 0;
+}
+
 /*
  * the routine to register the periodical work with certian interval
  * to the ticker, which is running peridically at background in the
@@ -90,7 +105,8 @@ int _vhost_stabilize(struct vhost* host)
 
     ret = node->ops->stabilize(node);
     retE((ret < 0));
-    //ticker->ops->add_cb(ticker, _aux_tick_cb, host);
+    ret = ticker->ops->add_cb(ticker, _aux_host_tick_cb, host);
+    retE((ret < 0));
     ret = ticker->ops->start(ticker, host->tick_tmo);
     retE((ret < 0));
     return 0;
@@ -457,21 +473,23 @@ struct vhost* vhost_create(struct vconfig* cfg)
     vnodeVer_unstrlize(host->ops->get_version(host), &ver);
     vnodeInfo_init(&info, &addr.id, &addr.addr, 0, &ver);
 
-    ret += vmsger_init (&host->msger);
-    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&addr.addr));
-    ret += vticker_init(&host->ticker);
-    ret += vroute_init (&host->route, cfg, &host->msger, &info);
-    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &addr);
-    ret += vwaiter_init(&host->waiter);
-    ret += vlsctl_init (&host->lsctl, host);
+    ret += vmsger_init  (&host->msger);
+    ret += vrpc_init    (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&addr.addr));
+    ret += vticker_init (&host->ticker);
+    ret += vroute_init  (&host->route, cfg, &host->msger, &info);
+    ret += vnode_init   (&host->node,  cfg, &host->ticker,&host->route, &addr);
+    ret += vwaiter_init (&host->waiter);
+    ret += vlsctl_init  (&host->lsctl, host);
+    ret += vcollect_init(&host->collect, cfg);
     if (ret < 0) {
-        vlsctl_deinit (&host->lsctl);
-        vwaiter_deinit(&host->waiter);
-        vnode_deinit  (&host->node);
-        vroute_deinit (&host->route);
-        vticker_deinit(&host->ticker);
-        vrpc_deinit   (&host->rpc);
-        vmsger_deinit (&host->msger);
+        vcollect_deinit(&host->collect);
+        vlsctl_deinit  (&host->lsctl);
+        vwaiter_deinit (&host->waiter);
+        vnode_deinit   (&host->node);
+        vroute_deinit  (&host->route);
+        vticker_deinit (&host->ticker);
+        vrpc_deinit    (&host->rpc);
+        vmsger_deinit  (&host->msger);
         free(host);
         return NULL;
     }

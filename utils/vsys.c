@@ -235,3 +235,33 @@ void vtimer_deinit(struct vtimer* timer)
     return ;
 }
 
+int vsys_get_cpu_ratio(int* ratio)
+{
+    vassert(ratio);
+    //todo;
+    return 0;
+}
+
+int vsys_get_mem_ratio(int* ratio)
+{
+    vassert(ratio);
+    //todo;
+    return 0;
+}
+
+int vsys_get_io_ratio (int* ratio)
+{
+    vassert(ratio);
+    //todo;
+    return 0;
+}
+
+int vsys_get_net_ratio(int* up_ratio, int* down_ratio)
+{
+    vassert(up_ratio);
+    vassert(down_ratio);
+
+    //todo;
+    return 0;
+}
+
