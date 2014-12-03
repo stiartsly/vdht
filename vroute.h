@@ -116,6 +116,7 @@ struct vroute_ops {
     int  (*reg_service)  (struct vroute*, int, struct sockaddr_in*);
     int  (*unreg_service)(struct vroute*, int, struct sockaddr_in*);
     int  (*get_service)  (struct vroute*, int, struct sockaddr_in*);
+    int  (*set_used_index)(struct vroute*, int);
     int  (*dsptch)       (struct vroute*, struct vmsg_usr*);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
@@ -141,6 +142,7 @@ typedef int (*vroute_dht_cb_t)(struct vroute*, struct sockaddr_in*, void*);
 struct vroute {
     vnodeInfo     own_node;
     struct varray own_svcs;
+    int used_index;
 
     struct vroute_node_space  node_space;
     struct vroute_srvc_space  srvc_space;

@@ -154,6 +154,16 @@ int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr
 }
 
 static
+int _vroute_set_used_index(struct vroute* route, int index)
+{
+    vassert(route);
+    retE((index < 0));
+
+    route->used_index = index;
+    return 0;
+}
+
+static
 int _vroute_load(struct vroute* route)
 {
     struct vroute_node_space* node_space = &route->node_space;
@@ -928,6 +938,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     vnodeInfo_copy(&route->own_node, own_info);
     route->own_node.flags = PROP_DHT_MASK;
     varray_init(&route->own_svcs, 4);
+    route->used_index = 0;
 
     vlock_init(&route->lock);
     vroute_node_space_init(&route->node_space, route, cfg, &route->own_node);

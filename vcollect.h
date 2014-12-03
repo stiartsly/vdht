@@ -3,8 +3,8 @@
 
 struct vcollect;
 struct vcollect_ops {
-    int (*collect_data)(struct vcollect*);
-    int (*get_index)   (struct vcollect*, int*);
+    int (*collect_used_ratio)(struct vcollect*);
+    int (*get_used_index)    (struct vcollect*, int*);
 };
 
 struct vcollect {

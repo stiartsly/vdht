@@ -241,6 +241,7 @@ int vsys_get_cpu_ratio(int* ratio)
     int system = 0;
     int nice   = 0;
     int idle   = 0;
+    int occupy = 0;
     char buf[128];
     char tmp[32];
     int fd  = 0;
@@ -257,7 +258,8 @@ int vsys_get_cpu_ratio(int* ratio)
     memset(tmp, 0, 32);
     ret = sscanf(buf, "%s, %u, %u, %u, %u", tmp, &user, &nice, &system, &idle);
     retE((ret < 0));
-    *ratio = (int)(idle / (idle + user + nice + system) * 10);
+    occupy = user + nice + system;
+    *ratio = (int)(occupy / (occupy + idle) * 10);
     return 0;
 }
 
@@ -281,7 +283,7 @@ int vsys_get_mem_ratio(int* ratio)
     memset(tmp, 0,32);
     ret = sscanf(buf, "%s, %u, %s, %s, %u %s", tmp, &total, tmp, tmp, &mfree, tmp);
     retE((ret < 0));
-    *ratio = (int)(mfree/total * 10);
+    *ratio = (int)((total - mfree)/total * 10);
     return 0;
 }
 
