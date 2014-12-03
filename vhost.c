@@ -80,15 +80,15 @@ int _aux_host_tick_cb(void* cookie)
     struct vhost* host = (struct vhost*)cookie;
     struct vroute* route = &host->route;
     struct vcollect* collect = &host->collect;
-    int idx = 0;
+    int nice = 0;
     int ret = 0;
 
     vassert(host);
 
     ret = collect->ops->collect_used_ratio(collect);
     retE((ret < 0));
-    collect->ops->get_used_index(collect, &idx);
-    route->ops->set_used_index(route, idx);
+    collect->ops->get_nice(collect, &nice);
+    route->ops->kick_nice(route, nice);
     return 0;
 }
 

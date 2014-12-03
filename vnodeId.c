@@ -373,14 +373,15 @@ void vsrvcInfo_free(vsrvcInfo* svc_info)
     return ;
 }
 
-int vsrvcInfo_init(vsrvcInfo* svc_info, int what, struct sockaddr_in* addr)
+int vsrvcInfo_init(vsrvcInfo* svc_info, int what, int nice, struct sockaddr_in* addr)
 {
     vassert(svc_info);
     vassert(addr);
 
     vtoken_make(&svc_info->id);
     vsockaddr_copy(&svc_info->addr, addr);
-    svc_info->usage = what;
+    svc_info->what = what;
+    svc_info->nice = nice;
     return 0;
 }
 
@@ -389,7 +390,8 @@ void vsrvcInfo_dump(vsrvcInfo* svc_info)
     vassert(svc_info);
     vtoken_dump(&svc_info->id);
     vsockaddr_dump(&svc_info->addr);
-    vdump(printf("what:%d", svc_info->usage));
+    vdump(printf("what:%d", svc_info->what));
+    vdump(printf("nice:%d", svc_info->nice));
 
     return ;
 }

@@ -2,7 +2,7 @@
 #include "vcollect.h"
 
 static
-int _vcollect_collect_res_used_ratio(struct vcollect* collect)
+int _vcollect_res_used_ratio(struct vcollect* collect)
 {
     int ret = 0;
     vassert(collect);
@@ -19,7 +19,7 @@ int _vcollect_collect_res_used_ratio(struct vcollect* collect)
 }
 
 static
-int _vcollect_get_used_index(struct vcollect* collect, int* index)
+int _vcollect_get_nice(struct vcollect* collect, int* index)
 {
     vassert(collect);
     vassert(index);
@@ -46,8 +46,8 @@ int _vcollect_get_used_index(struct vcollect* collect, int* index)
 
 static
 struct vcollect_ops collect_ops = {
-    .collect_used_ratio = _vcollect_collect_res_used_ratio,
-    .get_used_index     = _vcollect_get_used_index
+    .collect_used_ratio = _vcollect_res_used_ratio,
+    .get_nice           = _vcollect_get_nice
 };
 
 int vcollect_init(struct vcollect* collect, struct vconfig* cfg)

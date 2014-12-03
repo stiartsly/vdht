@@ -85,13 +85,15 @@ typedef struct vtoken vsrvcId;
  struct vsrvcInfo {
     vsrvcId id;
     struct sockaddr_in addr;
-    int usage;
+    int32_t what;
+    int32_t nice;
  };
+
  typedef struct vsrvcInfo vsrvcInfo;
 
  vsrvcInfo* vsrvcInfo_alloc(void);
  void vsrvcInfo_free(vsrvcInfo*);
- int  vsrvcInfo_init(vsrvcInfo*, int, struct sockaddr_in*);
+ int  vsrvcInfo_init(vsrvcInfo*, int, int, struct sockaddr_in*);
  void vsrvcInfo_dump(vsrvcInfo*);
 
 #endif

@@ -41,6 +41,7 @@ char* vpluger_get_desc(int what)
 struct vservice {
     struct sockaddr_in addr;
     int what;
+    int nice;
     uint32_t flags;
     time_t rcv_ts;
 };
@@ -66,13 +67,14 @@ void vservice_free(struct vservice* item)
 }
 
 static
-void vservice_init(struct vservice* item, int what, struct sockaddr_in* addr, time_t ts, uint32_t flags)
+void vservice_init(struct vservice* item, int what, int nice, struct sockaddr_in* addr, time_t ts, uint32_t flags)
 {
     vassert(item);
     vassert(addr);
 
     vsockaddr_copy(&item->addr, addr);
     item->what   = what;
+    item->nice   = nice;
     item->rcv_ts = ts;
     item->flags  = flags;
     return ;
@@ -84,6 +86,7 @@ void vservice_dump(struct vservice* item)
     vassert(item);
     vdump(printf("-> SERVICE"));
     vdump(printf("category:%s", vpluger_get_desc(item->what)));
+    vdump(printf("nice:%d", item->nice));
     vdump(printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts)));
     vsockaddr_dump(&item->addr);
     vdump(printf("<- SERVICE"));
@@ -100,7 +103,7 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
     varg_decl(cookie, 3, int32_t*, min_tdff);
     varg_decl(cookie, 4, int*, found);
 
-    if ((svc->what == svci->usage)
+    if ((svc->what == svci->what)
         && vsockaddr_equal(&svc->addr, &svci->addr)) {
         *to = svc;
         *found = 1;
@@ -141,10 +144,10 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
 
     vassert(space);
     vassert(svci);
-    retE((svci->usage < 0));
-    retE((svci->usage >= PLUGIN_BUTT));
+    retE((svci->what < 0));
+    retE((svci->what >= PLUGIN_BUTT));
 
-    svcs = &space->bucket[svci->usage].srvcs;
+    svcs = &space->bucket[svci->what].srvcs;
     {
         void* argv[] = {
             svci,
@@ -158,18 +161,18 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
             to->rcv_ts = now;
             updt = 1;
         } else if (to) {
-            vservice_init(to, svci->usage, &svci->addr, now, 0);
+            vservice_init(to, svci->what, svci->nice, &svci->addr, now, 0);
             updt = 1;
         } else {
             to = vservice_alloc();
             retE((!to));
-            vservice_init(to, svci->usage, &svci->addr, now, 0);
+            vservice_init(to, svci->what, svci->nice, &svci->addr, now, 0);
             varray_add_tail(svcs, to);
             updt = 1;
         };
     }
     if (updt) {
-        space->bucket[svci->usage].ts = now;
+        space->bucket[svci->what].ts = now;
         ret = 0;
     }
     return ret;
@@ -196,7 +199,7 @@ int _vroute_srvc_get_serivce_node(struct vroute_srvc_space* space, int what, vsr
         };
         varray_iterate(svcs, _aux_srvc_get_service_cb, argv);
         if (to) {
-            vsrvcInfo_init(svci, what, &to->addr);
+            vsrvcInfo_init(svci, what, to->nice, &to->addr);
             ret = 0;
         }
     }

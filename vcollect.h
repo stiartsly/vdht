@@ -4,7 +4,7 @@
 struct vcollect;
 struct vcollect_ops {
     int (*collect_used_ratio)(struct vcollect*);
-    int (*get_used_index)    (struct vcollect*, int*);
+    int (*get_nice)          (struct vcollect*, int*);
 };
 
 struct vcollect {

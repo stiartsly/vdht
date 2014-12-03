@@ -88,7 +88,7 @@ int _vroute_reg_service(struct vroute* route, int what, struct sockaddr_in* addr
     route->own_node.flags |= peer_service_prop[what];
     for (; i < varray_size(&route->own_svcs); i++){
         svc = (vsrvcInfo*)varray_get(&route->own_svcs, i);
-        if ((svc->usage == what) &&
+        if ((svc->what == what) &&
             (vsockaddr_equal(&svc->addr, addr))) {
             break;
         }
@@ -97,7 +97,7 @@ int _vroute_reg_service(struct vroute* route, int what, struct sockaddr_in* addr
         svc = vsrvcInfo_alloc();
         vlog((!svc), elog_vsrvcInfo_alloc);
         retE((!svc));
-        vsrvcInfo_init(svc, what, addr);
+        vsrvcInfo_init(svc, what, route->nice, addr);
         varray_add_tail(&route->own_svcs, svc);
     }
     vlock_leave(&route->lock);
@@ -119,7 +119,7 @@ int _vroute_unreg_service(struct vroute* route, int what, struct sockaddr_in* ad
     route->own_node.flags &= ~(peer_service_prop[what]);
     for (; i < varray_size(&route->own_svcs); i++) {
         svc = (vsrvcInfo*)varray_get(&route->own_svcs, i);
-        if ((svc->usage == what) &&
+        if ((svc->what == what) &&
             (vsockaddr_equal(&svc->addr, addr))) {
             break;
         }
@@ -154,12 +154,19 @@ int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr
 }
 
 static
-int _vroute_set_used_index(struct vroute* route, int index)
+int _vroute_kick_nice(struct vroute* route, int nice)
 {
-    vassert(route);
-    retE((index < 0));
+    int i = 0;
 
-    route->used_index = index;
+    vassert(route);
+    retE((nice < 0));
+
+    vlock_enter(&route->lock);
+    route->nice = nice;
+    for (; i < varray_size(&route->own_svcs); i++) {
+        ((vsrvcInfo*)varray_get(&route->own_svcs, i))->nice = nice;
+    }
+    vlock_leave(&route->lock);
     return 0;
 }
 
@@ -273,6 +280,7 @@ struct vroute_ops route_ops = {
     .reg_service   = _vroute_reg_service,
     .unreg_service = _vroute_unreg_service,
     .get_service   = _vroute_get_service,
+    .kick_nice     = _vroute_kick_nice,
     .dsptch        = _vroute_dispatch,
     .load          = _vroute_load,
     .store         = _vroute_store,
@@ -857,12 +865,12 @@ int _vroute_cb_post_service(struct vroute* route, struct sockaddr_in* from, void
     vsockaddr_copy(&addr.addr, from);
     ret = dec_ops->post_service(ctxt, &token, &addr.id, &svc);
     retE((ret < 0));
-    retE((svc.usage < 0));
-    retE((svc.usage >= PLUGIN_BUTT));
+    retE((svc.what < 0));
+    retE((svc.what >= PLUGIN_BUTT));
 
     ret = srvc_space->ops->add_srvc_node(srvc_space, &svc);
     retE((ret < 0));
-    vnodeInfo_init(&info, &addr.id, &addr.addr, peer_service_prop[svc.usage], NULL);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, peer_service_prop[svc.what], NULL);
     ret = node_space->ops->add_node(node_space, &info);
     retE((ret < 0));
     return 0;
@@ -938,7 +946,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     vnodeInfo_copy(&route->own_node, own_info);
     route->own_node.flags = PROP_DHT_MASK;
     varray_init(&route->own_svcs, 4);
-    route->used_index = 0;
+    route->nice = 0;
 
     vlock_init(&route->lock);
     vroute_node_space_init(&route->node_space, route, cfg, &route->own_node);
