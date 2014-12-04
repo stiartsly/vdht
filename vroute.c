@@ -299,6 +299,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
 
     vassert(route);
     vassert(dest);
+    retS((!(route->own_node.flags & PROP_PING)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -338,6 +339,7 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
     vassert(dest);
     vassert(token);
     vassert(info);
+    retS((!(route->own_node.flags & PROP_PING_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -375,6 +377,7 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
     vassert(route);
     vassert(dest);
     vassert(target);
+    retS((!(route->own_node.flags & PROP_FIND_NODE)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -411,6 +414,7 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     vassert(dest);
     vassert(token);
     vassert(info);
+    retS((!(route->own_node.flags & PROP_FIND_NODE_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -447,6 +451,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
     vassert(route);
     vassert(dest);
     vassert(target);
+    retS((!(route->own_node.flags & PROP_FIND_CLOSEST_NODES)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -489,6 +494,7 @@ int _vroute_dht_find_closest_nodes_rsp(
     vassert(dest);
     vassert(token);
     vassert(closest);
+    retS((!(route->own_node.flags & PROP_FIND_CLOSEST_NODES_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -520,6 +526,7 @@ int _vroute_dht_post_service(struct vroute* route, vnodeAddr* dest, vsrvcInfo* s
     vassert(route);
     vassert(dest);
     vassert(service);
+    retS((!(route->own_node.flags & PROP_POST_SERVICE)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -552,6 +559,7 @@ int _vroute_dht_post_hash(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
     vassert(route);
     vassert(dest);
     vassert(hash);
+    retS((!(route->own_node.flags & PROP_POST_HASH)));
 
     //todo;
     return 0;
@@ -573,6 +581,7 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
     vassert(route);
     vassert(dest);
     vassert(hash);
+    retS((!(route->own_node.flags & PROP_GET_PEERS)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -615,6 +624,7 @@ int _vroute_dht_get_peers_rsp(
     vassert(dest);
     vassert(token);
     vassert(peers);
+    retS((!(route->own_node.flags & PROP_GET_PEERS_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -937,6 +947,57 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
     return 0;
 }
 
+static
+int _aux_route_load_proto_caps(struct vconfig* cfg, uint32_t* flags)
+{
+    int on = 0;
+    vassert(cfg);
+    vassert(flags);
+
+    *flags = 0;
+    cfg->inst_ops->get_ping_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_PING;
+    }
+    cfg->inst_ops->get_ping_rsp_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_PING_R;
+    }
+    cfg->inst_ops->get_find_node_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_FIND_NODE;
+    }
+    cfg->inst_ops->get_find_node_rsp_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_FIND_NODE_R;
+    }
+    cfg->inst_ops->get_find_closest_nodes_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_FIND_CLOSEST_NODES;
+    }
+    cfg->inst_ops->get_find_closest_nodes_rsp_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_FIND_CLOSEST_NODES_R;
+    }
+    cfg->inst_ops->get_post_service_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_POST_SERVICE;
+    }
+    cfg->inst_ops->get_post_hash_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_POST_HASH;
+    }
+    cfg->inst_ops->get_get_peers_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_GET_PEERS;
+    }
+    cfg->inst_ops->get_get_peers_rsp_cap(cfg, &on);
+    if (on) {
+        *flags |= PROP_GET_PEERS_R;
+    }
+    return 0;
+}
+
 int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger, vnodeInfo* own_info)
 {
     vassert(route);
@@ -944,7 +1005,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     vassert(own_info);
 
     vnodeInfo_copy(&route->own_node, own_info);
-    route->own_node.flags = PROP_DHT_MASK;
+    _aux_route_load_proto_caps(cfg, &route->own_node.flags);
     varray_init(&route->own_svcs, 4);
     route->nice = 0;
 
