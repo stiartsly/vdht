@@ -829,6 +829,196 @@ int _vcfg_get_down_factor(struct vconfig* cfg, int* factor)
 }
 
 static
+int _vcfg_get_ping_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.ping", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_ping_rsp_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.ping_rsp", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_find_node_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.find_node", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_find_node_rsp_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.find_node_rsp", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_find_closest_nodes_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.find_closest_nodes", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_finde_closest_nodes_rsp_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.find_closest_nodes_rsp", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_post_service_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.post_service", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_post_hash_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.post_hash", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_get_peers_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.get_peers", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
+int _vcfg_get_get_peers_rsp_cap(struct vconfig* cfg, int* on)
+{
+    char buf[32];
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(on);
+
+    *on = 0;
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str(cfg, "proto.get_peers_rsp", buf, 32);
+    retS((ret < 0));
+    if (!strcmp(buf, "on")) {
+        *on = 1;
+    }
+    return 0;
+}
+
+static
 struct vconfig_inst_ops cfg_inst_ops = {
     .get_lsctl_unix_path    = _vcfg_get_lsctl_unix_path,
     .get_host_tick_tmo      = _vcfg_get_host_tick_tmo,
@@ -850,7 +1040,18 @@ struct vconfig_inst_ops cfg_inst_ops = {
     .get_mem_factor         = _vcfg_get_mem_factor,
     .get_io_factor          = _vcfg_get_io_factor,
     .get_up_factor          = _vcfg_get_up_factor,
-    .get_down_factor        = _vcfg_get_down_factor
+    .get_down_factor        = _vcfg_get_down_factor,
+
+    .get_ping_cap           = _vcfg_get_ping_cap,
+    .get_ping_rsp_cap       = _vcfg_get_ping_rsp_cap,
+    .get_find_node_cap      = _vcfg_get_find_node_cap,
+    .get_find_node_rsp_cap  = _vcfg_get_find_node_rsp_cap,
+    .get_find_closest_nodes_cap     = _vcfg_get_find_closest_nodes_cap,
+    .get_find_closest_nodes_rsp_cap = _vcfg_get_finde_closest_nodes_rsp_cap,
+    .get_post_service_cap   = _vcfg_get_post_service_cap,
+    .get_post_hash_cap      = _vcfg_get_post_hash_cap,
+    .get_get_peers_cap      = _vcfg_get_get_peers_cap,
+    .get_get_peers_rsp_cap  = _vcfg_get_get_peers_rsp_cap
 };
 
 int vconfig_init(struct vconfig* cfg)

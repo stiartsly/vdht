@@ -34,6 +34,17 @@ struct vconfig_inst_ops {
     int (*get_io_factor)         (struct vconfig*, int*);
     int (*get_up_factor)         (struct vconfig*, int*);
     int (*get_down_factor)       (struct vconfig*, int*);
+
+    int (*get_ping_cap)          (struct vconfig*, int*);
+    int (*get_ping_rsp_cap)      (struct vconfig*, int*);
+    int (*get_find_node_cap)     (struct vconfig*, int*);
+    int (*get_find_node_rsp_cap) (struct vconfig*, int*);
+    int (*get_find_closest_nodes_cap)    (struct vconfig*, int*);
+    int (*get_find_closest_nodes_rsp_cap)(struct vconfig*, int*);
+    int (*get_post_service_cap)  (struct vconfig*, int*);
+    int (*get_post_hash_cap)     (struct vconfig*, int*);
+    int (*get_get_peers_cap)     (struct vconfig*, int*);
+    int (*get_get_peers_rsp_cap) (struct vconfig*, int*);
 };
 
 struct vconfig {
