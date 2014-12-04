@@ -715,7 +715,7 @@ int _vcfg_get_cpu_criteria(struct vconfig* cfg, int* criteria)
     vassert(cfg);
     vassert(criteria);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.cpu_criteria", criteria, DEF_SPY_CPU_CRITERIA);
+    ret = cfg->ops->get_int_ext(cfg, "spy.cpu_criteria", criteria, DEF_SPY_CPU_CRITERIA);
     retE((ret < 0));
     return 0;
 }
@@ -727,7 +727,7 @@ int _vcfg_get_mem_criteria(struct vconfig* cfg, int* criteria)
     vassert(cfg);
     vassert(criteria);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.mem_criteria", criteria, DEF_SPY_MEM_CRITERIA);
+    ret = cfg->ops->get_int_ext(cfg, "spy.mem_criteria", criteria, DEF_SPY_MEM_CRITERIA);
     retE((ret < 0));
     return 0;
 }
@@ -739,7 +739,7 @@ int _vcfg_get_io_criteria(struct vconfig* cfg, int* criteria)
     vassert(cfg);
     vassert(criteria);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.io_criteria", criteria, DEF_SPY_IO_CRITERIA);
+    ret = cfg->ops->get_int_ext(cfg, "spy.io_criteria", criteria, DEF_SPY_IO_CRITERIA);
     retE((ret < 0));
     return 0;
 }
@@ -751,7 +751,7 @@ int _vcfg_get_up_criteria(struct vconfig* cfg, int* criteria)
     vassert(cfg);
     vassert(criteria);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.up_criteria", criteria, DEF_SPY_UP_CRITERIA);
+    ret = cfg->ops->get_int_ext(cfg, "spy.up_criteria", criteria, DEF_SPY_UP_CRITERIA);
     retE((ret < 0));
     return 0;
 }
@@ -763,7 +763,7 @@ int _vcfg_get_down_criteria(struct vconfig* cfg, int* criteria)
     vassert(cfg);
     vassert(criteria);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.down_criteria", criteria, DEF_SPY_DOWN_CRITERIA);
+    ret = cfg->ops->get_int_ext(cfg, "spy.down_criteria", criteria, DEF_SPY_DOWN_CRITERIA);
     retE((ret < 0));
     return 0;
 }
@@ -775,7 +775,7 @@ int _vcfg_get_cpu_factor(struct vconfig* cfg, int* factor)
     vassert(cfg);
     vassert(factor);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.cpu_factor", factor, DEF_SPY_CPU_FACTOR);
+    ret = cfg->ops->get_int_ext(cfg, "spy.cpu_factor", factor, DEF_SPY_CPU_FACTOR);
     retE((ret < 0));
     return 0;
 }
@@ -787,7 +787,7 @@ int _vcfg_get_mem_factor(struct vconfig* cfg, int* factor)
     vassert(cfg);
     vassert(factor);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.mem_factor", factor, DEF_SPY_MEM_FACTOR);
+    ret = cfg->ops->get_int_ext(cfg, "spy.mem_factor", factor, DEF_SPY_MEM_FACTOR);
     retE((ret < 0));
     return 0;
 }
@@ -799,7 +799,7 @@ int _vcfg_get_io_factor(struct vconfig* cfg, int* factor)
     vassert(cfg);
     vassert(factor);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.io_factor", factor, DEF_SPY_IO_FACTOR);
+    ret = cfg->ops->get_int_ext(cfg, "spy.io_factor", factor, DEF_SPY_IO_FACTOR);
     retE((ret < 0));
     return 0;
 }
@@ -811,7 +811,7 @@ int _vcfg_get_up_factor(struct vconfig* cfg, int* factor)
     vassert(cfg);
     vassert(factor);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.up_factor", factor, DEF_SPY_UP_FACTOR);
+    ret = cfg->ops->get_int_ext(cfg, "spy.up_factor", factor, DEF_SPY_UP_FACTOR);
     retE((ret < 0));
     return 0;
 }
@@ -823,7 +823,7 @@ int _vcfg_get_down_factor(struct vconfig* cfg, int* factor)
     vassert(cfg);
     vassert(factor);
 
-    ret = cfg->ops->get_int_ext(cfg, "collect.down_factor", factor, DEF_SPY_DOWN_FACTOR);
+    ret = cfg->ops->get_int_ext(cfg, "spy.down_factor", factor, DEF_SPY_DOWN_FACTOR);
     retE((ret < 0));
     return 0;
 }
