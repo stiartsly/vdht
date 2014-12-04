@@ -39,7 +39,7 @@ struct vlsctl {
     vlsctl_cmd_t*      cmds;
 };
 
-int  vlsctl_init  (struct vlsctl*, struct vhost*);
+int  vlsctl_init  (struct vlsctl*, struct vhost*, struct vconfig*);
 void vlsctl_deinit(struct vlsctl*);
 
 #endif

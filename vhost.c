@@ -449,7 +449,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vroute_init  (&host->route, cfg, &host->msger, &info);
     ret += vnode_init   (&host->node,  cfg, &host->ticker,&host->route, &addr);
     ret += vwaiter_init (&host->waiter);
-    ret += vlsctl_init  (&host->lsctl, host);
+    ret += vlsctl_init  (&host->lsctl, host, cfg);
     ret += vcollect_init(&host->collect, cfg);
     if (ret < 0) {
         vcollect_deinit(&host->collect);
