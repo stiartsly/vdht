@@ -36,6 +36,7 @@
 #include "vdht.h"
 #include "vdht_core.h"
 #include "vrpc.h"
+#include "vspy.h"
 #include "vhost.h"
 #include "vnode.h"
 #include "vmsger.h"
@@ -43,7 +44,6 @@
 #include "vlsctl.h"
 #include "vnodeId.h"
 #include "vticker.h"
-#include "vcollect.h"
 
 #if 0
 #define timer_t

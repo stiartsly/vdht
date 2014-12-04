@@ -7,6 +7,7 @@ vdht_objs = \
     vcfg.o  \
     vrpc.o  \
     vdht.o  \
+    vspy.o  \
     vdht_core.o \
     vhost.o \
     vnode.o \
@@ -17,7 +18,6 @@ vdht_objs = \
     vlsctl.o  \
     vticker.o \
     vnodeId.o \
-    vcollect.o 
 
 .PHONY: all vdhtd vlsctlc clean
 

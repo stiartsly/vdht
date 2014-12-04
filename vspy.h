@@ -1,12 +1,12 @@
 #ifndef __VCOLLECT_H__
 #define __VCOLLECT_H__
 
-struct vcollect;
-struct vcollect_ops {
-    int (*get_nice)(struct vcollect*, int*);
+struct vspy;
+struct vspy_ops {
+    int (*get_nice)(struct vspy*, int*);
 };
 
-struct vcollect {
+struct vspy {
     int cpu_ratio;
     int cpu_criteria;
     int cpu_factor;
@@ -27,11 +27,11 @@ struct vcollect {
     int down_criteria;
     int down_factor;
 
-    struct vcollect_ops* ops;
+    struct vspy_ops* ops;
 };
 
-int  vcollect_init  (struct vcollect*, struct vconfig*);
-void vcollect_deinit(struct vcollect*);
+int  vspy_init  (struct vspy*, struct vconfig*);
+void vspy_deinit(struct vspy*);
 
 #endif
 

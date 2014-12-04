@@ -77,14 +77,14 @@ int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
 static
 int _aux_host_tick_cb(void* cookie)
 {
-    struct vhost* host = (struct vhost*)cookie;
+    struct vhost*  host  = (struct vhost*)cookie;
     struct vroute* route = &host->route;
-    struct vcollect* collect = &host->collect;
+    struct vspy*   spy   = &host->spy;
     int nice = 0;
     int ret = 0;
 
     vassert(host);
-    ret = collect->ops->get_nice(collect, &nice);
+    ret = spy->ops->get_nice(spy, &nice);
     retE((ret < 0));
     route->ops->kick_nice(route, nice);
     return 0;
@@ -326,7 +326,7 @@ struct vhost_ops host_ops = {
  *
  */
 static
-int _aux_vhost_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
+int _aux_vhost_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
 {
     struct vmsg_sys* ms = NULL;
     char* data = NULL;
@@ -363,7 +363,7 @@ int _aux_vhost_msg_pack_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** 
  *
  */
 static
-int _aux_vhost_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
+int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
     void* data = sm->data;
     uint32_t magic = 0;
@@ -441,16 +441,16 @@ struct vhost* vhost_create(struct vconfig* cfg)
     vnodeVer_unstrlize(host->ops->get_version(host), &ver);
     vnodeInfo_init(&info, &addr.id, &addr.addr, 0, &ver);
 
-    ret += vmsger_init  (&host->msger);
-    ret += vrpc_init    (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&addr.addr));
-    ret += vticker_init (&host->ticker);
-    ret += vroute_init  (&host->route, cfg, &host->msger, &info);
-    ret += vnode_init   (&host->node,  cfg, &host->ticker,&host->route, &addr);
-    ret += vwaiter_init (&host->waiter);
-    ret += vlsctl_init  (&host->lsctl, host, cfg);
-    ret += vcollect_init(&host->collect, cfg);
+    ret += vmsger_init (&host->msger);
+    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&addr.addr));
+    ret += vticker_init(&host->ticker);
+    ret += vroute_init (&host->route, cfg, &host->msger, &info);
+    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &addr);
+    ret += vwaiter_init(&host->waiter);
+    ret += vlsctl_init (&host->lsctl, host, cfg);
+    ret += vspy_init   (&host->spy, cfg);
     if (ret < 0) {
-        vcollect_deinit(&host->collect);
+        vspy_deinit(&host->spy);
         vlsctl_deinit  (&host->lsctl);
         vwaiter_deinit (&host->waiter);
         vnode_deinit   (&host->node);
@@ -464,8 +464,8 @@ struct vhost* vhost_create(struct vconfig* cfg)
 
     host->waiter.ops->add(&host->waiter, &host->rpc);
     host->waiter.ops->add(&host->waiter, &host->lsctl.rpc);
-    vmsger_reg_pack_cb  (&host->msger, _aux_vhost_msg_pack_cb  , host);
-    vmsger_reg_unpack_cb(&host->msger, _aux_vhost_msg_unpack_cb, host);
+    vmsger_reg_pack_cb  (&host->msger, _aux_vhost_pack_msg_cb  , host);
+    vmsger_reg_unpack_cb(&host->msger, _aux_vhost_unpack_msg_cb, host);
 
     return host;
 }
