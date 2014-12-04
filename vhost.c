@@ -84,10 +84,8 @@ int _aux_host_tick_cb(void* cookie)
     int ret = 0;
 
     vassert(host);
-
-    ret = collect->ops->collect_used_ratio(collect);
+    ret = collect->ops->get_nice(collect, &nice);
     retE((ret < 0));
-    collect->ops->get_nice(collect, &nice);
     route->ops->kick_nice(route, nice);
     return 0;
 }

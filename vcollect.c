@@ -2,28 +2,17 @@
 #include "vcollect.h"
 
 static
-int _vcollect_res_used_ratio(struct vcollect* collect)
+int _vcollect_get_nice(struct vcollect* collect, int* index)
 {
     int ret = 0;
     vassert(collect);
-
-    ret = vsys_get_cpu_ratio(&collect->cpu_ratio);
-    retE((ret < 0));
-    ret = vsys_get_mem_ratio(&collect->mem_ratio);
-    retE((ret < 0));
-    ret = vsys_get_io_ratio (&collect->io_ratio);
-    retE((ret < 0));
-    ret = vsys_get_net_ratio(&collect->up_ratio, &collect->down_ratio);
-    retE((ret < 0));
-
-    return 0;
-}
-
-static
-int _vcollect_get_nice(struct vcollect* collect, int* index)
-{
-    vassert(collect);
     vassert(index);
+
+    ret += vsys_get_cpu_ratio(&collect->cpu_ratio);
+    ret += vsys_get_mem_ratio(&collect->mem_ratio);
+    ret += vsys_get_io_ratio (&collect->io_ratio);
+    ret += vsys_get_net_ratio(&collect->up_ratio, &collect->down_ratio);
+    retE((ret < 0));
 
     *index = 0;
     if (collect->cpu_ratio >= collect->cpu_criteria) {
@@ -41,14 +30,12 @@ int _vcollect_get_nice(struct vcollect* collect, int* index)
     if (collect->down_ratio >= collect->down_criteria) {
         *index += collect->down_ratio * collect->down_factor;
     }
-
     return 0;
 }
 
 static
 struct vcollect_ops collect_ops = {
-    .collect_used_ratio = _vcollect_res_used_ratio,
-    .get_nice           = _vcollect_get_nice
+    .get_nice = _vcollect_get_nice
 };
 
 int vcollect_init(struct vcollect* collect, struct vconfig* cfg)
