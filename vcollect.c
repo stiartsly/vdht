@@ -15,6 +15,7 @@ int _vcollect_res_used_ratio(struct vcollect* collect)
     retE((ret < 0));
     ret = vsys_get_net_ratio(&collect->up_ratio, &collect->down_ratio);
     retE((ret < 0));
+
     return 0;
 }
 
@@ -52,6 +53,7 @@ struct vcollect_ops collect_ops = {
 
 int vcollect_init(struct vcollect* collect, struct vconfig* cfg)
 {
+    int ret = 0;
     vassert(collect);
     vassert(cfg);
 
@@ -61,16 +63,17 @@ int vcollect_init(struct vcollect* collect, struct vconfig* cfg)
     collect->up_ratio   = 0;
     collect->down_ratio = 0;
 
-    cfg->ops->get_int_ext(cfg, "collect.cpu_criteria", &collect->cpu_criteria, DEF_COLLECT_CPU_CRITERIA);
-    cfg->ops->get_int_ext(cfg, "collect.cpu_factor",   &collect->cpu_factor,   DEF_COLLECT_CPU_FACTOR);
-    cfg->ops->get_int_ext(cfg, "collect.mem_criteria", &collect->mem_criteria, DEF_COLLECT_MEM_CRITERIA);
-    cfg->ops->get_int_ext(cfg, "collect.mem_factor",   &collect->mem_factor,   DEF_COLLECT_MEM_FACTOR);
-    cfg->ops->get_int_ext(cfg, "collect.io_criteria",  &collect->io_criteria,  DEF_COLLECT_IO_CRITERIA);
-    cfg->ops->get_int_ext(cfg, "collect.io_factor",    &collect->io_factor,    DEF_COLLECT_IO_FACTOR);
-    cfg->ops->get_int_ext(cfg, "collect.up_criteria",  &collect->up_criteria,  DEF_COLLECT_UP_CRITERIA);
-    cfg->ops->get_int_ext(cfg, "collect.up_factor",    &collect->up_factor,    DEF_COLLECT_UP_FACTOR);
-    cfg->ops->get_int_ext(cfg, "collect.down_critieria", &collect->down_criteria, DEF_COLLECT_DOWN_CRITERIA);
-    cfg->ops->get_int_ext(cfg, "collect.down_factor",  &collect->down_criteria, DEF_COLLECT_DOWN_FACTOR);
+    ret += cfg->inst_ops->get_cpu_criteria(cfg, &collect->cpu_criteria);
+    ret += cfg->inst_ops->get_mem_criteria(cfg, &collect->mem_criteria);
+    ret += cfg->inst_ops->get_io_criteria (cfg, &collect->io_criteria);
+    ret += cfg->inst_ops->get_up_criteria (cfg, &collect->up_criteria);
+    ret += cfg->inst_ops->get_down_criteria(cfg, &collect->down_criteria);
+    ret += cfg->inst_ops->get_cpu_factor(cfg, &collect->cpu_factor);
+    ret += cfg->inst_ops->get_mem_factor(cfg, &collect->mem_factor);
+    ret += cfg->inst_ops->get_io_factor (cfg, &collect->io_factor);
+    ret += cfg->inst_ops->get_up_factor (cfg, &collect->up_factor);
+    ret += cfg->inst_ops->get_down_factor(cfg, &collect->down_factor);
+    retE((ret < 0));
 
     collect->ops = &collect_ops;
     return 0;

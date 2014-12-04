@@ -646,15 +646,17 @@ struct vroute_node_space_ops route_space_ops = {
 
 int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route, struct vconfig* cfg, vnodeInfo* node_info)
 {
+    int ret = 0;
     int i = 0;
 
     vassert(space);
     vassert(cfg);
     vassert(node_info);
 
-    cfg->ops->get_str_ext(cfg, "route.db_file", space->db, BUF_SZ, DEF_ROUTE_DB_FILE);
-    cfg->ops->get_int_ext(cfg, "route.bucket_size", &space->bucket_sz, DEF_ROUTE_BUCKET_CAPC);
-    cfg->ops->get_int_ext(cfg, "route.max_send_times", &space->max_snd_tms, DEF_ROUTE_MAX_SND_TIMES);
+    ret += cfg->inst_ops->get_route_db_file(cfg, space->db, BUF_SZ);
+    ret += cfg->inst_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
+    ret += cfg->inst_ops->get_route_max_snd_tms(cfg, &space->max_snd_tms);
+    retE((ret < 0));
 
     for (; i < NBUCKETS; i++) {
         varray_init(&space->bucket[i].peers, 8);

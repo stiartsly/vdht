@@ -393,37 +393,6 @@ int _aux_vhost_msg_unpack_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
 }
 
 static
-int _aux_vhost_get_tmo(struct vconfig* cfg)
-{
-    char buf[32];
-    int tms = 0;
-    int ret = 0;
-    vassert(cfg);
-
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str_ext(cfg, "global.tick_tmo", buf, 32, DEF_HOST_TICK_TMO);
-    retE((ret < 0));
-
-    ret = strlen(buf);
-    switch(buf[ret-1]) {
-    case 's':
-        tms = 1;
-        break;
-    case 'm':
-        tms = 60;
-        break;
-    default:
-        retE((1));
-        break;
-    }
-    errno = 0;
-    ret = strtol(buf, NULL, 10);
-    retE((errno));
-
-    return (ret * tms);
-}
-
-static
 int _aux_vhost_set_addr(struct vconfig* cfg, vnodeAddr* nodeAddr)
 {
     char ip[64];
@@ -436,10 +405,8 @@ int _aux_vhost_set_addr(struct vconfig* cfg, vnodeAddr* nodeAddr)
     ret = vhostaddr_get_first(ip, 64);
     vlog((ret < 0), elog_vhostaddr_get_first);
     retE((ret < 0));
-    ret = cfg->ops->get_int(cfg, "dht.port", &port);
-    if (ret < 0) {
-        port = DEF_DHT_PORT;
-    }
+    ret = cfg->inst_ops->get_dht_port(cfg, &port);
+    retE((ret < 0));
     ret = vsockaddr_convert(ip, port, &nodeAddr->addr);
     vlog((ret < 0), elog_vsockaddr_convert);
     retE((ret < 0));
@@ -460,8 +427,8 @@ struct vhost* vhost_create(struct vconfig* cfg)
 
     ret = _aux_vhost_set_addr(cfg, &addr);
     retE_p((ret < 0));
-    tmo = _aux_vhost_get_tmo(cfg);
-    retE_p((tmo < 0));
+    ret = cfg->inst_ops->get_host_tick_tmo(cfg, &tmo);
+    retE_p((ret < 0));
 
     host = (struct vhost*)malloc(sizeof(struct vhost));
     vlog((!host), elog_malloc);

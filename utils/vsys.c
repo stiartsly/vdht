@@ -237,6 +237,7 @@ void vtimer_deinit(struct vtimer* timer)
 
 int vsys_get_cpu_ratio(int* ratio)
 {
+#if 0
     int user   = 0;
     int system = 0;
     int nice   = 0;
@@ -259,12 +260,16 @@ int vsys_get_cpu_ratio(int* ratio)
     ret = sscanf(buf, "%s, %u, %u, %u, %u", tmp, &user, &nice, &system, &idle);
     retE((ret < 0));
     occupy = user + nice + system;
-    *ratio = (int)(occupy / (occupy + idle) * 10);
+    *ratio = (int)(occupy * 10 / (occupy + idle);
+    return 0;
+#endif
+    *ratio = 5;
     return 0;
 }
 
 int vsys_get_mem_ratio(int* ratio)
 {
+#if 0
     int total = 0;
     int mfree = 0;
     char buf[128];
@@ -283,7 +288,10 @@ int vsys_get_mem_ratio(int* ratio)
     memset(tmp, 0,32);
     ret = sscanf(buf, "%s, %u, %s, %s, %u %s", tmp, &total, tmp, tmp, &mfree, tmp);
     retE((ret < 0));
-    *ratio = (int)((total - mfree)/total * 10);
+    *ratio = (int)((total - mfree) * 10/total);
+    return 0;
+#endif
+    *ratio = 5;
     return 0;
 }
 

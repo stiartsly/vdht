@@ -363,7 +363,7 @@ int _aux_lsctl_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
 
 int vlsctl_init(struct vlsctl* lsctl, struct vhost* host)
 {
-    struct vconfig_ops* ops = host->cfg->ops;
+    struct vconfig_inst_ops* ops = host->cfg->inst_ops;
     struct sockaddr_un* sun = &lsctl->addr.vsun_addr;
     int ret = 0;
 
@@ -371,7 +371,7 @@ int vlsctl_init(struct vlsctl* lsctl, struct vhost* host)
     vassert(host);
 
     sun->sun_family = AF_UNIX;
-    ret = ops->get_str_ext(host->cfg, "lsctl.unix_path", sun->sun_path, 105, DEF_LSCTL_UNIX_PATH);
+    ret = ops->get_lsctl_unix_path(host->cfg, sun->sun_path, 105);
     retE((ret < 0));
 
     lsctl->host = host;

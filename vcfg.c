@@ -1,6 +1,28 @@
 #include "vglobal.h"
 #include "vcfg.h"
 
+#define DEF_HOST_TICK_TMO       "5s"
+#define DEF_NODE_TICK_INTERVAL  "7s"
+
+#define DEF_ROUTE_DB_FILE       "route.db"
+#define DEF_ROUTE_BUCKET_CAPC   ((int)10)
+#define DEF_ROUTE_MAX_SND_TIMES ((int)10)
+#define DEF_LSCTL_UNIX_PATH     "/var/run/vdht/lsctl_socket"
+
+#define DEF_DHT_PORT            ((int)12300)
+
+#define DEF_COLLECT_CPU_CRITERIA   (5)
+#define DEF_COLLECT_MEM_CRITERIA   (5)
+#define DEF_COLLECT_IO_CRITERIA    (5)
+#define DEF_COLLECT_UP_CRITERIA    (5)
+#define DEF_COLLECT_DOWN_CRITERIA  (5)
+
+#define DEF_COLLECT_CPU_FACTOR     (6)
+#define DEF_COLLECT_MEM_FACTOR     (5)
+#define DEF_COLLECT_IO_FACTOR      (2)
+#define DEF_COLLECT_UP_FACTOR      (4)
+#define DEF_COLLECT_DOWN_FACTOR    (4)
+
 enum {
     CFG_INT = 0,
     CFG_STR,
@@ -552,13 +574,293 @@ struct vconfig_ops cfg_ops = {
     .get_str_ext = _vcfg_get_str_ext
 };
 
+static
+int _vcfg_get_lsctl_unix_path(struct vconfig* cfg, char* path, int len)
+{
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(path);
+    vassert(len > 0);
+
+    ret = cfg->ops->get_str_ext(cfg, "lsctl.unix_path", path, len, DEF_LSCTL_UNIX_PATH);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_host_tick_tmo(struct vconfig* cfg, int* tmo)
+{
+    char buf[32];
+    int tms = 0;
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(tmo);
+
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str_ext(cfg, "global.tick_tmo", buf, 32, DEF_HOST_TICK_TMO);
+    retE((ret < 0));
+
+    ret = strlen(buf);
+    switch(buf[ret-1]) {
+    case 's':
+        tms = 1;
+        break;
+    case 'm':
+        tms = 60;
+        break;
+    default:
+        retE((1));
+        break;
+    }
+    errno = 0;
+    ret = strtol(buf, NULL, 10);
+    retE((errno));
+
+    *tmo = (ret * tms);
+    return 0;
+}
+
+static
+int _vcfg_get_node_tick_interval(struct vconfig* cfg, int* interval)
+{
+    char buf[32];
+    int tms = 0;
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(interval);
+
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str_ext(cfg, "node.tick_interval", buf, 32, DEF_NODE_TICK_INTERVAL);
+    retE((ret < 0));
+
+    ret = strlen(buf);
+    switch(buf[ret-1]) {
+    case 's':
+        tms = 1;
+        break;
+    case 'm':
+        tms = 60;
+        break;
+    default:
+        retE((1));
+    }
+    errno = 0;
+    ret = strtol(buf, NULL, 10);
+    vlog((errno), elog_strtol);
+    retE((errno));
+
+    *interval = (ret * tms);
+    return 0;
+}
+
+static
+int _vcfg_get_route_db_file(struct vconfig* cfg, char* db, int len)
+{
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(db);
+    vassert(len > 0);
+
+    ret = cfg->ops->get_str_ext(cfg, "route.db_file", db, len, DEF_ROUTE_DB_FILE);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_route_bucket_sz(struct vconfig* cfg, int* sz)
+{
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(sz);
+
+    ret = cfg->ops->get_int_ext(cfg, "route.bucket_sz", sz, DEF_ROUTE_BUCKET_CAPC);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_route_max_snd_tms(struct vconfig* cfg, int* tms)
+{
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(tms);
+
+    ret = cfg->ops->get_int_ext(cfg, "route.max_send_tims", tms, DEF_ROUTE_MAX_SND_TIMES);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_dht_port(struct vconfig* cfg, int* port)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(port);
+
+    ret = cfg->ops->get_int_ext(cfg, "dht.port", port, DEF_DHT_PORT);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_cpu_criteria(struct vconfig* cfg, int* criteria)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(criteria);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.cpu_criteria", criteria, DEF_COLLECT_CPU_CRITERIA);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_mem_criteria(struct vconfig* cfg, int* criteria)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(criteria);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.mem_criteria", criteria, DEF_COLLECT_MEM_CRITERIA);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_io_criteria(struct vconfig* cfg, int* criteria)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(criteria);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.io_criteria", criteria, DEF_COLLECT_IO_CRITERIA);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_up_criteria(struct vconfig* cfg, int* criteria)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(criteria);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.up_criteria", criteria, DEF_COLLECT_UP_CRITERIA);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_down_criteria(struct vconfig* cfg, int* criteria)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(criteria);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.down_criteria", criteria, DEF_COLLECT_DOWN_CRITERIA);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_cpu_factor(struct vconfig* cfg, int* factor)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(factor);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.cpu_factor", factor, DEF_COLLECT_CPU_FACTOR);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_mem_factor(struct vconfig* cfg, int* factor)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(factor);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.mem_factor", factor, DEF_COLLECT_MEM_FACTOR);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_io_factor(struct vconfig* cfg, int* factor)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(factor);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.io_factor", factor, DEF_COLLECT_IO_FACTOR);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_up_factor(struct vconfig* cfg, int* factor)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(factor);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.up_factor", factor, DEF_COLLECT_UP_FACTOR);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_down_factor(struct vconfig* cfg, int* factor)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(factor);
+
+    ret = cfg->ops->get_int_ext(cfg, "collect.down_factor", factor, DEF_COLLECT_DOWN_FACTOR);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+struct vconfig_inst_ops cfg_inst_ops = {
+    .get_lsctl_unix_path    = _vcfg_get_lsctl_unix_path,
+    .get_host_tick_tmo      = _vcfg_get_host_tick_tmo,
+    .get_node_tick_interval = _vcfg_get_node_tick_interval,
+
+    .get_route_db_file      = _vcfg_get_route_db_file,
+    .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
+    .get_route_max_snd_tms  = _vcfg_get_route_max_snd_tms,
+
+    .get_dht_port           = _vcfg_get_dht_port,
+
+    .get_cpu_criteria       = _vcfg_get_cpu_criteria,
+    .get_mem_criteria       = _vcfg_get_mem_criteria,
+    .get_io_criteria        = _vcfg_get_io_criteria,
+    .get_up_criteria        = _vcfg_get_up_criteria,
+    .get_down_criteria      = _vcfg_get_down_criteria,
+
+    .get_cpu_factor         = _vcfg_get_cpu_factor,
+    .get_mem_factor         = _vcfg_get_mem_factor,
+    .get_io_factor          = _vcfg_get_io_factor,
+    .get_up_factor          = _vcfg_get_up_factor,
+    .get_down_factor        = _vcfg_get_down_factor
+};
+
 int vconfig_init(struct vconfig* cfg)
 {
     vassert(cfg);
 
     vlist_init(&cfg->items);
     vlock_init(&cfg->lock);
-    cfg->ops = &cfg_ops;
+    cfg->ops      = &cfg_ops;
+    cfg->inst_ops = &cfg_inst_ops;
     return 0;
 }
 

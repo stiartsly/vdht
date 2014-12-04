@@ -1,28 +1,6 @@
 #ifndef __VCFG_H__
 #define __VCFG_H__
 
-#define DEF_HOST_TICK_TMO       "5s"
-#define DEF_NODE_TICK_INTERVAL  "7s"
-
-#define DEF_ROUTE_DB_FILE       "route.db"
-#define DEF_ROUTE_BUCKET_CAPC   ((int)10)
-#define DEF_ROUTE_MAX_SND_TIMES ((int)10)
-#define DEF_LSCTL_UNIX_PATH     "/var/run/vdht/lsctl_socket"
-
-#define DEF_DHT_PORT            ((int)12300)
-
-#define DEF_COLLECT_CPU_CRITERIA   (5)
-#define DEF_COLLECT_MEM_CRITERIA   (5)
-#define DEF_COLLECT_IO_CRITERIA    (5)
-#define DEF_COLLECT_UP_CRITERIA    (5)
-#define DEF_COLLECT_DOWN_CRITERIA  (5)
-
-#define DEF_COLLECT_CPU_FACTOR     (6)
-#define DEF_COLLECT_MEM_FACTOR     (5)
-#define DEF_COLLECT_IO_FACTOR      (2)
-#define DEF_COLLECT_UP_FACTOR      (4)
-#define DEF_COLLECT_DOWN_FACTOR    (4)
-
 struct vconfig;
 struct vconfig_ops {
     int  (*parse)      (struct vconfig*, const char*);
@@ -34,11 +12,36 @@ struct vconfig_ops {
     int  (*get_str_ext)(struct vconfig*, const char*, char*, int, char*);
 };
 
+struct vconfig_inst_ops {
+    int (*get_lsctl_unix_path)   (struct vconfig*, char*, int);
+
+    int (*get_host_tick_tmo)     (struct vconfig*, int*);
+    int (*get_node_tick_interval)(struct vconfig*, int*);
+
+    int (*get_route_db_file)     (struct vconfig*, char*, int);
+    int (*get_route_bucket_sz)   (struct vconfig*, int*);
+    int (*get_route_max_snd_tms) (struct vconfig*, int*);
+
+    int (*get_dht_port)          (struct vconfig*, int*);
+
+    int (*get_cpu_criteria)      (struct vconfig*, int*);
+    int (*get_mem_criteria)      (struct vconfig*, int*);
+    int (*get_io_criteria)       (struct vconfig*, int*);
+    int (*get_up_criteria)       (struct vconfig*, int*);
+    int (*get_down_criteria)     (struct vconfig*, int*);
+    int (*get_cpu_factor)        (struct vconfig*, int*);
+    int (*get_mem_factor)        (struct vconfig*, int*);
+    int (*get_io_factor)         (struct vconfig*, int*);
+    int (*get_up_factor)         (struct vconfig*, int*);
+    int (*get_down_factor)       (struct vconfig*, int*);
+};
+
 struct vconfig {
     struct vlist items;
     struct vlock lock;
 
     struct vconfig_ops* ops;
+    struct vconfig_inst_ops* inst_ops;
 };
 
 int  vconfig_init  (struct vconfig*);

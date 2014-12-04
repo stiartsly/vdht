@@ -260,6 +260,7 @@ struct vroute_srvc_space_ops route_srvc_space_ops = {
 
 int vroute_srvc_space_init(struct vroute_srvc_space* space, struct vconfig* cfg)
 {
+    int ret = 0;
     int i = 0;
 
     vassert(space);
@@ -269,7 +270,8 @@ int vroute_srvc_space_init(struct vroute_srvc_space* space, struct vconfig* cfg)
         varray_init(&space->bucket[i].srvcs, 8);
         space->bucket[i].ts = 0;
     }
-    cfg->ops->get_int_ext(cfg, "route.bucket_size", &space->bucket_sz, DEF_ROUTE_BUCKET_CAPC);
+    ret = cfg->inst_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
+    retE((ret < 0));
     space->ops = &route_srvc_space_ops;
 
     return 0;

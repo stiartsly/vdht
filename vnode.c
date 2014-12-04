@@ -194,37 +194,6 @@ struct vnode_ops node_ops = {
     .dump      = _vnode_dump
 };
 
-static
-int _aux_get_tick_interval(struct vconfig* cfg)
-{
-    char buf[32];
-    int ret = 0;
-    int tms = 0;
-    vassert(cfg);
-
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str_ext(cfg, "node.tick_interval", buf, 32, DEF_NODE_TICK_INTERVAL);
-    retE((ret < 0));
-
-    ret = strlen(buf);
-    switch(buf[ret-1]) {
-    case 's':
-        tms = 1;
-        break;
-    case 'm':
-        tms = 60;
-        break;
-    default:
-        retE((1));
-    }
-    errno = 0;
-    ret = strtol(buf, NULL, 10);
-    vlog((errno), elog_strtol);
-    retE((errno));
-
-    return (ret * tms);
-}
-
 /*
  * @vnd:
  * @msger:
@@ -233,6 +202,8 @@ int _aux_get_tick_interval(struct vconfig* cfg)
  */
 int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, struct vroute* route, vnodeAddr* node_addr)
 {
+    int ret = 0;
+
     vassert(vnd);
     vassert(cfg);
     vassert(ticker);
@@ -247,8 +218,8 @@ int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, s
     vnd->route  = route;
     vnd->ops    = &node_ops;
 
-    vnd->tick_interval = _aux_get_tick_interval(cfg);
-    retE((vnd->tick_interval < 0));
+    ret = cfg->inst_ops->get_node_tick_interval(cfg, &vnd->tick_interval);
+    retE((ret < 0));
     return 0;
 }
 
