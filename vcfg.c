@@ -6,7 +6,7 @@
 
 #define DEF_ROUTE_DB_FILE       "route.db"
 #define DEF_ROUTE_BUCKET_CAPC   ((int)10)
-#define DEF_ROUTE_MAX_SND_TIMES ((int)10)
+#define DEF_ROUTE_MAX_SND_TIMES ((int)5)
 #define DEF_LSCTL_UNIX_PATH     "/var/run/vdht/lsctl_socket"
 
 #define DEF_DHT_PORT            ((int)12300)
