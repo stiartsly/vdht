@@ -867,7 +867,7 @@ int _vroute_cb_post_service(struct vroute* route, struct sockaddr_in* from, void
     retE((ret < 0));
     retE((svc.what < 0));
     retE((svc.what >= PLUGIN_BUTT));
-
+    vsockaddr_combine(from, &svc.addr, &svc.addr);
     ret = srvc_space->ops->add_srvc_node(srvc_space, &svc);
     retE((ret < 0));
     vnodeInfo_init(&info, &addr.id, &addr.addr, peer_service_prop[svc.what], NULL);

@@ -232,6 +232,20 @@ int vsockaddr_unstrlize(const char* ip_addr, struct sockaddr_in* addr)
     return 0;
 }
 
+int vsockaddr_combine(struct sockaddr_in* ip_part, struct sockaddr_in* port_part, struct sockaddr_in* addr)
+{
+    vassert(ip_part);
+    vassert(port_part);
+    vassert(addr);
+
+    addr->sin_family = AF_INET;
+    addr->sin_port = port_part->sin_port;
+    addr->sin_addr = ip_part->sin_addr;
+    memset(&addr->sin_zero, 0, 8);
+
+    return 0;
+}
+
 int vsockaddr_dump(struct sockaddr_in* addr)
 {
     char ip[64];
