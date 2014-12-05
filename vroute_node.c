@@ -326,16 +326,16 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
         };
         varray_iterate(peers, _aux_space_add_node_cb, argv);
         if (found) { //found
-            vpeer_init(to, &info->id, &info->ver, &info->addr, to->snd_ts, now, to->flags | flags);
+            vpeer_init(to, &info->id, &info->ver, &info->addr, to->flags | flags, to->snd_ts, now);
             updt = 1;
         } else if (to) { //replace worst one.
-            vpeer_init(to, &info->id, &info->ver, &info->addr, 0, now, flags);
+            vpeer_init(to, &info->id, &info->ver, &info->addr, flags, 0, now);
             updt = 1;
         } else { // insert new one.
             to = vpeer_alloc();
             vlog((!to), elog_vpeer_alloc);
             retE((!to));
-            vpeer_init(to, &info->id, &info->ver, &info->addr, 0, now, flags);
+            vpeer_init(to, &info->id, &info->ver, &info->addr, flags, 0, now);
             varray_add_tail(peers, to);
             updt = 1;
         }
