@@ -81,6 +81,7 @@ static
 void vpeer_init(
         struct vpeer* peer,
         vnodeId* id,
+        vnodeVer* ver,
         struct sockaddr_in* addr,
         uint32_t flags,
         time_t snd_ts,
@@ -89,7 +90,8 @@ void vpeer_init(
     vassert(peer);
     vassert(addr);
 
-    vtoken_copy(&peer->id, id);
+    vtoken_copy(&peer->id, id );
+    vtoken_copy(&peer->ver,ver);
     vsockaddr_copy(&peer->addr, addr);
     peer->flags  = flags;
     peer->snd_ts = snd_ts;
@@ -134,6 +136,7 @@ void vpeer_dump(struct vpeer* peer)
 
     vdump(printf("-> PEER"));
     vtoken_dump(&peer->id);
+    vnodeVer_dump(&peer->ver);
     vsockaddr_dump(&peer->addr);
     vpeer_dump_flags(peer->flags);
     vdump(printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet"));
@@ -323,16 +326,16 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
         };
         varray_iterate(peers, _aux_space_add_node_cb, argv);
         if (found) { //found
-            vpeer_init(to, &info->id, &info->addr, to->snd_ts, now, to->flags | flags);
+            vpeer_init(to, &info->id, &info->ver, &info->addr, to->snd_ts, now, to->flags | flags);
             updt = 1;
         } else if (to) { //replace worst one.
-            vpeer_init(to, &info->id, &info->addr, 0, now, flags);
+            vpeer_init(to, &info->id, &info->ver, &info->addr, 0, now, flags);
             updt = 1;
         } else { // insert new one.
             to = vpeer_alloc();
             vlog((!to), elog_vpeer_alloc);
             retE((!to));
-            vpeer_init(to, &info->id, &info->addr, 0, now, flags);
+            vpeer_init(to, &info->id, &info->ver, &info->addr, 0, now, flags);
             varray_add_tail(peers, to);
             updt = 1;
         }
