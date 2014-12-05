@@ -227,7 +227,6 @@ int vnodeVer_unstrlize(const char* ver_str, vnodeVer* ver)
         ver->data[i] = ret;
         i++;
     }
-    //TODO;
     return 0;
 }
 
@@ -238,8 +237,11 @@ void vnodeVer_dump(vnodeVer* ver)
 
     memset(sver, 0, 64);
     vnodeVer_strlize(ver, sver, 64);
-    vdump(printf("ver:%s", sver));
-
+    if (!strcmp("0.0.0.0.0", sver)) {
+        vdump(printf("empty"));
+    } else {
+        vdump(printf("ver:%s", sver));
+    }
     return;
 }
 

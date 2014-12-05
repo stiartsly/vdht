@@ -56,7 +56,7 @@ struct vpeer* vpeer_alloc(void)
     peer = (struct vpeer*)vmem_aux_alloc(&peer_cache);
     vlog((!peer), elog_vmem_aux_alloc);
     retE_p((!peer));
-    memset(peer, 0, sizeof(struct vpeer));
+    memset(peer, 0, sizeof(*peer));
     return peer;
 }
 /*
@@ -623,14 +623,14 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
     int j = 0;
     vassert(space);
 
-    vdump(printf("-> ROUTING SPACE"));
+    vdump(printf("-> NODE ROUTING SPACE"));
     for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
             vpeer_dump((struct vpeer*)varray_get(peers, j));
         }
     }
-    vdump(printf("<- ROUTING SPACE"));
+    vdump(printf("<- NODE ROUTING SPACE"));
 
     return ;
 }

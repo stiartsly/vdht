@@ -204,7 +204,7 @@ int _vlsctl_cmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 
     ret = host->ops->plug(host, what, &sin);
     retE((ret < 0));
-    vlogI(printf("service (%s) published", vpluger_get_desc(what)));
+    vlogI(printf("service (%s) published", vroute_srvc_get_desc(what)));
     return sz;
 }
 
@@ -235,7 +235,7 @@ int _vlsctl_cmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 
     ret = host->ops->unplug(host, what, &sin);
     retE((ret < 0));
-    vlogI(printf("service (%s) unavailable.", vpluger_get_desc(what)));
+    vlogI(printf("service (%s) unavailable.", vroute_srvc_get_desc(what)));
     return sz;
 }
 

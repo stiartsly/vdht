@@ -6,8 +6,7 @@
 #include "vcfg.h"
 #include "vsys.h"
 
-#define MAX_SND_PERIOD 600
-#define NBUCKETS    ((int)160)
+#define NBUCKETS    (VTOKEN_BITLEN)
 
 enum {
     PROP_UNREACHABLE          = 0x00000000,
@@ -44,9 +43,8 @@ enum {
 };
 
 #define PROP_DHT_MASK  ((uint32_t)0x000003ff)
-#define PROP_PLUG_MASK ((uint32_t)0x003f0000)
 
-char* vpluger_get_desc(int);
+char* vroute_srvc_get_desc(int);
 
 struct vroute;
 struct vroute_node_space;

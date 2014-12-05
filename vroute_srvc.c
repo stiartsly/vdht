@@ -1,14 +1,12 @@
 #include "vglobal.h"
 #include "vroute.h"
 
-
-struct vplugin_desc {
+struct vservice_desc {
     int   what;
     char* desc;
 };
 
-static
-struct vplugin_desc plugin_desc[] = {
+static struct vservice_desc service_desc[] = {
     { PLUGIN_RELAY,  "relay"           },
     { PLUGIN_STUN,   "stun"            },
     { PLUGIN_VPN,    "vpn"             },
@@ -16,13 +14,12 @@ struct vplugin_desc plugin_desc[] = {
     { PLUGIN_MROUTE, "multiple routes" },
     { PLUGIN_DHASH,  "data hash"       },
     { PLUGIN_APP,    "app"             },
-    { PLUGIN_BUTT, 0}
+    { 0, 0}
 };
 
-char* vpluger_get_desc(int what)
+char* vroute_srvc_get_desc(int what)
 {
-    struct vplugin_desc* desc = plugin_desc;
-
+    struct vservice_desc* desc = service_desc;
     for (; desc->desc; ) {
         if (desc->what == what) {
             break;
@@ -30,13 +27,13 @@ char* vpluger_get_desc(int what)
         desc++;
     }
     if (!desc->desc) {
-        return "unkown plugin";
+        return "unkown service";
     }
     return desc->desc;
 }
 
 /*
- * for plug_item
+ * service node structure and it follows it's correspondent help APIs.
  */
 struct vservice {
     struct sockaddr_in addr;
@@ -55,6 +52,7 @@ struct vservice* vservice_alloc(void)
     item = (struct vservice*)vmem_aux_alloc(&service_cache);
     vlog((!item), elog_vmem_aux_alloc);
     retE_p((!item));
+    memset(item, 0, sizeof(*item));
     return item;
 }
 
@@ -67,7 +65,13 @@ void vservice_free(struct vservice* item)
 }
 
 static
-void vservice_init(struct vservice* item, int what, int nice, struct sockaddr_in* addr, time_t ts, uint32_t flags)
+void vservice_init(
+        struct vservice* item,
+        int what,
+        int nice,
+        struct sockaddr_in* addr,
+        time_t ts,
+        uint32_t flags)
 {
     vassert(item);
     vassert(addr);
@@ -85,7 +89,7 @@ void vservice_dump(struct vservice* item)
 {
     vassert(item);
     vdump(printf("-> SERVICE"));
-    vdump(printf("category:%s", vpluger_get_desc(item->what)));
+    vdump(printf("what:%s", vroute_srvc_get_desc(item->what)));
     vdump(printf("nice:%d", item->nice));
     vdump(printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts)));
     vsockaddr_dump(&item->addr);
@@ -131,6 +135,13 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
     return 0;
 }
 
+/*
+ * the routine to add service (from other nodes) into service routing table.
+ *
+ * @space: service routing table space.
+ * @svci : service infos
+ *
+ */
 static
 int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* svci)
 {
@@ -178,6 +189,13 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
     return ret;
 }
 
+/*
+ * the routine to get service info from service routing table space if local host
+ * require some kind of system service.
+ *
+ * @space: service routing table space;
+ * @svci : service infos
+ */
 static
 int _vroute_srvc_get_serivce_node(struct vroute_srvc_space* space, int what, vsrvcInfo* svci)
 {
@@ -207,8 +225,9 @@ int _vroute_srvc_get_serivce_node(struct vroute_srvc_space* space, int what, vsr
 }
 
 /*
- * clear all plugs
- * @pluger: handler to plugin structure.
+ * the routine to clear all service nodes in service routing table.
+ *
+ * @sapce:
  */
 static
 void _vroute_srvc_clear(struct vroute_srvc_space* space)
@@ -227,8 +246,9 @@ void _vroute_srvc_clear(struct vroute_srvc_space* space)
 }
 
 /*
- * dump pluger
- * @pluger: handler to plugin structure.
+ * the routine to dump all service nodes in service routing table
+ *
+ * @space:
  */
 static
 void _vroute_srvc_dump(struct vroute_srvc_space* space)
@@ -239,14 +259,14 @@ void _vroute_srvc_dump(struct vroute_srvc_space* space)
 
     vassert(space);
 
-    vdump(printf("-> ROUTING MART"));
+    vdump(printf("-> SRVC ROUTING SPACE"));
     for (i = 0; i < PLUGIN_BUTT; i++) {
         svcs = &space->bucket[i].srvcs;
         for (j = 0; j < varray_size(svcs); j++) {
             vservice_dump((struct vservice*)varray_get(svcs, j));
         }
     }
-    vdump(printf("<- ROUTING MART"));
+    vdump(printf("<- SRVC ROUTING SPACE"));
     return;
 }
 

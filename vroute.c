@@ -25,10 +25,12 @@ int _aux_route_tick_cb(void* item, void* cookie)
 }
 
 /*
- * the routine to add a node to routing table.
+ * the routine to join a node with well known address into routing table,
+ * whose ID usually is fake and trivial.
+ *
  * @route: routing table.
- * @node:  node address to add to routing table.
- * @flags: properties that node has.
+ * @node:  well-known address of node to be joined
+ *
  */
 static
 int _vroute_join_node(struct vroute* route, vnodeAddr* node_addr)
@@ -52,9 +54,11 @@ int _vroute_join_node(struct vroute* route, vnodeAddr* node_addr)
 }
 
 /*
- * the routine to remove a node given by @node_addr from route table.
- * @route:
- * @node_addr:
+ * the routine to drop a node with well-known address from routing table,
+ * whose ID usually is fake and trivial.
+ *
+ * @route: routing table.
+ * @node_addr: address of node to be dropped
  *
  */
 static
@@ -73,6 +77,15 @@ int _vroute_drop_node(struct vroute* route, vnodeAddr* node_addr)
     return 0;
 }
 
+/*
+ * the routine to register a service info (only contain meta info) as local
+ * service, and the service will be published to all nodes in routing table.
+ *
+ * @route:
+ * @what:  service category.
+ * @addr:  address of service to provide.
+ *
+ */
 static
 int _vroute_reg_service(struct vroute* route, int what, struct sockaddr_in* addr)
 {
@@ -104,6 +117,14 @@ int _vroute_reg_service(struct vroute* route, int what, struct sockaddr_in* addr
     return 0;
 }
 
+/*
+ * the routine to unregister or nulify a service info, which registered before.
+ *
+ * @route:
+ * @what: service categroy.
+ * @addr: address of service to provide.
+ *
+ */
 static
 int _vroute_unreg_service(struct vroute* route, int what, struct sockaddr_in* addr)
 {
@@ -132,6 +153,14 @@ int _vroute_unreg_service(struct vroute* route, int what, struct sockaddr_in* ad
     return 0;
 }
 
+/*
+ * the routine to find best suitable service node from service routing table
+ * so that local app can meet its needs with that service.
+ *
+ * @route:
+ * @what : service category
+ * @addr : [out] address of service
+ */
 static
 int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr)
 {
@@ -153,6 +182,15 @@ int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr
     return 0;
 }
 
+/*
+ * the routine to update the nice index ( the index of resource avaiblility)
+ * of local host. The higher the nice value is, the lower availability for
+ * other nodes can provide.
+ *
+ * @route:
+ * @nice : an index of resource availability.
+ *
+ */
 static
 int _vroute_kick_nice(struct vroute* route, int nice)
 {
@@ -170,6 +208,12 @@ int _vroute_kick_nice(struct vroute* route, int nice)
     return 0;
 }
 
+/*
+ * the routine to load routing table infos from route database when host
+ * starts at first.
+ *
+ * @route:
+ */
 static
 int _vroute_load(struct vroute* route)
 {
@@ -184,6 +228,12 @@ int _vroute_load(struct vroute* route)
     return 0;
 }
 
+/*
+ * the routine to write all nodes in node routing table back to route database
+ * as long as the host become offline
+ *
+ * @route:
+ */
 static
 int _vroute_store(struct vroute* route)
 {
@@ -198,6 +248,11 @@ int _vroute_store(struct vroute* route)
     return 0;
 }
 
+/*
+ * the routine to priodically refresh the routing table.
+ *
+ * @route:
+ */
 static
 int _vroute_tick(struct vroute* route)
 {
@@ -211,6 +266,11 @@ int _vroute_tick(struct vroute* route)
     return 0;
 }
 
+/*
+ * the routine to clean routing table
+ *
+ * @route:
+ */
 static
 void _vroute_clear(struct vroute* route)
 {
@@ -225,26 +285,28 @@ void _vroute_clear(struct vroute* route)
     return;
 }
 
+/* the routine to dump routing table
+ *
+ * @route:
+ */
 static
 void _vroute_dump(struct vroute* route)
 {
     struct vroute_node_space* node_space = &route->node_space;
-    struct vroute_srvc_space* srvc_space  = &route->srvc_space;
+    struct vroute_srvc_space* srvc_space = &route->srvc_space;
     int i = 0;
     vassert(route);
 
     vdump(printf("-> ROUTE"));
     vlock_enter(&route->lock);
-    vdump(printf("-> MINE"));
-    vdump(printf("-> NODE"));
+    vdump(printf("-> MY NODE"));
     vnodeInfo_dump(&route->own_node);
-    vdump(printf("<- NODE"));
-    vdump(printf("-> SERVICES"));
+    vdump(printf("<- MY NODE"));
+    vdump(printf("-> LOCAL SERVICES"));
     for (; i < varray_size(&route->own_svcs); i++) {
         vsrvcInfo_dump((vsrvcInfo*)varray_get(&route->own_svcs, i));
     }
-    vdump(printf("<- SERVICES"));
-    vdump(printf("<- MINE"));
+    vdump(printf("<- LOCAL SERVICES"));
 
     node_space->ops->dump(node_space);
     srvc_space->ops->dump(srvc_space);
@@ -253,6 +315,11 @@ void _vroute_dump(struct vroute* route)
     return;
 }
 
+/*
+ * the routine to dispatch dht message
+ *
+ * @route:
+ */
 static
 int _vroute_dispatch(struct vroute* route, struct vmsg_usr* mu)
 {
