@@ -528,6 +528,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
         if ((space->bucket[i].ts + space->max_rcv_period) >= now) {
             continue;
         }
+        peer = (struct vpeer*)varray_get_rand(peers);
         vnodeAddr_init(&addr, &peer->id, &peer->addr);
         route->dht_ops->find_closest_nodes(route, &addr, &space->own->id);
     }
