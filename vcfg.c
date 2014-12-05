@@ -7,6 +7,7 @@
 #define DEF_ROUTE_DB_FILE       "route.db"
 #define DEF_ROUTE_BUCKET_CAPC   ((int)10)
 #define DEF_ROUTE_MAX_SND_TIMES ((int)5)
+#define DEF_ROUTE_MAX_RCV_PERIOD "1m"
 #define DEF_LSCTL_UNIX_PATH     "/var/run/vdht/lsctl_socket"
 
 #define DEF_DHT_PORT            ((int)12300)
@@ -697,6 +698,40 @@ int _vcfg_get_route_max_snd_tms(struct vconfig* cfg, int* tms)
 }
 
 static
+int _vcfg_get_route_max_rcv_period(struct vconfig* cfg, int* period)
+{
+    char buf[32];
+    int tms = 0;
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(period);
+
+    memset(buf, 0, 32);
+    ret = cfg->ops->get_str_ext(cfg, "route.max_rcv_period", buf, 32, DEF_ROUTE_MAX_RCV_PERIOD);
+    retE((ret < 0));
+
+    ret = strlen(buf);
+    switch(buf[ret-1]) {
+    case 's':
+        tms = 1;
+        break;
+    case 'm':
+        tms = 60;
+        break;
+    default:
+        retE((1));
+    }
+    errno = 0;
+    ret = strtol(buf, NULL, 10);
+    vlog((errno), elog_strtol);
+    retE((errno));
+
+    *period = (ret * tms);
+    return 0;
+}
+
+static
 int _vcfg_get_dht_port(struct vconfig* cfg, int* port)
 {
     int ret = 0;
@@ -1027,6 +1062,7 @@ struct vconfig_inst_ops cfg_inst_ops = {
     .get_route_db_file      = _vcfg_get_route_db_file,
     .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
     .get_route_max_snd_tms  = _vcfg_get_route_max_snd_tms,
+    .get_route_max_rcv_period = _vcfg_get_route_max_rcv_period,
 
     .get_dht_port           = _vcfg_get_dht_port,
 

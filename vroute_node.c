@@ -212,7 +212,7 @@ int _aux_space_tick_cb(void* item, void* cookie)
         return 0;
     }
     if ((!peer->snd_ts) ||
-        (*now - peer->rcv_ts > MAX_RCV_PERIOD)) {
+        (*now - peer->rcv_ts > space->max_rcv_period)) {
         vnodeAddr_init(&addr, &peer->id, &peer->addr);
         route->dht_ops->ping(route, &addr);
         peer->snd_ts = *now;
@@ -525,7 +525,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
         if (varray_size(peers) <= 0) {
             continue;
         }
-        if ((space->bucket[i].ts + MAX_RCV_PERIOD) >= now) {
+        if ((space->bucket[i].ts + space->max_rcv_period) >= now) {
             continue;
         }
         vnodeAddr_init(&addr, &peer->id, &peer->addr);
@@ -659,6 +659,7 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     ret += cfg->inst_ops->get_route_db_file(cfg, space->db, BUF_SZ);
     ret += cfg->inst_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
     ret += cfg->inst_ops->get_route_max_snd_tms(cfg, &space->max_snd_tms);
+    ret += cfg->inst_ops->get_route_max_rcv_period(cfg, &space->max_rcv_period);
     retE((ret < 0));
 
     for (; i < NBUCKETS; i++) {
