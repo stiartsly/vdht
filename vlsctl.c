@@ -32,7 +32,7 @@ int _aux_lsctl_get_addr(void* data, int offset, struct sockaddr_in* addr)
  * forward the request to make host online
  */
 static
-int _vlsctl_cmd_host_up(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_host_up(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     int ret = 0;
@@ -49,7 +49,7 @@ int _vlsctl_cmd_host_up(struct vlsctl* lsctl, void* data, int offset)
  *  forward the request to make host offline.
  */
 static
-int _vlsctl_cmd_host_down(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_host_down(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     int ret = 0;
@@ -66,7 +66,7 @@ int _vlsctl_cmd_host_down(struct vlsctl* lsctl, void* data, int offset)
  * forward the request to make vdhtd exit.
  */
 static
-int _vlsctl_cmd_host_exit(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_host_exit(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     int ret = 0;
@@ -84,7 +84,7 @@ int _vlsctl_cmd_host_exit(struct vlsctl* lsctl, void* data, int offset)
  * forward the reqeust to dump all infos about host, so as to debug
  */
 static
-int _vlsctl_cmd_dump_host(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_dump_host(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     vassert(lsctl);
@@ -100,7 +100,7 @@ int _vlsctl_cmd_dump_host(struct vlsctl* lsctl, void* data, int offset)
  * this request is purely for debug.
  */
 static
-int _vlsctl_cmd_bogus_query(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_bogus_query(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -130,7 +130,7 @@ int _vlsctl_cmd_bogus_query(struct vlsctl* lsctl, void* data, int offset)
  * into dht routing table.
  */
 static
-int _vlsctl_cmd_join_node(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_join_node(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -155,7 +155,7 @@ int _vlsctl_cmd_join_node(struct vlsctl* lsctl, void* data, int offset)
  * from dht routing table.
  */
 static
-int _vlsctl_cmd_drop_node(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_drop_node(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -181,7 +181,7 @@ int _vlsctl_cmd_drop_node(struct vlsctl* lsctl, void* data, int offset)
  *  relay, stun, ddns, ...
  */
 static
-int _vlsctl_cmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -212,7 +212,7 @@ int _vlsctl_cmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
  * forward to the declaration of service for being unavaiable.
  */
 static
-int _vlsctl_cmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -243,7 +243,7 @@ int _vlsctl_cmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
  * forward the request to get the best service option for special kind.
  */
 static
-int _vlsctl_cmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in addr;
@@ -270,7 +270,7 @@ int _vlsctl_cmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
  * forward the reqeust to dump config
  */
 static
-int _vlsctl_cmd_dump_cfg(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_dump_cfg(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     vassert(lsctl);
@@ -282,17 +282,17 @@ int _vlsctl_cmd_dump_cfg(struct vlsctl* lsctl, void* data, int offset)
 }
 
 static vlsctl_cmd_t lsctl_cmds[] = {
-    _vlsctl_cmd_host_up,
-    _vlsctl_cmd_host_down,
-    _vlsctl_cmd_host_exit,
-    _vlsctl_cmd_dump_host,
-    _vlsctl_cmd_bogus_query,
-    _vlsctl_cmd_join_node,
-    _vlsctl_cmd_drop_node,
-    _vlsctl_cmd_srvc_pub,
-    _vlsctl_cmd_srvc_unavai,
-    _vlsctl_cmd_srvc_prefer,
-    _vlsctl_cmd_dump_cfg,
+    _vcmd_host_up,
+    _vcmd_host_down,
+    _vcmd_host_exit,
+    _vcmd_dump_host,
+    _vcmd_bogus_query,
+    _vcmd_join_node,
+    _vcmd_drop_node,
+    _vcmd_srvc_pub,
+    _vcmd_srvc_unavai,
+    _vcmd_srvc_prefer,
+    _vcmd_dump_cfg,
     NULL
 };
 
@@ -322,7 +322,7 @@ int _vlsctl_dispatch(struct vlsctl* lsctl, struct vmsg_usr* um)
 }
 
 static
-struct vlsctl_ops   lsctl_ops = {
+struct vlsctl_ops lsctl_ops = {
     .dispatch = _vlsctl_dispatch
 };
 
