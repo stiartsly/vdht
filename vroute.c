@@ -299,7 +299,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
 
     vassert(route);
     vassert(dest);
-    retS((!(route->own_node.flags & PROP_PING)));
+    retS((!(route->own_node.flags & PROP_PING))); // ping disabled.
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -339,7 +339,7 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
     vassert(dest);
     vassert(token);
     vassert(info);
-    retS((!(route->own_node.flags & PROP_PING_R)));
+    retS((!(route->own_node.flags & PROP_PING_R))); //ping_rsp disabled
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -377,7 +377,7 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
     vassert(route);
     vassert(dest);
     vassert(target);
-    retS((!(route->own_node.flags & PROP_FIND_NODE)));
+    retS((!(route->own_node.flags & PROP_FIND_NODE))); //find_node disabled.
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -414,7 +414,7 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     vassert(dest);
     vassert(token);
     vassert(info);
-    retS((!(route->own_node.flags & PROP_FIND_NODE_R)));
+    retS((!(route->own_node.flags & PROP_FIND_NODE_R)));//find_node_rsp disabled.
 
     buf = vdht_buf_alloc();
     retE((!buf));

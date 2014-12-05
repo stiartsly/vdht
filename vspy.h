@@ -19,11 +19,11 @@ struct vspy {
     int io_criteria;
     int io_factor;
 
-    int up_ratio;
+    int up_ratio;  // for upload-network
     int up_criteria;
     int up_factor;
 
-    int down_ratio;
+    int down_ratio; // for download-network
     int down_criteria;
     int down_factor;
 

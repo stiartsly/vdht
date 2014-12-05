@@ -1,12 +1,18 @@
 #include "vglobal.h"
 #include "vspy.h"
 
+/*
+ * the routine to get sampling of cpu/mem/io/net used ratio.
+ *
+ * @spy:
+ * @nice: the resources(cpu/memory/io/net) used ratio index.
+ */
 static
-int _vspy_get_nice(struct vspy* spy, int* index)
+int _vspy_get_nice(struct vspy* spy, int* nice)
 {
     int ret = 0;
     vassert(spy);
-    vassert(index);
+    vassert(nice);
 
     ret += vsys_get_cpu_ratio(&spy->cpu_ratio);
     ret += vsys_get_mem_ratio(&spy->mem_ratio);
@@ -14,21 +20,21 @@ int _vspy_get_nice(struct vspy* spy, int* index)
     ret += vsys_get_net_ratio(&spy->up_ratio, &spy->down_ratio);
     retE((ret < 0));
 
-    *index = 0;
+    *nice = 0;
     if (spy->cpu_ratio >= spy->cpu_criteria) {
-        *index += spy->cpu_ratio * spy->cpu_factor;
+        *nice += spy->cpu_ratio * spy->cpu_factor;
     }
     if (spy->mem_ratio >= spy->mem_criteria) {
-        *index += spy->mem_ratio * spy->mem_factor;
+        *nice += spy->mem_ratio * spy->mem_factor;
     }
     if (spy->io_ratio >= spy->io_criteria) {
-        *index += spy->io_ratio  * spy->io_factor;
+        *nice += spy->io_ratio  * spy->io_factor;
     }
     if (spy->up_ratio >= spy->up_criteria) {
-        *index += spy->up_ratio  * spy->up_factor;
+        *nice += spy->up_ratio  * spy->up_factor;
     }
     if (spy->down_ratio >= spy->down_criteria) {
-        *index += spy->down_ratio * spy->down_factor;
+        *nice += spy->down_ratio * spy->down_factor;
     }
     return 0;
 }
