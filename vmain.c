@@ -60,7 +60,7 @@ int main(int argc, char** argv)
             break;
         }
         switch(c) {
-        case 0:
+        case 0: {
             if (long_options[opt_idx].flag != 0)
                 break;
             printf ("option %s", long_options[opt_idx].name);
@@ -68,6 +68,7 @@ int main(int argc, char** argv)
                 printf (" with arg %s", optarg);
             printf ("\n");
             break;
+        }
         case 'D':
             daemonize = 1;
             break;

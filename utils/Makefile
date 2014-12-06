@@ -1,6 +1,7 @@
 CFLAGS = -I. -I.. -g -Wall
 utils_objs = \
     varray.o \
+    vhash.o \
     vmisc.o \
     vmem.o \
     vsys.o 
