@@ -39,6 +39,7 @@
 #include "vspy.h"
 #include "vhost.h"
 #include "vnode.h"
+#include "vperf.h"
 #include "vmsger.h"
 #include "vroute.h"
 #include "vlsctl.h"
