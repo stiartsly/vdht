@@ -14,8 +14,8 @@ struct vhash_bucket {
     struct vlist list;
 };
 
-typedef int (*vhash_func_t)(void*);
-typedef int (*vhash_cmp_t) (void*, void*);
+typedef int (*vhash_func_t)(void*, void*);
+typedef int (*vhash_cmp_t) (void*, void*, void*);
 
 struct vhash {
     int capc;
@@ -26,20 +26,20 @@ struct vhash {
     vhash_func_t hash_cb;
     vhash_cmp_t  cmp_cb;
 
-    struct vhash_bucket* buckets;
+    struct vhash_bucket** buckets;
 };
 
 typedef int (*vhash_iterate_t)(void*, void*, void*);
 typedef int (*vhash_zero_t)   (void*, void*);
 
 int   vhash_init   (struct vhash*, int, void*, vhash_func_t, vhash_cmp_t);
-void  vhash_deinit (struct vhash*);
+void  vhash_deinit (struct vhash*, vhash_zero_t, void*);
+
 void* vhash_get    (struct vhash*, void*);
 int   vhash_add    (struct vhash*, void*, void*);
 int   vhash_size   (struct vhash*);
 void* vhash_del    (struct vhash*, void*);
 void* vhash_del_by_val(struct vhash*, void*);
 void  vhash_iterate(struct vhash*, vhash_iterate_t, void*);
-void  vhash_zero   (struct vhash*, vhash_zero_t, void*);
 
 #endif
