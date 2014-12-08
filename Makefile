@@ -14,6 +14,7 @@ vdht_objs = \
     vperf.o \
     vmsger.o  \
     vroute.o  \
+    vupnpc.o \
     vroute_node.o  \
     vroute_srvc.o  \
     vlsctl.o  \
