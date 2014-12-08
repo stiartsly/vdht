@@ -423,8 +423,8 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
 
     int _aux_space_track_cmp_cb(void* a, void* b, void* cookie)
     {
-        struct vpeer_track* item = (struct vpeer_track*)a;
-        struct vpeer_track* tgt  = (struct vpeer_track*)b;
+        struct vpeer_track* item = (struct vpeer_track*)b;
+        struct vpeer_track* tgt  = (struct vpeer_track*)a;
 
         return vnodeMetric_cmp(&tgt->metric, &item->metric);
     }
@@ -456,7 +456,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
 
     for (; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
-        for (; j < varray_size(peers); j++) {
+        for (j = 0; j < varray_size(peers); j++) {
             track = (struct vpeer_track*)vmem_aux_alloc(&maux);
             item  = (struct vpeer*)varray_get(peers, j);
             vnodeId_dist(&item->id, target, &track->metric);
