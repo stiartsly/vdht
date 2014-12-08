@@ -328,7 +328,7 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
         if (found) { //found
             vpeer_init(to, &info->id, &info->ver, &info->addr, to->flags | flags, to->snd_ts, now);
             updt = 1;
-        } else if (to) { //replace worst one.
+        } else if (to && (varray_size(peers) >= space->bucket_sz)) { //replace worst one.
             vpeer_init(to, &info->id, &info->ver, &info->addr, flags, 0, now);
             updt = 1;
         } else { // insert new one.
