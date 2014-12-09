@@ -358,23 +358,27 @@ int _vroute_node_space_del_node(struct vroute_node_space* space, vnodeAddr* addr
     struct varray* peers = NULL;
     struct vpeer*  peer  = NULL;
     vnodeAddr peer_addr;
-    int idx = 0;
+    int found = 0;
     int i   = 0;
+    int j   = 0;
 
     vassert(space);
     vassert(addr);
 
-    idx = vnodeId_bucket(&space->own->id, &addr->id);
-    peers = &space->bucket[idx].peers;
-    for (; i < varray_size(peers); i++) {
-        peer = (struct vpeer*)varray_get(peers, i);
-        vnodeAddr_init(&peer_addr, &peer->id, &peer->addr);
-        if (vnodeAddr_equal(&peer_addr, addr)) {
+    for (; i < NBUCKETS; i++) {
+        peers = &space->bucket[i].peers;
+        for (j = 0; j < varray_size(peers); j++) {
+            peer = (struct vpeer*)varray_get(peers, j);
+            vnodeAddr_init(&peer_addr, &peer->id, &peer->addr);
+            if (vnodeAddr_equal(&peer_addr, addr)) {
+                found = 1;
+                break;
+            }
+        }
+        if (found) {
+            vpeer_free(varray_del(peers, j));
             break;
         }
-    }
-    if (i < varray_size(peers)) {
-        vpeer_free(varray_del(peers, i));
     }
     return 0;
 }
