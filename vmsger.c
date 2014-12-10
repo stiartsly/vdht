@@ -216,8 +216,12 @@ int _vmsger_push(struct vmsger* msger, struct vmsg_usr* mu)
     vassert(msger);
     vassert(mu);
 
-    ret = msger->pack_cb(msger->cookie1, mu, &ms);
-    retE((ret < 0));
+    ms = vmsg_sys_alloc(0);
+    vlog((!ms), elog_vmsg_sys_alloc);
+    retE((!ms));
+
+    ret = msger->pack_cb(msger->cookie1, mu, ms);
+    ret1E((ret < 0), vmsg_sys_free(ms));
 
     vlock_enter(&msger->lock_msgs);
     vlist_add_tail(&msger->msgs, &ms->list);

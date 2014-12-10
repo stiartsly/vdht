@@ -88,7 +88,7 @@ struct vmsger_ops {
     int (*dump)   (struct vmsger*);
 };
 
-typedef int (*vmsger_pack_t  )(void*, struct vmsg_usr*, struct vmsg_sys**);
+typedef int (*vmsger_pack_t  )(void*, struct vmsg_usr*, struct vmsg_sys*);
 typedef int (*vmsger_unpack_t)(void*, struct vmsg_sys*, struct vmsg_usr*);
 
 struct vmsger {

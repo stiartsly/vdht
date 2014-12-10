@@ -326,9 +326,8 @@ struct vhost_ops host_ops = {
  *
  */
 static
-int _aux_vhost_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** sm)
+int _aux_vhost_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys* sm)
 {
-    struct vmsg_sys* ms = NULL;
     char* data = NULL;
     int sz = 0;
 
@@ -345,11 +344,7 @@ int _aux_vhost_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys** 
         data = unoff_addr(um->data, sz);
         set_uint32(data, DHT_MAGIC);
 
-        ms = vmsg_sys_alloc(0);
-        vlog((!ms), elog_vmsg_sys_alloc);
-        retE((!ms));
-        vmsg_sys_init(ms, um->addr, um->len + sz, data);
-        *sm = ms;
+        vmsg_sys_init(sm, um->addr, um->len + sz, data);
         return 0;
     }
     //todo;
