@@ -104,7 +104,7 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
     varg_decl(cookie, 0, vsrvcInfo*, svci);
     varg_decl(cookie, 1, struct vservice**, to);
     varg_decl(cookie, 2, time_t*, now);
-    varg_decl(cookie, 3, int32_t*, min_tdff);
+    varg_decl(cookie, 3, int32_t*, max_diff);
     varg_decl(cookie, 4, int*, found);
 
     if ((svc->what == svci->what)
@@ -113,9 +113,9 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
         *found = 1;
         return 1;
     }
-    if ((*now - svc->rcv_ts) < *min_tdff) {
+    if ((*now - svc->rcv_ts) > *max_diff) {
         *to = svc;
-        *min_tdff = *now - svc->rcv_ts;
+        *max_diff = *now - svc->rcv_ts;
     }
     return 0;
 }
@@ -124,9 +124,9 @@ static
 int _aux_srvc_get_service_cb(void* item, void* cookie)
 {
     struct vservice* svc = (struct vservice*)item;
-    varg_decl(cookie, 1, struct vservice**, to);
-    varg_decl(cookie, 2, time_t*, now);
-    varg_decl(cookie, 3, int32_t*, min_tdff);
+    varg_decl(cookie, 0, struct vservice**, to);
+    varg_decl(cookie, 1, time_t*, now);
+    varg_decl(cookie, 2, int32_t*, min_tdff);
 
     if ((*now - svc->rcv_ts) < *min_tdff) {
         *to = svc;
@@ -148,7 +148,7 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
     time_t now = time(NULL);
-    int32_t min_tdff = (int32_t)0x7fffffff;
+    int32_t max_diff = 0;
     int found = 0;
     int updt = 0;
     int ret  = -1;
@@ -164,14 +164,14 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
             svci,
             &to,
             &now,
-            &min_tdff,
+            &max_diff,
             &found
         };
         varray_iterate(svcs, _aux_srvc_add_service_cb, argv);
         if (found) {
             to->rcv_ts = now;
             updt = 1;
-        } else if (to) {
+        } else if (to && varray_size(svcs) >= space->bucket_sz) {
             vservice_init(to, svci->what, svci->nice, &svci->addr, now, 0);
             updt = 1;
         } else {
