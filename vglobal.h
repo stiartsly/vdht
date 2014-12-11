@@ -49,7 +49,10 @@
 #if 0
 #define timer_t
 #define time_t
+#define uint8_t
+#define uint16_t
 #define uint32_t
+#define int16_t
 #define int32_t
 #define sockaddr_in
 #define sockaddr_un
@@ -101,6 +104,8 @@
 #define inet_ntoa
 #define ntohs
 #define htons
+#define ntohl
+#define htonl
 #define errno
 
 #define sqlite3
@@ -130,6 +135,45 @@
 
 extern struct vdht_enc_ops dht_enc_ops;
 extern struct vdht_dec_ops dht_dec_ops;
+
+static
+inline uint8_t get_uint8(void* addr)
+{
+    return *(uint8_t*)addr;
+}
+
+static
+inline void set_uint8(void* addr, uint8_t val)
+{
+    *(uint8_t*)addr = val;
+    return ;
+}
+
+static
+inline int16_t get_int16(void* addr)
+{
+    return *(int16_t*)addr;
+}
+
+static
+inline void set_int16(void* addr, int16_t val)
+{
+    *(int16_t*)addr = val;
+    return ;
+}
+
+static
+inline uint16_t get_uint16(void* addr)
+{
+    return *(uint16_t*)addr;
+}
+
+static
+inline void set_uint16(void* addr, uint16_t val)
+{
+    *(uint16_t*)addr = val;
+    return ;
+}
 
 static
 inline int32_t get_int32(void* addr)

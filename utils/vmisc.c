@@ -261,3 +261,15 @@ int vsockaddr_dump(struct sockaddr_in* addr)
     return 0;
 }
 
+uint32_t vsockaddr_get_ip(struct sockaddr_in* addr)
+{
+    vassert(addr);
+    return (uint32_t)ntohl(addr->sin_addr.s_addr);
+}
+
+uint16_t vsockaddr_get_port(struct sockaddr_in* addr)
+{
+    vassert(addr);
+    return (uint16_t)ntohs(addr->sin_port);
+}
+

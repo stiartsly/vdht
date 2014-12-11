@@ -26,9 +26,9 @@ vdht_objs = \
 %.o: %.c 
 	@$(CC) -c -o $@ $< $(CFLAGS)
 
-all: vdhtd vlsctlc
+all: vdhtd vlsctlc 
 
-vdhtd: vmain.o libvdht.a libutils.a
+vdhtd: vmain.o libvdht.a libutils.a libstun.a
 	@$(CC) -o $@ $^ libutils.a  $(LDFLAGS)
 
 vlsctlc:
@@ -40,11 +40,16 @@ libvdht.a: $(vdht_objs)
 libutils.a:
 	@cd utils && make libutils.a
 
+libstun.a:
+	@cd stun  && make libstun.a
+
 clean:
 	@cd lsctl && make clean
 	@cd utils && make clean
+	@cd stun  && make clean
 	-rm -f *.o 
 	-rm -f libvdht.a
 	-rm -f libutils.a
+	-rm -f libstun.a
 	-rm -f vdhtd 
 

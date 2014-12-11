@@ -1,6 +1,9 @@
 #ifndef __VSTUN_H__
 #define __VSTUN_H__
 
+#include "vrpc.h"
+#include "vmsger.h"
+
 enum {
     attr_mapped_addr  = ((uint16_t)0x0001),
     attr_rsp_addr     = ((uint16_t)0x0002),
@@ -31,7 +34,7 @@ enum {
 struct vstun_msg_header {
     uint16_t type;
     uint16_t len;
-    //todo;
+    uint8_t  token[16];
 };
 
 struct vattr_header {
@@ -39,18 +42,18 @@ struct vattr_header {
     uint16_t len;
 };
 
-struct vattr_addr4 {
+struct vattr_addrv4 {
     uint8_t  pad;
     uint8_t  family;
     uint16_t port;
     uint32_t addr;
 };
 
-struct vattr_chg_req {
+struct vattr_change_req {
     uint32_t value;
 };
 
-struct vattr_error {
+struct vattr_error_code {
     uint16_t pad;
     uint8_t  error_class;
     uint8_t  number;
@@ -72,71 +75,68 @@ struct vattr_integrity {
     char hash[20];
 };
 
-union vattr_template {
-    struct vattr_addr4   addr;
-    struct vattr_chg_req req;
-    struct vattr_error   err;
-    struct vattr_string  str;
-    struct vattr_integrity integrity;
-    struct vattr_unknown_attrs unknown_attrs;
-};
-
 struct vstun_msg {
-    struct vstun_msg_header hdr;
-    bool has_mapped_addr;
-    struct vattr_addr4 mapped_addr;
+    struct vstun_msg_header header;
 
-    bool has_rsp_addr;
-    struct vattr_addr4 rsp_addr;
-
-    bool has_chg_req;
-    struct vattr_chg_req chg_req;
-
-    bool has_source_addr;
-    struct vattr_addr4 src_addr;
-
-    bool has_chged_addr;
-    struct vattr_addr4 chged_addr;
-
-    bool has_username;
+    int has_mapped_addr;
+    struct vattr_addrv4 mapped_addr;
+    int has_resp_addr;
+    struct vattr_addrv4 resp_addr;
+    int has_change_req;
+    struct vattr_change_req change_req;
+    int has_source_addr;
+    struct vattr_addrv4 source_addr;
+    int has_changed_addr;
+    struct vattr_addrv4 changed_addr;
+    int has_username;
     struct vattr_string username;
-
-    bool has_passwd;
+    int has_passwd;
     struct vattr_string passwd;
-
-    bool has_msg_integrity;
+    int has_msg_integrity;
     struct vattr_integrity intergrity;
-
-    bool has_err_code;
-    struct vattr_error err_code;
-
-    bool has_unknown_attrs;
+    int has_error_code;
+    struct vattr_error_code error_code;
+    int has_unkown_attrs;
     struct vattr_unknown_attrs unknown_attrs;
-
-    bool has_reflected_from;
-    struct vattr_addr4 reflected_from;
-
-    bool has_xor_mapped_addr;
-    struct vattr_addr4 xor_mapped_addr;
-
-    bool has_xor_only;
-    bool has_server_name;
+    int has_reflected_from;
+    struct vattr_addrv4 reflected_from;
+    int has_xor_mapped_addr;
+    struct vattr_addrv4 xor_mapped_addr;
+    int has_xor_only;
+    int has_server_name;
     struct vattr_string server_name;
-
-    bool has_2snd_addr;
-    struct vattr_addr4 secondary_addr;
+    int has_second_addr;
+    struct vattr_addrv4 second_addr;
 };
 
 struct vstun;
 struct vstun_ops {
-    int (*decode)(struct vstun*, char*, int, struct vstun_msg*);
+    int (*encode_msg)(struct vstun*, char*, int);
+    int (*decode_msg)(struct vstun*, char*, int);
+    int (*proc_msg)  (struct vstun*);
 };
 
 struct vstun {
+    int has_source_addr;
+    struct vattr_addrv4 source;
+    int has_alt_addr;
+    struct vattr_addrv4 alt;
+    int has_second_addr;
+    struct vattr_addrv4 second;
+
+    struct vattr_addrv4 from;
+    struct vstun_msg req;
+    struct vstun_msg rsp;
+
+    struct vrpc    rpc;
+    struct vmsger  msger;
+    struct vwaiter waiter;
+
     struct vstun_ops* ops;
 };
 
-int  vstun_init  (struct vstun*);
-void vstun_deinit(struct vstun*);
+struct vstun* vstun_create(struct vconfig*);
+void vstun_destroy(struct vstun*);
 
 #endif
+

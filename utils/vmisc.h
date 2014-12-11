@@ -21,4 +21,7 @@ int  vsockaddr_unstrlize(const char*, struct sockaddr_in*);
 int  vsockaddr_combine  (struct sockaddr_in*, struct sockaddr_in*, struct sockaddr_in*);
 int  vsockaddr_dump     (struct sockaddr_in*);
 
+uint32_t vsockaddr_get_ip  (struct sockaddr_in*);
+uint16_t vsockaddr_get_port(struct sockaddr_in*);
+
 #endif
