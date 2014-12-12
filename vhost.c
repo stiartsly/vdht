@@ -9,10 +9,13 @@ static
 int _vhost_start(struct vhost* host)
 {
     struct vnode* node = &host->node;
+    struct vstun* stun = &host->stun;
     int ret = 0;
     vassert(host);
     vassert(node);
 
+    ret = stun->ops->render_srvc(stun);
+    retE((ret < 0));
     ret = node->ops->start(node);
     retE((ret < 0));
     vlogI(printf("Host started"));
@@ -27,10 +30,13 @@ static
 int _vhost_stop(struct vhost* host)
 {
     struct vnode* node = &host->node;
+    struct vstun* stun = &host->stun;
     int ret = 0;
     vassert(host);
 
     ret = node->ops->stop(node);
+    retE((ret < 0));
+    ret = stun->ops->unrender_srvc(stun);
     retE((ret < 0));
     vlogI(printf("Host stopped"));
     return 0;

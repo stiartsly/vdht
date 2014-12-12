@@ -688,11 +688,27 @@ int _vstun_render_srvc(struct vstun* stun)
     return 0;
 }
 
+static
+int _vstun_unrender_srvc(struct vstun * stun)
+{
+    struct vattr_addrv4* source = &stun->source;
+    struct vhost* host = stun->host;
+    struct sockaddr_in addr;
+    int ret = 0;
+    vassert(stun);
+
+    vsockaddr_convert2(source->addr, source->port, &addr);
+    ret = host->ops->unplug(host, PLUGIN_STUN, &addr);
+    retE((ret < 0));
+    return 0;
+}
+
 struct vstun_ops stun_core_ops = {
     .encode_msg  = _vstun_msg_enc,
     .decode_msg  = _vstun_msg_dec,
     .proc_msg    = _vstun_msg_proc,
-    .render_srvc = _vstun_render_srvc
+    .render_srvc   = _vstun_render_srvc,
+    .unrender_srvc = _vstun_unrender_srvc
 };
 
 static

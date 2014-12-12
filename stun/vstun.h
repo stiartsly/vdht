@@ -118,10 +118,11 @@ struct vstun_msg {
 struct vhost;
 struct vstun;
 struct vstun_ops {
-    int (*encode_msg) (struct vstun*, char*, int);
-    int (*decode_msg) (struct vstun*, char*, int);
-    int (*proc_msg)   (struct vstun*);
-    int (*render_srvc)(struct vstun*);
+    int (*encode_msg)   (struct vstun*, char*, int);
+    int (*decode_msg)   (struct vstun*, char*, int);
+    int (*proc_msg)     (struct vstun*);
+    int (*render_srvc)  (struct vstun*);
+    int (*unrender_srvc)(struct vstun*);
 };
 
 struct vstun {
