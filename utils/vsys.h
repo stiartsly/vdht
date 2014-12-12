@@ -48,6 +48,7 @@ struct vthread {
 
 extern int  vthread_init  (struct vthread*, vthread_entry_t, void*);
 extern int  vthread_start (struct vthread*);
+extern int  vthread_join  (struct vthread*, int*);
 extern void vthread_deinit(struct vthread*);
 
 /*

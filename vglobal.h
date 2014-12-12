@@ -125,7 +125,7 @@
 #define pthread_cond_signal
 #define pthread_cond_destroy
 #define pthread_create
-#define pthread_destroy
+#define pthread_join
 
 #define timer_create
 #define timer_settime

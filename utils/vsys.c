@@ -122,6 +122,18 @@ int vthread_start(struct vthread* thread)
     return 0;
 }
 
+int vthread_join(struct vthread* thread, int* quit_code)
+{
+    int ret = 0;
+
+    vassert(thread);
+    vassert(quit_code);
+
+    ret = pthread_join(thread->thread, (void**)quit_code);
+    retE((ret < 0));
+    return 0;
+}
+
 void vthread_deinit(struct vthread* thread)
 {
     vassert(thread);
@@ -129,7 +141,6 @@ void vthread_deinit(struct vthread* thread)
     vlog((!thread->started),printf("#!thread not started yet"));
     vlog((!thread->quited), printf("#!thread not quited yet"));
     pthread_mutex_destroy(&thread->mutex);
-//    pthread_destroy(&thread->thread);
     return ;
 }
 
