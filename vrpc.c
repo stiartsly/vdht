@@ -297,7 +297,7 @@ void _vrpc_udp_dump(void* impl)
     int  port = 0;
     vassert(udp);
 
-    vsockaddr_unconvert(&udp->addr, buf, 64, &port);
+    vsockaddr_unconvert(&udp->addr, buf, 64, (uint16_t*)&port);
     vdump(printf("udp"));
     vdump(printf("addr: %s:%d", buf, port));
     vdump(printf("fd: %d", udp->sock_fd));

@@ -23,7 +23,7 @@ int _aux_lsctl_get_addr(void* data, int offset, struct sockaddr_in* addr)
     strcpy(ip, (char*)offset_addr(data, offset + sz));
     sz += strlen(ip) + 1;
 
-    ret = vsockaddr_convert(ip, port, addr);
+    ret = vsockaddr_convert(ip, (uint16_t)port, addr);
     retE((ret < 0));
     return sz;
 }

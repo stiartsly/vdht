@@ -30,6 +30,7 @@
 #include "utils/vmem.h"
 #include "utils/vsys.h"
 #include "utils/vmisc.h"
+#include "stun/vstun.h"
 
 #include "vdef.h"
 #include "vcfg.h"

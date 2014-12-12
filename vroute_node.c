@@ -267,7 +267,7 @@ int _aux_space_store_cb(void* item, void* cookie)
     memset(id,  0, 64);
     vtoken_strlize(&peer->id, id, 64);
     memset(ip,  0, 64);
-    vsockaddr_unconvert(&peer->addr, ip, 64, &port);
+    vsockaddr_unconvert(&peer->addr, ip, 64, (uint16_t*)&port);
     memset(ver, 0, 64);
     vnodeVer_strlize(&peer->ver, ver, 64);
 

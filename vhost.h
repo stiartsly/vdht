@@ -38,6 +38,7 @@ struct vhost {
     struct vnode    node;
     struct vlsctl   lsctl;
     struct vspy     spy;
+    struct vstun    stun;
 
     struct vconfig*   cfg;
     struct vhost_ops* ops;

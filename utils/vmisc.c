@@ -75,57 +75,6 @@ int vhostaddr_get_next(char* host, int sz)
     return 0;
 }
 
-#if 0
-static struct hostent* ghent = NULL;
-static int gindex = 0;
-int vhostaddr_get_first(char* host, int sz)
-{
-    char hname[128];
-    char* tmp = NULL;
-    int ret = 0;
-
-    vassert(host);
-    vassert(sz > 0);
-
-    ret = gethostname(hname, 128);
-    vlog((ret < 0), elog_gethostname);
-    retE((ret < 0));
-
-    gindex = 0;
-    ghent  = gethostbyname(hname);
-    vlog((!ghent), elog_gethostbyname);
-    retE((!ghent));
-
-    tmp = inet_ntoa(*(struct in_addr*)(ghent->h_addr_list[gindex]));
-    vlog((!tmp), elog_inet_ntoa);
-    retE((!tmp));
-    retE((strlen(tmp) + 1 > sz));
-    strcpy(host, tmp);
-
-    gindex++;
-    return 0;
-}
-
-int vhostaddr_get_next(char* host, int sz)
-{
-    char* tmp = NULL;
-    vassert(host);
-    vassert(sz > 0);
-
-    retE((!ghent));
-    retE((!gindex >= 1));
-
-    tmp = inet_ntoa(*(struct in_addr*)(ghent->h_addr_list[gindex]));
-    vlog((!tmp), elog_inet_ntoa);
-    retE((!tmp));
-    retE((strlen(tmp) + 1 > sz));
-    strcpy(host, tmp);
-
-    gindex++;
-    return 0;
-}
-#endif
-
 void vsockaddr_copy(struct sockaddr_in* dst, struct sockaddr_in* src)
 {
     vassert(dst);
@@ -148,16 +97,16 @@ int vsockaddr_equal(struct sockaddr_in* a, struct sockaddr_in* b)
     return 1;
 }
 
-int vsockaddr_convert(const char* host, int port, struct sockaddr_in* addr)
+int vsockaddr_convert(const char* host, uint16_t port, struct sockaddr_in* addr)
 {
     int ret = 0;
     vassert(host);
     vassert(port > 0);
     vassert(addr);
 
+    memset(addr, 0, sizeof(*addr));
     addr->sin_family = AF_INET;
-    addr->sin_port = htons((unsigned short)port);
-    memset(&addr->sin_zero, 0, 8);
+    addr->sin_port = htons(port);
 
     ret = inet_aton(host, (struct in_addr*)&addr->sin_addr);
     vlog((!ret), elog_inet_aton);
@@ -165,7 +114,19 @@ int vsockaddr_convert(const char* host, int port, struct sockaddr_in* addr)
     return 0;
 }
 
-int vsockaddr_unconvert(struct sockaddr_in* addr, char* host, int len, int* port)
+int vsockaddr_convert2(uint32_t ip, uint16_t port, struct sockaddr_in* addr)
+{
+    vassert(addr);
+
+    memset(addr, 0, sizeof(*addr));
+    addr->sin_family = AF_INET;
+    addr->sin_port   = htons(port);
+    addr->sin_addr.s_addr = htonl(ip);
+
+    return 0;
+}
+
+int vsockaddr_unconvert(struct sockaddr_in* addr, char* host, int len, uint16_t* port)
 {
     char* hostname = NULL;
 
@@ -184,9 +145,21 @@ int vsockaddr_unconvert(struct sockaddr_in* addr, char* host, int len, int* port
     return 0;
 }
 
+int vsockaddr_unconvert2(struct sockaddr_in* addr, uint32_t* ip, uint16_t* port)
+{
+    vassert(addr);
+    vassert(ip);
+    vassert(port);
+
+    *ip   = ntohl(addr->sin_addr.s_addr);
+    *port = ntohs(addr->sin_port);
+
+    return 0;
+}
+
 int vsockaddr_strlize(struct sockaddr_in* addr, char* buf, int len)
 {
-    int port = 0;
+    uint16_t port = 0;
     int ret  = 0;
     int sz   = 0;
 
@@ -238,18 +211,19 @@ int vsockaddr_combine(struct sockaddr_in* ip_part, struct sockaddr_in* port_part
     vassert(port_part);
     vassert(addr);
 
+    memset(addr, 0, sizeof(*addr));
+
     addr->sin_family = AF_INET;
     addr->sin_port = port_part->sin_port;
     addr->sin_addr = ip_part->sin_addr;
-    memset(&addr->sin_zero, 0, 8);
 
     return 0;
 }
 
 int vsockaddr_dump(struct sockaddr_in* addr)
 {
+    uint16_t port = 0;
     char ip[64];
-    int port = 0;
     int ret  = 0;
     vassert(addr);
 
@@ -259,17 +233,5 @@ int vsockaddr_dump(struct sockaddr_in* addr)
     retE((ret < 0));
     vdump(printf("ADDR:%s:%d", ip, port));
     return 0;
-}
-
-uint32_t vsockaddr_get_ip(struct sockaddr_in* addr)
-{
-    vassert(addr);
-    return (uint32_t)ntohl(addr->sin_addr.s_addr);
-}
-
-uint16_t vsockaddr_get_port(struct sockaddr_in* addr)
-{
-    vassert(addr);
-    return (uint16_t)ntohs(addr->sin_port);
 }
 

@@ -1,6 +1,33 @@
 #include "vglobal.h"
 #include "vstun.h"
 
+struct vattr_enc_routine {
+    uint16_t attr;
+    int (*enc_cb)(struct vstun_msg*, char*, int);
+};
+
+struct vattr_dec_routine {
+    uint16_t attr;
+    int (*dec_cb)(char*, int, struct vstun_msg*);
+};
+
+struct vmsg_proc_routine {
+    uint16_t mtype;
+    int (*proc_cb)(struct vstun*);
+};
+
+static
+void vattr_addrv4_init(struct vattr_addrv4* addr, struct sockaddr_in* s_addr)
+{
+    vassert(addr);
+    vassert(s_addr);
+
+    addr->family = family_ipv4;
+    addr->pad    = 0;
+    vsockaddr_unconvert2(s_addr, &addr->addr, &addr->port);
+    return ;
+}
+
 static
 void vattr_addrv4_enc(struct vattr_addrv4* addr, char* buf, int len)
 {
@@ -19,6 +46,37 @@ void vattr_addrv4_enc(struct vattr_addrv4* addr, char* buf, int len)
     sz += sizeof(uint16_t);
     set_uint32(offset_addr(buf, sz), addr->port);
 
+    return ;
+}
+
+static
+void vattr_addrv4_dec(char* buf, int len, struct vattr_addrv4* addr)
+{
+    int sz = 0;
+    vassert(buf);
+    vassert(addr);
+    vassert(len == 8);
+
+    addr->pad = 0;
+    sz += sizeof(uint8_t);
+    addr->family = get_uint8(offset_addr(buf, sz));
+    sz += sizeof(uint8_t);
+    addr->port = get_uint16(offset_addr(buf, sz));
+    sz += sizeof(uint16_t);
+    addr->addr = get_uint32(offset_addr(buf, sz));
+    addr->port = ntohs(addr->port);
+    addr->addr = ntohl(addr->addr);
+    return ;
+}
+
+static
+void vattr_addrv4_copy(struct vattr_addrv4* dest, struct vattr_addrv4* src)
+{
+    vassert(dest);
+    vassert(src);
+
+    memset(dest, 0,   sizeof(*dest));
+    memcpy(dest, src, sizeof(*dest));
     return ;
 }
 
@@ -250,11 +308,6 @@ int _vattr_enc_unkown_attrs(struct vstun_msg* msg, char* buf, int len)
     return 0;
 }
 
-struct vattr_enc_routine {
-    uint16_t attr;
-    int (*enc_cb)(struct vstun_msg*, char*, int);
-};
-
 static
 struct vattr_enc_routine attr_enc_routines[] = {
     {attr_mapped_addr,     _vattr_enc_mapped_addr    },
@@ -274,52 +327,6 @@ struct vattr_enc_routine attr_enc_routines[] = {
     {attr_unknown_attr,    _vattr_enc_unkown_attrs   },
     {0, 0}
 };
-
-static
-int _vstun_msg_enc(struct vstun* stun, char* buf, int len)
-{
-    struct vattr_enc_routine* routine = attr_enc_routines;
-    struct vstun_msg_header* hdr = (struct vstun_msg_header*)buf;
-    struct vstun_msg* rsp = &stun->rsp;
-    int ret = 0;
-    int sz  = 0;
-
-    vassert(stun);
-    vassert(buf);
-    vassert(len > 0);
-
-    memcpy(hdr, &rsp->header, sizeof(*hdr));
-    hdr->type = ntohs(hdr->type);
-    hdr->len  = ntohs(hdr->len);
-    sz += sizeof(*hdr);
-
-    for (; routine->enc_cb; routine++) {
-        ret = routine->enc_cb(rsp, buf + sz, len - sz);
-        retE((ret < 0));
-        sz  += ret;
-    }
-    return sz;
-}
-
-static
-void vattr_addrv4_dec(char* buf, int len, struct vattr_addrv4* addr)
-{
-    int sz = 0;
-    vassert(buf);
-    vassert(addr);
-    vassert(len == 8);
-
-    addr->pad = 0;
-    sz += sizeof(uint8_t);
-    addr->family = get_uint8(offset_addr(buf, sz));
-    sz += sizeof(uint8_t);
-    addr->port = get_uint16(offset_addr(buf, sz));
-    sz += sizeof(uint16_t);
-    addr->addr = get_uint32(offset_addr(buf, sz));
-    addr->port = ntohs(addr->port);
-    addr->addr = ntohl(addr->addr);
-    return ;
-}
 
 static
 int _vattr_dec_mapped_addr(char* buf, int len, struct vstun_msg* msg)
@@ -518,11 +525,6 @@ int _vattr_dec_unknown_attrs(char* buf, int len, struct vstun_msg* msg)
     return 0;
 }
 
-struct vattr_dec_routine {
-    uint16_t attr;
-    int (*dec_cb)(char*, int, struct vstun_msg*);
-};
-
 static
 struct vattr_dec_routine attr_dec_routines[] = {
     {attr_mapped_addr,     _vattr_dec_mapped_addr     },
@@ -542,6 +544,70 @@ struct vattr_dec_routine attr_dec_routines[] = {
     {attr_unknown_attr,    _vattr_dec_unknown_attrs   },
     {0, 0}
 };
+
+static
+int vmsg_proc_bind_req(struct vstun* stun)
+{
+    struct vstun_msg* req = &stun->req;
+    struct vstun_msg* rsp = &stun->rsp;
+    vassert(stun);
+
+    memset(rsp, 0, sizeof(*rsp));
+    rsp->header.type = msg_bind_rsp;
+    memcpy(rsp->header.token, req->header.token, 16);
+    if (req->has_xor_only) {
+        //todo;
+    } else {
+        rsp->has_xor_only = 0;
+        rsp->has_mapped_addr = 1;
+        vattr_addrv4_copy(&rsp->mapped_addr, &stun->from);
+    }
+    if (stun->has_source_addr) {
+        rsp->has_source_addr = 1;
+        vattr_addrv4_copy(&rsp->source_addr, &stun->source);
+    }
+    if (stun->has_alt_addr) {
+        rsp->has_changed_addr = 1;
+        vattr_addrv4_copy(&rsp->changed_addr, &stun->alt);
+    }
+    if (stun->has_second_addr) {
+        rsp->has_second_addr = 1;
+        vattr_addrv4_copy(&rsp->second_addr, &stun->second);
+    }
+    return 0;
+}
+
+static
+struct vmsg_proc_routine msg_proc_routines[] = {
+    { msg_bind_req, vmsg_proc_bind_req },
+    { 0, 0 }
+};
+
+static
+int _vstun_msg_enc(struct vstun* stun, char* buf, int len)
+{
+    struct vattr_enc_routine* routine = attr_enc_routines;
+    struct vstun_msg_header* hdr = (struct vstun_msg_header*)buf;
+    struct vstun_msg* rsp = &stun->rsp;
+    int ret = 0;
+    int sz  = 0;
+
+    vassert(stun);
+    vassert(buf);
+    vassert(len > 0);
+
+    memcpy(hdr, &rsp->header, sizeof(*hdr));
+    hdr->type = ntohs(hdr->type);
+    hdr->len  = ntohs(hdr->len);
+    sz += sizeof(*hdr);
+
+    for (; routine->enc_cb; routine++) {
+        ret = routine->enc_cb(rsp, buf + sz, len - sz);
+        retE((ret < 0));
+        sz  += ret;
+    }
+    return sz;
+}
 
 static
 int _vstun_msg_dec(struct vstun* stun, char* buf, int len)
@@ -588,60 +654,6 @@ int _vstun_msg_dec(struct vstun* stun, char* buf, int len)
 }
 
 static
-void vattr_addrv4_copy(struct vattr_addrv4* dest, struct vattr_addrv4* src)
-{
-    vassert(dest);
-    vassert(src);
-
-    memset(dest, 0,   sizeof(*dest));
-    memcpy(dest, src, sizeof(*dest));
-    return ;
-}
-
-static
-int vstun_msg_handle_bind_req(struct vstun* stun)
-{
-    struct vstun_msg* req = &stun->req;
-    struct vstun_msg* rsp = &stun->rsp;
-    vassert(stun);
-
-    memset(rsp, 0, sizeof(*rsp));
-    rsp->header.type = msg_bind_rsp;
-    memcpy(rsp->header.token, req->header.token, 16);
-    if (req->has_xor_only) {
-        //todo;
-    } else {
-        rsp->has_xor_only = 0;
-        rsp->has_mapped_addr = 1;
-        vattr_addrv4_copy(&rsp->mapped_addr, &stun->from);
-    }
-    if (stun->has_source_addr) {
-        rsp->has_source_addr = 1;
-        vattr_addrv4_copy(&rsp->source_addr, &stun->source);
-    }
-    if (stun->has_alt_addr) {
-        rsp->has_changed_addr = 1;
-        vattr_addrv4_copy(&rsp->changed_addr, &stun->alt);
-    }
-    if (stun->has_second_addr) {
-        rsp->has_second_addr = 1;
-        vattr_addrv4_copy(&rsp->second_addr, &stun->second);
-    }
-    return 0;
-}
-
-struct vmsg_proc_routine {
-    uint16_t mtype;
-    int (*proc_cb)(struct vstun*);
-};
-
-static
-struct vmsg_proc_routine msg_proc_routines[] = {
-    { msg_bind_req, vstun_msg_handle_bind_req },
-    { 0, 0 }
-};
-
-static
 int _vstun_msg_proc(struct vstun* stun)
 {
     struct vmsg_proc_routine* routine = msg_proc_routines;
@@ -661,10 +673,26 @@ int _vstun_msg_proc(struct vstun* stun)
     return 0;
 }
 
+static
+int _vstun_render_srvc(struct vstun* stun)
+{
+    struct vattr_addrv4* source = &stun->source;
+    struct vhost* host = stun->host;
+    struct sockaddr_in addr;
+    int ret = 0;
+    vassert(stun);
+
+    vsockaddr_convert2(source->addr, source->port, &addr);
+    ret = host->ops->plug(host, PLUGIN_STUN, &addr);
+    retE((ret < 0));
+    return 0;
+}
+
 struct vstun_ops stun_core_ops = {
-    .encode_msg = _vstun_msg_enc,
-    .decode_msg = _vstun_msg_dec,
-    .proc_msg   = _vstun_msg_proc
+    .encode_msg  = _vstun_msg_enc,
+    .decode_msg  = _vstun_msg_dec,
+    .proc_msg    = _vstun_msg_proc,
+    .render_srvc = _vstun_render_srvc
 };
 
 static
@@ -676,11 +704,7 @@ int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
     vassert(stun);
     vassert(mu);
 
-    stun->from.family = AF_INET;
-    stun->from.pad  = 0;
-    stun->from.addr = vsockaddr_get_ip  (to_sockaddr_sin(mu->addr));
-    stun->from.port = vsockaddr_get_port(to_sockaddr_sin(mu->addr));
-
+    vattr_addrv4_init(&stun->from, to_sockaddr_sin(mu->addr));
     ret = stun->ops->decode_msg(stun, mu->data, mu->len);
     retE((ret < 0));
     ret = stun->ops->proc_msg(stun);
@@ -745,53 +769,45 @@ int _aux_stun_get_addr(struct vconfig* cfg, struct sockaddr_in* addr)
     return 0;
 }
 
-struct vstun* vstun_create(struct vconfig* cfg)
+int vstun_init(struct vstun* stun, struct vhost* host, struct vconfig* cfg)
 {
     struct sockaddr_in addr;
-    struct vstun* stun = NULL;
     int ret = 0;
 
     vassert(cfg);
-
-    ret = _aux_stun_get_addr(cfg, &addr);
-    retE_p((ret < 0));
-    stun = (struct vstun*)malloc(sizeof(*stun));
-    vlog((!stun), elog_malloc);
-    retE_p((!stun));
     memset(stun, 0, sizeof(*stun));
+    ret = _aux_stun_get_addr(cfg, &addr);
+    retE((ret < 0));
 
-    stun->has_source_addr = 0;
+    stun->has_source_addr = 1;
+    vattr_addrv4_init(&stun->source, &addr);
+
     stun->has_alt_addr    = 0;
     stun->has_second_addr = 0;
-    stun->ops = &stun_core_ops;
+    stun->host = host;
+    stun->ops  = &stun_core_ops;
 
     ret += vmsger_init(&stun->msger);
     ret += vrpc_init(&stun->rpc, &stun->msger, VRPC_UDP, to_vsockaddr_from_sin(&addr));
-    ret += vwaiter_init(&stun->waiter);
     if (ret < 0) {
-        vwaiter_deinit(&stun->waiter);
         vrpc_deinit(&stun->rpc);
         vmsger_deinit(&stun->msger);
-        return NULL;
+        return -1;
     }
-    stun->waiter.ops->add(&stun->waiter, &stun->rpc);
-    vmsger_reg_pack_cb  (&stun->msger, _aux_stun_pack_msg_cb, stun);
+    vmsger_reg_pack_cb  (&stun->msger, _aux_stun_pack_msg_cb,   stun);
     vmsger_reg_unpack_cb(&stun->msger, _aux_stun_unpack_msg_cb, stun);
     stun->msger.ops->add_cb(&stun->msger, stun, _aux_stun_msg_cb, VMSG_STUN);
 
     return 0;
 }
 
-void vstun_destroy(struct vstun* stun)
+void vstun_deinit(struct vstun* stun)
 {
     vassert(stun);
 
-    stun->waiter.ops->remove(&stun->waiter, &stun->rpc);
-    vwaiter_deinit(&stun->waiter);
     vrpc_deinit   (&stun->rpc);
     vmsger_deinit (&stun->msger);
 
-    free(stun);
     return ;
 }
 

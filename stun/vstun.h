@@ -1,25 +1,31 @@
 #ifndef __VSTUN_H__
 #define __VSTUN_H__
 
+#include "vcfg.h"
 #include "vrpc.h"
 #include "vmsger.h"
 
 enum {
-    attr_mapped_addr  = ((uint16_t)0x0001),
-    attr_rsp_addr     = ((uint16_t)0x0002),
-    attr_chg_req      = ((uint16_t)0x0003),
-    attr_source_addr  = ((uint16_t)0x0004),
-    attr_changed_addr = ((uint16_t)0x0005),
-    attr_username     = ((uint16_t)0x0006),
-    attr_password     = ((uint16_t)0x0007),
-    attr_msg_intgrity = ((uint16_t)0x0008),
-    attr_err_code     = ((uint16_t)0x0009),
-    attr_unknown_attr = ((uint16_t)0x000A),
+    family_ipv4 = ((uint8_t)0x01),
+    family_ipv6 = ((uint8_t)0x02)
+};
+
+enum {
+    attr_mapped_addr     = ((uint16_t)0x0001),
+    attr_rsp_addr        = ((uint16_t)0x0002),
+    attr_chg_req         = ((uint16_t)0x0003),
+    attr_source_addr     = ((uint16_t)0x0004),
+    attr_changed_addr    = ((uint16_t)0x0005),
+    attr_username        = ((uint16_t)0x0006),
+    attr_password        = ((uint16_t)0x0007),
+    attr_msg_intgrity    = ((uint16_t)0x0008),
+    attr_err_code        = ((uint16_t)0x0009),
+    attr_unknown_attr    = ((uint16_t)0x000A),
     attr_reflected_from  = ((uint16_t)0x000B),
     attr_xor_mapped_addr = ((uint16_t)0x8020),
-    attr_xor_only     = ((uint16_t)0x0021),
-    attr_server_name  = ((uint16_t)0x8022),
-    attr_second_addr  = ((uint16_t)0x8050) // non standard extension.
+    attr_xor_only        = ((uint16_t)0x0021),
+    attr_server_name     = ((uint16_t)0x8022),
+    attr_second_addr     = ((uint16_t)0x8050) // non standard extension.
 };
 
 enum {
@@ -109,11 +115,13 @@ struct vstun_msg {
     struct vattr_addrv4 second_addr;
 };
 
+struct vhost;
 struct vstun;
 struct vstun_ops {
-    int (*encode_msg)(struct vstun*, char*, int);
-    int (*decode_msg)(struct vstun*, char*, int);
-    int (*proc_msg)  (struct vstun*);
+    int (*encode_msg) (struct vstun*, char*, int);
+    int (*decode_msg) (struct vstun*, char*, int);
+    int (*proc_msg)   (struct vstun*);
+    int (*render_srvc)(struct vstun*);
 };
 
 struct vstun {
@@ -128,15 +136,15 @@ struct vstun {
     struct vstun_msg req;
     struct vstun_msg rsp;
 
-    struct vrpc    rpc;
-    struct vmsger  msger;
-    struct vwaiter waiter;
+    struct vhost* host;
+    struct vrpc   rpc;
+    struct vmsger msger;
 
     struct vstun_ops* ops;
 };
 
-struct vstun* vstun_create(struct vconfig*);
-void vstun_destroy(struct vstun*);
+int  vstun_init  (struct vstun*, struct vhost*, struct vconfig*);
+void vstun_deinit(struct vstun*);
 
 #endif
 
