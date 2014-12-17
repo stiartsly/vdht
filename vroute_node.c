@@ -309,6 +309,10 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
     vassert(space);
     vassert(info);
 
+    if (vtoken_equal(&info->id, &space->own->id) ||
+        vsockaddr_equal(&info->addr, &space->own->addr)) {
+        return 0;
+    }
     if (vtoken_equal(&space->own->ver, &info->ver)) {
         flags |= PROP_VER;
     }
