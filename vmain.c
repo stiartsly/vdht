@@ -48,6 +48,7 @@ void show_version(void)
 int main(int argc, char** argv)
 {
     struct vhost*  host = NULL;
+    struct vstun*  stun = NULL;
     struct vconfig cfg;
     char* cfg_file = NULL;
     int opt_idx = 0;
@@ -129,21 +130,33 @@ int main(int argc, char** argv)
     }
     ret = cfg.ops->parse(&cfg, cfg_file);
     if (ret < 0) {
-        printf("config file not exist or containing wrong format.\n");
+        printf("config file not exist or containing wrong format\n");
         vconfig_deinit(&cfg);
         exit(-1);
     }
 
     host = vhost_create(&cfg);
     if (!host) {
+        printf("failed to create vhost\n");
+        vconfig_deinit(&cfg);
+        exit(-1);
+    }
+    stun = vstun_create(host, &cfg);
+    if (!stun) {
+        printf("failed to create vstun\n");
+        vhost_destroy(host);
         vconfig_deinit(&cfg);
         exit(-1);
     }
 
     host->ops->stabilize(host);
     host->ops->start(host);
+    stun->ops->daemonize(stun);
+    stun->ops->render(stun);
     host->ops->loop(host);
 
+    stun->ops->unrender(stun);
+    vstun_destroy(stun);
     vhost_destroy(host);
     vconfig_deinit(&cfg);
     return 0;

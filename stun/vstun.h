@@ -126,6 +126,7 @@ struct vstun_core_ops {
     int (*render)   (struct vstun*);
     int (*unrender) (struct vstun*);
     int (*daemonize)(struct vstun*);
+    int (*stop)     (struct vstun*);
 };
 
 struct vstun_cache {

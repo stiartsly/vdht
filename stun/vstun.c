@@ -42,10 +42,20 @@ int _vstun_daemonize(struct vstun* stun)
     return 0;
 }
 
+static
+int _vstun_stop(struct vstun* stun)
+{
+    vassert(stun);
+
+    //todo;
+    return 0;
+}
+
 struct vstun_core_ops stun_ops = {
     .render    = _vstun_render_service,
     .unrender  = _vstun_unrender_service,
-    .daemonize = _vstun_daemonize
+    .daemonize = _vstun_daemonize,
+    .stop      = _vstun_stop
 };
 
 static
@@ -183,10 +193,11 @@ struct vstun* vstun_create(struct vhost* host, struct vconfig* cfg)
     return stun;
 }
 
-void vstun_deinit(struct vstun* stun)
+void vstun_destroy(struct vstun* stun)
 {
     vassert(stun);
 
+    stun->ops->stop(stun);
     stun->waiter.ops->remove(&stun->waiter, &stun->rpc);
     vwaiter_deinit(&stun->waiter);
     vrpc_deinit   (&stun->rpc);
