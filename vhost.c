@@ -9,13 +9,10 @@ static
 int _vhost_start(struct vhost* host)
 {
     struct vnode* node = &host->node;
-    struct vstun* stun = &host->stun;
     int ret = 0;
     vassert(host);
     vassert(node);
 
-    ret = stun->ops->render_srvc(stun);
-    retE((ret < 0));
     ret = node->ops->start(node);
     retE((ret < 0));
     vlogI(printf("Host started"));
@@ -30,13 +27,10 @@ static
 int _vhost_stop(struct vhost* host)
 {
     struct vnode* node = &host->node;
-    struct vstun* stun = &host->stun;
     int ret = 0;
     vassert(host);
 
     ret = node->ops->stop(node);
-    retE((ret < 0));
-    ret = stun->ops->unrender_srvc(stun);
     retE((ret < 0));
     vlogI(printf("Host stopped"));
     return 0;
@@ -450,9 +444,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vspy_init   (&host->spy, cfg);
-    ret += vstun_init  (&host->stun, host, cfg);
     if (ret < 0) {
-        vstun_deinit   (&host->stun);
         vspy_deinit    (&host->spy);
         vlsctl_deinit  (&host->lsctl);
         vwaiter_deinit (&host->waiter);
@@ -467,7 +459,6 @@ struct vhost* vhost_create(struct vconfig* cfg)
 
     host->waiter.ops->add(&host->waiter, &host->rpc);
     host->waiter.ops->add(&host->waiter, &host->lsctl.rpc);
-    host->waiter.ops->add(&host->waiter, &host->stun.rpc);
     vmsger_reg_pack_cb  (&host->msger, _aux_vhost_pack_msg_cb  , host);
     vmsger_reg_unpack_cb(&host->msger, _aux_vhost_unpack_msg_cb, host);
 
@@ -481,7 +472,6 @@ void vhost_destroy(struct vhost* host)
     host->waiter.ops->remove(&host->waiter, &host->lsctl.rpc);
     host->waiter.ops->remove(&host->waiter, &host->rpc);
 
-    vstun_deinit  (&host->stun);
     vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);

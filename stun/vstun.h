@@ -115,17 +115,20 @@ struct vstun_msg {
     struct vattr_addrv4 second_addr;
 };
 
-struct vhost;
 struct vstun;
-struct vstun_ops {
-    int (*encode_msg)   (struct vstun*, char*, int);
-    int (*decode_msg)   (struct vstun*, char*, int);
-    int (*proc_msg)     (struct vstun*);
-    int (*render_srvc)  (struct vstun*);
-    int (*unrender_srvc)(struct vstun*);
+struct vstun_msg_ops {
+    int (*encode)(struct vstun*, struct vstun_msg*, char*, int);
+    int (*decode)(struct vstun*, char*, int, struct vstun_msg*);
+    int (*handle)(struct vstun*, struct vstun_msg*, struct vstun_msg*);
 };
 
-struct vstun {
+struct vstun_core_ops {
+    int (*render)   (struct vstun*);
+    int (*unrender) (struct vstun*);
+    int (*daemonize)(struct vstun*);
+};
+
+struct vstun_cache {
     int has_source_addr;
     struct vattr_addrv4 source;
     int has_alt_addr;
@@ -134,18 +137,23 @@ struct vstun {
     struct vattr_addrv4 second;
 
     struct vattr_addrv4 from;
-    struct vstun_msg req;
-    struct vstun_msg rsp;
+};
 
+struct vhost;
+struct vstun {
     struct vhost* host;
     struct vrpc   rpc;
     struct vmsger msger;
+    struct vwaiter waiter;
 
-    struct vstun_ops* ops;
+    struct vstun_cache cache;
+
+    struct vstun_msg_ops*  msg_ops;
+    struct vstun_core_ops* ops;
 };
 
-int  vstun_init  (struct vstun*, struct vhost*, struct vconfig*);
-void vstun_deinit(struct vstun*);
+struct vstun* vstun_create(struct vhost*, struct vconfig*);
+void vstun_destroy(struct vstun*);
 
 #endif
 

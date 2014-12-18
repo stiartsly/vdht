@@ -274,7 +274,7 @@ void vnodeAddr_dump (vnodeAddr* addr)
 
     vassert(addr);
     vtoken_dump(&addr->id);
-    ret = vsockaddr_unconvert(&addr->addr, ip, 64, &port);
+    ret = vsockaddr_unconvert(&addr->addr, ip, 64, (uint16_t*)&port);
     vlog((ret < 0), elog_vsockaddr_unconvert);
     retE_v((ret < 0));
     printf("##Addr: %s:%d\n", ip, port);
