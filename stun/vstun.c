@@ -34,20 +34,55 @@ int _vstun_unrender_service(struct vstun * stun)
 }
 
 static
+int _aux_stun_daemon_entry(void* argv)
+{
+    struct vstun* stun = (struct vstun*)argv;
+    struct vwaiter* waiter = &stun->waiter;
+    int ret = 0;
+
+    vassert(stun);
+    vassert(waiter);
+
+    vlogI(printf("stun service started"));
+    while(!stun->to_quit) {
+        ret = waiter->ops->laundry(waiter);
+        if (ret < 0) {
+            continue;
+        }
+    }
+    vlogI(printf("stun service stopped"));
+    return 0;
+}
+
+static
 int _vstun_daemonize(struct vstun* stun)
 {
+    int ret = 0;
     vassert(stun);
 
-    //todo;
+    stun->daemonized = 0;
+    stun->to_quit    = 0;
+
+    ret = vthread_init(&stun->daemon_thread, _aux_stun_daemon_entry, stun);
+    retE((ret < 0));
+    stun->daemonized = 1;
+    vthread_start(&stun->daemon_thread);
+
     return 0;
 }
 
 static
 int _vstun_stop(struct vstun* stun)
 {
+    int ret_code = 0;
+    int ret = 0;
     vassert(stun);
 
-    //todo;
+    if (stun->daemonized) {
+        stun->to_quit = 1;
+        ret = vthread_join(&stun->daemon_thread, &ret_code);
+        retE((ret < 0));
+    }
     return 0;
 }
 
@@ -74,10 +109,10 @@ static
 int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
     struct vstun* stun = (struct vstun*)cookie;
-    struct vstun_msg req;
-    struct vstun_msg rsp;
+    struct vstun_msg req, rsp;
     void* buf = NULL;
     int ret = 0;
+
     vassert(stun);
     vassert(mu);
 
@@ -93,6 +128,7 @@ int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
     buf = malloc(BUF_SZ);
     vlog((!buf), elog_malloc);
     retE((!buf));
+
     ret = stun->msg_ops->encode(stun, &rsp, buf, BUF_SZ);
     ret1E((ret < 0), free(buf));
     {
@@ -112,6 +148,8 @@ static
 int _aux_stun_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys* sm)
 {
     vassert(cookie);
+    vassert(um);
+    vassert(sm);
     retE((um->msgId != VMSG_STUN));
 
     vmsg_sys_init(sm, um->addr, um->len, um->data);

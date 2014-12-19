@@ -142,6 +142,10 @@ struct vstun_cache {
 
 struct vhost;
 struct vstun {
+    struct vthread daemon_thread;
+    int daemonized;
+    int to_quit;
+
     struct vhost* host;
     struct vrpc   rpc;
     struct vmsger msger;
