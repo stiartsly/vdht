@@ -51,17 +51,16 @@ void be_free(struct be_node* node)
 }
 
 static
-int32_t _be_decode_int(char** data, int* data_len)
+int _be_decode_int(char** data, int* data_len, int32_t* int_val)
 {
     char *endp = NULL;
-    int32_t ret = 0;
 
     errno = 0;
-    ret  = (int32_t)strtol(*data, &endp, 10);
+    *int_val = (int32_t)strtol(*data, &endp, 10);
     retE((errno));
     *data_len -= (endp - *data);
     *data = endp;
-    return ret;
+    return 0;
 }
 
 static
@@ -69,9 +68,10 @@ char* _be_decode_str(char** data, int* data_len)
 {
     char* s = NULL;
     int32_t len = 0;
+    int ret = 0;
 
-    len = _be_decode_int(data, data_len);
-    retE_p((len < 0));
+    ret = _be_decode_int(data, data_len, &len);
+    retE_p((ret < 0));
     retE_p((len > *data_len - 1));
 
     if (**data == ':') {
@@ -127,9 +127,11 @@ struct be_node *_be_decode(char **data, int *data_len)
 
         /* empty list case. */
         if (i == 0){
-            node->val.l = (struct be_node**)realloc(node->val.l, sizeof(void*));
-            vlog((!node->val.d), elog_realloc);
-            ret1E_p((!node->val.l), be_free(node));
+            struct be_node** l = NULL;
+            l = (struct be_node**)realloc(node->val.l, sizeof(void*));
+            vlog((!l), elog_realloc);
+            ret1E_p((!l), be_free(node));
+            node->val.l = l;
         }
         node->val.l[i] = NULL;
         break;
@@ -159,22 +161,26 @@ struct be_node *_be_decode(char **data, int *data_len)
         ++(*data);
 
         if (i == 0) {
-            node->val.d = (struct be_dict*)realloc(node->val.d, sizeof(struct be_dict));
-            vlog((!node->val.d), elog_realloc);
-            ret1E_p((!node->val.d), be_free(node));
+            struct be_dict* d = NULL;
+            d = (struct be_dict*)realloc(node->val.d, sizeof(struct be_dict));
+            vlog((!d), elog_realloc);
+            ret1E_p((!d), be_free(node));
+            node->val.d = d;
         }
         node->val.d[i].val = NULL;
         break;
     }
     case 'i': { /* integers */
+        int ret = 0;
         node = be_alloc(BE_INT);
         vlog((!node), elog_be_alloc);
         retE_p((!node));
 
         --(*data_len);
         ++(*data);
-        node->val.i = _be_decode_int(data, data_len);
-        retE_p((**data != 'e'));
+        ret = _be_decode_int(data, data_len, &node->val.i);
+        ret1E_p((ret < 0), be_free(node));
+        ret1E_p((**data != 'e'), be_free(node));
         --(*data_len);
         ++(*data);
         break;
