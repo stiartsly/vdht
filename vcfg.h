@@ -10,6 +10,7 @@ struct vconfig_ops {
     int  (*get_int_ext)(struct vconfig*, const char*, int*, int);
     int  (*get_str)    (struct vconfig*, const char*, char*, int);
     int  (*get_str_ext)(struct vconfig*, const char*, char*, int, char*);
+    int  (*check_section)(struct vconfig*, char*);
 };
 
 struct vconfig_inst_ops {

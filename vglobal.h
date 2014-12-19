@@ -68,6 +68,7 @@
 #define snprintf
 #define sscanf
 #define strcmp
+#define strncmp
 #define strtol
 #define strchr
 #define strcat

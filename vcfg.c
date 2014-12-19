@@ -567,6 +567,29 @@ int _vcfg_get_str_ext(struct vconfig* cfg, const char* key, char* value, int sz,
 }
 
 static
+int _vcfg_check_section(struct vconfig* cfg, char* section)
+{
+    struct vcfg_item* item = NULL;
+    struct vlist* node = NULL;
+    int len = strlen(section);
+    int found = 0;
+
+    vassert(cfg);
+    vassert(section);
+
+    vlock_enter(&cfg->lock);
+    __vlist_for_each(node, &cfg->items) {
+        item = vlist_entry(node, struct vcfg_item, list);
+        if ((len < strlen(item->key)) && !strncmp(section, item->key, len)) {
+            found = 1;
+            break;
+        }
+    }
+    vlock_leave(&cfg->lock);
+    return found;
+}
+
+static
 struct vconfig_ops cfg_ops = {
     .parse       = _vcfg_parse,
     .clear       = _vcfg_clear,
@@ -574,7 +597,8 @@ struct vconfig_ops cfg_ops = {
     .get_int     = _vcfg_get_int,
     .get_int_ext = _vcfg_get_int_ext,
     .get_str     = _vcfg_get_str,
-    .get_str_ext = _vcfg_get_str_ext
+    .get_str_ext = _vcfg_get_str_ext,
+    .check_section = _vcfg_check_section
 };
 
 static
