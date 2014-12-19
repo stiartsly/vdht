@@ -113,7 +113,7 @@ struct be_node *_be_decode(char **data, int *data_len)
         ++(*data);
         while (**data != 'e') {
             struct be_node** l = NULL;
-            l = (struct be_node**)realloc(node->val.l, (i+2)*sizeof(void*));
+            l = (struct be_node**)realloc(node->val.l, (i+2)*sizeof(struct be_node**));
             vlog((!l), elog_realloc);
             ret1E_p((!l), be_free(node));
             node->val.l = l;
@@ -128,7 +128,7 @@ struct be_node *_be_decode(char **data, int *data_len)
         /* empty list case. */
         if (i == 0){
             struct be_node** l = NULL;
-            l = (struct be_node**)realloc(node->val.l, sizeof(void*));
+            l = (struct be_node**)realloc(node->val.l, sizeof(struct be_node**));
             vlog((!l), elog_realloc);
             ret1E_p((!l), be_free(node));
             node->val.l = l;
@@ -336,12 +336,12 @@ int be_add_list(struct be_node *list, struct be_node *node)
     vassert(node);
     vassert(list->type == BE_LIST);
 
-    l = (struct be_node**)realloc(list->val.l, (i + 2)*sizeof(void*));
+    for (; list->val.l[i]; i++);
+    l = (struct be_node**)realloc(list->val.l, (i + 2)*sizeof(struct be_node**));
     vlog((!l), elog_realloc);
     retE((!l));
     list->val.l = l;
 
-    for (; list->val.l[i]; i++);
     list->val.l[i] = node;
     i++;
     list->val.l[i] = NULL;
