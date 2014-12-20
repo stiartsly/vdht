@@ -49,6 +49,7 @@ struct vconfig_inst_ops {
     int (*get_get_peers_rsp_cap) (struct vconfig*, int*);
 
     int (*get_stun_port)         (struct vconfig*, int*);
+    int (*get_stun_server_name)  (struct vconfig*, char*, int);
 };
 
 struct vconfig {

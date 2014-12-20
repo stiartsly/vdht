@@ -1093,6 +1093,20 @@ int _vcfg_get_stun_port(struct vconfig* cfg, int* port)
 }
 
 static
+int _vcfg_get_stun_server_name(struct vconfig* cfg, char* buf, int len)
+{
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(buf);
+    vassert(len > 0);
+
+    ret = cfg->ops->get_str_ext(cfg, "stun.name", buf, len, "empty");
+    retE((ret < 0));
+    return 0;
+}
+
+static
 struct vconfig_inst_ops cfg_inst_ops = {
     .get_lsctl_unix_path    = _vcfg_get_lsctl_unix_path,
     .get_host_tick_tmo      = _vcfg_get_host_tick_tmo,
@@ -1128,7 +1142,8 @@ struct vconfig_inst_ops cfg_inst_ops = {
     .get_get_peers_cap      = _vcfg_get_get_peers_cap,
     .get_get_peers_rsp_cap  = _vcfg_get_get_peers_rsp_cap,
 
-    .get_stun_port          = _vcfg_get_stun_port
+    .get_stun_port          = _vcfg_get_stun_port,
+    .get_stun_server_name   = _vcfg_get_stun_server_name
 };
 
 int vconfig_init(struct vconfig* cfg)

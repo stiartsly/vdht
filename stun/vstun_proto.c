@@ -13,7 +13,7 @@ struct vattr_dec_routine {
 
 struct vmsg_proc_routine {
     uint16_t mtype;
-    int (*proc_cb)(struct vstun_msg*, struct vstun_msg*, struct vstun_cache*);
+    int (*proc_cb)(struct vstun_msg*, void*);
 };
 
 static
@@ -58,17 +58,6 @@ void vattr_addrv4_dec(char* buf, int len, struct vattr_addrv4* addr)
 }
 
 static
-void vattr_addrv4_copy(struct vattr_addrv4* dest, struct vattr_addrv4* src)
-{
-    vassert(dest);
-    vassert(src);
-
-    memset(dest, 0,   sizeof(*dest));
-    memcpy(dest, src, sizeof(*dest));
-    return ;
-}
-
-static
 int vattr_string_dec(char* buf, int len, struct vattr_string* str)
 {
     vassert(str);
@@ -103,151 +92,7 @@ int _vattr_enc_mapped_addr(struct vstun_msg* msg, char* buf, int len)
 }
 
 static
-int _vattr_enc_response_addr(struct vstun_msg* msg, char* buf, int len)
-{
-    struct vattr_header* attr = (struct vattr_header*)buf;
-    struct vattr_addrv4* addr = &msg->resp_addr;
-    int sz = 0;
-
-    vassert(msg);
-    vassert(buf);
-    vassert(len > 0);
-
-    retS((!msg->has_resp_addr));
-    attr->type = attr_rsp_addr;
-    attr->len  = 8;
-    sz += sizeof(*attr);
-
-    vattr_addrv4_enc(addr, (char*)(buf + 1), attr->len);
-    attr->type = htons(attr->type);
-    attr->len  = htons(attr->len);
-    sz += attr->len;
-
-    return sz;
-}
-
-static
-int _vattr_enc_change_req(struct vstun_msg* msg, char* buf, int len)
-{
-    struct vattr_header* attr = (struct vattr_header*)buf;
-    struct vattr_change_req* req = &msg->change_req;
-    int sz = 0;
-
-    vassert(msg);
-    vassert(buf);
-    vassert(len > 0);
-
-    retS((!msg->has_change_req));
-    attr->type = attr_changed_addr;
-    attr->len  = 4;
-    sz += sizeof(*attr);
-
-    set_uint32(offset_addr(buf, sz), htonl(req->value));
-    sz += sizeof(uint32_t);
-
-    return sz;
-}
-
-static
-int _vattr_enc_source_addr(struct vstun_msg* msg, char* buf, int len)
-{
-    struct vattr_header* attr = (struct vattr_header*)buf;
-    struct vattr_addrv4* addr = &msg->source_addr;
-    int sz = 0;
-
-    vassert(msg);
-    vassert(buf);
-    vassert(len > 0);
-
-    retS((!msg->has_source_addr));
-    attr->type = attr_source_addr;
-    attr->len  = 8;
-    sz += sizeof(*attr);
-
-    vattr_addrv4_enc(addr, (char*)(attr + 1), attr->len);
-    attr->type = htons(attr->type);
-    attr->len  = htons(attr->len);
-    sz += attr->len;
-
-    return sz;
-}
-
-static
-int _vattr_enc_changed_addr(struct vstun_msg* msg, char* buf, int len)
-{
-    struct vattr_header* attr = (struct vattr_header*)buf;
-    struct vattr_addrv4* addr = &msg->changed_addr;
-    int sz = 0;
-
-    vassert(msg);
-    vassert(buf);
-    vassert(len > 0);
-
-    retS((!msg->has_changed_addr));
-    attr->type = attr_source_addr;
-    attr->len  = 8;
-    sz += sizeof(*attr);
-
-    vattr_addrv4_enc(addr, (char*)(attr + 1), attr->len);
-    attr->type = htons(attr->type);
-    attr->len  = htons(attr->len);
-    sz += attr->len;
-
-    return sz;
-}
-
-static
-int _vattr_enc_username(struct vstun_msg* msg, char* buf, int len)
-{
-    vassert(msg);
-    vassert(buf);
-
-    //todo;
-    return 0;
-}
-
-static
-int _vattr_enc_password(struct vstun_msg* msg, char* buf, int len)
-{
-    vassert(msg);
-    vassert(buf);
-
-    //todo;
-    return 0;
-}
-
-static
-int _vattr_enc_msg_integrity(struct vstun_msg* msg, char* buf, int len)
-{
-    vassert(msg);
-    vassert(buf);
-
-    //todo;
-    return 0;
-}
-
-static
 int _vattr_enc_error_code(struct vstun_msg* msg, char* buf, int len)
-{
-    vassert(msg);
-    vassert(buf);
-
-    //todo;
-    return 0;
-}
-
-static
-int _vattr_enc_reflected_from(struct vstun_msg* msg, char* buf, int len)
-{
-    vassert(msg);
-    vassert(buf);
-
-    //todo;
-    return 0;
-}
-
-static
-int _vattr_enc_xor_mapped_addr(struct vstun_msg* msg, char* buf, int len)
 {
     vassert(msg);
     vassert(buf);
@@ -267,7 +112,7 @@ int _vattr_enc_server_name(struct vstun_msg* msg, char* buf, int len)
 }
 
 static
-int _vattr_enc_second_addr(struct vstun_msg* msg, char* buf, int len)
+int _vattr_enc_unknown_attrs(struct vstun_msg* msg, char* buf, int len)
 {
     vassert(msg);
     vassert(buf);
@@ -277,17 +122,7 @@ int _vattr_enc_second_addr(struct vstun_msg* msg, char* buf, int len)
 }
 
 static
-int _vattr_enc_xor_only(struct vstun_msg* msg, char* buf, int len)
-{
-    vassert(msg);
-    vassert(buf);
-
-    //todo;
-    return 0;
-}
-
-static
-int _vattr_enc_unkown_attrs(struct vstun_msg* msg, char* buf, int len)
+int _vattr_enc_todo_attrs(struct vstun_msg* msg, char* buf, int len)
 {
     vassert(msg);
     vassert(buf);
@@ -298,21 +133,20 @@ int _vattr_enc_unkown_attrs(struct vstun_msg* msg, char* buf, int len)
 
 static
 struct vattr_enc_routine attr_enc_routines[] = {
-    {attr_mapped_addr,     _vattr_enc_mapped_addr    },
-    {attr_rsp_addr   ,     _vattr_enc_response_addr  },
-    {attr_changed_addr,    _vattr_enc_change_req     },
-    {attr_source_addr ,    _vattr_enc_source_addr    },
-    {attr_changed_addr,    _vattr_enc_changed_addr   },
-    {attr_username,        _vattr_enc_username       },
-    {attr_password,        _vattr_enc_password       },
-    {attr_msg_intgrity,    _vattr_enc_msg_integrity  },
-    {attr_err_code,        _vattr_enc_error_code     },
-    {attr_reflected_from,  _vattr_enc_reflected_from },
-    {attr_xor_mapped_addr, _vattr_enc_xor_mapped_addr},
-    {attr_server_name,     _vattr_enc_server_name    },
-    {attr_second_addr,     _vattr_enc_second_addr    },
-    {attr_xor_only,        _vattr_enc_xor_only       },
-    {attr_unknown_attr,    _vattr_enc_unkown_attrs   },
+    {attr_mapped_addr,     _vattr_enc_mapped_addr  },
+    {attr_error_code,      _vattr_enc_error_code   },
+    {attr_server_name,     _vattr_enc_server_name  },
+    {attr_response_addr,   _vattr_enc_todo_attrs   },
+    {attr_changed_addr,    _vattr_enc_todo_attrs   },
+    {attr_source_addr ,    _vattr_enc_todo_attrs   },
+    {attr_changed_addr,    _vattr_enc_todo_attrs   },
+    {attr_username,        _vattr_enc_todo_attrs   },
+    {attr_password,        _vattr_enc_todo_attrs   },
+    {attr_msg_intgrity,    _vattr_enc_todo_attrs   },
+    {attr_reflected_from,  _vattr_enc_todo_attrs   },
+    {attr_xor_mapped_addr, _vattr_enc_todo_attrs   },
+    {attr_xor_only,        _vattr_enc_todo_attrs   },
+    {attr_unknown_attr,    _vattr_enc_unknown_attrs},
     {0, 0}
 };
 
@@ -330,103 +164,7 @@ int _vattr_dec_mapped_addr(char* buf, int len, struct vstun_msg* msg)
 }
 
 static
-int _vattr_dec_response_addr(char* buf, int len, struct vstun_msg* msg)
-{
-    struct vattr_addrv4* addr = &msg->resp_addr;
-    vassert(buf);
-    vassert(msg);
-
-    retE((len != 8));
-    msg->has_resp_addr = 1;
-    vattr_addrv4_dec(buf, len, addr);
-    return 0;
-}
-
-static
-int _vattr_dec_change_req(char* buf, int len, struct vstun_msg* msg)
-{
-    struct vattr_change_req* req = &msg->change_req;
-    vassert(buf);
-    vassert(msg);
-
-    retE((len != 4));
-    msg->has_change_req = 1;
-    req->value = get_uint32(buf);
-    req->value = ntohl(req->value);
-    return 0;
-}
-
-static
-int _vattr_dec_source_addr(char* buf, int len, struct vstun_msg* msg)
-{
-    struct vattr_addrv4* addr = &msg->source_addr;
-    vassert(buf);
-    vassert(msg);
-
-    retE((len != 8));
-    msg->has_source_addr = 1;
-    vattr_addrv4_dec(buf, len, addr);
-    return 0;
-}
-
-static
-int _vattr_dec_changed_addr(char* buf, int len, struct vstun_msg* msg)
-{
-    struct vattr_addrv4* addr = &msg->changed_addr;
-    vassert(buf);
-    vassert(msg);
-
-    retE((len != 8));
-    msg->has_changed_addr = 1;
-    vattr_addrv4_dec(buf, len, addr);
-    return 0;
-}
-
-static
-int _vattr_dec_username(char* buf, int len, struct vstun_msg* msg)
-{
-    struct vattr_string* name = &msg->username;
-    int ret = 0;
-
-    vassert(buf);
-    vassert(msg);
-
-    msg->has_username = 1;
-    ret = vattr_string_dec(buf, len, name);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vattr_dec_passwd(char* buf, int len, struct vstun_msg* msg)
-{
-    struct vattr_string* pswd = &msg->passwd;
-    int ret = 0;
-
-    vassert(buf);
-    vassert(msg);
-
-    msg->has_passwd = 1;
-    ret = vattr_string_dec(buf, len, pswd);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vattr_dec_integrity(char* buf, int len, struct vstun_msg* msg)
-{
-    vassert(msg);
-    vassert(buf);
-    vassert(len > 0);
-
-    msg->has_msg_integrity = 1;
-    //todo;
-    return 0;
-}
-
-
-static
-int _vattr_dec_error(char* buf, int len, struct vstun_msg* msg)
+int _vattr_dec_error_code(char* buf, int len, struct vstun_msg* msg)
 {
     vassert(msg);
     vassert(buf);
@@ -434,32 +172,6 @@ int _vattr_dec_error(char* buf, int len, struct vstun_msg* msg)
 
     msg->has_error_code = 1;
     //todo;
-    return 0;
-}
-
-static
-int _vattr_dec_reflected_from(char* buf, int len, struct vstun_msg* msg)
-{
-    struct vattr_addrv4* addr = &msg->reflected_from;
-    vassert(buf);
-    vassert(msg);
-
-    retE((len != 8));
-    msg->has_reflected_from = 1;
-    vattr_addrv4_dec(buf, len, addr);
-    return 0;
-}
-
-static
-int _vattr_dec_xor_mapped_addr(char* buf, int len, struct vstun_msg* msg)
-{
-    struct vattr_addrv4* addr = &msg->xor_mapped_addr;
-    vassert(buf);
-    vassert(msg);
-
-    retE((len != 8));
-    msg->has_xor_mapped_addr = 1;
-    vattr_addrv4_dec(buf, len, addr);
     return 0;
 }
 
@@ -479,30 +191,6 @@ int _vattr_dec_server_name(char* buf, int len, struct vstun_msg* msg)
 }
 
 static
-int _vattr_dec_secondary_addr(char* buf, int len, struct vstun_msg* msg)
-{
-    struct vattr_addrv4* addr = &msg->second_addr;
-    vassert(buf);
-    vassert(msg);
-
-    retE((len != 8));
-    msg->has_second_addr = 1;
-    vattr_addrv4_dec(buf, len, addr);
-    return 0;
-}
-
-static
-int _vattr_dec_xor_only(char* buf, int len, struct vstun_msg* msg)
-{
-    vassert(buf);
-    vassert(msg);
-
-    msg->has_xor_only = 1;
-    return 0;
-}
-
-
-static
 int _vattr_dec_unknown_attrs(char* buf, int len, struct vstun_msg* msg)
 {
     vassert(msg);
@@ -514,61 +202,89 @@ int _vattr_dec_unknown_attrs(char* buf, int len, struct vstun_msg* msg)
 }
 
 static
+int _vattr_dec_todo_attrs(char* buf, int len, struct vstun_msg* msg)
+{
+    vassert(msg);
+    vassert(buf);
+
+    //todo;
+    return 0;
+}
+
+static
 struct vattr_dec_routine attr_dec_routines[] = {
-    {attr_mapped_addr,     _vattr_dec_mapped_addr     },
-    {attr_rsp_addr   ,     _vattr_dec_response_addr   },
-    {attr_chg_req    ,     _vattr_dec_change_req      },
-    {attr_source_addr,     _vattr_dec_source_addr     },
-    {attr_changed_addr,    _vattr_dec_changed_addr    },
-    {attr_username,        _vattr_dec_username        },
-    {attr_password,        _vattr_dec_passwd          },
-    {attr_msg_intgrity,    _vattr_dec_integrity       },
-    {attr_err_code    ,    _vattr_dec_error           },
-    {attr_reflected_from,  _vattr_dec_reflected_from  },
-    {attr_xor_mapped_addr, _vattr_dec_xor_mapped_addr },
-    {attr_server_name,     _vattr_dec_server_name     },
-    {attr_second_addr,     _vattr_dec_secondary_addr  },
-    {attr_xor_only,        _vattr_dec_xor_only        },
-    {attr_unknown_attr,    _vattr_dec_unknown_attrs   },
+    {attr_mapped_addr,     _vattr_dec_mapped_addr  },
+    {attr_error_code,      _vattr_dec_error_code   },
+    {attr_server_name,     _vattr_dec_server_name  },
+    {attr_response_addr,   _vattr_dec_todo_attrs   },
+    {attr_change_request , _vattr_dec_todo_attrs   },
+    {attr_source_addr,     _vattr_dec_todo_attrs   },
+    {attr_changed_addr,    _vattr_dec_todo_attrs   },
+    {attr_username,        _vattr_dec_todo_attrs   },
+    {attr_password,        _vattr_dec_todo_attrs   },
+    {attr_msg_intgrity,    _vattr_dec_todo_attrs   },
+    {attr_reflected_from,  _vattr_dec_todo_attrs   },
+    {attr_xor_mapped_addr, _vattr_dec_todo_attrs   },
+    {attr_xor_only,        _vattr_dec_todo_attrs   },
+    {attr_unknown_attr,    _vattr_dec_unknown_attrs},
     {0, 0}
 };
 
 static
-int vmsg_proc_bind_req(struct vstun_msg* req, struct vstun_msg* rsp, struct vstun_cache* cache)
+int _vmsg_proc_bind_req(struct vstun_msg* msg, void* argv)
 {
+    varg_decl(argv, 0, struct vstun_msg*,   rsp );
+    varg_decl(argv, 1, struct sockaddr_in*, from);
+    varg_decl(argv, 2, char*, server_name);
     struct vstun_msg_header* hdr = &rsp->header;
-    vassert(req);
-    vassert(rsp);
+
+    vassert(msg);
+    vassert(argv);
 
     memset(rsp, 0, sizeof(*rsp));
     hdr->type = htons(msg_bind_rsp);
-    memcpy(hdr->token, req->header.token, 16);
+    memcpy(hdr->token, msg->header.token, 16);
 
-    if (req->has_xor_only) {
-        //todo;
-    } else {
-        rsp->has_xor_only = 0;
+    {
+        struct vattr_addrv4* addr = &rsp->mapped_addr;
         rsp->has_mapped_addr = 1;
-        vattr_addrv4_copy(&rsp->mapped_addr, &cache->from);
+        addr->pad = 0;
+        addr->family = family_ipv4;
+        vsockaddr_unconvert2(from, &addr->addr, &addr->port);
+        addr->addr = htonl(addr->addr);
+        addr->port = htons(addr->port);
     }
-    if (cache->has_source_addr) {
-        rsp->has_source_addr = 1;
-        vattr_addrv4_copy(&rsp->source_addr, &cache->source);
-    }
-    if (cache->has_alt_addr) {
-        rsp->has_changed_addr = 1;
-        vattr_addrv4_copy(&rsp->changed_addr, &cache->alt);
-    }
-    if (cache->has_second_addr) {
-        rsp->has_second_addr = 1;
-        vattr_addrv4_copy(&rsp->second_addr, &cache->second);
+    {
+        struct vattr_string* name = &rsp->server_name;
+        rsp->has_server_name = 1;
+        strcpy(name->value, server_name);
     }
     return 0;
 }
 
 static
+int _vmsg_proc_bind_rsp_suc(struct vstun_msg* msg, void* argv)
+{
+    vassert(msg);
+
+    //todo;
+    return 1;
+}
+
+static
+int _vmsg_proc_bind_rsp_err(struct vstun_msg* msg, void* argv)
+{
+    vassert(msg);
+
+    //todo;
+    return 1;
+}
+
+static
 struct vmsg_proc_routine msg_proc_routines[] = {
-    { msg_bind_req, vmsg_proc_bind_req },
+    { msg_bind_req,     _vmsg_proc_bind_req     },
+    { msg_bind_rsp,     _vmsg_proc_bind_rsp_suc },
+    { msg_bind_rsp_err, _vmsg_proc_bind_rsp_err },
     { 0, 0 }
 };
 
@@ -643,22 +359,21 @@ int _vstun_msg_dec(struct vstun* stun, char* buf, int len, struct vstun_msg* msg
 }
 
 static
-int _vstun_msg_proc(struct vstun* stun, struct vstun_msg* req, struct vstun_msg* rsp)
+int _vstun_msg_proc(struct vstun* stun, struct vstun_msg* msg, void* argv)
 {
     struct vmsg_proc_routine* routine = msg_proc_routines;
     int ret = 0;
 
     vassert(stun);
-    vassert(req);
-    vassert(rsp);
+    vassert(msg);
 
     for (; routine->proc_cb; routine++) {
-        if (routine->mtype == req->header.type) {
+        if (routine->mtype == msg->header.type) {
             break;
         }
     }
     retE((!routine->proc_cb));
-    ret = routine->proc_cb(req, rsp, &stun->cache);
+    ret = routine->proc_cb(msg, argv);
     retE((ret < 0));
     return 0;
 }

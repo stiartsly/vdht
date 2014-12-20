@@ -6,35 +6,31 @@ extern struct vstun_msg_ops stun_msg_ops;
 static
 int _vstun_render_service(struct vstun* stun)
 {
-    struct vattr_addrv4* source = &stun->cache.source;
     struct vhost* host = stun->host;
-    struct sockaddr_in addr;
     int ret = 0;
     vassert(stun);
 
-    vsockaddr_convert2(source->addr, source->port, &addr);
-    ret = host->ops->plug(host, PLUGIN_STUN, &addr);
+    ret = host->ops->plug(host, PLUGIN_STUN, &stun->my_addr);
     retE((ret < 0));
+    vlogI(printf("stun service registered"));
     return 0;
 }
 
 static
 int _vstun_unrender_service(struct vstun * stun)
 {
-    struct vattr_addrv4* source = &stun->cache.source;
     struct vhost* host = stun->host;
-    struct sockaddr_in addr;
     int ret = 0;
     vassert(stun);
 
-    vsockaddr_convert2(source->addr, source->port, &addr);
-    ret = host->ops->unplug(host, PLUGIN_STUN, &addr);
+    ret = host->ops->unplug(host, PLUGIN_STUN, &stun->my_addr);
     retE((ret < 0));
+    vlogI(printf("stun service unregistered"));
     return 0;
 }
 
 static
-int _aux_stun_daemon_entry(void* argv)
+int _aux_stun_thread_entry(void* argv)
 {
     struct vstun* stun = (struct vstun*)argv;
     struct vwaiter* waiter = &stun->waiter;
@@ -63,10 +59,10 @@ int _vstun_daemonize(struct vstun* stun)
     stun->daemonized = 0;
     stun->to_quit    = 0;
 
-    ret = vthread_init(&stun->daemon_thread, _aux_stun_daemon_entry, stun);
+    ret = vthread_init(&stun->daemon, _aux_stun_thread_entry, stun);
     retE((ret < 0));
+    vthread_start(&stun->daemon);
     stun->daemonized = 1;
-    vthread_start(&stun->daemon_thread);
 
     return 0;
 }
@@ -74,13 +70,14 @@ int _vstun_daemonize(struct vstun* stun)
 static
 int _vstun_stop(struct vstun* stun)
 {
-    int ret_code = 0;
     int ret = 0;
     vassert(stun);
 
     if (stun->daemonized) {
+        int ret_code = 0;
+
         stun->to_quit = 1;
-        ret = vthread_join(&stun->daemon_thread, &ret_code);
+        ret = vthread_join(&stun->daemon, &ret_code);
         retE((ret < 0));
     }
     return 0;
@@ -94,22 +91,12 @@ struct vstun_core_ops stun_ops = {
 };
 
 static
-void vattr_addrv4_init(struct vattr_addrv4* addr, struct sockaddr_in* s_addr)
-{
-    vassert(addr);
-    vassert(s_addr);
-
-    addr->family = family_ipv4;
-    addr->pad    = 0;
-    vsockaddr_unconvert2(s_addr, &addr->addr, &addr->port);
-    return ;
-}
-
-static
 int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
     struct vstun* stun = (struct vstun*)cookie;
-    struct vstun_msg req, rsp;
+    struct vstun_msg req;
+    struct vstun_msg rsp;
+    void* argv[4] = {NULL,};
     void* buf = NULL;
     int ret = 0;
 
@@ -119,11 +106,16 @@ int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
     memset(&req, 0, sizeof(req));
     memset(&rsp, 0, sizeof(rsp));
 
-    vattr_addrv4_init(&stun->cache.from, to_sockaddr_sin(mu->addr));
     ret = stun->msg_ops->decode(stun, mu->data, mu->len, &req);
     retE((ret < 0));
-    ret = stun->msg_ops->handle(stun, &req, &rsp);
+
+    argv[0] = &rsp;
+    argv[1] = to_sockaddr_sin(mu->addr);
+    argv[2] = stun->my_name;
+    ret = stun->msg_ops->handle(stun, &req, argv);
     retE((ret < 0));
+    retS((ret > 0)); // means success (or error) response.
+                     // do not need response message.
 
     buf = malloc(BUF_SZ);
     vlog((!buf), elog_malloc);
@@ -168,22 +160,27 @@ int _aux_stun_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* 
 }
 
 static
-int _aux_stun_get_addr(struct vconfig* cfg, struct sockaddr_in* addr)
+int _aux_stun_get_addr_and_name(struct vstun* stun, struct vconfig* cfg)
 {
-    char ip[64];
+    char buf[64];
     int port = 0;
     int ret  = 0;
     vassert(cfg);
 
-    memset(ip, 0, 64);
-    ret = vhostaddr_get_first(ip, 64);
+    memset(buf, 0, 64);
+    ret = vhostaddr_get_first(buf, 64);
     vlog((ret < 0), elog_vhostaddr_get_first);
     retE((ret < 0));
     ret = cfg->inst_ops->get_stun_port(cfg, &port);
     retE((ret < 0));
-    ret = vsockaddr_convert(ip, port, addr);
+    ret = vsockaddr_convert(buf, port, &stun->my_addr);
     vlog((ret < 0), elog_vsockaddr_convert);
     retE((ret < 0));
+
+    memset(buf, 0, 64);
+    ret = cfg->inst_ops->get_stun_server_name(cfg, stun->my_name, 64);
+    retE((ret < 0));
+
     return 0;
 }
 
@@ -196,20 +193,15 @@ struct vstun* vstun_create(struct vhost* host, struct vconfig* cfg)
     vassert(host);
     vassert(cfg);
 
-    ret = _aux_stun_get_addr(cfg, &addr);
-    retE_p((ret < 0));
-
     stun = (struct vstun*)malloc(sizeof(*stun));
     vlog((!stun), elog_malloc);
     retE_p((!stun));
     memset(stun, 0, sizeof(*stun));
 
-    stun->cache.has_source_addr = 1;
-    stun->cache.has_alt_addr    = 0;
-    stun->cache.has_second_addr = 0;
-    vattr_addrv4_init(&stun->cache.source, &addr);
+    ret = _aux_stun_get_addr_and_name(stun, cfg);
+    ret1E_p((ret < 0), free(stun));
 
-    stun->host = host;
+    stun->host    = host;
     stun->msg_ops = &stun_msg_ops;
     stun->ops     = &stun_ops;
 
