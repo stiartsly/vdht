@@ -1087,7 +1087,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     route->cfg   = cfg;
     route->msger = msger;
 
-    msger->ops->add_cb(route->msger, route, _aux_route_msg_cb, VMSG_DHT);
+    msger->ops->add_cb(msger, route, _aux_route_msg_cb, VMSG_DHT);
     return 0;
 }
 

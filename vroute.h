@@ -5,6 +5,7 @@
 #include "varray.h"
 #include "vcfg.h"
 #include "vsys.h"
+#include "vdef.h"
 
 #define NBUCKETS    (VTOKEN_BITLEN)
 

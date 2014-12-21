@@ -1,10 +1,18 @@
 #include "vglobal.h"
-#include "vstun.h"
+#include "vstun_proto.h"
+#include "vstuns.h"
 
-extern struct vstun_msg_ops stun_msg_ops;
+extern struct vstun_proto_ops stun_proto_ops;
+
+struct vstuns_params {
+    struct vattr_addrv4 source;
+    struct vattr_string host_name;
+    //todo;
+};
+static struct vstuns_params stuns_params;
 
 static
-int _vstun_render_service(struct vstun* stun)
+int _vstuns_render_service(struct vstuns* stun)
 {
     struct vhost* host = stun->host;
     int ret = 0;
@@ -17,7 +25,7 @@ int _vstun_render_service(struct vstun* stun)
 }
 
 static
-int _vstun_unrender_service(struct vstun * stun)
+int _vstuns_unrender_service(struct vstuns * stun)
 {
     struct vhost* host = stun->host;
     int ret = 0;
@@ -30,9 +38,25 @@ int _vstun_unrender_service(struct vstun * stun)
 }
 
 static
-int _aux_stun_thread_entry(void* argv)
+int _vstuns_parse_msg(struct vstuns* stun, void* argv)
 {
-    struct vstun* stun = (struct vstun*)argv;
+    varg_decl(argv, 0, struct sockaddr_in*, from);
+    varg_decl(argv, 1, struct vstun_msg*, req);
+    varg_decl(argv, 2, struct vstun_msg*, rsp);
+
+    vassert(stun);
+    vassert(req);
+    vassert(from);
+    vassert(rsp);
+
+    //todo;
+    return 0;
+}
+
+static
+int _aux_stuns_thread_entry(void* argv)
+{
+    struct vstuns*  stun   = (struct vstuns*)argv;
     struct vwaiter* waiter = &stun->waiter;
     int ret = 0;
 
@@ -51,7 +75,7 @@ int _aux_stun_thread_entry(void* argv)
 }
 
 static
-int _vstun_daemonize(struct vstun* stun)
+int _vstuns_daemonize(struct vstuns* stun)
 {
     int ret = 0;
     vassert(stun);
@@ -59,7 +83,7 @@ int _vstun_daemonize(struct vstun* stun)
     stun->daemonized = 0;
     stun->to_quit    = 0;
 
-    ret = vthread_init(&stun->daemon, _aux_stun_thread_entry, stun);
+    ret = vthread_init(&stun->daemon, _aux_stuns_thread_entry, stun);
     retE((ret < 0));
     vthread_start(&stun->daemon);
     stun->daemonized = 1;
@@ -68,7 +92,7 @@ int _vstun_daemonize(struct vstun* stun)
 }
 
 static
-int _vstun_stop(struct vstun* stun)
+int _vstuns_stop(struct vstuns* stun)
 {
     int ret = 0;
     vassert(stun);
@@ -83,20 +107,20 @@ int _vstun_stop(struct vstun* stun)
     return 0;
 }
 
-struct vstun_core_ops stun_ops = {
-    .render    = _vstun_render_service,
-    .unrender  = _vstun_unrender_service,
-    .daemonize = _vstun_daemonize,
-    .stop      = _vstun_stop
+struct vstuns_ops stuns_ops = {
+    .render    = _vstuns_render_service,
+    .unrender  = _vstuns_unrender_service,
+    .parse_msg = _vstuns_parse_msg,
+    .daemonize = _vstuns_daemonize,
+    .stop      = _vstuns_stop
 };
 
 static
-int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
+int _aux_stuns_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
-    struct vstun* stun = (struct vstun*)cookie;
+    struct vstuns* stun = (struct vstuns*)cookie;
     struct vstun_msg req;
     struct vstun_msg rsp;
-    void* argv[4] = {NULL,};
     void* buf = NULL;
     int ret = 0;
 
@@ -106,22 +130,25 @@ int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
     memset(&req, 0, sizeof(req));
     memset(&rsp, 0, sizeof(rsp));
 
-    ret = stun->msg_ops->decode(stun, mu->data, mu->len, &req);
+    ret = stun->proto_ops->decode(mu->data, mu->len, &req);
     retE((ret < 0));
+    retE((req.header.type != msg_bind_req)); //skip non-request message.
 
-    argv[0] = &rsp;
-    argv[1] = to_sockaddr_sin(mu->addr);
-    argv[2] = stun->my_name;
-    ret = stun->msg_ops->handle(stun, &req, argv);
-    retE((ret < 0));
-    retS((ret > 0)); // means success (or error) response.
-                     // do not need response message.
+    {
+        void* argv[] = {
+            to_sockaddr_sin(mu->addr),
+            &req,
+            &rsp
+        };
+        ret = stun->ops->parse_msg(stun, argv);
+        retE((ret < 0));
+    }
 
     buf = malloc(BUF_SZ);
     vlog((!buf), elog_malloc);
     retE((!buf));
 
-    ret = stun->msg_ops->encode(stun, &rsp, buf, BUF_SZ);
+    ret = stun->proto_ops->encode(&rsp, buf, BUF_SZ);
     ret1E((ret < 0), free(buf));
     {
         struct vmsg_usr msg = {
@@ -137,7 +164,7 @@ int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
 }
 
 static
-int _aux_stun_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys* sm)
+int _aux_stuns_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys* sm)
 {
     vassert(cookie);
     vassert(um);
@@ -149,7 +176,7 @@ int _aux_stun_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys* sm
 }
 
 static
-int _aux_stun_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
+int _aux_stuns_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* um)
 {
     vassert(cookie);
     vassert(sm);
@@ -160,53 +187,56 @@ int _aux_stun_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr* 
 }
 
 static
-int _aux_stun_get_addr_and_name(struct vstun* stun, struct vconfig* cfg)
+int _aux_stuns_get_params(struct vconfig* cfg, struct vstuns_params* params, struct sockaddr_in* addr)
 {
     char buf[64];
     int port = 0;
     int ret  = 0;
-    vassert(cfg);
 
+    vassert(params);
     memset(buf, 0, 64);
     ret = vhostaddr_get_first(buf, 64);
     vlog((ret < 0), elog_vhostaddr_get_first);
     retE((ret < 0));
     ret = cfg->inst_ops->get_stun_port(cfg, &port);
     retE((ret < 0));
-    ret = vsockaddr_convert(buf, port, &stun->my_addr);
+    ret = vsockaddr_convert(buf, port, addr);
     vlog((ret < 0), elog_vsockaddr_convert);
     retE((ret < 0));
 
     memset(buf, 0, 64);
-    ret = cfg->inst_ops->get_stun_server_name(cfg, stun->my_name, 64);
+    ret = cfg->inst_ops->get_stun_server_name(cfg, params->host_name.value, 64);
     retE((ret < 0));
+
+    ret = vsockaddr_unconvert2(addr, &params->source.addr, &params->source.port);
+    params->source.family = family_ipv4;
+    params->source.pad    = 0;
 
     return 0;
 }
 
-struct vstun* vstun_create(struct vhost* host, struct vconfig* cfg)
+struct vstuns* vstuns_create(struct vhost* host, struct vconfig* cfg)
 {
-    struct vstun* stun = NULL;
-    struct sockaddr_in addr;
+    struct vstuns* stun = NULL;
     int ret = 0;
 
     vassert(host);
     vassert(cfg);
 
-    stun = (struct vstun*)malloc(sizeof(*stun));
+    stun = (struct vstuns*)malloc(sizeof(*stun));
     vlog((!stun), elog_malloc);
     retE_p((!stun));
     memset(stun, 0, sizeof(*stun));
 
-    ret = _aux_stun_get_addr_and_name(stun, cfg);
+    ret = _aux_stuns_get_params(cfg, &stuns_params, &stun->my_addr);
     ret1E_p((ret < 0), free(stun));
-
-    stun->host    = host;
-    stun->msg_ops = &stun_msg_ops;
-    stun->ops     = &stun_ops;
+    stun->host      = host;
+    stun->proto_ops = &stun_proto_ops;
+    stun->ops       = &stuns_ops;
+    stun->params    = &stuns_params;
 
     ret += vmsger_init (&stun->msger);
-    ret += vrpc_init   (&stun->rpc, &stun->msger, VRPC_UDP, to_vsockaddr_from_sin(&addr));
+    ret += vrpc_init   (&stun->rpc, &stun->msger, VRPC_UDP, to_vsockaddr_from_sin(&stun->my_addr));
     ret += vwaiter_init(&stun->waiter);
     if (ret < 0) {
         vwaiter_deinit (&stun->waiter);
@@ -216,14 +246,14 @@ struct vstun* vstun_create(struct vhost* host, struct vconfig* cfg)
         return NULL;
     }
     stun->waiter.ops->add(&stun->waiter, &stun->rpc);
-    vmsger_reg_pack_cb  (&stun->msger, _aux_stun_pack_msg_cb,   stun);
-    vmsger_reg_unpack_cb(&stun->msger, _aux_stun_unpack_msg_cb, stun);
-    stun->msger.ops->add_cb(&stun->msger, stun, _aux_stun_msg_cb, VMSG_STUN);
+    vmsger_reg_pack_cb  (&stun->msger, _aux_stuns_pack_msg_cb,   stun);
+    vmsger_reg_unpack_cb(&stun->msger, _aux_stuns_unpack_msg_cb, stun);
+    stun->msger.ops->add_cb(&stun->msger, stun, _aux_stuns_msg_cb, VMSG_STUN);
 
     return stun;
 }
 
-void vstun_destroy(struct vstun* stun)
+void vstuns_destroy(struct vstuns* stun)
 {
     vassert(stun);
 

@@ -133,6 +133,8 @@
 #define elog_vservice_alloc       vlogE(printf("vservice_alloc"))
 #define elog_vsrvcInfo_alloc      vlogE(printf("vsrvcInfo_alloc"))
 #define elog_vnodeInfo_alloc      vlogE(printf("vnodeInfo_alloc"))
+#define elog_vstunc_req_alloc     vlogE(printf("vstunc_req_alloc"))
+#define elog_vstunc_srv_alloc     vlogE(printf("vstunc_srv_alloc"))
 
 #define elog_vmsg_cb_alloc  vlogE(printf("vmsg_cb_alloc"))
 #define elog_vmsg_sys_alloc vlogE(printf("vmsg_sys_alloc"))

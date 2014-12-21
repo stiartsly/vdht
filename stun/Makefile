@@ -5,7 +5,8 @@ DEPS =
 
 stun_objs = \
     vstun_proto.o \
-    vstun.o 
+    vstuns.o \
+    vstunc.o \
 
 
 .PHONY: libstun.a clean

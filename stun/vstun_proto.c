@@ -1,5 +1,5 @@
 #include "vglobal.h"
-#include "vstun.h"
+#include "vstun_proto.h"
 
 struct vattr_enc_routine {
     uint16_t attr;
@@ -231,83 +231,26 @@ struct vattr_dec_routine attr_dec_routines[] = {
 };
 
 static
-int _vmsg_proc_bind_req(struct vstun_msg* msg, void* argv)
-{
-    varg_decl(argv, 0, struct vstun_msg*,   rsp );
-    varg_decl(argv, 1, struct sockaddr_in*, from);
-    varg_decl(argv, 2, char*, server_name);
-    struct vstun_msg_header* hdr = &rsp->header;
-
-    vassert(msg);
-    vassert(argv);
-
-    memset(rsp, 0, sizeof(*rsp));
-    hdr->type = htons(msg_bind_rsp);
-    memcpy(hdr->token, msg->header.token, 16);
-
-    {
-        struct vattr_addrv4* addr = &rsp->mapped_addr;
-        rsp->has_mapped_addr = 1;
-        addr->pad = 0;
-        addr->family = family_ipv4;
-        vsockaddr_unconvert2(from, &addr->addr, &addr->port);
-        addr->addr = htonl(addr->addr);
-        addr->port = htons(addr->port);
-    }
-    {
-        struct vattr_string* name = &rsp->server_name;
-        rsp->has_server_name = 1;
-        strcpy(name->value, server_name);
-    }
-    return 0;
-}
-
-static
-int _vmsg_proc_bind_rsp_suc(struct vstun_msg* msg, void* argv)
-{
-    vassert(msg);
-
-    //todo;
-    return 1;
-}
-
-static
-int _vmsg_proc_bind_rsp_err(struct vstun_msg* msg, void* argv)
-{
-    vassert(msg);
-
-    //todo;
-    return 1;
-}
-
-static
-struct vmsg_proc_routine msg_proc_routines[] = {
-    { msg_bind_req,     _vmsg_proc_bind_req     },
-    { msg_bind_rsp,     _vmsg_proc_bind_rsp_suc },
-    { msg_bind_rsp_err, _vmsg_proc_bind_rsp_err },
-    { 0, 0 }
-};
-
-static
-int _vstun_msg_enc(struct vstun* stun, struct vstun_msg* msg, char* buf, int len)
+int _vstun_proto_encode(struct vstun_msg* msg, char* buf, int len)
 {
     struct vstun_msg_header* hdr = (struct vstun_msg_header*)buf;
-    struct vattr_enc_routine* routine = attr_enc_routines;
+    struct vattr_enc_routine* encoder = attr_enc_routines;
     int ret = 0;
     int sz  = 0;
 
-    vassert(stun);
     vassert(msg);
     vassert(buf);
     vassert(len > 0);
 
     memcpy(hdr, &msg->header, sizeof(*hdr));
-    hdr->type = ntohs(hdr->type);
-    hdr->len  = ntohs(hdr->len);
+    hdr->type  = htons(hdr->type);
+    hdr->len   = htons(hdr->len);
+    hdr->magic = htonl(STUN_MAGIC);
+    //todo: trans_id
     sz += sizeof(*hdr);
 
-    for (; routine->enc_cb; routine++) {
-        ret = routine->enc_cb(msg, buf + sz, len - sz);
+    for (; encoder->enc_cb; encoder++) {
+        ret = encoder->enc_cb(msg, buf + sz, len - sz);
         retE((ret < 0));
         sz  += ret;
     }
@@ -315,42 +258,41 @@ int _vstun_msg_enc(struct vstun* stun, struct vstun_msg* msg, char* buf, int len
 }
 
 static
-int _vstun_msg_dec(struct vstun* stun, char* buf, int len, struct vstun_msg* msg)
+int _vstun_proto_decode(char* buf, int len, struct vstun_msg* msg)
 {
-    struct vattr_dec_routine* routine = attr_dec_routines;
+    struct vattr_dec_routine* decoder = attr_dec_routines;
     struct vstun_msg_header* hdr = &msg->header;
     char* data = NULL;
     int ret = 0;
     int sz  = 0;
 
-    vassert(stun);
     vassert(msg);
     vassert(buf);
     vassert(len > 0);
     retE((len <= sizeof(*hdr)));
 
     memcpy(hdr, buf, sizeof(*hdr));
-    hdr->type = ntohs(hdr->type);
-    hdr->len  = ntohs(hdr->len);
+    hdr->type  = ntohs(hdr->type);
+    hdr->len   = ntohs(hdr->len);
+    hdr->magic = ntohl(hdr->magic);
+    //todo: trans_id
 
     data = offset_addr(buf, sizeof(*hdr));
     sz   = hdr->len;
     while (sz > 0) {
         struct vattr_header attr;
-
-        memcpy(&attr, data, sizeof(attr));
         attr.type = ntohs(attr.type);
         attr.len  = ntohs(attr.len);
 
         data = offset_addr(data, sizeof(attr));
         sz  -= sizeof(attr);
 
-        for (; routine->attr != attr_unknown_attr; routine++) {
-            if (routine->attr == attr.type) {
+        for (; decoder->attr != attr_unknown_attr; decoder++) {
+            if (decoder->attr == attr.type) {
                 break;
             }
         }
-        ret = routine->dec_cb(data, attr.len, msg);
+        ret = decoder->dec_cb(data, attr.len, msg);
         retE((ret < 0));
         data = offset_addr(data, attr.len);
         sz  -= attr.len;
@@ -358,29 +300,8 @@ int _vstun_msg_dec(struct vstun* stun, char* buf, int len, struct vstun_msg* msg
     return 0;
 }
 
-static
-int _vstun_msg_proc(struct vstun* stun, struct vstun_msg* msg, void* argv)
-{
-    struct vmsg_proc_routine* routine = msg_proc_routines;
-    int ret = 0;
-
-    vassert(stun);
-    vassert(msg);
-
-    for (; routine->proc_cb; routine++) {
-        if (routine->mtype == msg->header.type) {
-            break;
-        }
-    }
-    retE((!routine->proc_cb));
-    ret = routine->proc_cb(msg, argv);
-    retE((ret < 0));
-    return 0;
-}
-
-struct vstun_msg_ops stun_msg_ops = {
-    .encode = _vstun_msg_enc,
-    .decode = _vstun_msg_dec,
-    .handle = _vstun_msg_proc
+struct vstun_proto_ops stun_proto_ops = {
+    .encode = _vstun_proto_encode,
+    .decode = _vstun_proto_decode
 };
 

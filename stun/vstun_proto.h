@@ -1,9 +1,7 @@
-#ifndef __VSTUN_H__
-#define __VSTUN_H__
+#ifndef __VSTUN_PROTO_H__
+#define __VSTUN_PROTO_H__
 
-#include "vcfg.h"
-#include "vrpc.h"
-#include "vmsger.h"
+#define STUN_MAGIC ((uint32_t)0x2112A442)
 
 enum {
     family_ipv4 = ((uint8_t)0x01),
@@ -36,7 +34,8 @@ enum {
 struct vstun_msg_header {
     uint16_t type;
     uint16_t len;
-    uint8_t  token[16];
+    uint32_t magic;
+    uint8_t  trans_id[12];
 };
 
 struct vattr_header {
@@ -80,40 +79,13 @@ struct vstun_msg {
     struct vattr_unknown_attrs unknown_attrs;
 };
 
-struct vstun;
-struct vstun_msg_ops {
-    int (*encode)(struct vstun*, struct vstun_msg*, char*, int);
-    int (*decode)(struct vstun*, char*, int, struct vstun_msg*);
-    int (*handle)(struct vstun*, struct vstun_msg*, void*);
+struct vstun_proto_ops {
+    int (*encode)(struct vstun_msg*, char*, int);
+    int (*decode)(char*, int, struct vstun_msg*);
+    int (*call)  (struct vstun_msg*, void*);
 };
 
-struct vstun_core_ops {
-    int (*render)   (struct vstun*);
-    int (*unrender) (struct vstun*);
-    int (*daemonize)(struct vstun*);
-    int (*stop)     (struct vstun*);
-};
-
-struct vhost;
-struct vstun {
-    struct vthread daemon;
-    int daemonized;
-    int to_quit;
-
-    struct sockaddr_in my_addr;
-    char my_name[64];
-
-    struct vhost*  host;
-    struct vrpc    rpc;
-    struct vmsger  msger;
-    struct vwaiter waiter;
-
-    struct vstun_msg_ops*  msg_ops;
-    struct vstun_core_ops* ops;
-};
-
-struct vstun* vstun_create(struct vhost*, struct vconfig*);
-void vstun_destroy(struct vstun*);
+void vstun_msg_header_init(struct vstun_msg_header*, uint16_t, uint16_t, uint8_t*);
 
 #endif
 

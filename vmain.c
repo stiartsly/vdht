@@ -48,7 +48,7 @@ void show_version(void)
 int main(int argc, char** argv)
 {
     struct vhost*  host = NULL;
-    struct vstun*  stun = NULL;
+    struct vstuns* stun = NULL;
     struct vconfig cfg;
     int using_stun = 0;
     char* cfg_file = NULL;
@@ -148,7 +148,7 @@ int main(int argc, char** argv)
 
     using_stun = cfg.ops->check_section(&cfg, "stun");
     if (using_stun) {
-        stun = vstun_create(host, &cfg);
+        stun = vstuns_create(host, &cfg);
         if (!stun) {
             printf("failed to create vstun\n");
             vhost_destroy(host);
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
 
     if (using_stun) {
         stun->ops->unrender(stun);
-        vstun_destroy(stun);
+        vstuns_destroy(stun);
     }
     vhost_destroy(host);
     vconfig_deinit(&cfg);
