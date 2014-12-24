@@ -246,7 +246,6 @@ int _vstun_proto_encode(struct vstun_msg* msg, char* buf, int len)
     hdr->type  = htons(hdr->type);
     hdr->len   = htons(hdr->len);
     hdr->magic = htonl(STUN_MAGIC);
-    //todo: trans_id
     sz += sizeof(*hdr);
 
     for (; encoder->enc_cb; encoder++) {
@@ -275,7 +274,6 @@ int _vstun_proto_decode(char* buf, int len, struct vstun_msg* msg)
     hdr->type  = ntohs(hdr->type);
     hdr->len   = ntohs(hdr->len);
     hdr->magic = ntohl(hdr->magic);
-    //todo: trans_id
 
     data = offset_addr(buf, sizeof(*hdr));
     sz   = hdr->len;

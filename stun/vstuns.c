@@ -40,16 +40,36 @@ int _vstuns_unrender_service(struct vstuns * stun)
 static
 int _vstuns_parse_msg(struct vstuns* stun, void* argv)
 {
+    struct vstuns_params* params = (struct vstuns_params*)stun->params;
     varg_decl(argv, 0, struct sockaddr_in*, from);
     varg_decl(argv, 1, struct vstun_msg*, req);
     varg_decl(argv, 2, struct vstun_msg*, rsp);
+    int sz = 0;
 
     vassert(stun);
     vassert(req);
     vassert(from);
     vassert(rsp);
 
-    //todo;
+    memset(rsp, 0, sizeof(*rsp));
+
+    rsp->has_mapped_addr = 1;
+    rsp->mapped_addr.pad = 0;
+    rsp->mapped_addr.family = family_ipv4;
+    vsockaddr_unconvert2(from, &rsp->mapped_addr.addr, &rsp->mapped_addr.port);
+    sz += sizeof(struct vattr_header);
+    sz += sizeof(struct vattr_addrv4);
+
+    rsp->has_server_name = 1;
+    memcpy(&rsp->server_name, &params->source, sizeof(struct vattr_string));
+    sz += sizeof(struct vattr_header);
+    sz += sizeof(struct vattr_addrv4);
+
+    rsp->header.type  = msg_bind_rsp;
+    rsp->header.len   = sz;
+    rsp->header.magic = STUN_MAGIC;
+    memcpy(rsp->header.trans_id, req->header.trans_id, 12);
+
     return 0;
 }
 

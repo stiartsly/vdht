@@ -82,7 +82,6 @@ struct vstun_msg {
 struct vstun_proto_ops {
     int (*encode)(struct vstun_msg*, char*, int);
     int (*decode)(char*, int, struct vstun_msg*);
-    int (*call)  (struct vstun_msg*, void*);
 };
 
 void vstun_msg_header_init(struct vstun_msg_header*, uint16_t, uint16_t, uint8_t*);

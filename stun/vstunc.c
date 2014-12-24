@@ -108,6 +108,19 @@ int _vstunc_add_server(struct vstunc* stunc, char* srv_name, struct sockaddr_in*
 }
 
 static
+void _aux_trans_id_make(uint8_t* trans_id)
+{
+    int i = 0;
+    vassert(trans_id);
+
+    srand(time(NULL));
+    for (; i < 12; i++) {
+        trans_id[i] = (uint8_t)(rand() % 16);
+    }
+    return ;
+}
+
+static
 int _vstunc_req_mapped_addr(struct vstunc* stunc, struct sockaddr_in* to, handle_mapped_addr_t cb, void* cookie)
 {
     struct vstunc_req* req = NULL;
@@ -124,8 +137,11 @@ int _vstunc_req_mapped_addr(struct vstunc* stunc, struct sockaddr_in* to, handle
     retE((!buf));
 
     memset(&msg, 0, sizeof(msg));
-    //todo: trans_id;
-    vstun_msg_header_init(&msg.header, msg_bind_req, 0, trans_id);
+    msg.header.type  = msg_bind_req;
+    msg.header.len   = 0;
+    msg.header.magic = 0;
+    _aux_trans_id_make(msg.header.trans_id);
+
     ret = stunc->proto_ops->encode(&msg, buf, BUF_SZ);
     ret1E((ret < 0), free(buf));
 
