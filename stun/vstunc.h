@@ -5,8 +5,15 @@
 #include "vsys.h"
 #include "vmsger.h"
 
-typedef int (*handle_mapped_addr_t)(struct sockaddr_in*, void*);
 struct vstunc;
+struct vstunc_nat_ops {
+    int (*check_nat_blocked)(struct vstunc*, struct sockaddr_in*);
+    int (*check_full_cone)  (struct vstunc*, struct sockaddr_in*);
+    int (*check_symmetric)  (struct vstunc*, struct sockaddr_in*, struct sockaddr_in*);
+    int (*check_port_restricted)(struct vstunc*, struct sockaddr_in*);
+};
+
+typedef int (*handle_mapped_addr_t)(struct sockaddr_in*, void*);
 struct vstunc_ops {
     int (*add_server)     (struct vstunc*, char*, struct sockaddr_in*);
     int (*req_mapped_addr)(struct vstunc*, struct sockaddr_in*, handle_mapped_addr_t, void*);
