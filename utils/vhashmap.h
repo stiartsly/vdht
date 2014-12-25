@@ -1,5 +1,5 @@
-#ifndef __VHASH_H__
-#define __VHASH_H__
+#ifndef __VHASHMAP_H__
+#define __VHASHMAP_H__
 
 #include "vlist.h"
 

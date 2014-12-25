@@ -1,5 +1,5 @@
 #include "vglobal.h"
-#include "vhash.h"
+#include "vhashmap.h"
 
 static MEM_AUX_INIT(hash_item_cache, sizeof(struct vmsg_sys), 8);
 static
