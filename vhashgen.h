@@ -12,34 +12,18 @@ struct vhashgen;
  * use HASH-SHA1 algorithm
  */
 struct vhashgen_sha1_ops {
-    void (*reset)   (struct vhashgen*);
-    void (*input)   (struct vhashgen*, uint8_t*, int);
-    int  (*result)  (struct vhashgen*, uint32_t*);
+    void (*reset) (struct vhashgen*);
+    void (*input) (struct vhashgen*, uint8_t*, int);
+    int  (*result)(struct vhashgen*, uint32_t*);
 };
 
 struct vhashgen_ops {
-    int (*hash)     (struct vhashgen*, uint8_t*, vtoken*);
-    int (*hash_ext) (struct vhashgen*, uint8_t*, uint8_t*, vtoken*);
-    int (*hash_frag)(struct vhashgen*, uint8_t*, int, vtoken*);
-};
-
-struct vhashgen_ctxt_sha1 {
-    uint32_t digest[5];
-    int len_low;
-    int len_high;        // message length in bits.
-
-    uint8_t msgblk[64]; // 512-bit message blocks;
-    int msgblk_idx;     // index to message blocks;
-
-    int computed;
-    int corrupted;
-
-    int oops;
-    int done;
+    int (*hash)   (struct vhashgen*, uint8_t*, int, vtoken*);
+    int (*hash_with_cookie)(struct vhashgen*, uint8_t*, int, uint8_t*, int, vtoken*);
 };
 
 struct vhashgen {
-    struct vhashgen_ctxt_sha1 ctxt_sha1;
+    void* ctxt;
 
     struct vhashgen_sha1_ops* sha_ops;
     struct vhashgen_ops*      ops;
