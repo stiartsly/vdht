@@ -1,16 +1,42 @@
 #include "vglobal.h"
 #include "vhashgen.h"
 
+/*  Description:
+ *      This file implements the Secure Hashing Standard as defined
+ *      in FIPS PUB 180-1 published April 17, 1995.
+ *
+ *      The Secure Hashing Standard, which uses the Secure Hashing
+ *      Algorithm (SHA), produces a 160-bit message digest for a
+ *      given data stream.  In theory, it is highly improbable that
+ *      two messages will produce the same message digest.  Therefore,
+ *      this algorithm can serve as a means of providing a "fingerprint"
+ *      for a message.
+ *
+ *  Portability Issues:
+ *      SHA-1 is defined in terms of 32-bit "words".  This code was
+ *      written with the expectation that the processor has at least
+ *      a 32-bit machine word size.  If the machine word size is larger,
+ *      the code should still function properly.  One caveat to that
+ *      is that the input functions taking characters and character
+ *      arrays assume that only 8 bits of information are stored in each
+ *      character.
+ *
+ *  Caveats:
+ *      SHA-1 is designed to work with messages less than 2^64 bits
+ *      long. Although SHA-1 allows a message digest to be generated for
+ *      messages of any number of bits less than 2^64, this
+ *      implementation only works with messages with a length that is a
+ *      multiple of the size of an 8-bit character.
+ *
+ */
+
 struct vhashgen_ctxt_sha1 {
     uint32_t digest[5];
     int len_low;
-    int len_high;        // message length in bits.
+    int len_high;       // msg len in bits.
 
-    uint8_t msgblk[64]; // 512-bit message blocks;
-    int msgblk_idx;     // index to message blocks;
-
-    int computed;
-    int corrupted;
+    uint8_t msgbuf[64]; // 512-bit msgbuf
+    int cursor;         // index to msgbuf
 
     int oops;
     int done;
@@ -20,7 +46,7 @@ static
 struct vhashgen_ctxt_sha1 hashgen_ctxt_sha1;
 
 static
-void _aux_sha1_digest_msgblk(struct vhashgen_ctxt_sha1* ctxt)
+void _aux_sha1_digest_msgbuf(struct vhashgen_ctxt_sha1* ctxt)
 {
     uint32_t k[] = /* Constants defined in SHA-1   */
     {
@@ -39,10 +65,10 @@ void _aux_sha1_digest_msgblk(struct vhashgen_ctxt_sha1* ctxt)
     vassert(ctxt);
 
     for (i = 0; i < 16; i++) {
-        seq[i]  = ((uint32_t)ctxt->msgblk[i*4]) << 24;
-        seq[i] |= ((uint32_t)ctxt->msgblk[i*4 + 1]) << 16;
-        seq[i] |= ((uint32_t)ctxt->msgblk[i*4 + 2]) << 8;
-        seq[i] |= ((uint32_t)ctxt->msgblk[i*4 + 3]);
+        seq[i]  = ((uint32_t)ctxt->msgbuf[i*4]) << 24;
+        seq[i] |= ((uint32_t)ctxt->msgbuf[i*4 + 1]) << 16;
+        seq[i] |= ((uint32_t)ctxt->msgbuf[i*4 + 2]) << 8;
+        seq[i] |= ((uint32_t)ctxt->msgbuf[i*4 + 3]);
     }
 
     for (i = 16; i < 80; i++) {
@@ -97,12 +123,12 @@ void _aux_sha1_digest_msgblk(struct vhashgen_ctxt_sha1* ctxt)
     ctxt->digest[3] = (ctxt->digest[3] + d) & 0xFFFFFFFF;
     ctxt->digest[4] = (ctxt->digest[4] + e) & 0xFFFFFFFF;
 
-    ctxt->msgblk_idx = 0;
+    ctxt->cursor = 0;
     return ;
 }
 
 static
-void _aux_sha1_padding_msgblk(struct vhashgen_ctxt_sha1* ctxt)
+void _aux_sha1_padding_msgbuf(struct vhashgen_ctxt_sha1* ctxt)
 {
     vassert(ctxt);
     /*
@@ -111,38 +137,43 @@ void _aux_sha1_padding_msgblk(struct vhashgen_ctxt_sha1* ctxt)
      *  block, process it, and then continue padding into a second
      *  block.
      */
-    if (ctxt->msgblk_idx > 55) {
-        ctxt->msgblk[ctxt->msgblk_idx++] = 0x80;
-        while (ctxt->msgblk_idx < 64) {
-            ctxt->msgblk[ctxt->msgblk_idx++] = 0;
+    if (ctxt->cursor > 55) {
+        ctxt->msgbuf[ctxt->cursor++] = 0x80;
+        while (ctxt->cursor < 64) {
+            ctxt->msgbuf[ctxt->cursor++] = 0;
         }
-        _aux_sha1_digest_msgblk(ctxt);
-        while (ctxt->msgblk_idx < 56) {
-            ctxt->msgblk[ctxt->msgblk_idx++] = 0;
+        _aux_sha1_digest_msgbuf(ctxt);
+        while (ctxt->cursor < 56) {
+            ctxt->msgbuf[ctxt->cursor++] = 0;
         }
     } else {
-        ctxt->msgblk[ctxt->msgblk_idx++] = 0x80;
-        while (ctxt->msgblk_idx <  56) {
-            ctxt->msgblk[ctxt->msgblk_idx++] = 0;
+        ctxt->msgbuf[ctxt->cursor++] = 0x80;
+        while (ctxt->cursor <  56) {
+            ctxt->msgbuf[ctxt->cursor++] = 0;
         }
     }
 
     /*
      *  Store the message length as the last 8 octets
      */
-    ctxt->msgblk[56] = (ctxt->len_high >> 24) & 0xFF;
-    ctxt->msgblk[57] = (ctxt->len_high >> 16) & 0xFF;
-    ctxt->msgblk[58] = (ctxt->len_high >> 8 ) & 0xFF;
-    ctxt->msgblk[59] = (ctxt->len_high) & 0xFF;
-    ctxt->msgblk[60] = (ctxt->len_low >> 24 ) & 0xFF;
-    ctxt->msgblk[61] = (ctxt->len_low >> 16 ) & 0xFF;
-    ctxt->msgblk[62] = (ctxt->len_low >> 8  ) & 0xFF;
-    ctxt->msgblk[63] = (ctxt->len_low) & 0xFF;
+    ctxt->msgbuf[56] = (ctxt->len_high >> 24) & 0xFF;
+    ctxt->msgbuf[57] = (ctxt->len_high >> 16) & 0xFF;
+    ctxt->msgbuf[58] = (ctxt->len_high >> 8 ) & 0xFF;
+    ctxt->msgbuf[59] = (ctxt->len_high) & 0xFF;
+    ctxt->msgbuf[60] = (ctxt->len_low >> 24 ) & 0xFF;
+    ctxt->msgbuf[61] = (ctxt->len_low >> 16 ) & 0xFF;
+    ctxt->msgbuf[62] = (ctxt->len_low >> 8  ) & 0xFF;
+    ctxt->msgbuf[63] = (ctxt->len_low) & 0xFF;
 
-    _aux_sha1_digest_msgblk(ctxt);
+    _aux_sha1_digest_msgbuf(ctxt);
     return ;
 }
 
+/*
+ * the routine to reset the context of sha1-hash engine.
+ *
+ * @gen: hash engine.
+ */
 static
 void _vhashgen_sha1_reset(struct vhashgen* gen)
 {
@@ -164,6 +195,12 @@ void _vhashgen_sha1_reset(struct vhashgen* gen)
     return ;
 }
 
+/*
+ * the routine to process the input message with sha1-hash algorithm.
+ * @gen: hash engine.
+ * @msg: message buf.
+ * @len: message length
+ */
 static
 void _vhashgen_sha1_input(struct vhashgen* gen, uint8_t* msg, int len)
 {
@@ -178,7 +215,7 @@ void _vhashgen_sha1_input(struct vhashgen* gen, uint8_t* msg, int len)
         return ;
     }
     while (len-- && !ctxt->oops) {
-        ctxt->msgblk[ctxt->msgblk_idx++] = (*msg & 0xff);
+        ctxt->msgbuf[ctxt->cursor++] = (*msg & 0xff);
         ctxt->len_low += 8;
         ctxt->len_low &= 0xFFFFFFFF;
         if (!ctxt->len_low) {
@@ -188,14 +225,19 @@ void _vhashgen_sha1_input(struct vhashgen* gen, uint8_t* msg, int len)
                 ctxt->oops = 1;
             }
         }
-        if (ctxt->msgblk_idx == 64) {
-            _aux_sha1_digest_msgblk(ctxt);
+        if (ctxt->cursor == 64) {
+            _aux_sha1_digest_msgbuf(ctxt);
         }
         msg++;
     }
     return ;
 }
 
+/*
+ * the routine to get hash result after processing.
+ * @ gen:
+ * @ hash_array: [out] hash result value;
+ */
 static
 int _vhashgen_sha1_result(struct vhashgen* gen, uint32_t* hash_array)
 {
@@ -205,7 +247,7 @@ int _vhashgen_sha1_result(struct vhashgen* gen, uint32_t* hash_array)
 
     retE((ctxt->oops));
     if ((!ctxt->done)) {
-        _aux_sha1_padding_msgblk(ctxt);
+        _aux_sha1_padding_msgbuf(ctxt);
         ctxt->done = 1;
     }
 
@@ -226,30 +268,34 @@ struct vhashgen_sha1_ops hashgen_sha1_ops = {
 };
 
 /*
- * the routine to hash system service information, such as stun, relay.
+ * the routine to hash a certain length of message, which often used to
+ * hash system sort of services, such as relay, stun.
+ *
  * @gen:
  * @content:
  * @len:
  * @hash:
  */
 static
-int _vhashgen_hash(struct vhashgen* gen, uint8_t* content, int len, vtoken* hash)
+int _vhashgen_hash(struct vhashgen* gen, uint8_t* msg, int len, vtoken* hash)
 {
     int ret = 0;
     vassert(gen);
-    vassert(content);
+    vassert(msg);
     vassert(len > 0);
     vassert(hash);
 
     gen->sha_ops->reset(gen);
-    gen->sha_ops->input(gen, content, len);
+    gen->sha_ops->input(gen, msg, len);
     ret = gen->sha_ops->result(gen, (uint32_t*)hash->data);
     retE((ret < 0));
     return 0;
 }
 
 /*
- * the routine to hash custom service information, such as popocloud service.
+ * the routine to hash a certain length of message and cookie, which often
+ * used to hash user-customized sort of services, such as popocloud, vpn.
+ *
  * @gen:
  * @magic:
  * @cookie:
