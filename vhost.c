@@ -119,17 +119,16 @@ int _vhost_stabilize(struct vhost* host)
  * @waht: plugin ID.
  */
 static
-int _vhost_plug(struct vhost* host, int what, struct sockaddr_in* addr)
+int _vhost_plug_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
 {
     struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(addr);
-    retE((what < 0));
-    retE((what >= PLUGIN_BUTT));
+    vassert(svc_hash);
 
-    ret = route->ops->reg_service(route, what, addr);
+    ret = route->ops->reg_service(route, svc_hash, addr);
     retE((ret < 0));
     return 0;
 }
@@ -140,33 +139,30 @@ int _vhost_plug(struct vhost* host, int what, struct sockaddr_in* addr)
  * @waht: plugin ID.
  */
 static
-int _vhost_unplug(struct vhost* host, int what, struct sockaddr_in* addr)
+int _vhost_unplug_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
 {
     struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
-    vassert(addr);
-    retE((what < 0));
-    retE((what >= PLUGIN_BUTT));
+    vassert(svc_hash);
 
-    ret = route->ops->unreg_service(route, what, addr);
+    ret = route->ops->unreg_service(route, svc_hash, addr);
     retE((ret < 0));
     return 0;
 }
 
 static
-int _vhost_get_service(struct vhost* host, int what, struct sockaddr_in* addr)
+int _vhost_get_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
 {
     struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(addr);
-    retE((what < 0));
-    retE((what >= PLUGIN_BUTT));
+    vassert(svc_hash);
 
-    ret = route->ops->get_service(route, what, addr);
+    ret = route->ops->get_service(route, svc_hash, addr);
     retE((ret < 0));
     return 0;
 }
@@ -302,9 +298,9 @@ struct vhost_ops host_ops = {
     .join        = _vhost_join,
     .drop        = _vhost_drop,
     .stabilize   = _vhost_stabilize,
-    .plug        = _vhost_plug,
-    .unplug      = _vhost_unplug,
-    .get_service = _vhost_get_service,
+    .plug_service   = _vhost_plug_service,
+    .unplug_service = _vhost_unplug_service,
+    .get_service    = _vhost_get_service,
     .loop        = _vhost_loop,
     .req_quit    = _vhost_req_quit,
     .dump        = _vhost_dump,
@@ -434,7 +430,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->cfg = cfg;
     host->ops = &host_ops;
     vnodeVer_unstrlize(host->ops->get_version(host), &ver);
-    vnodeInfo_init(&info, &addr.id, &addr.addr, 0, &ver);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, &ver, 0);
 
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&addr.addr));

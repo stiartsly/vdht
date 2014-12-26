@@ -3,16 +3,6 @@
 
 #define MAX_CAPC ((int)8)
 
-static uint32_t peer_service_prop[] = {
-    PROP_RELAY,
-    PROP_STUN,
-    PROP_VPN,
-    PROP_DDNS,
-    PROP_MROUTE,
-    PROP_DHASH,
-    PROP_APP
-};
-
 int _aux_route_tick_cb(void* item, void* cookie)
 {
     struct vroute_node_space* space = (struct vroute_node_space*)cookie;
@@ -44,7 +34,7 @@ int _vroute_join_node(struct vroute* route, vnodeAddr* node_addr)
     vassert(node_addr);
 
     memset(&ver, 0, sizeof(ver));
-    vnodeInfo_init(&node_info, &node_addr->id, &node_addr->addr, 0, &ver);
+    vnodeInfo_init(&node_info, &node_addr->id, &node_addr->addr, &ver, 0);
 
     vlock_enter(&route->lock);
     ret = space->ops->add_node(space, &node_info);
@@ -82,27 +72,26 @@ int _vroute_drop_node(struct vroute* route, vnodeAddr* node_addr)
  * service, and the service will be published to all nodes in routing table.
  *
  * @route:
- * @what:  service category.
+ * @svc_hash: service Id.
  * @addr:  address of service to provide.
  *
  */
 static
-int _vroute_reg_service(struct vroute* route, int what, struct sockaddr_in* addr)
+int _vroute_reg_service(struct vroute* route, vtoken* svc_hash, struct sockaddr_in* addr)
 {
     vsrvcInfo* svc = NULL;
     int i = 0;
 
     vassert(route);
     vassert(addr);
-    retE((what < 0));
-    retE((what >= PLUGIN_BUTT));
+    vassert(svc_hash);
 
     vlock_enter(&route->lock);
-    route->own_node.flags |= peer_service_prop[what];
+    route->own_node.weight++;
     for (; i < varray_size(&route->own_svcs); i++){
         svc = (vsrvcInfo*)varray_get(&route->own_svcs, i);
-        if ((svc->what == what) &&
-            (vsockaddr_equal(&svc->addr, addr))) {
+        if (vtoken_equal(&svc->id, svc_hash) &&
+            vsockaddr_equal(&svc->addr, addr)) {
             break;
         }
     }
@@ -110,7 +99,7 @@ int _vroute_reg_service(struct vroute* route, int what, struct sockaddr_in* addr
         svc = vsrvcInfo_alloc();
         vlog((!svc), elog_vsrvcInfo_alloc);
         retE((!svc));
-        vsrvcInfo_init(svc, what, route->nice, addr);
+        vsrvcInfo_init(svc, svc_hash, route->nice, addr);
         varray_add_tail(&route->own_svcs, svc);
     }
     vlock_leave(&route->lock);
@@ -121,27 +110,26 @@ int _vroute_reg_service(struct vroute* route, int what, struct sockaddr_in* addr
  * the routine to unregister or nulify a service info, which registered before.
  *
  * @route:
- * @what: service categroy.
+ * @svc_hash: service hash Id.
  * @addr: address of service to provide.
  *
  */
 static
-int _vroute_unreg_service(struct vroute* route, int what, struct sockaddr_in* addr)
+int _vroute_unreg_service(struct vroute* route, vtoken* svc_hash, struct sockaddr_in* addr)
 {
     vsrvcInfo* svc = NULL;
     int i = 0;
 
     vassert(route);
     vassert(addr);
-    retE((what < 0));
-    retE((what >= PLUGIN_BUTT));
+    vassert(svc_hash);
 
     vlock_enter(&route->lock);
-    route->own_node.flags &= ~(peer_service_prop[what]);
+    route->own_node.weight--;
     for (; i < varray_size(&route->own_svcs); i++) {
         svc = (vsrvcInfo*)varray_get(&route->own_svcs, i);
-        if ((svc->what == what) &&
-            (vsockaddr_equal(&svc->addr, addr))) {
+        if (vtoken_equal(&svc->id, svc_hash) &&
+            vsockaddr_equal(&svc->addr, addr)) {
             break;
         }
     }
@@ -158,11 +146,11 @@ int _vroute_unreg_service(struct vroute* route, int what, struct sockaddr_in* ad
  * so that local app can meet its needs with that service.
  *
  * @route:
- * @what : service category
+ * @svc_hash: service hash id.
  * @addr : [out] address of service
  */
 static
-int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr)
+int _vroute_get_service(struct vroute* route, vtoken* svc_hash, struct sockaddr_in* addr)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
     vsrvcInfo svc;
@@ -170,11 +158,10 @@ int _vroute_get_service(struct vroute* route, int what, struct sockaddr_in* addr
 
     vassert(route);
     vassert(addr);
-    retE((what < 0));
-    retE((what >= PLUGIN_BUTT));
+    vassert(svc_hash);
 
     vlock_enter(&route->lock);
-    ret = srvc_space->ops->get_srvc_node(srvc_space, what, &svc);
+    ret = srvc_space->ops->get_srvc_node(srvc_space, svc_hash, &svc);
     vlock_leave(&route->lock);
     retE((ret < 0));
 
@@ -366,7 +353,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeAddr* dest)
 
     vassert(route);
     vassert(dest);
-    retS((!(route->own_node.flags & PROP_PING))); // ping disabled.
+    retS((!(route->flags & PROP_PING))); // ping disabled.
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -406,7 +393,7 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeAddr* dest, vtoken* token, v
     vassert(dest);
     vassert(token);
     vassert(info);
-    retS((!(route->own_node.flags & PROP_PING_R))); //ping_rsp disabled
+    retS((!(route->flags & PROP_PING_R))); //ping_rsp disabled
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -444,7 +431,7 @@ int _vroute_dht_find_node(struct vroute* route, vnodeAddr* dest, vnodeId* target
     vassert(route);
     vassert(dest);
     vassert(target);
-    retS((!(route->own_node.flags & PROP_FIND_NODE))); //find_node disabled.
+    retS((!(route->flags & PROP_FIND_NODE))); //find_node disabled.
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -481,7 +468,7 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeAddr* dest, vtoken* tok
     vassert(dest);
     vassert(token);
     vassert(info);
-    retS((!(route->own_node.flags & PROP_FIND_NODE_R)));//find_node_rsp disabled.
+    retS((!(route->flags & PROP_FIND_NODE_R)));//find_node_rsp disabled.
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -518,7 +505,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeAddr* dest, vnodeI
     vassert(route);
     vassert(dest);
     vassert(target);
-    retS((!(route->own_node.flags & PROP_FIND_CLOSEST_NODES)));
+    retS((!(route->flags & PROP_FIND_CLOSEST_NODES)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -561,7 +548,7 @@ int _vroute_dht_find_closest_nodes_rsp(
     vassert(dest);
     vassert(token);
     vassert(closest);
-    retS((!(route->own_node.flags & PROP_FIND_CLOSEST_NODES_R)));
+    retS((!(route->flags & PROP_FIND_CLOSEST_NODES_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -593,7 +580,7 @@ int _vroute_dht_post_service(struct vroute* route, vnodeAddr* dest, vsrvcInfo* s
     vassert(route);
     vassert(dest);
     vassert(service);
-    retS((!(route->own_node.flags & PROP_POST_SERVICE)));
+    retS((!(route->flags & PROP_POST_SERVICE)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -626,7 +613,7 @@ int _vroute_dht_post_hash(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
     vassert(route);
     vassert(dest);
     vassert(hash);
-    retS((!(route->own_node.flags & PROP_POST_HASH)));
+    retS((!(route->flags & PROP_POST_HASH)));
 
     //todo;
     return 0;
@@ -648,7 +635,7 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeAddr* dest, vnodeHash* hash
     vassert(route);
     vassert(dest);
     vassert(hash);
-    retS((!(route->own_node.flags & PROP_GET_PEERS)));
+    retS((!(route->flags & PROP_GET_PEERS)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -691,7 +678,7 @@ int _vroute_dht_get_peers_rsp(
     vassert(dest);
     vassert(token);
     vassert(peers);
-    retS((!(route->own_node.flags & PROP_GET_PEERS_R)));
+    retS((!(route->flags & PROP_GET_PEERS_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -755,7 +742,7 @@ int _vroute_cb_ping(struct vroute* route, struct sockaddr_in* from, void* ctxt)
     vsockaddr_copy(&addr.addr, from);
     ret = dec_ops->ping(ctxt, &token, &addr.id);
     retE((ret < 0));
-    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_PING, NULL);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, NULL, 1);
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
     ret = route->dht_ops->ping_rsp(route, &addr, &token, &route->own_node);
@@ -778,7 +765,6 @@ int _vroute_cb_ping_rsp(struct vroute* route, struct sockaddr_in* from, void* ct
 
     ret = dec_ops->ping_rsp(ctxt, &token, &info);
     retE((ret < 0));
-    info.flags |= PROP_PING_R;
     vsockaddr_copy(&info.addr, from);
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
@@ -804,7 +790,7 @@ int _vroute_cb_find_node(struct vroute* route, struct sockaddr_in* from, void* c
     vsockaddr_copy(&addr.addr, from);
     ret = dec_ops->find_node(ctxt, &token, &addr.id, &target);
     retE((ret < 0));
-    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_FIND_NODE, NULL);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, NULL, 1);
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
 
@@ -845,7 +831,7 @@ int _vroute_cb_find_node_rsp(struct vroute* route, struct sockaddr_in* from, voi
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
 
-    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_FIND_NODE_R, NULL);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, NULL, 1);
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
     return 0;
@@ -873,7 +859,7 @@ int _vroute_cb_find_closest_nodes(
     vsockaddr_copy(&addr.addr, from);
     ret = dec_ops->find_closest_nodes(ctxt, &token, &addr.id, &target);
     retE((ret < 0));
-    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_FIND_CLOSEST_NODES, NULL);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, NULL, 1);
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
 
@@ -917,7 +903,7 @@ int _vroute_cb_find_closest_nodes_rsp(
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
     varray_deinit(&closest);
 
-    vnodeInfo_init(&info, &addr.id, &addr.addr, PROP_FIND_CLOSEST_NODES_R, NULL);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, NULL, 1);
     ret = space->ops->add_node(space, &info);
     retE((ret < 0));
     return 0;
@@ -942,12 +928,10 @@ int _vroute_cb_post_service(struct vroute* route, struct sockaddr_in* from, void
     vsockaddr_copy(&addr.addr, from);
     ret = dec_ops->post_service(ctxt, &token, &addr.id, &svc);
     retE((ret < 0));
-    retE((svc.what < 0));
-    retE((svc.what >= PLUGIN_BUTT));
     vsockaddr_combine(from, &svc.addr, &svc.addr);
     ret = srvc_space->ops->add_srvc_node(srvc_space, &svc);
     retE((ret < 0));
-    vnodeInfo_init(&info, &addr.id, &addr.addr, peer_service_prop[svc.what], NULL);
+    vnodeInfo_init(&info, &addr.id, &addr.addr, NULL, 1);
     ret = node_space->ops->add_node(node_space, &info);
     retE((ret < 0));
     return 0;
@@ -1072,7 +1056,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     vassert(own_info);
 
     vnodeInfo_copy(&route->own_node, own_info);
-    _aux_route_load_proto_caps(cfg, &route->own_node.flags);
+    _aux_route_load_proto_caps(cfg, &route->flags);
     varray_init(&route->own_svcs, 4);
     route->nice = 0;
 

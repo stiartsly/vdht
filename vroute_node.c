@@ -5,46 +5,14 @@
 
 #define vminimum(a, b)   ((a < b) ? a: b)
 
-struct vpeer_flags_desc {
-    uint32_t  prop;
-    char*     desc;
-};
-
-static
-struct vpeer_flags_desc peer_flags_desc[] = {
-    {PROP_PING,                 "ping"                },
-    {PROP_PING_R,               "ping_r"              },
-    {PROP_FIND_NODE,            "find_node"           },
-    {PROP_FIND_NODE_R,          "find_node_r"         },
-    {PROP_FIND_CLOSEST_NODES,   "find_closest_nodes"  },
-    {PROP_FIND_CLOSEST_NODES_R, "find_closest_nodes_r"},
-    {PROP_POST_SERVICE,         "post_service"        },
-    {PROP_POST_HASH,            "post_hash"           },
-    {PROP_GET_PEERS,            "get_peers"           },
-    {PROP_GET_PEERS_R,          "get_peers_r"         },
-    {PROP_VER,                  "same version"        },
-    {PROP_RELAY,                "relay"               },
-    {PROP_STUN,                 "stun"                },
-    {PROP_VPN,                  "vpn"                 },
-    {PROP_DDNS,                 "ddns"                },
-    {PROP_MROUTE,               "mroute"              },
-    {PROP_DHASH,                "dhash"               },
-    {PROP_APP,                  "apps"                },
-    {PROP_UNREACHABLE, 0}
-};
-
 /*
  * for vpeer
  */
-struct vpeer{
-    vnodeId   id;
-    vnodeVer  ver;
-    struct sockaddr_in addr;
-    uint32_t  flags;
-
-    time_t    snd_ts;
-    time_t    rcv_ts;
-    int       ntries;
+struct vpeer {
+    vnodeInfo node;
+    time_t snd_ts;
+    time_t rcv_ts;
+    int ntries;
 };
 
 static MEM_AUX_INIT(peer_cache, sizeof(struct vpeer), 0);
@@ -78,55 +46,15 @@ void vpeer_free(struct vpeer* peer)
  * @flags:
  */
 static
-void vpeer_init(
-        struct vpeer* peer,
-        vnodeId* id,
-        vnodeVer* ver,
-        struct sockaddr_in* addr,
-        uint32_t flags,
-        time_t snd_ts,
-        time_t rcv_ts)
+void vpeer_init(struct vpeer* peer, vnodeInfo* node, time_t snd_ts, time_t rcv_ts)
 {
     vassert(peer);
-    vassert(addr);
+    vassert(node);
 
-    vtoken_copy(&peer->id, id );
-    vtoken_copy(&peer->ver,ver);
-    vsockaddr_copy(&peer->addr, addr);
-    peer->flags  = flags;
+    vnodeInfo_copy(&peer->node, node);
     peer->snd_ts = snd_ts;
     peer->rcv_ts = rcv_ts;
     peer->ntries = 0;
-    return ;
-}
-
-static
-void vpeer_dump_flags(uint32_t flags)
-{
-    struct vpeer_flags_desc* desc = peer_flags_desc;
-    static char buf[BUF_SZ];
-    int found = 0;
-
-    memset(buf, 0, BUF_SZ);
-    strcat(buf, "[");
-    if (desc->prop & flags) {
-        strcat(buf, desc->desc);
-        found = 1;
-    }
-    desc++;
-    while(desc->desc) {
-        if (desc->prop & flags) {
-            strcat(buf, ",");
-            strcat(buf, desc->desc);
-        }
-        desc++;
-    }
-    if (!found) {
-        strcat(buf, "empty");
-    }
-    strcat(buf, "]");
-    vdump(printf("flags:%s", buf));
-    return ;
 }
 
 static
@@ -135,10 +63,7 @@ void vpeer_dump(struct vpeer* peer)
     vassert(peer);
 
     vdump(printf("-> PEER"));
-    vtoken_dump(&peer->id);
-    vnodeVer_dump(&peer->ver);
-    vsockaddr_dump(&peer->addr);
-    vpeer_dump_flags(peer->flags);
+    vnodeInfo_dump(&peer->node);
     vdump(printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet"));
     vdump(printf("timestamp[rcv]: %s",  ctime(&peer->rcv_ts)));
     vdump(printf("tried send times:%d", peer->ntries));
@@ -151,14 +76,13 @@ int _aux_space_add_node_cb(void* item, void* cookie)
 {
     struct vpeer* peer = (struct vpeer*)item;
     varg_decl(cookie, 0, vnodeInfo*, node_info);
-    varg_decl(cookie, 1, uint32_t*,  min_flags);
+    varg_decl(cookie, 1, int*,       min_weight);
     varg_decl(cookie, 2, int*,       max_period);
     varg_decl(cookie, 3, time_t*,    now);
     varg_decl(cookie, 4, int*,       found);
     varg_decl(cookie, 5, struct vpeer**, to);
 
-    if (vtoken_equal(&peer->id, &node_info->id) ||
-        vsockaddr_equal(&peer->addr, &node_info->addr)) {
+    if (vnodeInfo_equal(&peer->node, node_info)) {
         *to = peer;
         *found = 1;
         return 1;
@@ -168,9 +92,9 @@ int _aux_space_add_node_cb(void* item, void* cookie)
         *to = peer;
         *max_period = *now - peer->rcv_ts;
     }
-    if (peer->flags < *min_flags) {
+    if (peer->node.weight < *min_weight) {
         *to = peer;
-        *min_flags = peer->flags;
+        *min_weight = peer->node.weight;
     }
     return 0;
 }
@@ -179,15 +103,16 @@ static
 int _aux_space_broadcast_cb(void* item, void* cookie)
 {
     struct vpeer* peer = (struct vpeer*)item;
-    varg_decl(cookie, 0, struct vroute*, route);
-    varg_decl(cookie, 1, void*, svci);
+    varg_decl(cookie, 0, struct vroute_node_space*, space);
+    varg_decl(cookie, 1, struct vsrvcInfo*, svc);
+    struct vroute* route = space->route;
     vnodeAddr addr;
 
-    if (peer->flags == PROP_UNREACHABLE) {
-        return 0;
+    if (peer->ntries >= space->max_snd_tms) {
+        return 0; //unreachable.
     }
-    vnodeAddr_init(&addr, &peer->id, &peer->addr);
-    route->dht_ops->post_service(route, &addr, (vsrvcInfo*)svci);
+    vnodeAddr_init(&addr, &peer->node.id, &peer->node.addr);
+    route->dht_ops->post_service(route, &addr, svc);
     return 0;
 }
 
@@ -204,16 +129,12 @@ int _aux_space_tick_cb(void* item, void* cookie)
     vassert(space);
     vassert(now);
 
-    if (peer->ntries >  space->max_snd_tms) { //unreachable.
-        return 0;
-    }
-    if (peer->ntries == space->max_snd_tms) {
-        peer->flags = PROP_UNREACHABLE;
+    if (peer->ntries >=  space->max_snd_tms) { //unreachable.
         return 0;
     }
     if ((!peer->snd_ts) ||
         (*now - peer->rcv_ts > space->max_rcv_period)) {
-        vnodeAddr_init(&addr, &peer->id, &peer->addr);
+        vnodeAddr_init(&addr, &peer->node.id, &peer->node.addr);
         route->dht_ops->ping(route, &addr);
         peer->snd_ts = *now;
         peer->ntries++;
@@ -238,10 +159,11 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
     iport = strtol(port, NULL, 10);
     retE((errno));
 
-    node_info.flags = 0;
+    memset(&node_info, 0, sizeof(node_info));
     vtoken_unstrlize(id, &node_info.id);
     vsockaddr_convert(ip, iport, &node_info.addr);
     vnodeVer_unstrlize(ver, &node_info.ver);
+    node_info.weight = 0;
 
     space->ops->add_node(space, &node_info);
     return 0;
@@ -265,11 +187,11 @@ int _aux_space_store_cb(void* item, void* cookie)
     vassert(db);
 
     memset(id,  0, 64);
-    vtoken_strlize(&peer->id, id, 64);
+    vtoken_strlize(&peer->node.id, id, 64);
     memset(ip,  0, 64);
-    vsockaddr_unconvert(&peer->addr, ip, 64, (uint16_t*)&port);
+    vsockaddr_unconvert(&peer->node.addr, ip, 64, (uint16_t*)&port);
     memset(ver, 0, 64);
-    vnodeVer_strlize(&peer->ver, ver, 64);
+    vnodeVer_strlize(&peer->node.ver, ver, 64);
 
     memset(sql_buf, 0, BUF_SZ);
     off += sprintf(sql_buf + off, "insert into '%s' ", VPEER_TB);
@@ -299,8 +221,7 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
     struct varray* peers = NULL;
     struct vpeer*  to    = NULL;
     time_t now = time(NULL);
-    uint32_t flags = info->flags;
-    uint32_t min_flags = 0;
+    int min_weight = 0;
     int max_period = 0;
     int found = 0;
     int updt  = 0;
@@ -309,20 +230,20 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
     vassert(space);
     vassert(info);
 
-    if (vtoken_equal(&info->id, &space->own->id) ||
-        vsockaddr_equal(&info->addr, &space->own->addr)) {
+    if (vnodeInfo_equal(space->own, info)) {
         return 0;
     }
     if (vtoken_equal(&space->own->ver, &info->ver)) {
-        flags |= PROP_VER;
+        info->weight++;
     }
 
+    min_weight = info->weight;
     idx = vnodeId_bucket(&space->own->id, &info->id);
     peers = &space->bucket[idx].peers;
     {
         void* argv[] = {
             info,
-            &min_flags,
+            &min_weight,
             &max_period,
             &now,
             &found,
@@ -330,16 +251,16 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
         };
         varray_iterate(peers, _aux_space_add_node_cb, argv);
         if (found) { //found
-            vpeer_init(to, &info->id, &info->ver, &info->addr, to->flags | flags, to->snd_ts, now);
+            vpeer_init(to, info, to->snd_ts, now);
             updt = 1;
         } else if (to && (varray_size(peers) >= space->bucket_sz)) { //replace worst one.
-            vpeer_init(to, &info->id, &info->ver, &info->addr, flags, 0, now);
+            vpeer_init(to, info, 0, now);
             updt = 1;
         } else { // insert new one.
             to = vpeer_alloc();
             vlog((!to), elog_vpeer_alloc);
             retE((!to));
-            vpeer_init(to, &info->id, &info->ver, &info->addr, flags, 0, now);
+            vpeer_init(to, info, 0, now);
             varray_add_tail(peers, to);
             updt = 1;
         }
@@ -373,7 +294,7 @@ int _vroute_node_space_del_node(struct vroute_node_space* space, vnodeAddr* addr
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
             peer = (struct vpeer*)varray_get(peers, j);
-            vnodeAddr_init(&peer_addr, &peer->id, &peer->addr);
+            vnodeAddr_init(&peer_addr, &peer->node.id, &peer->node.addr);
             if (vnodeAddr_equal(&peer_addr, addr)) {
                 found = 1;
                 break;
@@ -410,9 +331,11 @@ int _vroute_node_space_get_node(struct vroute_node_space* space, vnodeId* target
     peers = &space->bucket[idx].peers;
     for (; i < varray_size(peers); i++) {
         peer = (struct vpeer*)varray_get(peers, i);
-        if (vtoken_equal(&peer->id, target)) {
-            vnodeInfo_init(info, target, &peer->addr, peer->flags, &peer->ver);
-            info->flags &= ~PROP_VER;
+        if (vtoken_equal(&peer->node.id, target)) {
+            vnodeInfo_copy(info, &peer->node);
+            if (vtoken_equal(&peer->node.ver, &space->own->ver)) {
+                info->weight -= 1;
+            }
             ret = 0;
             break;
         }
@@ -467,7 +390,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
         for (j = 0; j < varray_size(peers); j++) {
             track = (struct vpeer_track*)vmem_aux_alloc(&maux);
             item  = (struct vpeer*)varray_get(peers, j);
-            vnodeId_dist(&item->id, target, &track->metric);
+            vnodeId_dist(&item->node.id, target, &track->metric);
             track->bucket_idx = i;
             track->item_idx   = j;
             vsorted_array_add(&array, track);
@@ -475,13 +398,14 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
     }
     for (i = 0; i < vminimum(num, vsorted_array_size(&array)); i++) {
         vnodeInfo* info = NULL;
-        uint32_t flags = 0;
         track = (struct vpeer_track*)vsorted_array_get(&array, i);
         peers = &space->bucket[track->bucket_idx].peers;
         item  = (struct vpeer*)varray_get(peers, track->item_idx);
-        info  = vnodeInfo_alloc();
-        flags = item->flags & ~PROP_VER;
-        vnodeInfo_init(info, &item->id, &item->addr, flags, &item->ver);
+        info  = vnodeInfo_alloc(); //todo;
+        vnodeInfo_copy(info, &item->node);
+        if (vtoken_equal(&info->ver, &space->own->ver)) {
+            info->weight--;
+        }
         varray_add_tail(closest, info);
     }
     vsorted_array_zero(&array, _aux_space_peer_free_cb, &maux);
@@ -492,19 +416,16 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
 static
 int _vroute_node_space_broadcast(struct vroute_node_space* space, void* svci)
 {
-    struct varray* peers = NULL;
     int i = 0;
-
     vassert(space);
     vassert(svci);
 
-    for (; i < NBUCKETS; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         void* argv[] = {
-            space->route,
+            space,
             svci
         };
-        peers = &space->bucket[i].peers;
-        varray_iterate(peers, _aux_space_broadcast_cb, argv);
+        varray_iterate(&space->bucket[i].peers, _aux_space_broadcast_cb, argv);
     }
     return 0;
 }
@@ -537,7 +458,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
-        vnodeAddr_init(&addr, &peer->id, &peer->addr);
+        vnodeAddr_init(&addr, &peer->node.id, &peer->node.addr);
         route->dht_ops->find_closest_nodes(route, &addr, &space->own->id);
     }
     return 0;

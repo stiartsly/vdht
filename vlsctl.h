@@ -23,6 +23,17 @@ enum {
     VLSCTL_BUTT
 };
 
+enum {
+    PLUGIN_RELAY,
+    PLUGIN_STUN,
+    PLUGIN_VPN,
+    PLUGIN_DDNS,
+    PLUGIN_MROUTE,
+    PLUGIN_DHASH,
+    PLUGIN_APP,
+    PLUGIN_BUTT
+};
+
 struct vlsctl;
 struct vlsctl_ops {
     int (*dispatch)(struct vlsctl*, struct vmsg_usr*);

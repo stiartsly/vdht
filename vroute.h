@@ -20,27 +20,7 @@ enum {
     PROP_POST_SERVICE         = 0x00000040,
     PROP_POST_HASH            = 0x00000080,
     PROP_GET_PEERS            = 0x00000100,
-    PROP_GET_PEERS_R          = 0x00000200,
-
-    PROP_VER         = 0x00001000,
-    PROP_RELAY       = 0x00010000,
-    PROP_STUN        = 0x00020000,
-    PROP_VPN         = 0x00040000,
-    PROP_DDNS        = 0x00080000,
-    PROP_MROUTE      = 0x00100000,
-    PROP_DHASH       = 0x00200000,
-    PROP_APP         = 0x01000000
-};
-
-enum {
-    PLUGIN_RELAY,
-    PLUGIN_STUN,
-    PLUGIN_VPN,
-    PLUGIN_DDNS,
-    PLUGIN_MROUTE,
-    PLUGIN_DHASH,
-    PLUGIN_APP,
-    PLUGIN_BUTT
+    PROP_GET_PEERS_R          = 0x00000200
 };
 
 #define PROP_DHT_MASK  ((uint32_t)0x000003ff)
@@ -86,7 +66,7 @@ void vroute_node_space_deinit(struct vroute_node_space*);
 struct vroute_srvc_space;
 struct vroute_srvc_space_ops {
     int  (*add_srvc_node)(struct vroute_srvc_space*, vsrvcInfo*);
-    int  (*get_srvc_node)(struct vroute_srvc_space*, int, vsrvcInfo*);
+    int  (*get_srvc_node)(struct vroute_srvc_space*, vtoken*, vsrvcInfo*);
     void (*clear)        (struct vroute_srvc_space*);
     void (*dump)         (struct vroute_srvc_space*);
 };
@@ -96,8 +76,7 @@ struct vroute_srvc_space {
 
     struct vroute_srvc_space_bucket {
         struct varray srvcs;
-        time_t ts;
-    } bucket[PLUGIN_BUTT];
+    } bucket[NBUCKETS];
     struct vroute_srvc_space_ops* ops;
 };
 
@@ -111,9 +90,9 @@ struct vroute;
 struct vroute_ops {
     int  (*join_node)    (struct vroute*, vnodeAddr*);
     int  (*drop_node)    (struct vroute*, vnodeAddr*);
-    int  (*reg_service)  (struct vroute*, int, struct sockaddr_in*);
-    int  (*unreg_service)(struct vroute*, int, struct sockaddr_in*);
-    int  (*get_service)  (struct vroute*, int, struct sockaddr_in*);
+    int  (*reg_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
+    int  (*unreg_service)(struct vroute*, vtoken*, struct sockaddr_in*);
+    int  (*get_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
     int  (*kick_nice)    (struct vroute*, int);
     int  (*dsptch)       (struct vroute*, struct vmsg_usr*);
     int  (*load)         (struct vroute*);
@@ -140,6 +119,7 @@ typedef int (*vroute_dht_cb_t)(struct vroute*, struct sockaddr_in*, void*);
 struct vroute {
     vnodeInfo     own_node;
     struct varray own_svcs;
+    uint32_t flags;
     int nice;
 
     struct vroute_node_space  node_space;

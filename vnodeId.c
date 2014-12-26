@@ -313,6 +313,14 @@ void vnodeInfo_free(vnodeInfo* info)
     return ;
 }
 
+int vnodeInfo_equal(vnodeInfo* a, vnodeInfo* b)
+{
+    vassert(a);
+    vassert(b);
+
+    return (vtoken_equal(&a->id, &b->id) || vsockaddr_equal(&a->addr,&b->addr));
+}
+
 void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
 {
     vassert(dest);
@@ -321,11 +329,11 @@ void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
     vtoken_copy(&dest->id, &src->id);
     vsockaddr_copy(&dest->addr, &src->addr);
     vtoken_copy(&dest->ver, &src->ver);
-    dest->flags = src->flags;
+    dest->weight = src->weight;
     return ;
 }
 
-int vnodeInfo_init(vnodeInfo* info, vnodeId* id, struct sockaddr_in* addr, uint32_t flags, vnodeVer* ver)
+int vnodeInfo_init(vnodeInfo* info, vnodeId* id, struct sockaddr_in* addr, vnodeVer* ver, int32_t weight)
 {
     vassert(info);
     vassert(id);
@@ -339,7 +347,7 @@ int vnodeInfo_init(vnodeInfo* info, vnodeId* id, struct sockaddr_in* addr, uint3
     } else {
         vtoken_copy(&info->ver, ver);
     }
-    info->flags = flags;
+    info->weight = weight;
     return 0;
 }
 
@@ -350,8 +358,23 @@ void vnodeInfo_dump(vnodeInfo* info)
     vtoken_dump(&info->id);
     vsockaddr_dump(&info->addr);
     vnodeVer_dump(&info->ver);
-    vdump(printf("flags: 0x%x", info->flags));
+    vdump(printf("weight: %d", info->weight));
     return ;
+}
+
+/*
+ * for vsrvcId
+ */
+int vsrvcId_bucket(vsrvcId* id)
+{
+    int hash = 0;
+    int i = 0;
+    vassert(id);
+
+    for (i = 0; i < VTOKEN_LEN; i++) {
+        hash += (id->data[i]) % VTOKEN_BITLEN;
+    }
+    return (hash % VTOKEN_BITLEN);
 }
 
 /*
@@ -375,16 +398,35 @@ void vsrvcInfo_free(vsrvcInfo* svc_info)
     return ;
 }
 
-int vsrvcInfo_init(vsrvcInfo* svc_info, int what, int nice, struct sockaddr_in* addr)
+int vsrvcInfo_init(vsrvcInfo* svc_info, vtoken* svc_id, int nice, struct sockaddr_in* addr)
 {
     vassert(svc_info);
     vassert(addr);
 
-    vtoken_make(&svc_info->id);
-    vsockaddr_copy(&svc_info->addr, addr);
-    svc_info->what = what;
+    vtoken_copy(&svc_info->id, svc_id);
     svc_info->nice = nice;
+    vsockaddr_copy(&svc_info->addr, addr);
     return 0;
+}
+
+void vsrvcInfo_copy (vsrvcInfo* dest, vsrvcInfo* src)
+{
+    vassert(dest);
+    vassert(src);
+
+    vtoken_copy(&dest->id,  &src->id);
+    vsockaddr_copy(&dest->addr, &src->addr);
+    dest->nice = src->nice;
+
+    return ;
+}
+
+int vsrvcInfo_equal(vsrvcInfo* a, vsrvcInfo* b)
+{
+    vassert(a);
+    vassert(b);
+
+    return (vtoken_equal(&a->id, &b->id) && vsockaddr_equal(&a->addr,&b->addr));
 }
 
 void vsrvcInfo_dump(vsrvcInfo* svc_info)
@@ -392,7 +434,6 @@ void vsrvcInfo_dump(vsrvcInfo* svc_info)
     vassert(svc_info);
     vtoken_dump(&svc_info->id);
     vsockaddr_dump(&svc_info->addr);
-    vdump(printf("what:%d", svc_info->what));
     vdump(printf("nice:%d", svc_info->nice));
 
     return ;

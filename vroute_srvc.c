@@ -1,45 +1,11 @@
 #include "vglobal.h"
 #include "vroute.h"
 
-struct vservice_desc {
-    int   what;
-    char* desc;
-};
-
-static struct vservice_desc service_desc[] = {
-    { PLUGIN_RELAY,  "relay"           },
-    { PLUGIN_STUN,   "stun"            },
-    { PLUGIN_VPN,    "vpn"             },
-    { PLUGIN_DDNS,   "ddns"            },
-    { PLUGIN_MROUTE, "multiple routes" },
-    { PLUGIN_DHASH,  "data hash"       },
-    { PLUGIN_APP,    "app"             },
-    { 0, 0}
-};
-
-char* vroute_srvc_get_desc(int what)
-{
-    struct vservice_desc* desc = service_desc;
-    for (; desc->desc; ) {
-        if (desc->what == what) {
-            break;
-        }
-        desc++;
-    }
-    if (!desc->desc) {
-        return "unkown service";
-    }
-    return desc->desc;
-}
-
 /*
  * service node structure and it follows it's correspondent help APIs.
  */
 struct vservice {
-    struct sockaddr_in addr;
-    int what;
-    int nice;
-    uint32_t flags;
+    vsrvcInfo svc;
     time_t rcv_ts;
 };
 
@@ -65,22 +31,13 @@ void vservice_free(struct vservice* item)
 }
 
 static
-void vservice_init(
-        struct vservice* item,
-        int what,
-        int nice,
-        struct sockaddr_in* addr,
-        time_t ts,
-        uint32_t flags)
+void vservice_init(struct vservice* item, vsrvcInfo* svci, time_t ts)
 {
     vassert(item);
-    vassert(addr);
+    vassert(svci);
 
-    vsockaddr_copy(&item->addr, addr);
-    item->what   = what;
-    item->nice   = nice;
+    vsrvcInfo_copy(&item->svc, svci);
     item->rcv_ts = ts;
-    item->flags  = flags;
     return ;
 }
 
@@ -89,10 +46,8 @@ void vservice_dump(struct vservice* item)
 {
     vassert(item);
     vdump(printf("-> SERVICE"));
-    vdump(printf("what:%s", vroute_srvc_get_desc(item->what)));
-    vdump(printf("nice:%d", item->nice));
+    vsrvcInfo_dump(&item->svc);
     vdump(printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts)));
-    vsockaddr_dump(&item->addr);
     vdump(printf("<- SERVICE"));
     return;
 }
@@ -100,22 +55,21 @@ void vservice_dump(struct vservice* item)
 static
 int _aux_srvc_add_service_cb(void* item, void* cookie)
 {
-    struct vservice* svc = (struct vservice*)item;
-    varg_decl(cookie, 0, vsrvcInfo*, svci);
-    varg_decl(cookie, 1, struct vservice**, to);
+    struct vservice* svc_item = (struct vservice*)item;
+    varg_decl(cookie, 0, struct vservice**, to);
+    varg_decl(cookie, 1, vsrvcInfo*, svc);
     varg_decl(cookie, 2, time_t*, now);
     varg_decl(cookie, 3, int32_t*, max_diff);
     varg_decl(cookie, 4, int*, found);
 
-    if ((svc->what == svci->what)
-        && vsockaddr_equal(&svc->addr, &svci->addr)) {
-        *to = svc;
+    if (vsrvcInfo_equal(&svc_item->svc, svc)) {
+        *to = svc_item;
         *found = 1;
         return 1;
     }
-    if ((*now - svc->rcv_ts) > *max_diff) {
-        *to = svc;
-        *max_diff = *now - svc->rcv_ts;
+    if ((*now - svc_item->rcv_ts) > *max_diff) {
+        *to = svc_item;
+        *max_diff = *now - svc_item->rcv_ts;
     }
     return 0;
 }
@@ -123,14 +77,15 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
 static
 int _aux_srvc_get_service_cb(void* item, void* cookie)
 {
-    struct vservice* svc = (struct vservice*)item;
+    struct vservice* svc_item = (struct vservice*)item;
     varg_decl(cookie, 0, struct vservice**, to);
-    varg_decl(cookie, 1, time_t*, now);
-    varg_decl(cookie, 2, int32_t*, min_tdff);
+    varg_decl(cookie, 1, vtoken*, svc_hash);
+    varg_decl(cookie, 2, int*, nice);
 
-    if ((*now - svc->rcv_ts) < *min_tdff) {
-        *to = svc;
-        *min_tdff = *now - svc->rcv_ts;
+    if (vtoken_equal(&svc_item->svc.id, svc_hash) &&
+        (svc_item->svc.nice < *nice)) {
+        *to = svc_item;
+        *nice = svc_item->svc.nice;
     }
     return 0;
 }
@@ -143,26 +98,22 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
  *
  */
 static
-int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* svci)
+int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* svc)
 {
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
     time_t now = time(NULL);
     int32_t max_diff = 0;
     int found = 0;
-    int updt = 0;
-    int ret  = -1;
 
     vassert(space);
-    vassert(svci);
-    retE((svci->what < 0));
-    retE((svci->what >= PLUGIN_BUTT));
+    vassert(svc);
 
-    svcs = &space->bucket[svci->what].srvcs;
+    svcs = &space->bucket[vsrvcId_bucket(&svc->id)].srvcs;
     {
         void* argv[] = {
-            svci,
             &to,
+            svc,
             &now,
             &max_diff,
             &found
@@ -170,23 +121,16 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
         varray_iterate(svcs, _aux_srvc_add_service_cb, argv);
         if (found) {
             to->rcv_ts = now;
-            updt = 1;
         } else if (to && varray_size(svcs) >= space->bucket_sz) {
-            vservice_init(to, svci->what, svci->nice, &svci->addr, now, 0);
-            updt = 1;
+            vservice_init(to, svc, now);
         } else {
             to = vservice_alloc();
             retE((!to));
-            vservice_init(to, svci->what, svci->nice, &svci->addr, now, 0);
+            vservice_init(to, svc, now);
             varray_add_tail(svcs, to);
-            updt = 1;
         };
     }
-    if (updt) {
-        space->bucket[svci->what].ts = now;
-        ret = 0;
-    }
-    return ret;
+    return 0;
 }
 
 /*
@@ -194,34 +138,33 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
  * require some kind of system service.
  *
  * @space: service routing table space;
+ * @svc_hash:
  * @svci : service infos
  */
 static
-int _vroute_srvc_get_serivce_node(struct vroute_srvc_space* space, int what, vsrvcInfo* svci)
+int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vtoken* svc_hash, vsrvcInfo* svc)
 {
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
-    time_t now = time(NULL);
-    int32_t min_tdff = (int32_t)0x7fffffff;
-    int ret = -1;
+    int nice = 100;
 
     vassert(space);
-    vassert(svci);
+    vassert(svc);
+    vassert(svc_hash);
 
-    svcs = &space->bucket[what].srvcs;
+    svcs = &space->bucket[vsrvcId_bucket(svc_hash)].srvcs;
     {
         void* argv[] = {
+            svc_hash,
             &to,
-            &now,
-            &min_tdff
+            &nice
         };
         varray_iterate(svcs, _aux_srvc_get_service_cb, argv);
         if (to) {
-            vsrvcInfo_init(svci, what, to->nice, &to->addr);
-            ret = 0;
+            vsrvcInfo_copy(svc, &to->svc);
         }
     }
-    return ret;
+    return 0;
 }
 
 /*
@@ -236,7 +179,7 @@ void _vroute_srvc_clear(struct vroute_srvc_space* space)
     int i = 0;
     vassert(space);
 
-    for (; i < PLUGIN_BUTT; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         svcs = &space->bucket[i].srvcs;
         while(varray_size(svcs) > 0) {
             vservice_free((struct vservice*)varray_del(svcs, 0));
@@ -260,7 +203,7 @@ void _vroute_srvc_dump(struct vroute_srvc_space* space)
     vassert(space);
 
     vdump(printf("-> SRVC ROUTING SPACE"));
-    for (i = 0; i < PLUGIN_BUTT; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         svcs = &space->bucket[i].srvcs;
         for (j = 0; j < varray_size(svcs); j++) {
             vservice_dump((struct vservice*)varray_get(svcs, j));
@@ -273,7 +216,7 @@ void _vroute_srvc_dump(struct vroute_srvc_space* space)
 static
 struct vroute_srvc_space_ops route_srvc_space_ops = {
     .add_srvc_node = _vroute_srvc_add_service_node,
-    .get_srvc_node = _vroute_srvc_get_serivce_node,
+    .get_srvc_node = _vroute_srvc_get_service_node,
     .clear         = _vroute_srvc_clear,
     .dump          = _vroute_srvc_dump
 };
@@ -286,9 +229,8 @@ int vroute_srvc_space_init(struct vroute_srvc_space* space, struct vconfig* cfg)
     vassert(space);
     vassert(cfg);
 
-    for (; i < PLUGIN_BUTT; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         varray_init(&space->bucket[i].srvcs, 8);
-        space->bucket[i].ts = 0;
     }
     ret = cfg->inst_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
     retE((ret < 0));
@@ -302,7 +244,7 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space* space)
     int i = 0;
 
     space->ops->clear(space);
-    for (; i < PLUGIN_BUTT; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         varray_deinit(&space->bucket[i].srvcs);
     }
     return ;

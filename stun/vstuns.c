@@ -14,11 +14,11 @@ static struct vstuns_params stuns_params;
 static
 int _vstuns_render_service(struct vstuns* stun)
 {
-    struct vhost* host = stun->host;
+    //struct vhost* host = stun->host;
     int ret = 0;
     vassert(stun);
 
-    ret = host->ops->plug(host, PLUGIN_STUN, &stun->my_addr);
+    //ret = host->ops->plug(host, PLUGIN_STUN, &stun->my_addr);
     retE((ret < 0));
     vlogI(printf("stun service registered"));
     return 0;
@@ -27,11 +27,11 @@ int _vstuns_render_service(struct vstuns* stun)
 static
 int _vstuns_unrender_service(struct vstuns * stun)
 {
-    struct vhost* host = stun->host;
+    //struct vhost* host = stun->host;
     int ret = 0;
     vassert(stun);
 
-    ret = host->ops->unplug(host, PLUGIN_STUN, &stun->my_addr);
+    //ret = host->ops->unplug(host, PLUGIN_STUN, &stun->my_addr);
     retE((ret < 0));
     vlogI(printf("stun service unregistered"));
     return 0;

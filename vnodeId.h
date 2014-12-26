@@ -64,37 +64,40 @@ struct vnodeInfo  {
     vnodeId  id;
     struct sockaddr_in addr;
     vnodeVer ver;
-    uint32_t flags;
+    int32_t weight;
 };
 typedef struct vnodeInfo vnodeInfo;
 
 vnodeInfo* vnodeInfo_alloc(void);
-void vnodeInfo_free(vnodeInfo*);
-void vnodeInfo_copy(vnodeInfo*, vnodeInfo*);
-int  vnodeInfo_init(vnodeInfo*, vnodeId*, struct sockaddr_in*, uint32_t, vnodeVer*);
-void vnodeInfo_dump(vnodeInfo*);
+void vnodeInfo_free (vnodeInfo*);
+int  vnodeInfo_equal(vnodeInfo*, vnodeInfo*);
+void vnodeInfo_copy (vnodeInfo*, vnodeInfo*);
+int  vnodeInfo_init (vnodeInfo*, vnodeId*, struct sockaddr_in*, vnodeVer*, int32_t);
+void vnodeInfo_dump (vnodeInfo*);
 
 /*
  * for vsrvcId
  */
 typedef struct vtoken vsrvcId;
+int vsrvcId_bucket(vsrvcId*);
 
 /*
  * for vsrvcInfo
  */
  struct vsrvcInfo {
     vsrvcId id;
-    struct sockaddr_in addr;
-    int32_t what;
     int32_t nice;
+    struct sockaddr_in addr;
  };
 
  typedef struct vsrvcInfo vsrvcInfo;
 
  vsrvcInfo* vsrvcInfo_alloc(void);
- void vsrvcInfo_free(vsrvcInfo*);
- int  vsrvcInfo_init(vsrvcInfo*, int, int, struct sockaddr_in*);
- void vsrvcInfo_dump(vsrvcInfo*);
+ void vsrvcInfo_free (vsrvcInfo*);
+ int  vsrvcInfo_init (vsrvcInfo*, vtoken*, int, struct sockaddr_in*);
+ void vsrvcInfo_copy (vsrvcInfo*, vsrvcInfo*);
+ int  vsrvcInfo_equal(vsrvcInfo*, vsrvcInfo*);
+ void vsrvcInfo_dump (vsrvcInfo*);
 
 #endif
 

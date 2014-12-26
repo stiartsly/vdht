@@ -183,7 +183,7 @@ int _vcmd_drop_node(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 {
-    struct vhost* host = lsctl->host;
+    //struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
     int what = 0;
     int ret = 0;
@@ -202,9 +202,9 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
     retE((ret < 0));
     sz += ret;
 
-    ret = host->ops->plug(host, what, &sin);
+   // ret = host->ops->plug(host, what, &sin);
     retE((ret < 0));
-    vlogI(printf("service (%s) published", vroute_srvc_get_desc(what)));
+   //vlogI(printf("service (%s) published", vroute_srvc_get_desc(what)));
     return sz;
 }
 
@@ -214,7 +214,7 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 {
-    struct vhost* host = lsctl->host;
+    //struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
     int what = 0;
     int ret = 0;
@@ -233,9 +233,9 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
     retE((ret < 0));
     sz += ret;
 
-    ret = host->ops->unplug(host, what, &sin);
+   // ret = host->ops->unplug(host, what, &sin);
     retE((ret < 0));
-    vlogI(printf("service (%s) unavailable.", vroute_srvc_get_desc(what)));
+   //vlogI(printf("service (%s) unavailable.", vroute_srvc_get_desc(what)));
     return sz;
 }
 
@@ -245,7 +245,7 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
 {
-    struct vhost* host = lsctl->host;
+    //struct vhost* host = lsctl->host;
     struct sockaddr_in addr;
     int what = 0;
     int ret = 0;
@@ -260,7 +260,7 @@ int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
     retE((what >= PLUGIN_BUTT ));
     sz += sizeof(int32_t);
 
-    ret = host->ops->get_service(host, what, &addr);
+   // ret = host->ops->get_service(host, what, &addr);
     retE((ret < 0));
     vsockaddr_dump(&addr);
     return sz;

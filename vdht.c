@@ -97,8 +97,8 @@ struct be_node* _aux_create_vnodeInfo(vnodeInfo* info)
     be_add_keypair(dict, "m", node);
     node = be_create_ver(&info->ver);
     be_add_keypair(dict, "v", node);
-    node = be_create_int(info->flags);
-    be_add_keypair(dict, "f", node);
+    node = be_create_int(info->weight);
+    be_add_keypair(dict, "w", node);
 
     return dict;
 }
@@ -117,8 +117,6 @@ struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* info)
     be_add_keypair(dict, "id", node);
     node = be_create_addr(&info->addr);
     be_add_keypair(dict, "m", node);
-    node = be_create_int(info->what);
-    be_add_keypair(dict, "f", node);
     node = be_create_int(info->nice);
     be_add_keypair(dict, "n", node);
 
@@ -687,9 +685,9 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
     retE((ret < 0));
     ret = be_unpack_ver(node, &info->ver);
     retE((ret < 0));
-    ret = be_node_by_key(dict, "f", &node);
+    ret = be_node_by_key(dict, "w", &node);
     retE((ret < 0));
-    ret = be_unpack_int(node, (int*)&info->flags);
+    ret = be_unpack_int(node, &info->weight);
     retE((ret < 0));
     return 0;
 }
@@ -711,10 +709,6 @@ int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* info)
     ret = be_node_by_key(dict, "m", &node);
     retE((ret < 0));
     ret = be_unpack_addr(node, &info->addr);
-    retE((ret < 0));
-    ret = be_node_by_key(dict, "f", &node);
-    retE((ret < 0));
-    ret = be_unpack_int(node, (int*)&info->what);
     retE((ret < 0));
     ret = be_node_by_key(dict, "n", &node);
     retE((ret < 0));
