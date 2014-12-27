@@ -6,7 +6,7 @@ extern struct vstun_proto_ops stun_proto_ops;
 struct vstunc_req {
     struct vlist list;
     uint8_t trans_id[12];
-    handle_mapped_addr_t cb;
+    stunc_msg_cb_t cb;
     void* cookie;
 };
 
@@ -34,7 +34,7 @@ void vstunc_req_free(struct vstunc_req* req)
 }
 
 static
-void vstunc_req_init(struct vstunc_req* req, uint8_t* trans_id, handle_mapped_addr_t cb, void* cookie)
+void vstunc_req_init(struct vstunc_req* req, uint8_t* trans_id, stunc_msg_cb_t cb, void* cookie)
 {
     vlist_init(&req->list);
     memcpy(req->trans_id, trans_id, 12);
@@ -47,7 +47,7 @@ void vstunc_req_init(struct vstunc_req* req, uint8_t* trans_id, handle_mapped_ad
 struct vstunc_srv {
     struct vlist list;
     struct sockaddr_in addr;
-    char hostname[32];
+    time_t used_ts;
 };
 
 static MEM_AUX_INIT(stunc_srv_cache, sizeof(struct vstunc_srv), 4);
@@ -74,31 +74,29 @@ void vstunc_srv_free(struct vstunc_srv* srv)
 }
 
 static
-void vstunc_srv_init(struct vstunc_srv* srv, char* hostname, struct sockaddr_in* addr)
+void vstunc_srv_init(struct vstunc_srv* srv, struct sockaddr_in* addr)
 {
     vassert(srv);
-    vassert(hostname);
 
     vlist_init(&srv->list);
-    strncpy(srv->hostname, hostname, 32);
     vsockaddr_copy(&srv->addr, addr);
+    srv->used_ts = 0;
 
     return;
 }
 
 static
-int _vstunc_add_server(struct vstunc* stunc, char* srv_name, struct sockaddr_in* srv_addr)
+int _vstunc_add_server(struct vstunc* stunc, struct sockaddr_in* srv_addr)
 {
     struct vstunc_srv* srv = NULL;
 
     vassert(stunc);
-    vassert(srv_name);
     vassert(srv_addr);
 
     srv = vstunc_srv_alloc();
     vlog((!srv), elog_vstunc_srv_alloc);
     retE((!srv));
-    vstunc_srv_init(srv, srv_name, srv_addr);
+    vstunc_srv_init(srv, srv_addr);
 
     vlock_enter(&stunc->lock);
     vlist_add_tail(&stunc->servers, &srv->list);
@@ -108,41 +106,31 @@ int _vstunc_add_server(struct vstunc* stunc, char* srv_name, struct sockaddr_in*
 }
 
 static
-void _aux_trans_id_make(uint8_t* trans_id)
+int _vstunc_get_server(struct vstunc* stunc, struct sockaddr_in* srv_addr)
 {
-    int i = 0;
-    vassert(trans_id);
+    vassert(stunc);
+    vassert(srv_addr);
 
-    srand(time(NULL));
-    for (; i < 12; i++) {
-        trans_id[i] = (uint8_t)(rand() % 16);
-    }
-    return ;
+    //todo;
+    return 0;
 }
 
 static
-int _vstunc_req_mapped_addr(struct vstunc* stunc, struct sockaddr_in* to, handle_mapped_addr_t cb, void* cookie)
+int _vstunc_snd_req_msg(struct vstunc* stunc, struct vstun_msg* msg, struct sockaddr_in* to, stunc_msg_cb_t cb, void* cookie)
 {
     struct vstunc_req* req = NULL;
-    struct vstun_msg msg;
     void* buf = NULL;
-    uint8_t trans_id[12];
     int ret = 0;
 
     vassert(stunc);
-    vassert(cb);
+    vassert(msg);
+    vassert(to);
 
     buf = malloc(BUF_SZ);
     vlog((!buf), elog_malloc);
     retE((!buf));
 
-    memset(&msg, 0, sizeof(msg));
-    msg.header.type  = msg_bind_req;
-    msg.header.len   = 0;
-    msg.header.magic = 0;
-    _aux_trans_id_make(msg.header.trans_id);
-
-    ret = stunc->proto_ops->encode(&msg, buf, BUF_SZ);
+    ret = stunc->proto_ops->encode(msg, buf, BUF_SZ);
     ret1E((ret < 0), free(buf));
 
     {
@@ -160,7 +148,7 @@ int _vstunc_req_mapped_addr(struct vstunc* stunc, struct sockaddr_in* to, handle
     vlog((!req), elog_vstunc_req_alloc);
     retE((!req));
 
-    vstunc_req_init(req, trans_id, cb, cookie);
+    vstunc_req_init(req, msg->header.trans_id, cb, cookie);
     vlock_enter(&stunc->lock);
     vlist_add_tail(&stunc->items, &req->list);
     vlock_leave(&stunc->lock);
@@ -169,70 +157,39 @@ int _vstunc_req_mapped_addr(struct vstunc* stunc, struct sockaddr_in* to, handle
 }
 
 static
-int _vstunc_rsp_mapped_addr(struct vstunc* stunc, struct sockaddr_in* from, char* buf, int len)
+int _vstunc_rcv_rsp_msg(struct vstunc* stunc, struct vstun_msg* msg, struct sockaddr_in* from)
 {
-    struct vstun_msg msg;
-    struct vstun_msg_header* hdr = &msg.header;
     struct vstunc_req* req = NULL;
     struct vlist* node = NULL;
-    int ret = 0;
 
     vassert(stunc);
-    vassert(buf);
-    vassert(len > 0);
+    vassert(msg);
     vassert(from);
-
-    memset(&msg, 0, sizeof(msg));
-    ret = stunc->proto_ops->decode(buf, len, &msg);
-    retE((ret < 0));
-    retS((STUN_MAGIC != hdr->magic)); //skip non-stun message.
 
     vlock_enter(&stunc->lock);
     __vlist_for_each(node, &stunc->items) {
         req = vlist_entry(node, struct vstunc_req, list);
-        if (!memcmp(req->trans_id, hdr->trans_id, 12)) {
+        if (!memcmp(req->trans_id, msg->header.trans_id, 12)) {
             vlist_del(&req->list);
             break;
         }
         req = NULL;
     }
     vlock_leave(&stunc->lock);
-    retS((!req)); // skip wrong trans_id message.
+    retS((!req)); // skip the message with wrong trans_id
 
-    switch(hdr->type) {
-    case msg_bind_rsp: {
-        struct vattr_addrv4* addr = &msg.mapped_addr;
-        struct sockaddr_in sin_addr;
-
-        if (msg.has_mapped_addr) {
-            vsockaddr_convert2(addr->addr, addr->port, &sin_addr);
-            req->cb(&sin_addr, req->cookie);
-        }
-        break;
-    }
-    case msg_bind_rsp_err:
-        break;
-    default:
-        retE((1));
-        break;
-    }
-    if (req) {
+    if (msg->header.type != msg_bind_rsp) {
         vstunc_req_free(req);
+        return 0;
     }
+
+    req->cb(req->cookie, msg);
+    vstunc_req_free(req);
     return 0;
 }
 
 static
-int _vstunc_get_nat_type(struct vstunc* stunc)
-{
-    vassert(stunc);
-
-    //todo;
-    return 0;
-}
-
-static
-int _vstunc_clear(struct vstunc* stunc)
+void _vstunc_clear(struct vstunc* stunc)
 {
     struct vstunc_srv* srv = NULL;
     struct vstunc_req*   item = NULL;
@@ -251,27 +208,250 @@ int _vstunc_clear(struct vstunc* stunc)
         vstunc_srv_free(srv);
     }
     vlock_leave(&stunc->lock);
+    return;
+}
+
+static
+void _vstunc_dump(struct vstunc* stunc)
+{
+    vassert(stunc);
+
+    //todo;
+    return;
+}
+
+static
+struct vstunc_ops stunc_ops = {
+    .add_srv     = _vstunc_add_server,
+    .get_srv     = _vstunc_get_server,
+    .snd_req_msg = _vstunc_snd_req_msg,
+    .rcv_rsp_msg = _vstunc_rcv_rsp_msg,
+    .clear       = _vstunc_clear,
+    .dump        = _vstunc_dump
+};
+
+struct vstunc_nat_params {
+    uint32_t which_step;
+    struct sockaddr_in my_last_addr;
+};
+
+static
+struct vstunc_nat_params stunc_nat_params = {
+    .which_step = NAT_CHECK_STEP0
+};
+
+static
+void _aux_trans_id_make(uint8_t* trans_id)
+{
+    int i = 0;
+    vassert(trans_id);
+
+    srand(time(NULL));
+    for (; i < 12; i++) {
+        trans_id[i] = (uint8_t)(rand() % 16);
+    }
+    return ;
+}
+
+/*
+ * the routine to check whether network is fully-blocked by NAT.
+ *
+ * @srv:
+ */
+static
+int _vstunc_check_step1(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
+{
+    struct vstun_msg   msg;
+    struct sockaddr_in to;
+    int   ret = 0;
+
+    vassert(stunc);
+
+    msg.header.type  = msg_bind_req;
+    msg.header.len   = 0;
+    msg.header.magic = STUN_MAGIC;
+    _aux_trans_id_make(msg.header.trans_id);
+
+    ret = stunc->ops->get_srv(stunc, &to);
+    retE((ret < 0));
+    ret = stunc->ops->snd_req_msg(stunc, &msg, &to, cb, cookie);
+    retE((ret < 0));
     return 0;
 }
 
-struct vstunc_ops stunc_ops = {
-    .add_server      = _vstunc_add_server,
-    .req_mapped_addr = _vstunc_req_mapped_addr,
-    .rsp_mapped_addr = _vstunc_rsp_mapped_addr,
-    .get_nat_type    = _vstunc_get_nat_type,
-    .clear           = _vstunc_clear
+/*
+ * the routine to check whether network is full-cone NAT.
+ */
+static
+int _vstunc_check_step2(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
+{
+    struct vstun_msg  msg;
+    struct sockaddr_in to;
+    int ret = 0;
+
+    vassert(stunc);
+
+    msg.header.type  = msg_bind_req;
+    msg.header.len   = 0;
+    msg.header.magic = STUN_MAGIC;
+
+    //todo; req_change attribute needed.
+    _aux_trans_id_make(msg.header.trans_id);
+
+    ret = stunc->ops->get_srv(stunc, &to);
+    retE((ret < 0));
+    ret = stunc->ops->snd_req_msg(stunc, &msg, &to, cb, cookie);
+    retE((ret < 0));
+    return 0;
+}
+
+/*
+ * the routine to check whether network is symmetric NAT.
+ */
+static
+int _vstunc_check_step3(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
+{
+    struct vstun_msg  msg;
+    struct sockaddr_in to;
+    int ret = 0;
+
+    vassert(stunc);
+
+    msg.header.type  = msg_bind_req;
+    msg.header.len   = 0;
+    msg.header.magic = STUN_MAGIC;
+
+    //todo; req_change attribute needed.
+    _aux_trans_id_make(msg.header.trans_id);
+
+    ret = stunc->ops->get_srv(stunc, &to);
+    retE((ret < 0));
+    ret = stunc->ops->snd_req_msg(stunc, &msg, &to, cb, cookie);
+    retE((ret < 0));
+    return 0;
+}
+
+/*
+ * the routine to check whether network is restricted cone NAT or port restricted
+ * cone NAT.
+ */
+static
+int _vstunc_check_step4(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
+{
+    struct vstun_msg  msg;
+    struct sockaddr_in to;
+    int ret = 0;
+
+    vassert(stunc);
+
+    msg.header.type  = msg_bind_req;
+    msg.header.len   = 0;
+    msg.header.magic = STUN_MAGIC;
+
+    //todo; req_change attribute needed.
+    _aux_trans_id_make(msg.header.trans_id);
+
+    ret = stunc->ops->get_srv(stunc, &to);
+    retE((ret < 0));
+    ret = stunc->ops->snd_req_msg(stunc, &msg, &to, cb, cookie);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _aux_check_nat_type_cb(void* cookie, struct vstun_msg* msg)
+{
+    struct vstunc* stunc = (struct vstunc*)cookie;
+    struct vstunc_nat_params* params = (struct vstunc_nat_params*)stunc->params;
+    int ret = 0;
+    vassert(stunc);
+    vassert(msg);
+
+    switch(params->which_step) {
+    case NAT_CHECK_STEP0:
+        //deal message.
+        params->which_step = NAT_CHECK_STEP1;
+        ret = stunc->nat_ops->check_step2(stunc, _aux_check_nat_type_cb, stunc);
+        break;
+
+    case NAT_CHECK_STEP1:
+        //deal message;
+        params->which_step = NAT_CHECK_STEP2;
+        ret = stunc->nat_ops->check_step3(stunc, _aux_check_nat_type_cb, stunc);
+        break;
+    case NAT_CHECK_STEP2:
+        //deal message;
+        params->which_step = NAT_CHECK_STEP3;
+        ret = stunc->nat_ops->check_step3(stunc, _aux_check_nat_type_cb, stunc);
+        break;
+    case NAT_CHECK_STEP3:
+        //deal message;
+        params->which_step = NAT_CHECK_STEP3_NEXT;
+        ret = stunc->nat_ops->check_step3(stunc, _aux_check_nat_type_cb, stunc);
+        break;
+    case NAT_CHECK_STEP3_NEXT:
+        //todo:
+        params->which_step = NAT_CHECK_STEP4;
+        ret = stunc->nat_ops->check_step4(stunc, _aux_check_nat_type_cb, stunc);
+        break;
+    case NAT_CHECK_STEP4:
+        //todo;
+        params->which_step = NAT_CHECK_SUCC;
+        //todo;
+        break;
+    case NAT_CHECK_ERR:
+    case NAT_CHECK_SUCC:
+    case NAT_CHECK_TIMEOUT:
+        //todo;
+        break;
+    default:
+        vassert(0);
+    }
+    if (ret < 0) {
+        params->which_step = NAT_CHECK_ERR;
+    }
+    return 0;
+}
+
+static
+int _vstunc_check_nat_type(struct vstunc* stunc)
+{
+    struct vstunc_nat_params* params = (struct vstunc_nat_params*)stunc->params;
+    int ret = 0;
+    vassert(stunc);
+
+    memset(params, 0, sizeof(*params));
+    params->which_step = NAT_CHECK_STEP0;
+
+    ret = stunc->nat_ops->check_step1(stunc, _aux_check_nat_type_cb, stunc);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+struct vstunc_nat_ops stunc_nat_ops = {
+    .check_step1 = _vstunc_check_step1,
+    .check_step2 = _vstunc_check_step2,
+    .check_step3 = _vstunc_check_step3,
+    .check_step3 = _vstunc_check_step4,
+    .check_nat_type = _vstunc_check_nat_type
 };
 
 static
 int _aux_stunc_msg_cb(void* cookie, struct vmsg_usr* mu)
 {
     struct vstunc* stunc = (struct vstunc*)cookie;
+    struct vstun_msg msg;
     int ret = 0;
 
     vassert(stunc);
     vassert(mu);
 
-    ret = stunc->ops->rsp_mapped_addr(stunc, to_sockaddr_sin(mu->addr), mu->data, mu->len);
+    memset(&msg, 0, sizeof(msg));
+    ret = stunc->proto_ops->decode(mu->data, mu->len, &msg);
+    retE((ret < 0));
+
+    ret = stunc->ops->rcv_rsp_msg(stunc, &msg, to_sockaddr_sin(mu->addr));
     retE((ret < 0));
     return 0;
 }
@@ -283,7 +463,10 @@ int vstunc_init(struct vstunc* stunc, struct vmsger* msger)
     vlist_init(&stunc->items);
     vlock_init(&stunc->lock);
 
+    stunc->msger     = msger;
+    stunc->params    = &stunc_nat_params;
     stunc->ops       = &stunc_ops;
+    stunc->nat_ops   = &stunc_nat_ops;
     stunc->proto_ops = &stun_proto_ops;
     msger->ops->add_cb(msger, stunc, _aux_stunc_msg_cb, VMSG_STUN);
     return 0;
