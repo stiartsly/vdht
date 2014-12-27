@@ -161,7 +161,7 @@ void* varray_del(struct varray* array, int idx)
     }
 
     item = array->items[idx];
-    for (; i < array->used; i++) {
+    for (i = idx; i < array->used; i++) {
         array->items[i] = array->items[i+1];
     }
     array->items[i] = NULL;
