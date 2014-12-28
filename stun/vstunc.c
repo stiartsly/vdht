@@ -108,8 +108,28 @@ int _vstunc_add_server(struct vstunc* stunc, struct sockaddr_in* srv_addr)
 static
 int _vstunc_get_server(struct vstunc* stunc, struct sockaddr_in* srv_addr)
 {
+    struct vstunc_srv* srv = NULL;
+    struct vlist* node = NULL;
     vassert(stunc);
     vassert(srv_addr);
+
+    vlock_enter(&stunc->lock);
+    if (!vlist_is_empty(&stunc->servers)) {
+        node = vlist_pop_head(&stunc->servers);
+        srv  = vlist_entry(node, struct vstunc_srv, list);
+        vsockaddr_copy(srv_addr, &srv->addr);
+        vlist_add_tail(&stunc->servers, node);
+    }
+    vlock_leave(&stunc->lock);
+    retE((!srv));
+    return 0;
+}
+
+static
+int _vstunc_obsolete_server(struct vstunc* stunc, struct sockaddr_in* srv_addr)
+{
+    vassert(stunc);
+    vassert(stunc);
 
     //todo;
     return 0;
@@ -220,16 +240,6 @@ void _vstunc_dump(struct vstunc* stunc)
     return;
 }
 
-static
-struct vstunc_ops stunc_ops = {
-    .add_srv     = _vstunc_add_server,
-    .get_srv     = _vstunc_get_server,
-    .snd_req_msg = _vstunc_snd_req_msg,
-    .rcv_rsp_msg = _vstunc_rcv_rsp_msg,
-    .clear       = _vstunc_clear,
-    .dump        = _vstunc_dump
-};
-
 struct vstunc_nat_params {
     uint32_t which_step;
     struct sockaddr_in my_last_addr;
@@ -237,7 +247,7 @@ struct vstunc_nat_params {
 
 static
 struct vstunc_nat_params stunc_nat_params = {
-    .which_step = NAT_CHECK_STEP0
+    .which_step = NAT_CHECK_STEP1
 };
 
 static
@@ -259,13 +269,15 @@ void _aux_trans_id_make(uint8_t* trans_id)
  * @srv:
  */
 static
-int _vstunc_check_step1(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
+int _vstunc_check_step1(void* cookie,  stunc_msg_cb_t cb)
 {
-    struct vstun_msg   msg;
+    struct vstunc* stunc = (struct vstunc*)cookie;
+    struct vstun_msg msg;
     struct sockaddr_in to;
     int   ret = 0;
 
     vassert(stunc);
+    vassert(cb);
 
     msg.header.type  = msg_bind_req;
     msg.header.len   = 0;
@@ -283,9 +295,10 @@ int _vstunc_check_step1(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
  * the routine to check whether network is full-cone NAT.
  */
 static
-int _vstunc_check_step2(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
+int _vstunc_check_step2(void* cookie, stunc_msg_cb_t cb)
 {
-    struct vstun_msg  msg;
+    struct vstunc* stunc = (struct vstunc*)cookie;
+    struct vstun_msg msg;
     struct sockaddr_in to;
     int ret = 0;
 
@@ -309,9 +322,10 @@ int _vstunc_check_step2(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
  * the routine to check whether network is symmetric NAT.
  */
 static
-int _vstunc_check_step3(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
+int _vstunc_check_step3(void* cookie, stunc_msg_cb_t cb)
 {
-    struct vstun_msg  msg;
+    struct vstunc* stunc = (struct vstunc*)cookie;
+    struct vstun_msg msg;
     struct sockaddr_in to;
     int ret = 0;
 
@@ -336,8 +350,9 @@ int _vstunc_check_step3(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
  * cone NAT.
  */
 static
-int _vstunc_check_step4(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
+int _vstunc_check_step4(void* cookie, stunc_msg_cb_t cb)
 {
+    struct vstunc* stunc = (struct vstunc*)cookie;
     struct vstun_msg  msg;
     struct sockaddr_in to;
     int ret = 0;
@@ -359,6 +374,16 @@ int _vstunc_check_step4(struct vstunc* stunc, stunc_msg_cb_t cb, void* cookie)
 }
 
 static
+stunc_nat_check_t stunc_check_steps[] = {
+    _vstunc_check_step1,   // when checking in step1
+    _vstunc_check_step2,   // when checking in step2.
+    _vstunc_check_step3,   // when checking in step3
+    _vstunc_check_step3,   // when checking in bottom half of step3.
+    _vstunc_check_step4,   // when checking in step4.
+    0
+};
+
+static
 int _aux_check_nat_type_cb(void* cookie, struct vstun_msg* msg)
 {
     struct vstunc* stunc = (struct vstunc*)cookie;
@@ -368,31 +393,25 @@ int _aux_check_nat_type_cb(void* cookie, struct vstun_msg* msg)
     vassert(msg);
 
     switch(params->which_step) {
-    case NAT_CHECK_STEP0:
-        //deal message.
-        params->which_step = NAT_CHECK_STEP1;
-        ret = stunc->nat_ops->check_step2(stunc, _aux_check_nat_type_cb, stunc);
-        break;
-
     case NAT_CHECK_STEP1:
         //deal message;
         params->which_step = NAT_CHECK_STEP2;
-        ret = stunc->nat_ops->check_step3(stunc, _aux_check_nat_type_cb, stunc);
+        ret = stunc->nat_ops[NAT_CHECK_STEP2](stunc, _aux_check_nat_type_cb);
         break;
     case NAT_CHECK_STEP2:
         //deal message;
         params->which_step = NAT_CHECK_STEP3;
-        ret = stunc->nat_ops->check_step3(stunc, _aux_check_nat_type_cb, stunc);
+        ret = stunc->nat_ops[NAT_CHECK_STEP3](stunc, _aux_check_nat_type_cb);
         break;
     case NAT_CHECK_STEP3:
         //deal message;
         params->which_step = NAT_CHECK_STEP3_NEXT;
-        ret = stunc->nat_ops->check_step3(stunc, _aux_check_nat_type_cb, stunc);
+        ret = stunc->nat_ops[NAT_CHECK_STEP3_NEXT](stunc, _aux_check_nat_type_cb);
         break;
     case NAT_CHECK_STEP3_NEXT:
         //todo:
         params->which_step = NAT_CHECK_STEP4;
-        ret = stunc->nat_ops->check_step4(stunc, _aux_check_nat_type_cb, stunc);
+        ret = stunc->nat_ops[NAT_CHECK_STEP4](stunc, _aux_check_nat_type_cb);
         break;
     case NAT_CHECK_STEP4:
         //todo;
@@ -421,19 +440,21 @@ int _vstunc_check_nat_type(struct vstunc* stunc)
     vassert(stunc);
 
     memset(params, 0, sizeof(*params));
-    params->which_step = NAT_CHECK_STEP0;
-
-    ret = stunc->nat_ops->check_step1(stunc, _aux_check_nat_type_cb, stunc);
+    params->which_step = NAT_CHECK_STEP1;
+    ret = stunc->nat_ops[NAT_CHECK_STEP1](stunc, _aux_check_nat_type_cb);
     retE((ret < 0));
     return 0;
 }
 
 static
-struct vstunc_nat_ops stunc_nat_ops = {
-    .check_step1 = _vstunc_check_step1,
-    .check_step2 = _vstunc_check_step2,
-    .check_step3 = _vstunc_check_step3,
-    .check_step3 = _vstunc_check_step4,
+struct vstunc_ops stunc_ops = {
+    .add_srv      = _vstunc_add_server,
+    .get_srv      = _vstunc_get_server,
+    .obsolete_srv = _vstunc_obsolete_server,
+    .snd_req_msg  = _vstunc_snd_req_msg,
+    .rcv_rsp_msg  = _vstunc_rcv_rsp_msg,
+    .clear        = _vstunc_clear,
+    .dump         = _vstunc_dump,
     .check_nat_type = _vstunc_check_nat_type
 };
 
@@ -466,7 +487,7 @@ int vstunc_init(struct vstunc* stunc, struct vmsger* msger)
     stunc->msger     = msger;
     stunc->params    = &stunc_nat_params;
     stunc->ops       = &stunc_ops;
-    stunc->nat_ops   = &stunc_nat_ops;
+    stunc->nat_ops   = stunc_check_steps;
     stunc->proto_ops = &stun_proto_ops;
     msger->ops->add_cb(msger, stunc, _aux_stunc_msg_cb, VMSG_STUN);
     return 0;
