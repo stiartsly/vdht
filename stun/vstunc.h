@@ -1,7 +1,7 @@
 #ifndef __VSTUNC_H__
 #define __VSTUNC_H__
 
-#include "vlist.h"
+#include "varray.h"
 #include "vsys.h"
 #include "vmsger.h"
 #include "vstun_proto.h"
@@ -30,32 +30,44 @@ enum {
 
 struct vstunc;
 typedef int (*stunc_msg_cb_t)(void*, struct vstun_msg*);
-struct vstunc_ops {
-    int  (*add_srv)     (struct vstunc*, struct sockaddr_in*);
-    int  (*get_srv)     (struct vstunc*, struct sockaddr_in*);
-    int  (*obsolete_srv)(struct vstunc*, struct sockaddr_in*);
-    int  (*snd_req_msg) (struct vstunc*, struct vstun_msg*, struct sockaddr_in*, stunc_msg_cb_t, void*);
-    int  (*rcv_rsp_msg) (struct vstunc*, struct vstun_msg*, struct sockaddr_in*);
-    void (*clear)       (struct vstunc*);
-    void (*dump)        (struct vstunc*);
-    int  (*check_nat_type)(struct vstunc*);
+
+struct vstunc_base_ops {
+    int  (*add_srv)    (struct vstunc*, struct sockaddr_in*);
+    int  (*snd_req_msg)(struct vstunc*, struct vstun_msg*, stunc_msg_cb_t, void*, int);
+    int  (*rcv_rsp_msg)(struct vstunc*, struct vstun_msg*, struct sockaddr_in*);
+    int  (*reap_tmo_reqs)(struct vstunc*);
+    void (*clear)      (struct vstunc*);
+    void (*dump)       (struct vstunc*);
+};
+
+typedef int (*get_ext_addr_cb_t)(void*, struct sockaddr_in*);
+typedef int (*get_nat_type_cb_t)(void*, int);
+struct vstunc_nat_ops {
+    int  (*get_ext_addr)(struct vstunc*, struct sockaddr_in*, get_ext_addr_cb_t, void*);
+    int  (*get_nat_type)(struct vstunc*, get_nat_type_cb_t, void*);
 };
 
 typedef int (*stunc_nat_check_t)(void*, stunc_msg_cb_t);
 struct vstunc {
-    struct vlist items;
-    struct vlist servers;
-    struct vlock lock;
+    struct varray items;   //stunc request records;
+    struct varray servers;
+    struct vlock  lock;
 
-    struct vmsger* msger;
-    void* params;
+    int max_snd_tmo;
+    int max_snd_tms; 
 
-    struct vstunc_ops* ops;
+    struct vmsger*  msger;
+    struct vticker* ticker;
+    struct vroute*  route;
+    void* private_params;
+
+    struct vstunc_base_ops* base_ops;
+    struct vstunc_nat_ops*  ops;
     stunc_nat_check_t* nat_ops;
     struct vstun_proto_ops* proto_ops;
 };
 
-int  vstunc_init(struct vstunc*, struct vmsger*);
+int  vstunc_init(struct vstunc*, struct vmsger*, struct vticker*, struct vroute*);
 void vstunc_deinit(struct vstunc*);
 
 #endif
