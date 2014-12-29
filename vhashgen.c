@@ -326,13 +326,40 @@ struct vhashgen_ops hashgen_ops = {
     .hash_with_cookie = _vhashgen_hash_with_cookie
 };
 
+static
+int _vhashgen_hash_stun_service(struct vhashgen* gen, vtoken* token)
+{
+    vassert(gen);
+    vassert(token);
+
+    //todo;
+    return 0;
+}
+
+static
+int _vhashgen_hash_relay_service(struct vhashgen* gen, vtoken* token)
+{
+    vassert(gen);
+    vassert(token);
+
+    //todo;
+    return 0;
+}
+
+static
+struct vhashgen_inst_ops hashgen_inst_ops = {
+    .hash_stun  = _vhashgen_hash_stun_service,
+    .hash_relay = _vhashgen_hash_relay_service
+};
+
 int vhashgen_init (struct vhashgen* gen)
 {
     vassert(gen);
 
-    gen->ctxt    = &hashgen_ctxt_sha1;
-    gen->ops     = &hashgen_ops;
-    gen->sha_ops = &hashgen_sha1_ops;
+    gen->ctxt     = &hashgen_ctxt_sha1;
+    gen->sha_ops  = &hashgen_sha1_ops;
+    gen->ops      = &hashgen_ops;
+    gen->inst_ops = &hashgen_inst_ops;
 
     return 0;
 }

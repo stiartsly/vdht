@@ -22,11 +22,17 @@ struct vhashgen_ops {
     int (*hash_with_cookie)(struct vhashgen*, uint8_t*, int, uint8_t*, int, vtoken*);
 };
 
+struct vhashgen_inst_ops {
+    int (*hash_stun) (struct vhashgen*, vtoken*);
+    int (*hash_relay)(struct vhashgen*, vtoken*);
+};
+
 struct vhashgen {
     void* ctxt;
 
     struct vhashgen_sha1_ops* sha_ops;
     struct vhashgen_ops*      ops;
+    struct vhashgen_inst_ops* inst_ops;
 };
 
 int  vhashgen_init  (struct vhashgen*);
