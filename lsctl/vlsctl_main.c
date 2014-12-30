@@ -78,7 +78,7 @@ struct option long_options[] = {
     {"del-node",            no_argument,       0,        'e'},
     {"relay",               no_argument,       0,        'R'},
     {"stun",                no_argument,       0,        'T'},
-    {"vpn",                 no_argument,       0,        'P'},
+    //{"vpn",                 no_argument,       0,        'P'},
     {"up",                  no_argument,       0,        'u'},
     {"down",                no_argument,       0,        'w'},
     {"addr",                required_argument, 0,        'm'},
@@ -115,11 +115,11 @@ void show_usage(void)
     printf("  -p  --relay    --down    --addr=IP:PORT   request to nulify a relay service\n");
     printf("  -p  --stun     --up      --addr=IP:PORT   request to post a stun  service\n");
     printf("  -p  --stun     --down    --addr=IP:PORT   request to nulify a stun service\n");
-    printf("  -p  --vpn      --up      --addr=IP:PORT   request to post a vpn service\n");
-    printf("  -p  --vpn      --down    --addr=IP:PORT   request to nulify a vpn service\n");
+   // printf("  -p  --vpn      --up      --addr=IP:PORT   request to post a vpn service\n");
+   // printf("  -p  --vpn      --down    --addr=IP:PORT   request to nulify a vpn service\n");
     printf("  -q  --relay                               request to acquire relay service\n");
     printf("  -q  --stun                                request to acquire stun service\n");
-    printf("  -q  --vpn                                 request to actuire vpn service\n");
+   // printf("  -q  --vpn                                 request to actuire vpn service\n");
     printf("\n");
     printf(" About bogus dht options:\n");
     printf("  -t  --ping               --addr=IP:PORT   request to send ping query\n");
@@ -772,7 +772,7 @@ int main(int argc, char** argv)
     }
 
     while(c >= 0) {
-        c = getopt_long(argc, argv, "U:S:dDxscaepRTPuwm:qtJKLMNvh", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:S:dDxscaepRTuwm:qtJKLMNvh", long_options, &opt_idx);
         if (c < 0) {
             break;
         } else if (c == 0) {
