@@ -329,20 +329,24 @@ struct vhashgen_ops hashgen_ops = {
 static
 int _vhashgen_get_stun_svc_hash(struct vhashgen* gen, vtoken* token)
 {
+    int ret = 0;
     vassert(gen);
     vassert(token);
 
-    //todo;
+    ret = gen->ops->hash(gen, (uint8_t*)HASH_MAGIC_STUN, strlen(HASH_MAGIC_STUN), token);
+    retE((ret < 0));
     return 0;
 }
 
 static
 int _vhashgen_get_relay_svc_hash(struct vhashgen* gen, vtoken* token)
 {
+    int ret = 0;
     vassert(gen);
     vassert(token);
 
-    //todo;
+    ret = gen->ops->hash(gen, (uint8_t*)HASH_MAGIC_RELAY, strlen(HASH_MAGIC_RELAY), token);
+    retE((ret < 0));
     return 0;
 }
 
