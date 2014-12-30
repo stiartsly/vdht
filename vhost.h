@@ -7,6 +7,8 @@
 #include "vlsctl.h"
 #include "vmsger.h"
 #include "vticker.h"
+#include "vhashgen.h"
+#include "stun/vstunc.h"
 
 struct vhost;
 struct vhost_ops {
@@ -38,6 +40,8 @@ struct vhost {
     struct vnode    node;
     struct vlsctl   lsctl;
     struct vspy     spy;
+    struct vstunc   stunc;
+    struct vhashgen hashgen;
 
     struct vconfig*   cfg;
     struct vhost_ops* ops;

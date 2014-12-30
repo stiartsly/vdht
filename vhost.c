@@ -440,7 +440,11 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vspy_init   (&host->spy, cfg);
+    ret += vstunc_init (&host->stunc, &host->msger, &host->ticker, &host->route);
+    ret += vhashgen_init(&host->hashgen);
     if (ret < 0) {
+        vhashgen_deinit(&host->hashgen);
+        vstunc_deinit  (&host->stunc);
         vspy_deinit    (&host->spy);
         vlsctl_deinit  (&host->lsctl);
         vwaiter_deinit (&host->waiter);
@@ -468,6 +472,9 @@ void vhost_destroy(struct vhost* host)
     host->waiter.ops->remove(&host->waiter, &host->lsctl.rpc);
     host->waiter.ops->remove(&host->waiter, &host->rpc);
 
+    vhashgen_deinit(&host->hashgen);
+    vstunc_deinit (&host->stunc);
+    vspy_deinit   (&host->spy);
     vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);

@@ -240,7 +240,7 @@ struct vstuns* vstuns_create(struct vhost* host, struct vconfig* cfg)
     stun->host      = host;
     stun->proto_ops = &stun_proto_ops;
     stun->ops       = &stuns_ops;
-    stun->hashgen   = NULL; //host->hashgen;
+    stun->hashgen   = &host->hashgen;
     ret += vmsger_init (&stun->msger);
     ret += vrpc_init   (&stun->rpc, &stun->msger, VRPC_UDP, to_vsockaddr_from_sin(&stun->my_addr));
     ret += vwaiter_init(&stun->waiter);
