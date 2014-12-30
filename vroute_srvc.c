@@ -59,7 +59,7 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
     varg_decl(cookie, 0, struct vservice**, to);
     varg_decl(cookie, 1, vsrvcInfo*, svc);
     varg_decl(cookie, 2, time_t*, now);
-    varg_decl(cookie, 3, int32_t*, max_diff);
+    varg_decl(cookie, 3, int*, max_period);
     varg_decl(cookie, 4, int*, found);
 
     if (vsrvcInfo_equal(&svc_item->svc, svc)) {
@@ -67,9 +67,9 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
         *found = 1;
         return 1;
     }
-    if ((*now - svc_item->rcv_ts) > *max_diff) {
+    if ((int)(*now - svc_item->rcv_ts) > *max_period) {
         *to = svc_item;
-        *max_diff = *now - svc_item->rcv_ts;
+        *max_period = *now - svc_item->rcv_ts;
     }
     return 0;
 }
@@ -80,12 +80,12 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
     struct vservice* svc_item = (struct vservice*)item;
     varg_decl(cookie, 0, struct vservice**, to);
     varg_decl(cookie, 1, vtoken*, svc_hash);
-    varg_decl(cookie, 2, int*, nice);
+    varg_decl(cookie, 2, int*, min_nice);
 
     if (vtoken_equal(&svc_item->svc.id, svc_hash) &&
-        (svc_item->svc.nice < *nice)) {
+        (svc_item->svc.nice < *min_nice)) {
         *to = svc_item;
-        *nice = svc_item->svc.nice;
+        *min_nice = svc_item->svc.nice;
     }
     return 0;
 }
@@ -103,7 +103,7 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
     time_t now = time(NULL);
-    int32_t max_diff = 0;
+    int max_period = 0;
     int found = 0;
 
     vassert(space);
@@ -115,7 +115,7 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
             &to,
             svc,
             &now,
-            &max_diff,
+            &max_period,
             &found
         };
         varray_iterate(svcs, _aux_srvc_add_service_cb, argv);
@@ -146,7 +146,7 @@ int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vtoken* svc_h
 {
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
-    int nice = 100;
+    int min_nice = 100;
 
     vassert(space);
     vassert(svc);
@@ -157,7 +157,7 @@ int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vtoken* svc_h
         void* argv[] = {
             svc_hash,
             &to,
-            &nice
+            &min_nice
         };
         varray_iterate(svcs, _aux_srvc_get_service_cb, argv);
         if (to) {
