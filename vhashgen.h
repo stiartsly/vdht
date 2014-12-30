@@ -23,8 +23,8 @@ struct vhashgen_ops {
 };
 
 struct vhashgen_inst_ops {
-    int (*hash_stun) (struct vhashgen*, vtoken*);
-    int (*hash_relay)(struct vhashgen*, vtoken*);
+    int (*get_stun_hash) (struct vhashgen*, vtoken*);
+    int (*get_relay_hash)(struct vhashgen*, vtoken*);
 };
 
 struct vhashgen {

@@ -327,7 +327,7 @@ struct vhashgen_ops hashgen_ops = {
 };
 
 static
-int _vhashgen_hash_stun_service(struct vhashgen* gen, vtoken* token)
+int _vhashgen_get_stun_svc_hash(struct vhashgen* gen, vtoken* token)
 {
     vassert(gen);
     vassert(token);
@@ -337,7 +337,7 @@ int _vhashgen_hash_stun_service(struct vhashgen* gen, vtoken* token)
 }
 
 static
-int _vhashgen_hash_relay_service(struct vhashgen* gen, vtoken* token)
+int _vhashgen_get_relay_svc_hash(struct vhashgen* gen, vtoken* token)
 {
     vassert(gen);
     vassert(token);
@@ -348,8 +348,8 @@ int _vhashgen_hash_relay_service(struct vhashgen* gen, vtoken* token)
 
 static
 struct vhashgen_inst_ops hashgen_inst_ops = {
-    .hash_stun  = _vhashgen_hash_stun_service,
-    .hash_relay = _vhashgen_hash_relay_service
+    .get_stun_hash  = _vhashgen_get_stun_svc_hash,
+    .get_relay_hash = _vhashgen_get_relay_svc_hash
 };
 
 int vhashgen_init (struct vhashgen* gen)
