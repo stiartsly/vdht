@@ -4,21 +4,18 @@
 
 extern struct vstun_proto_ops stun_proto_ops;
 
-struct vstuns_params {
-    struct vattr_addrv4 source;
-    struct vattr_string host_name;
-    //todo;
-};
-static struct vstuns_params stuns_params;
-
 static
 int _vstuns_render_service(struct vstuns* stun)
 {
-    //struct vhost* host = stun->host;
+    struct vhashgen* hashgen = stun->hashgen;
+    struct vhost* host = stun->host;
+    vtoken hash;
     int ret = 0;
     vassert(stun);
 
-    //ret = host->ops->plug(host, PLUGIN_STUN, &stun->my_addr);
+    ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+    retE((ret < 0));
+    ret = host->ops->plug_service(host, &hash, &stun->my_addr);
     retE((ret < 0));
     vlogI(printf("stun service registered"));
     return 0;
@@ -27,11 +24,15 @@ int _vstuns_render_service(struct vstuns* stun)
 static
 int _vstuns_unrender_service(struct vstuns * stun)
 {
-    //struct vhost* host = stun->host;
+    struct vhashgen* hashgen = stun->hashgen;
+    struct vhost* host = stun->host;
+    vtoken hash;
     int ret = 0;
     vassert(stun);
 
-    //ret = host->ops->unplug(host, PLUGIN_STUN, &stun->my_addr);
+    ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+    retE((ret < 0));
+    ret = host->ops->unplug_service(host, &hash, &stun->my_addr);
     retE((ret < 0));
     vlogI(printf("stun service unregistered"));
     return 0;
@@ -40,7 +41,6 @@ int _vstuns_unrender_service(struct vstuns * stun)
 static
 int _vstuns_parse_msg(struct vstuns* stun, void* argv)
 {
-    struct vstuns_params* params = (struct vstuns_params*)stun->params;
     varg_decl(argv, 0, struct sockaddr_in*, from);
     varg_decl(argv, 1, struct vstun_msg*, req);
     varg_decl(argv, 2, struct vstun_msg*, rsp);
@@ -54,14 +54,7 @@ int _vstuns_parse_msg(struct vstuns* stun, void* argv)
     memset(rsp, 0, sizeof(*rsp));
 
     rsp->has_mapped_addr = 1;
-    rsp->mapped_addr.pad = 0;
-    rsp->mapped_addr.family = family_ipv4;
-    vsockaddr_unconvert2(from, &rsp->mapped_addr.addr, &rsp->mapped_addr.port);
-    sz += sizeof(struct vattr_header);
-    sz += sizeof(struct vattr_addrv4);
-
-    rsp->has_server_name = 1;
-    memcpy(&rsp->server_name, &params->source, sizeof(struct vattr_string));
+    vsockaddr_to_addrv4(from, &rsp->mapped_addr);
     sz += sizeof(struct vattr_header);
     sz += sizeof(struct vattr_addrv4);
 
@@ -207,13 +200,15 @@ int _aux_stuns_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
 }
 
 static
-int _aux_stuns_get_params(struct vconfig* cfg, struct vstuns_params* params, struct sockaddr_in* addr)
+int _aux_stuns_get_addr(struct vconfig* cfg, struct sockaddr_in* addr)
 {
     char buf[64];
     int port = 0;
     int ret  = 0;
 
-    vassert(params);
+    vassert(cfg);
+    vassert(addr);
+
     memset(buf, 0, 64);
     ret = vhostaddr_get_first(buf, 64);
     vlog((ret < 0), elog_vhostaddr_get_first);
@@ -223,14 +218,6 @@ int _aux_stuns_get_params(struct vconfig* cfg, struct vstuns_params* params, str
     ret = vsockaddr_convert(buf, port, addr);
     vlog((ret < 0), elog_vsockaddr_convert);
     retE((ret < 0));
-
-    memset(buf, 0, 64);
-    ret = cfg->inst_ops->get_stun_server_name(cfg, params->host_name.value, 64);
-    retE((ret < 0));
-
-    ret = vsockaddr_unconvert2(addr, &params->source.addr, &params->source.port);
-    params->source.family = family_ipv4;
-    params->source.pad    = 0;
 
     return 0;
 }
@@ -248,13 +235,12 @@ struct vstuns* vstuns_create(struct vhost* host, struct vconfig* cfg)
     retE_p((!stun));
     memset(stun, 0, sizeof(*stun));
 
-    ret = _aux_stuns_get_params(cfg, &stuns_params, &stun->my_addr);
+    ret = _aux_stuns_get_addr(cfg, &stun->my_addr);
     ret1E_p((ret < 0), free(stun));
     stun->host      = host;
     stun->proto_ops = &stun_proto_ops;
     stun->ops       = &stuns_ops;
-    stun->params    = &stuns_params;
-
+    stun->hashgen   = NULL; //host->hashgen;
     ret += vmsger_init (&stun->msger);
     ret += vrpc_init   (&stun->rpc, &stun->msger, VRPC_UDP, to_vsockaddr_from_sin(&stun->my_addr));
     ret += vwaiter_init(&stun->waiter);

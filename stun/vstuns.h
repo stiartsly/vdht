@@ -6,6 +6,7 @@
 #include "vrpc.h"
 #include "vhost.h"
 #include "vmsger.h"
+#include "vstun_proto.h"
 
 struct vstuns;
 struct vstuns_ops {
@@ -16,19 +17,18 @@ struct vstuns_ops {
     int (*stop)     (struct vstuns*);
 };
 
-struct vhost;
 struct vstuns {
     struct vthread daemon;
     int daemonized;
     int to_quit;
 
     struct sockaddr_in my_addr;
-    void* params;
 
-    struct vhost*  host;
-    struct vrpc    rpc;
-    struct vmsger  msger;
-    struct vwaiter waiter;
+    struct vhost*    host;
+    struct vhashgen* hashgen;
+    struct vrpc      rpc;
+    struct vmsger    msger;
+    struct vwaiter   waiter;
 
     struct vstun_proto_ops* proto_ops;
     struct vstuns_ops* ops;
