@@ -183,8 +183,10 @@ int _vcmd_drop_node(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 {
-    //struct vhost* host = lsctl->host;
+    struct vhost*    host    = lsctl->host;
+    struct vhashgen* hashgen = lsctl->hashgen;
     struct sockaddr_in sin;
+    vtoken hash;
     int what = 0;
     int ret = 0;
     int sz = 0;
@@ -202,9 +204,20 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
     retE((ret < 0));
     sz += ret;
 
-   // ret = host->ops->plug(host, what, &sin);
+    switch(what) {
+    case PLUGIN_STUN:
+        ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+        break;
+    case PLUGIN_RELAY:
+        ret = hashgen->inst_ops->get_relay_hash(hashgen, &hash);
+        break;
+    default:
+        retE((1));
+        break;
+    }
     retE((ret < 0));
-   //vlogI(printf("service (%s) published", vroute_srvc_get_desc(what)));
+    ret = host->ops->plug_service(host, &hash, &sin);
+    retE((ret < 0));
     return sz;
 }
 
@@ -214,8 +227,10 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 {
-    //struct vhost* host = lsctl->host;
+    struct vhost*     host   = lsctl->host;
+    struct vhashgen* hashgen = lsctl->hashgen;
     struct sockaddr_in sin;
+    vtoken hash;
     int what = 0;
     int ret = 0;
     int sz  = 0;
@@ -233,9 +248,20 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
     retE((ret < 0));
     sz += ret;
 
-   // ret = host->ops->unplug(host, what, &sin);
+    switch(what) {
+    case PLUGIN_STUN:
+        ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+        break;
+    case PLUGIN_RELAY:
+        ret = hashgen->inst_ops->get_relay_hash(hashgen, &hash);
+        break;
+    default:
+        retE((1));
+        break;
+    }
     retE((ret < 0));
-   //vlogI(printf("service (%s) unavailable.", vroute_srvc_get_desc(what)));
+    ret = host->ops->plug_service(host, &hash, &sin);
+    retE((ret < 0));
     return sz;
 }
 
@@ -245,8 +271,10 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
 {
-    //struct vhost* host = lsctl->host;
+    struct vhost*     host   = lsctl->host;
+    struct vhashgen* hashgen = lsctl->hashgen;
     struct sockaddr_in addr;
+    vtoken hash;
     int what = 0;
     int ret = 0;
     int sz  = 0;
@@ -260,7 +288,19 @@ int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
     retE((what >= PLUGIN_BUTT ));
     sz += sizeof(int32_t);
 
-   // ret = host->ops->get_service(host, what, &addr);
+    switch(what) {
+    case PLUGIN_STUN:
+        ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+        break;
+    case PLUGIN_RELAY:
+        ret = hashgen->inst_ops->get_relay_hash(hashgen, &hash);
+        break;
+    default:
+        retE((1));
+        break;
+    }
+
+    ret = host->ops->get_service(host, &hash, &addr);
     retE((ret < 0));
     vsockaddr_dump(&addr);
     return sz;
@@ -373,9 +413,10 @@ int vlsctl_init(struct vlsctl* lsctl, struct vhost* host, struct vconfig* cfg)
     ret = cfg->inst_ops->get_lsctl_unix_path(cfg, sun->sun_path, 105);
     retE((ret < 0));
 
-    lsctl->host = host;
-    lsctl->ops  = &lsctl_ops;
-    lsctl->cmds = lsctl_cmds;
+    lsctl->host    = host;
+    lsctl->hashgen = &host->hashgen;
+    lsctl->ops     = &lsctl_ops;
+    lsctl->cmds    = lsctl_cmds;
 
     ret += vmsger_init(&lsctl->msger);
     ret += vrpc_init(&lsctl->rpc, &lsctl->msger, VRPC_UNIX, &lsctl->addr);

@@ -4,6 +4,7 @@
 #include "vrpc.h"
 #include "vmsger.h"
 #include "vhost.h"
+#include "vhashgen.h"
 
 enum {
     VLSCTL_HOST_UP,
@@ -41,9 +42,10 @@ struct vlsctl_ops {
 
 typedef int (*vlsctl_cmd_t)(struct vlsctl*, void*, int);
 struct vlsctl {
-    struct vrpc   rpc;
-    struct vmsger msger;
-    struct vhost* host;
+    struct vrpc      rpc;
+    struct vmsger    msger;
+    struct vhost*    host;
+    struct vhashgen* hashgen;
 
     struct vsockaddr   addr;
     struct vlsctl_ops* ops;
