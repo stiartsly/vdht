@@ -19,7 +19,7 @@ struct vnode_ops {
 };
 
 struct vnode {
-    vnodeAddr ownId;
+    vnodeInfo ownId;
 
     int    tick_interval;
     time_t ts;
@@ -33,7 +33,7 @@ struct vnode {
     struct vnode_ops* ops;
 };
 
-int  vnode_init  (struct vnode*, struct vconfig*, struct vticker*, struct vroute*, vnodeAddr*);
+int  vnode_init  (struct vnode*, struct vconfig*, struct vticker*, struct vroute*, vnodeInfo*);
 void vnode_deinit(struct vnode*);
 
 #endif

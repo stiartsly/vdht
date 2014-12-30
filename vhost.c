@@ -258,26 +258,22 @@ static
 int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest)
 {
     struct vroute* route = &host->route;
-    vnodeAddr addr;
     int ret = 0;
 
     vassert(host);
     vassert(dest);
 
-    vtoken_make(&addr.id);
-    vsockaddr_copy(&addr.addr, dest);
-
     switch(what) {
     case VDHT_PING:
-        ret = route->dht_ops->ping(route, &addr);
+        ret = route->dht_ops->ping(route, dest);
         break;
 
     case VDHT_FIND_NODE:
-        ret = route->dht_ops->find_node(route, &addr, &host->ownId.id);
+        ret = route->dht_ops->find_node(route, dest, &host->ownId.id);
         break;
 
     case VDHT_FIND_CLOSEST_NODES:
-        ret = route->dht_ops->find_closest_nodes(route, &addr, &host->ownId.id);
+        ret = route->dht_ops->find_closest_nodes(route, dest, &host->ownId.id);
         break;
 
     case VDHT_POST_SERVICE:
@@ -382,13 +378,13 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
 }
 
 static
-int _aux_vhost_set_addr(struct vconfig* cfg, vnodeAddr* nodeAddr)
+int _aux_vhost_set_addr(struct vconfig* cfg, struct sockaddr_in* addr)
 {
     char ip[64];
     int port = 0;
     int ret  = 0;
     vassert(cfg);
-    vassert(nodeAddr);
+    vassert(addr);
 
     memset(ip, 0, 64);
     ret = vhostaddr_get_first(ip, 64);
@@ -396,25 +392,23 @@ int _aux_vhost_set_addr(struct vconfig* cfg, vnodeAddr* nodeAddr)
     retE((ret < 0));
     ret = cfg->inst_ops->get_dht_port(cfg, &port);
     retE((ret < 0));
-    ret = vsockaddr_convert(ip, (uint16_t)port, &nodeAddr->addr);
+    ret = vsockaddr_convert(ip, (uint16_t)port, addr);
     vlog((ret < 0), elog_vsockaddr_convert);
     retE((ret < 0));
 
-    vtoken_make(&nodeAddr->id);
     return 0;
 }
 
 struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
-    vnodeAddr addr;
     vnodeInfo info;
-    vnodeVer  ver;
     int tmo = 0;
     int ret = 0;
     vassert(cfg);
 
-    ret = _aux_vhost_set_addr(cfg, &addr);
+    vtoken_make(&info.id);
+    ret = _aux_vhost_set_addr(cfg, &info.addr);
     retE_p((ret < 0));
     ret = cfg->inst_ops->get_host_tick_tmo(cfg, &tmo);
     retE_p((ret < 0));
@@ -424,19 +418,20 @@ struct vhost* vhost_create(struct vconfig* cfg)
     retE_p((!host));
     memset(host, 0, sizeof(*host));
 
-    vnodeAddr_copy(&host->ownId, &addr);
+
     host->tick_tmo = tmo;
     host->to_quit  = 0;
     host->cfg = cfg;
     host->ops = &host_ops;
-    vnodeVer_unstrlize(host->ops->get_version(host), &ver);
-    vnodeInfo_init(&info, &addr.id, &addr.addr, &ver, 0);
+
+    vnodeVer_unstrlize(host->ops->get_version(host), &info.ver);
+    vnodeInfo_init(&host->ownId, &info.id, &info.addr, &info.ver, 0);
 
     ret += vmsger_init (&host->msger);
-    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&addr.addr));
+    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&info.addr));
     ret += vticker_init(&host->ticker);
     ret += vroute_init (&host->route, cfg, &host->msger, &info);
-    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &addr);
+    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &info);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vspy_init   (&host->spy, cfg);

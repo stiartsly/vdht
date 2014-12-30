@@ -28,7 +28,7 @@ struct vhost_ops {
 };
 
 struct vhost {
-    vnodeAddr ownId;
+    vnodeInfo ownId;
     int  to_quit;
     int  tick_tmo;
 

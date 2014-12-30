@@ -48,7 +48,6 @@ static
 int _vnode_join(struct vnode* vnd, struct sockaddr_in* addr)
 {
     struct vroute* route = vnd->route;
-    vnodeAddr node_addr;
     int ret = 0;
 
     vassert(vnd);
@@ -58,9 +57,7 @@ int _vnode_join(struct vnode* vnd, struct sockaddr_in* addr)
         return 0;
     }
 
-    vtoken_make(&node_addr.id);
-    vsockaddr_copy(&node_addr.addr, addr);
-    ret = route->ops->join_node(route, &node_addr);
+    ret = route->ops->join_node(route, addr);
     retE((ret < 0));
     return 0;
 }
@@ -73,7 +70,6 @@ static
 int _vnode_drop(struct vnode* vnd, struct sockaddr_in* addr)
 {
     struct vroute* route = vnd->route;
-    vnodeAddr node_addr;
     int ret = 0;
 
     vassert(vnd);
@@ -83,9 +79,7 @@ int _vnode_drop(struct vnode* vnd, struct sockaddr_in* addr)
         return 0;
     }
 
-    vtoken_make(&node_addr.id);
-    vsockaddr_copy(&node_addr.addr, addr);
-    ret = route->ops->drop_node(route, &node_addr);
+    ret = route->ops->drop_node(route, addr);
     retE((ret < 0));
     return 0;
 }
@@ -200,16 +194,16 @@ struct vnode_ops node_ops = {
  * @ticker:
  * @addr:
  */
-int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, struct vroute* route, vnodeAddr* node_addr)
+int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, struct vroute* route, vnodeInfo* node_info)
 {
     int ret = 0;
 
     vassert(vnd);
     vassert(cfg);
     vassert(ticker);
-    vassert(node_addr);
+    vassert(node_info);
 
-    vnodeAddr_copy(&vnd->ownId, node_addr);
+    vnodeInfo_copy(&vnd->ownId, node_info);
     vlock_init(&vnd->lock);
     vnd->mode  = VDHT_OFF;
 

@@ -44,20 +44,6 @@ int  vnodeVer_strlize  (vnodeVer*, char*, int);
 int  vnodeVer_unstrlize(const char*, vnodeVer*);
 
 /*
- * for vnodeAddr
- */
-struct vnodeAddr {
-    vnodeId id;
-    struct sockaddr_in addr;
-};
-typedef struct vnodeAddr vnodeAddr;
-
-int  vnodeAddr_equal(vnodeAddr*, vnodeAddr*);
-void vnodeAddr_dump (vnodeAddr*);
-void vnodeAddr_copy (vnodeAddr*, vnodeAddr*);
-int  vnodeAddr_init (vnodeAddr*, vnodeId*, struct sockaddr_in*);
-
-/*
  * for vnodeInfo
  */
 struct vnodeInfo  {

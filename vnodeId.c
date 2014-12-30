@@ -264,53 +264,6 @@ void vnodeVer_dump(vnodeVer* ver)
 }
 
 /*
- * for vnodeAddr funcs
- */
-int  vnodeAddr_equal(vnodeAddr* a, vnodeAddr* b)
-{
-    vassert(a);
-    vassert(b);
-
-    return (vtoken_equal(&a->id, &b->id) || vsockaddr_equal(&a->addr,&b->addr));
-}
-
-void vnodeAddr_copy (vnodeAddr* a, vnodeAddr* b)
-{
-    vassert(a);
-    vassert(b);
-
-    vtoken_copy(&a->id, &b->id);
-    vsockaddr_copy(&a->addr, &b->addr);
-    return ;
-}
-
-void vnodeAddr_dump (vnodeAddr* addr)
-{
-    char ip[64];
-    int port = 0;
-    int ret = 0;
-
-    vassert(addr);
-    vtoken_dump(&addr->id);
-    ret = vsockaddr_unconvert(&addr->addr, ip, 64, (uint16_t*)&port);
-    vlog((ret < 0), elog_vsockaddr_unconvert);
-    retE_v((ret < 0));
-    printf("##Addr: %s:%d\n", ip, port);
-    return ;
-}
-
-int vnodeAddr_init(vnodeAddr* nodeAddr, vnodeId* id, struct sockaddr_in* addr)
-{
-    vassert(nodeAddr);
-    vassert(id);
-    vassert(addr);
-
-    vtoken_copy(&nodeAddr->id, id);
-    vsockaddr_copy(&nodeAddr->addr, addr);
-    return 0;
-}
-
-/*
  * for vnodeInfo funcs
  */
 static MEM_AUX_INIT(node_info_cache, sizeof(vnodeInfo), 0);
@@ -354,11 +307,15 @@ void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
 int vnodeInfo_init(vnodeInfo* info, vnodeId* id, struct sockaddr_in* addr, vnodeVer* ver, int32_t weight)
 {
     vassert(info);
-    vassert(id);
+    vassert(id || !id) ;
     vassert(addr);
     vassert(ver || !ver);
 
-    vtoken_copy(&info->id, id);
+    if (!id) {
+        vtoken_make(&info->id);
+    } else {
+        vtoken_copy(&info->id, id);
+    }
     vsockaddr_copy(&info->addr, addr);
     if (!ver) {
         vnodeVer_unstrlize("0.0.0.0.0", &info->ver);
