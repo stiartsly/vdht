@@ -303,3 +303,29 @@ struct vstun_proto_ops stun_proto_ops = {
     .decode = _vstun_proto_decode
 };
 
+int vsockaddr_to_addrv4(struct sockaddr_in* sin_addr, struct vattr_addrv4* attr_addr)
+{
+    int ret = 0;
+    vassert(sin_addr);
+    vassert(attr_addr);
+
+    ret = vsockaddr_unconvert2(sin_addr, &attr_addr->addr, &attr_addr->port);
+    retE((ret < 0));
+    attr_addr->family = family_ipv4;
+    attr_addr->pad    = 0;
+
+    return 0;
+
+}
+int vsockaddr_from_addrv4(struct vattr_addrv4* attr_addr, struct sockaddr_in* sin_addr)
+{
+    int ret = 0;
+    vassert(attr_addr);
+    vassert(sin_addr);
+
+    retE((attr_addr->family != family_ipv4));
+    ret = vsockaddr_convert2(attr_addr->addr, attr_addr->port, sin_addr);
+    retE((ret < 0));
+    return 0;
+}
+

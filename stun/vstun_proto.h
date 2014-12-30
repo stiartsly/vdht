@@ -84,7 +84,8 @@ struct vstun_proto_ops {
     int (*decode)(char*, int, struct vstun_msg*);
 };
 
-void vstun_msg_header_init(struct vstun_msg_header*, uint16_t, uint16_t, uint8_t*);
+int vsockaddr_to_addrv4(struct sockaddr_in*, struct vattr_addrv4*);
+int vsockaddr_from_addrv4(struct vattr_addrv4*, struct sockaddr_in*);
 
 #endif
 
