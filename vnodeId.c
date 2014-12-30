@@ -13,7 +13,7 @@ void vtoken_make(vtoken* token)
     srand(time(NULL)); // TODO: need use mac as srand seed.
     data = (char*)token->data;
     for (; i < VTOKEN_LEN; i++) {
-        data[i] = (char)(rand() % 16);
+        data[i] = (uint8_t)rand();
     }
     return ;
 }
@@ -46,6 +46,7 @@ void vtoken_copy(vtoken* dst, vtoken* src)
 
 int vtoken_strlize(vtoken* token, char* buf, int len)
 {
+    uint8_t data = 0;
     int ret = 0;
     int sz  = 0;
     int i   = 0;
@@ -54,47 +55,64 @@ int vtoken_strlize(vtoken* token, char* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    memset(buf, 0, len);
     for (; i < VTOKEN_LEN; i++) {
-        ret = snprintf(buf+sz, len-sz, "%x", token->data[i]);
+        data = token->data[i];
+        ret = snprintf(buf+sz, len-sz, "%x%x", (data & 0x0f), (data >> 4));
         vlog((ret >= len-sz), elog_snprintf);
         retE((ret >= len-sz));
         sz += ret;
     }
-    retE((strlen(buf) != VTOKEN_LEN));
+
     return 0;
 }
 
 int vtoken_unstrlize(const char* id_str, vtoken* token)
 {
-    char tmp[4];
+    uint32_t low  = 0;
+    uint32_t high = 0;
+    char data = 0;
     int ret = 0;
     int i = 0;
     vassert(id_str);
     vassert(token);
 
-    memset(tmp, 0, 4);
-    retE((strlen(id_str) != VTOKEN_LEN));
-    for(; i < VTOKEN_LEN; i++) {
-        int idata = 0;
-        *tmp = id_str[i];
-        ret = sscanf(tmp, "%x", &idata);
+    for (; i < VTOKEN_LEN; i++) {
+        data = *id_str;
+        ret = sscanf(&data, "%x", &low);
         vlog((!ret), elog_sscanf);
         retE((!ret));
-        token->data[i] = (char)idata;
+        id_str++;
+
+        data = *id_str;
+        ret = sscanf(&data, "%x", &high);
+        vlog((!ret), elog_sscanf);
+        retE((!ret));
+        id_str++;
+
+        token->data[i] = ((high << 4) | low);
     }
     return 0;
 }
 
 void vtoken_dump(vtoken* token)
 {
+    uint8_t data = 0;
     char buf[64];
+    int i   = 0;
+    int sz  = 0;
     int ret = 0;
     vassert(token);
 
     memset(buf, 0, 64);
-    ret = snprintf(buf, 64, "ID:");
-    vtoken_strlize(token, buf + ret, 64-ret);
+    sz = snprintf(buf, 64, "ID:");
+
+    for (; i < VTOKEN_LEN-1; i++) {
+        data = token->data[i];
+        ret = snprintf(buf+sz, 64-sz, "%x%x-", (data & 0x0f), (data >> 4));
+        sz += ret;
+    }
+    data = token->data[i];
+    snprintf(buf+sz, 64-sz, "%x%x", (data & 0x0f), (data >> 4));
     vdump(printf("%s",buf));
 
     return;

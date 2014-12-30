@@ -8,7 +8,7 @@
 #define VTOKEN_BITLEN 160
 
 struct vtoken {
-    unsigned char data[VTOKEN_LEN];
+    uint8_t data[VTOKEN_LEN];
 };
 typedef struct vtoken vtoken;
 
