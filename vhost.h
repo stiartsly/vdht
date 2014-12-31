@@ -17,14 +17,17 @@ struct vhost_ops {
     int   (*join)       (struct vhost*, struct sockaddr_in*);
     int   (*drop)       (struct vhost*, struct sockaddr_in*);
     int   (*stabilize)  (struct vhost*);
-    int   (*plug_service)  (struct vhost*, vtoken*, struct sockaddr_in*);
-    int   (*unplug_service)(struct vhost*, vtoken*, struct sockaddr_in*);
-    int   (*get_service)   (struct vhost*, vtoken*, struct sockaddr_in*);
     int   (*loop)       (struct vhost*);
     int   (*req_quit)   (struct vhost*);
     void  (*dump)       (struct vhost*);
     char* (*get_version)(struct vhost*);
     int   (*bogus_query)(struct vhost*, int, struct sockaddr_in*);
+};
+
+struct vhost_svc_ops {
+    int (*publish)(struct vhost*, vtoken*, struct sockaddr_in*);
+    int (*cancel) (struct vhost*, vtoken*, struct sockaddr_in*);
+    int (*get)    (struct vhost*, vtoken*, struct sockaddr_in*);
 };
 
 struct vhost {
@@ -45,6 +48,7 @@ struct vhost {
 
     struct vconfig*   cfg;
     struct vhost_ops* ops;
+    struct vhost_svc_ops* svc_ops;
 };
 
 struct vhost* vhost_create(struct vconfig*);

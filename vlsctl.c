@@ -216,7 +216,7 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
         break;
     }
     retE((ret < 0));
-    ret = host->ops->plug_service(host, &hash, &sin);
+    ret = host->svc_ops->publish(host, &hash, &sin);
     retE((ret < 0));
     return sz;
 }
@@ -260,7 +260,7 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
         break;
     }
     retE((ret < 0));
-    ret = host->ops->plug_service(host, &hash, &sin);
+    ret = host->svc_ops->cancel(host, &hash, &sin);
     retE((ret < 0));
     return sz;
 }
@@ -300,7 +300,7 @@ int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
         break;
     }
 
-    ret = host->ops->get_service(host, &hash, &addr);
+    ret = host->svc_ops->get(host, &hash, &addr);
     retE((ret < 0));
     vsockaddr_dump(&addr);
     return sz;

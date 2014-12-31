@@ -15,7 +15,7 @@ int _vstuns_render_service(struct vstuns* stun)
 
     ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
     retE((ret < 0));
-    ret = host->ops->plug_service(host, &hash, &stun->my_addr);
+    ret = host->svc_ops->publish(host, &hash, &stun->my_addr);
     retE((ret < 0));
     vlogI(printf("stun service registered"));
     return 0;
@@ -32,7 +32,7 @@ int _vstuns_unrender_service(struct vstuns * stun)
 
     ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
     retE((ret < 0));
-    ret = host->ops->unplug_service(host, &hash, &stun->my_addr);
+    ret = host->svc_ops->cancel(host, &hash, &stun->my_addr);
     retE((ret < 0));
     vlogI(printf("stun service unregistered"));
     return 0;

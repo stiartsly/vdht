@@ -113,60 +113,6 @@ int _vhost_stabilize(struct vhost* host)
     return 0;
 }
 
-/* the routine to plug a plugin server, which will be added into route
- * table.
- * @host:
- * @waht: plugin ID.
- */
-static
-int _vhost_plug_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
-{
-    struct vroute* route = &host->route;
-    int ret = 0;
-
-    vassert(host);
-    vassert(addr);
-    vassert(svc_hash);
-
-    ret = route->ops->reg_service(route, svc_hash, addr);
-    retE((ret < 0));
-    return 0;
-}
-
-/* the routine to unplug a plugin server, which will be removed out of
- * route table.
- * @host:
- * @waht: plugin ID.
- */
-static
-int _vhost_unplug_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
-{
-    struct vroute* route = &host->route;
-    int ret = 0;
-
-    vassert(host);
-    vassert(svc_hash);
-
-    ret = route->ops->unreg_service(route, svc_hash, addr);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vhost_get_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
-{
-    struct vroute* route = &host->route;
-    int ret = 0;
-
-    vassert(host);
-    vassert(addr);
-    vassert(svc_hash);
-
-    ret = route->ops->get_service(route, svc_hash, addr);
-    retE((ret < 0));
-    return 0;
-}
-
 /*
  * the routine to dump all infomation about host.
  * @host:
@@ -294,14 +240,71 @@ struct vhost_ops host_ops = {
     .join        = _vhost_join,
     .drop        = _vhost_drop,
     .stabilize   = _vhost_stabilize,
-    .plug_service   = _vhost_plug_service,
-    .unplug_service = _vhost_unplug_service,
-    .get_service    = _vhost_get_service,
     .loop        = _vhost_loop,
     .req_quit    = _vhost_req_quit,
     .dump        = _vhost_dump,
     .get_version = _vhost_get_version,
     .bogus_query = _vhost_bogus_query
+};
+
+/* the routine to plug a plugin server, which will be added into route
+ * table.
+ * @host:
+ * @waht: plugin ID.
+ */
+static
+int _vhost_publish_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
+{
+    struct vroute* route = &host->route;
+    int ret = 0;
+
+    vassert(host);
+    vassert(addr);
+    vassert(svc_hash);
+
+    ret = route->ops->reg_service(route, svc_hash, addr);
+    retE((ret < 0));
+    return 0;
+}
+
+/* the routine to unplug a plugin server, which will be removed out of
+ * route table.
+ * @host:
+ * @waht: plugin ID.
+ */
+static
+int _vhost_cancel_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
+{
+    struct vroute* route = &host->route;
+    int ret = 0;
+
+    vassert(host);
+    vassert(svc_hash);
+
+    ret = route->ops->unreg_service(route, svc_hash, addr);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vhost_get_service_metainfo(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
+{
+    struct vroute* route = &host->route;
+    int ret = 0;
+
+    vassert(host);
+    vassert(addr);
+    vassert(svc_hash);
+
+    ret = route->ops->get_service(route, svc_hash, addr);
+    retE((ret < 0));
+    return 0;
+}
+
+struct vhost_svc_ops host_svc_ops = {
+    .publish = _vhost_publish_service,
+    .cancel  = _vhost_cancel_service,
+    .get     = _vhost_get_service_metainfo
 };
 
 /*
@@ -421,8 +424,9 @@ struct vhost* vhost_create(struct vconfig* cfg)
 
     host->tick_tmo = tmo;
     host->to_quit  = 0;
-    host->cfg = cfg;
-    host->ops = &host_ops;
+    host->cfg      = cfg;
+    host->ops      = &host_ops;
+    host->svc_ops  = &host_svc_ops;
 
     vnodeVer_unstrlize(host->ops->get_version(host), &info.ver);
     vnodeInfo_init(&host->ownId, &info.id, &info.addr, &info.ver, 0);
