@@ -57,7 +57,7 @@ int vtoken_strlize(vtoken* token, char* buf, int len)
 
     for (; i < VTOKEN_LEN; i++) {
         data = token->data[i];
-        ret = snprintf(buf+sz, len-sz, "%x%x", (data & 0x0f), (data >> 4));
+        ret = snprintf(buf+sz, len-sz, "%x%x", (data >> 4), (data & 0x0f));
         vlog((ret >= len-sz), elog_snprintf);
         retE((ret >= len-sz));
         sz += ret;
@@ -78,13 +78,13 @@ int vtoken_unstrlize(const char* id_str, vtoken* token)
 
     for (; i < VTOKEN_LEN; i++) {
         data = *id_str;
-        ret = sscanf(&data, "%x", &low);
+        ret = sscanf(&data, "%x", &high);
         vlog((!ret), elog_sscanf);
         retE((!ret));
         id_str++;
 
         data = *id_str;
-        ret = sscanf(&data, "%x", &high);
+        ret = sscanf(&data, "%x", &low);
         vlog((!ret), elog_sscanf);
         retE((!ret));
         id_str++;
@@ -108,11 +108,11 @@ void vtoken_dump(vtoken* token)
 
     for (; i < VTOKEN_LEN-1; i++) {
         data = token->data[i];
-        ret = snprintf(buf+sz, 64-sz, "%x%x-", (data & 0x0f), (data >> 4));
+        ret = snprintf(buf+sz, 64-sz, "%x%x-", (data >> 4), (data & 0x0f));
         sz += ret;
     }
     data = token->data[i];
-    snprintf(buf+sz, 64-sz, "%x%x", (data & 0x0f), (data >> 4));
+    snprintf(buf+sz, 64-sz, "%x%x", (data >> 4), (data & 0x0f));
     vdump(printf("%s",buf));
 
     return;

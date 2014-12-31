@@ -126,7 +126,7 @@ void _vhost_dump(struct vhost* host)
     vassert(host);
 
     vdump(printf("-> HOST"));
-    vsockaddr_dump(&host->ownId.addr);
+    vsockaddr_dump(&host->own_node_info.addr);
     host->route.ops->dump(&host->route);
     host->node.ops->dump(&host->node);
     host->msger.ops->dump(&host->msger);
