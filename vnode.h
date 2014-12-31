@@ -12,14 +12,13 @@ struct vnode;
 struct vnode_ops {
     int (*start)    (struct vnode*);
     int (*stop)     (struct vnode*);
-    int (*join)     (struct vnode*, struct sockaddr_in*);
-    int (*drop)     (struct vnode*, struct sockaddr_in*);
+    int (*join)     (struct vnode*);
     int (*stabilize)(struct vnode*);
     int (*dump)     (struct vnode*);
 };
 
 struct vnode {
-    vnodeInfo ownId;
+    vnodeInfo* own_node_info;
 
     int    tick_interval;
     time_t ts;

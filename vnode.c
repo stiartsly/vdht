@@ -40,51 +40,6 @@ int _vnode_start(struct vnode* vnd)
 }
 
 /*
- * join the given node as dht node.
- * @vnd:
- * @addr:
- */
-static
-int _vnode_join(struct vnode* vnd, struct sockaddr_in* addr)
-{
-    struct vroute* route = vnd->route;
-    int ret = 0;
-
-    vassert(vnd);
-    vassert(addr);
-
-    if (vsockaddr_equal(&vnd->ownId.addr, addr)) {
-        return 0;
-    }
-
-    ret = route->ops->join_node(route, addr);
-    retE((ret < 0));
-    return 0;
-}
-
-/*
- * @vnd:
- * @addr:
- */
-static
-int _vnode_drop(struct vnode* vnd, struct sockaddr_in* addr)
-{
-    struct vroute* route = vnd->route;
-    int ret = 0;
-
-    vassert(vnd);
-    vassert(addr);
-
-    if (vsockaddr_equal(&vnd->ownId.addr, addr)) {
-        return 0;
-    }
-
-    ret = route->ops->drop_node(route, addr);
-    retE((ret < 0));
-    return 0;
-}
-
-/*
  * @vnd
  */
 static
@@ -99,6 +54,22 @@ int _vnode_stop(struct vnode* vnd)
     }
     vnd->mode = VDHT_DOWN;
     vlock_leave(&vnd->lock);
+    return 0;
+}
+
+static
+int _vnode_join(struct vnode* vnd)
+{
+    vassert(vnd);
+
+    vlock_enter(&vnd->lock);
+    while (vnd->mode != VDHT_OFF) {
+        vlock_leave(&vnd->lock);
+        sleep(1);
+        vlock_enter(&vnd->lock);
+    }
+    vlock_leave(&vnd->lock);
+
     return 0;
 }
 
@@ -183,7 +154,6 @@ struct vnode_ops node_ops = {
     .start     = _vnode_start,
     .stop      = _vnode_stop,
     .join      = _vnode_join,
-    .drop      = _vnode_drop,
     .stabilize = _vnode_stabilize,
     .dump      = _vnode_dump
 };
@@ -203,7 +173,7 @@ int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, s
     vassert(ticker);
     vassert(node_info);
 
-    vnodeInfo_copy(&vnd->ownId, node_info);
+    vnd->own_node_info = node_info;
     vlock_init(&vnd->lock);
     vnd->mode  = VDHT_OFF;
 
@@ -224,13 +194,7 @@ void vnode_deinit(struct vnode* vnd)
 {
     vassert(vnd);
 
-    vlock_enter(&vnd->lock);
-    while (vnd->mode != VDHT_OFF) {
-        vlock_leave(&vnd->lock);
-        sleep(1);
-        vlock_enter(&vnd->lock);
-    }
-    vlock_leave(&vnd->lock);
+    vnd->ops->join(vnd);
     vlock_deinit (&vnd->lock);
 
     return ;

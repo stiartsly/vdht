@@ -43,13 +43,16 @@ int _vhost_stop(struct vhost* host)
 static
 int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
 {
-    struct vnode* node = &host->node;
+    struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(wellknown_addr);
 
-    ret = node->ops->join(node, wellknown_addr);
+    if (vsockaddr_equal(&host->own_node_info.addr, wellknown_addr)) {
+        return 0;
+    }
+    ret = route->ops->join_node(route, wellknown_addr);
     retE((ret < 0));
     vlogI(printf("Joined a node"));
     return 0;
@@ -63,13 +66,17 @@ int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
 static
 int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
 {
-    struct vnode* node = &host->node;
+    struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(addr);
 
-    ret = node->ops->drop(node, addr);
+    if (vsockaddr_equal(&host->own_node_info.addr, addr)) {
+        return 0;
+    }
+
+    ret = route->ops->drop_node(route, addr);
     retE((ret < 0));
     vlogI(printf("Dropped a node"));
     return 0;
@@ -282,6 +289,7 @@ int _vhost_cancel_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_
     int ret = 0;
 
     vassert(host);
+    vassert(addr);
     vassert(svc_hash);
 
     ret = route->ops->unreg_service(route, svc_hash, addr);
