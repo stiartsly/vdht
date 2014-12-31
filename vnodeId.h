@@ -80,7 +80,7 @@ int vsrvcId_bucket(vsrvcId*);
 
  vsrvcInfo* vsrvcInfo_alloc(void);
  void vsrvcInfo_free (vsrvcInfo*);
- int  vsrvcInfo_init (vsrvcInfo*, vtoken*, int, struct sockaddr_in*);
+ int  vsrvcInfo_init (vsrvcInfo*, vtoken*, int32_t, struct sockaddr_in*);
  void vsrvcInfo_copy (vsrvcInfo*, vsrvcInfo*);
  int  vsrvcInfo_equal(vsrvcInfo*, vsrvcInfo*);
  void vsrvcInfo_dump (vsrvcInfo*);

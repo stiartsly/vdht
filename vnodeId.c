@@ -373,7 +373,7 @@ void vsrvcInfo_free(vsrvcInfo* svc_info)
     return ;
 }
 
-int vsrvcInfo_init(vsrvcInfo* svc_info, vtoken* svc_id, int nice, struct sockaddr_in* addr)
+int vsrvcInfo_init(vsrvcInfo* svc_info, vtoken* svc_id, int32_t nice, struct sockaddr_in* addr)
 {
     vassert(svc_info);
     vassert(addr);

@@ -93,8 +93,9 @@ struct vroute_ops {
     int  (*reg_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
     int  (*unreg_service)(struct vroute*, vtoken*, struct sockaddr_in*);
     int  (*get_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
-    int  (*kick_nice)    (struct vroute*, int);
+    int  (*kick_nice)    (struct vroute*, int32_t);
     int  (*dsptch)       (struct vroute*, struct vmsg_usr*);
+    int  (*permit)       (struct vroute*, uint32_t);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
@@ -110,8 +111,8 @@ struct vroute_dht_ops {
     int (*find_closest_nodes)    (struct vroute*, struct sockaddr_in*, vnodeId*);
     int (*find_closest_nodes_rsp)(struct vroute*, struct sockaddr_in*, vtoken*, struct varray*);
     int (*post_service)  (struct vroute*, struct sockaddr_in*, vsrvcInfo*);
-    int (*post_hash)     (struct vroute*, struct sockaddr_in*, vnodeHash*);
-    int (*get_peers)     (struct vroute*, struct sockaddr_in*, vnodeHash*);
+    int (*post_hash)     (struct vroute*, struct sockaddr_in*, vtoken*);
+    int (*get_peers)     (struct vroute*, struct sockaddr_in*, vtoken*);
     int (*get_peers_rsp) (struct vroute*, struct sockaddr_in*, vtoken*, struct varray*);
 };
 
@@ -119,8 +120,8 @@ typedef int (*vroute_dht_cb_t)(struct vroute*, struct sockaddr_in*, void*);
 struct vroute {
     vnodeInfo     own_node;
     struct varray own_svcs;
-    uint32_t flags;
-    int nice;
+    uint32_t props;
+    int32_t  nice;
 
     struct vroute_node_space  node_space;
     struct vroute_srvc_space  srvc_space;
