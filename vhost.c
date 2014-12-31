@@ -11,7 +11,6 @@ int _vhost_start(struct vhost* host)
     struct vnode* node = &host->node;
     int ret = 0;
     vassert(host);
-    vassert(node);
 
     ret = node->ops->start(node);
     retE((ret < 0));
@@ -46,6 +45,7 @@ int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
 {
     struct vnode* node = &host->node;
     int ret = 0;
+
     vassert(host);
     vassert(wellknown_addr);
 
@@ -65,6 +65,7 @@ int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
 {
     struct vnode* node = &host->node;
     int ret = 0;
+
     vassert(host);
     vassert(addr);
 
@@ -84,6 +85,7 @@ int _aux_host_tick_cb(void* cookie)
     int ret = 0;
 
     vassert(host);
+
     ret = spy->ops->get_nice(spy, &nice);
     retE((ret < 0));
     route->ops->kick_nice(route, nice);
@@ -100,8 +102,9 @@ static
 int _vhost_stabilize(struct vhost* host)
 {
     struct vticker* ticker = &host->ticker;
-    struct vnode* node = &host->node;
+    struct vnode*    node  = &host->node;
     int ret = 0;
+
     vassert(host);
 
     ret = node->ops->stabilize(node);
@@ -144,7 +147,6 @@ int _vhost_loop(struct vhost* host)
     int ret = 0;
 
     vassert(host);
-    vassert(waiter);
 
     vlogI(printf("Host laundrying"));
     while(!host->to_quit) {
@@ -165,6 +167,7 @@ static
 int _vhost_req_quit(struct vhost* host)
 {
     vassert(host);
+
     host->to_quit = 1;
     vlogI(printf("Host about to quit."));
     return 0;
@@ -215,11 +218,11 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest)
         break;
 
     case VDHT_FIND_NODE:
-        ret = route->dht_ops->find_node(route, dest, &host->ownId.id);
+        ret = route->dht_ops->find_node(route, dest, &host->own_node_info.id);
         break;
 
     case VDHT_FIND_CLOSEST_NODES:
-        ret = route->dht_ops->find_closest_nodes(route, dest, &host->ownId.id);
+        ret = route->dht_ops->find_closest_nodes(route, dest, &host->own_node_info.id);
         break;
 
     case VDHT_POST_SERVICE:
@@ -421,7 +424,6 @@ struct vhost* vhost_create(struct vconfig* cfg)
     retE_p((!host));
     memset(host, 0, sizeof(*host));
 
-
     host->tick_tmo = tmo;
     host->to_quit  = 0;
     host->cfg      = cfg;
@@ -429,7 +431,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->svc_ops  = &host_svc_ops;
 
     vnodeVer_unstrlize(host->ops->get_version(host), &info.ver);
-    vnodeInfo_init(&host->ownId, &info.id, &info.addr, &info.ver, 0);
+    vnodeInfo_init(&host->own_node_info, &info.id, &info.addr, &info.ver, 0);
 
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&info.addr));

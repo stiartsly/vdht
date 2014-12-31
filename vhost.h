@@ -31,7 +31,7 @@ struct vhost_svc_ops {
 };
 
 struct vhost {
-    vnodeInfo ownId;
+    vnodeInfo own_node_info;
     int  to_quit;
     int  tick_tmo;
 
