@@ -87,6 +87,14 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space*);
  * for routing table.
  */
 struct vroute;
+struct vroute_record_ops {
+    int  (*make) (struct vroute*, vtoken*);
+    int  (*check)(struct vroute*, vtoken*);
+    void (*reap) (struct vroute*);
+    void (*clear)(struct vroute*);
+    void (*dump) (struct vroute*);
+};
+
 struct vroute_ops {
     int  (*join_node)    (struct vroute*, struct sockaddr_in*);
     int  (*drop_node)    (struct vroute*, struct sockaddr_in*);
@@ -127,6 +135,11 @@ struct vroute {
     struct vroute_srvc_space  srvc_space;
 
     struct vlock lock;
+
+    int max_record_period;
+    struct vlist records;     // has all dht query records.
+    struct vlock record_lock;
+    struct vroute_record_ops* record_ops;
 
     struct vroute_ops*     ops;
     struct vroute_dht_ops* dht_ops;

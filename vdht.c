@@ -1136,7 +1136,7 @@ int _vdht_dec_get_peers_rsp(
 }
 
 static
-int _vdht_dec(void* buf, int len, void** ctxt)
+int _vdht_dec(void* buf, int len, vtoken* token, void** ctxt)
 {
     struct be_node* dict = NULL;
     int ret = 0;
@@ -1150,6 +1150,9 @@ int _vdht_dec(void* buf, int len, void** ctxt)
     retE((!dict));
 
     ret = _aux_unpack_dhtId(dict);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vtoken(dict, token);
     retE((ret < 0));
 
     *ctxt = (void*)dict;

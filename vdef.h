@@ -140,6 +140,7 @@
 #define elog_vmsg_sys_alloc vlogE(printf("vmsg_sys_alloc"))
 #define elog_vpeer_alloc    vlogE(printf("vpeer_alloc"))
 #define elog_vtick_cb_alloc vlogE(printf("vtick_cb_alloc"))
+#define elog_vrecord_alloc  vlogE(printf("vrecord_alloc"))
 
 #define vlog_vmsger_init    vlogE(printf("vmsger_init"))
 #define vlog_vrpc_init      vlogE(printf("vrpc_init"))

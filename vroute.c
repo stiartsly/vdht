@@ -3,6 +3,160 @@
 
 #define MAX_CAPC ((int)8)
 
+struct vrecord {
+    struct vlist list;
+    vtoken token;
+    time_t snd_ts;
+};
+
+static MEM_AUX_INIT(record_cache, sizeof(struct vrecord), 4);
+static
+struct vrecord* vrecord_alloc(void)
+{
+    struct vrecord* record = NULL;
+
+    record = (struct vrecord*)vmem_aux_alloc(&record_cache);
+    vlog((!record), elog_vmem_aux_alloc);
+    retE_p((!record));
+    return record;
+}
+
+static
+void vrecord_free(struct vrecord* record)
+{
+    vassert(record);
+    vmem_aux_free(&record_cache, record);
+    return ;
+}
+
+static
+void vrecord_init(struct vrecord* record, vtoken* token)
+{
+    vassert(record);
+    vassert(token);
+
+    vlist_init(&record->list);
+    vtoken_copy(&record->token, token);
+    record->snd_ts = time(NULL);
+    return ;
+}
+
+static
+void vrecord_dump(struct vrecord* record)
+{
+    vassert(record);
+    vtoken_dump(&record->token);
+    vdump(printf("timestamp[snd]: %s",  ctime(&record->snd_ts)));
+    return ;
+}
+
+static
+int _vroute_make_record(struct vroute* route, vtoken* token)
+{
+    struct vrecord* record = NULL;
+
+    vassert(route);
+    vassert(token);
+
+    record = vrecord_alloc();
+    vlog((!record), elog_vrecord_alloc);
+    retE((!record));
+
+    vrecord_init(record, token);
+    vlock_enter(&route->record_lock);
+    vlist_add_tail(&route->records, &record->list);
+    vlock_leave(&route->record_lock);
+
+    return 0;
+}
+
+static
+int _vroute_check_record(struct vroute* route, vtoken* token)
+{
+    struct vrecord* record = NULL;
+    struct vlist* node = NULL;
+    int found = 0;
+
+    vassert(route);
+    vassert(token);
+
+    vlock_enter(&route->record_lock);
+    __vlist_for_each(node, &route->records) {
+        record = vlist_entry(node, struct vrecord, list);
+        if (vtoken_equal(&record->token, token)) {
+            vlist_del(&record->list);
+            vrecord_free(record);
+            found = 1;
+            break;
+        }
+    }
+    vlock_leave(&route->record_lock);
+    return found;
+}
+
+static
+void _vroute_reap_timeout_records(struct vroute* route)
+{
+    struct vrecord* record = NULL;
+    struct vlist* node = NULL;
+    time_t now = time(NULL);
+    vassert(route);
+
+    vlock_enter(&route->record_lock);
+    __vlist_for_each(node, &route->records) {
+        record = vlist_entry(node, struct vrecord, list);
+        if ((now - record->snd_ts) > route->max_record_period) {
+            vlist_del(&record->list);
+            vrecord_free(record);
+        }
+    }
+    vlock_leave(&route->record_lock);
+    return ;
+}
+
+static
+void _vroute_clear_records(struct vroute* route)
+{
+    struct vrecord* record = NULL;
+    struct vlist* node = NULL;
+    vassert(route);
+
+    vlock_enter(&route->record_lock);
+    while(!vlist_is_empty(&route->records)) {
+        node = vlist_pop_head(&route->records);
+        record = vlist_entry(node, struct vrecord, list);
+        vrecord_free(record);
+    }
+    vlock_leave(&route->record_lock);
+    return ;
+}
+
+static
+void _vroute_dump_records(struct vroute* route)
+{
+    struct vrecord* record = NULL;
+    struct vlist* node = NULL;
+    vassert(route);
+
+    vlock_enter(&route->record_lock);
+    __vlist_for_each(node, &route->records) {
+        record = vlist_entry(node, struct vrecord, list);
+        vrecord_dump(record);
+    }
+    vlock_leave(&route->record_lock);
+    return ;
+}
+
+struct vroute_record_ops route_record_ops = {
+    .make  = _vroute_make_record,
+    .check = _vroute_check_record,
+    .reap  = _vroute_reap_timeout_records,
+    .clear = _vroute_clear_records,
+    .dump  = _vroute_dump_records
+};
+
+
+static
 int _aux_route_tick_cb(void* item, void* cookie)
 {
     struct vroute_node_space* space = (struct vroute_node_space*)cookie;
@@ -317,14 +471,16 @@ int _vroute_dispatch(struct vroute* route, struct vmsg_usr* mu)
 {
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     void* ctxt = NULL;
+    vtoken token;
     int ret = 0;
 
     vassert(route);
     vassert(mu);
 
-    ret = dec_ops->dec(mu->data, mu->len, &ctxt);
+    ret = dec_ops->dec(mu->data, mu->len, &token, &ctxt);
     retE((ret >= VDHT_UNKNOWN));
     retE((ret < 0));
+    retE((!route->record_ops->check(route, &token))); // skip not-my-rsp msg.
     vlogI(printf("received @%s", vdht_get_desc(ret)));
 
     ret = route->cb_ops[ret](route, &mu->addr->vsin_addr, ctxt);
@@ -386,6 +542,7 @@ int _vroute_dht_ping(struct vroute* route, struct sockaddr_in* dest_addr)
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
+    route->record_ops->make(route, &token);
     vlogI(printf("send @ping"));
     return 0;
 }
@@ -464,6 +621,7 @@ int _vroute_dht_find_node(struct vroute* route, struct sockaddr_in* dest_addr, v
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
+    route->record_ops->make(route, &token);
     vlogI(printf("send @find_node"));
     return 0;
 }
@@ -538,6 +696,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, struct sockaddr_in* des
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
+    route->record_ops->make(route, &token);
     vlogI(printf("send @find_closest_nodes"));
     return 0;
 }
@@ -667,6 +826,7 @@ int _vroute_dht_get_peers(struct vroute* route, struct sockaddr_in* dest_addr, v
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
+    route->record_ops->make(route, &token);
     vlogI(printf("send @get_peers"));
     return 0;
 }
@@ -1074,6 +1234,11 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     vroute_node_space_init(&route->node_space, route, cfg, &route->own_node);
     vroute_srvc_space_init(&route->srvc_space, cfg);
 
+    route->max_record_period = 5;
+    vlist_init(&route->records);
+    vlock_init(&route->record_lock);
+    route->record_ops = &route_record_ops;
+
     route->ops     = &route_ops;
     route->dht_ops = &route_dht_ops;
     route->cb_ops  = route_cb_ops;
@@ -1089,6 +1254,9 @@ void vroute_deinit(struct vroute* route)
 {
     int i = 0;
     vassert(route);
+
+    route->record_ops->clear(route);
+    vlock_deinit(&route->record_lock);
 
     vroute_node_space_deinit(&route->node_space);
     vroute_srvc_space_deinit(&route->srvc_space);
