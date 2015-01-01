@@ -101,7 +101,6 @@ struct vdht_dec_ops {
     int (*dec) (
             void* buf,
             int sz,
-            vtoken* token,
             void** ctxt
         );
 
