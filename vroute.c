@@ -50,6 +50,13 @@ void vrecord_dump(struct vrecord* record)
     return ;
 }
 
+/*
+ * the routine to make a record after sending a dht query msg.
+ * in case to check the rightness of response message.
+ *
+ * @route:
+ * @token:
+ */
 static
 int _vroute_make_record(struct vroute* route, vtoken* token)
 {
@@ -70,6 +77,13 @@ int _vroute_make_record(struct vroute* route, vtoken* token)
     return 0;
 }
 
+/*
+ * the routine to check the dht message( always response message) with given
+ * token is in the messages record that sent before.
+ *
+ * @route:
+ * @token:
+ */
 static
 int _vroute_check_record(struct vroute* route, vtoken* token)
 {
@@ -94,6 +108,12 @@ int _vroute_check_record(struct vroute* route, vtoken* token)
     return (found ? 0 : -1);
 }
 
+/*
+ * the routine to reap all timeout message records that menas all messages to
+ * those records were not reachable.
+ *
+ * @route:
+ */
 static
 void _vroute_reap_timeout_records(struct vroute* route)
 {
@@ -114,6 +134,10 @@ void _vroute_reap_timeout_records(struct vroute* route)
     return ;
 }
 
+/*
+ * the routine to clear all message records
+ * @route:
+ */
 static
 void _vroute_clear_records(struct vroute* route)
 {
@@ -131,6 +155,11 @@ void _vroute_clear_records(struct vroute* route)
     return ;
 }
 
+/*
+ * the routine to dump all message record infomartion
+ *
+ * @route:
+ */
 static
 void _vroute_dump_records(struct vroute* route)
 {
