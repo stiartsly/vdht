@@ -62,6 +62,8 @@
 #define sockaddr_un
 #define sockaddr
 
+#define perror
+#define printf
 #define malloc
 #define realloc
 #define free

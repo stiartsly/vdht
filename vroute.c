@@ -922,16 +922,18 @@ void _aux_vnodeInfo_free(void* info, void* cookie)
     vnodeInfo_free((vnodeInfo*)info);
     return ;
 }
-/*
- * @route:
- * @closest:
- */
 
+/* the routine to call when receiving a ping dht msg.
+ *
+ * @route:
+ * @from:  address where the msge is from;
+ * @ctxt:  dht decoder context.
+ */
 static
 int _vroute_cb_ping(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
-    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vroute_node_space* space = &route->node_space;
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     vnodeInfo source_info;
     vtoken token;
     int ret = 0;
@@ -951,11 +953,18 @@ int _vroute_cb_ping(struct vroute* route, struct sockaddr_in* from, void* ctxt)
     return 0;
 }
 
+/*
+ * the routine to call when receving a ping-rsp dht msg.
+ *
+ * @route:
+ * @from:
+ * @ctxt:
+ */
 static
 int _vroute_cb_ping_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
-    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vroute_node_space* space = &route->node_space;
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     vnodeInfo source_info;
     vtoken token;
     int ret = 0;
@@ -974,11 +983,18 @@ int _vroute_cb_ping_rsp(struct vroute* route, struct sockaddr_in* from, void* ct
     return 0;
 }
 
+/*
+ * the routine to call when receving a find-node dht msg.
+ *
+ * @route:
+ * @from:
+ * @ctxt:
+ */
 static
 int _vroute_cb_find_node(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
-    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vroute_node_space* space = &route->node_space;
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct varray closest;
     vnodeInfo source_info;
     vnodeInfo target_info;
@@ -1014,11 +1030,18 @@ int _vroute_cb_find_node(struct vroute* route, struct sockaddr_in* from, void* c
     return 0;
 }
 
+/*
+ * the routine to call when receving a find-node-rsp dht msg.
+ *
+ * @route:
+ * @from:
+ * @ctxt:
+ */
 static
 int _vroute_cb_find_node_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
-    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vroute_node_space* space = &route->node_space;
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     vnodeInfo target_info;
     vnodeInfo source_info;
     vtoken token;
@@ -1042,14 +1065,18 @@ int _vroute_cb_find_node_rsp(struct vroute* route, struct sockaddr_in* from, voi
     return 0;
 }
 
+/*
+ * the routine to call when receving a find-closest-nodes dht msg.
+ *
+ * @route:
+ * @from:
+ * @ctxt:
+ */
 static
-int _vroute_cb_find_closest_nodes(
-        struct vroute* route,
-        struct sockaddr_in* from,
-        void* ctxt)
+int _vroute_cb_find_closest_nodes(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
-    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vroute_node_space* space = &route->node_space;
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct varray closest;
     vnodeInfo source_info;
     vnodeId target;
@@ -1077,14 +1104,21 @@ int _vroute_cb_find_closest_nodes(
     return 0;
 }
 
+/*
+ * the routine to call when receving a find-closest-nodes-rsp dht msg.
+ *
+ * @route:
+ * @from:
+ * @ctxt:
+ */
 static
 int _vroute_cb_find_closest_nodes_rsp(
         struct vroute* route,
         struct sockaddr_in* from,
         void* ctxt)
 {
-    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vroute_node_space* space = &route->node_space;
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct varray closest;
     vnodeInfo source_info;
     vtoken token;
@@ -1114,12 +1148,19 @@ int _vroute_cb_find_closest_nodes_rsp(
     return 0;
 }
 
+/*
+ * the routine to call when receving a post-service dht msg.
+ *
+ * @route:
+ * @from:
+ * @ctxt:
+ */
 static
 int _vroute_cb_post_service(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
-    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vroute_node_space* node_space = &route->node_space;
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
+    struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     vsrvcInfo svc;
     vnodeInfo source_info;
     vtoken token;
@@ -1141,6 +1182,13 @@ int _vroute_cb_post_service(struct vroute* route, struct sockaddr_in* from, void
     return 0;
 }
 
+/*
+ * the routine to call when receving a post-hash dht msg.
+ *
+ * @route:
+ * @from:
+ * @ctxt:
+ */
 static
 int _vroute_cb_post_hash(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
@@ -1152,6 +1200,13 @@ int _vroute_cb_post_hash(struct vroute* route, struct sockaddr_in* from, void* c
     return 0;
 }
 
+/*
+ * the routine to call when receving a get_peers dht msg.
+ *
+ * @route:
+ * @from:
+ * @ctxt:
+ */
 static
 int _vroute_cb_get_peers(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
@@ -1162,7 +1217,13 @@ int _vroute_cb_get_peers(struct vroute* route, struct sockaddr_in* from, void* c
     //todo;
     return 0;
 }
-
+/*
+ * the routine to call when receving a get_peers_rsp dht msg.
+ *
+ * @route:
+ * @from:
+ * @ctxt:
+ */
 static
 int _vroute_cb_get_peers_rsp(struct vroute* route, struct sockaddr_in* from, void* ctxt)
 {
