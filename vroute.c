@@ -438,6 +438,7 @@ int _vroute_tick(struct vroute* route)
     node_space->ops->tick(node_space);
     varray_iterate(&route->own_svcs, _aux_route_tick_cb, node_space);
     vlock_leave(&route->lock);
+    route->record_ops->reap(route); // reap all timeout records.
     return 0;
 }
 
@@ -569,7 +570,7 @@ int _vroute_dht_ping(struct vroute* route, struct sockaddr_in* dest_addr)
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
-    route->record_ops->make(route, &token);
+    route->record_ops->make(route, &token); // record this request query.
     vlogI(printf("send @ping"));
     return 0;
 }

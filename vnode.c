@@ -76,7 +76,8 @@ int _vnode_join(struct vnode* vnd)
 static
 int _aux_node_tick_cb(void* cookie)
 {
-    struct vnode* vnd = (struct vnode*)cookie;
+    struct vnode* vnd    = (struct vnode*)cookie;
+    struct vroute* route = (struct vroute*)vnd->route;
     time_t now = time(NULL);
     vassert(vnd);
 
@@ -88,7 +89,7 @@ int _aux_node_tick_cb(void* cookie)
         break;
     }
     case VDHT_UP: {
-        if (vnd->route->ops->load(vnd->route) < 0) {
+        if (route->ops->load(route) < 0) {
             vnd->mode = VDHT_ERR;
             break;
         }
@@ -99,7 +100,7 @@ int _aux_node_tick_cb(void* cookie)
     }
     case VDHT_RUN: {
         if (now - vnd->ts > vnd->tick_interval) {
-            vnd->route->ops->tick(vnd->route);
+            route->ops->tick(route);
             vnd->ts = now;
         }
         break;
