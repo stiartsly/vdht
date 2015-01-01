@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS=-I. -Iutils -Istun -I/usr/local/include -g -Wall -std=gnu99 -D_STUB
-LDFLAGS=-lpthread -lsqlite3 -lrt
+CFLAGS=-I. -Iutils -Istun -I/usr/local/include -I3rdparties/miniupnpc -g -Wall -std=gnu99 -D_STUB
+LDFLAGS=-lpthread -lsqlite3 -lrt -L3rdparties/miniupnpc -lminiupnpc
 DEPS = 
 
 vdht_objs = \

@@ -1,6 +1,23 @@
 #ifndef __VUPNPC_H__
 #define __VUPNPC_H__
 
+#include "vsys.h"
+
+enum {
+    UPNPC_PROTO_TCP,
+    UPNPC_PROTO_UDP,
+    UPNPC_PROTO_BUTT
+};
+
+enum {
+    UPNPC_RAW,
+    UPNPC_NOIGD,
+    UPNPC_READY,
+    UPNPC_ACTIVE,
+    UPNPC_ERR,
+    UPNPC_BUTT
+};
+
 struct vupnpc_status {
     int bytes_snd;
     int bytes_rcv;
@@ -8,21 +25,22 @@ struct vupnpc_status {
     int pkts_rcv;
 };
 
-enum {
-    VUPNPC_PROTO_TCP,
-    VUPNPC_PROTO_UDP,
-    VUPNPC_PROTO_BUTT
-};
-
 struct vupnpc;
 struct vupnpc_ops {
-    int (*map_port)  (struct vupnpc*, int, int, int, int, char*);
+    int (*setup)     (struct vupnpc*);
+    int (*shutdown)  (struct vupnpc*);
+
+    int (*map_port)  (struct vupnpc*, int, int, int, struct sockaddr_in*);
     int (*unmap_port)(struct vupnpc*, int, int);
     int (*get_status)(struct vupnpc*, struct vupnpc_status*);
     void (*dump_mapping_port)(struct vupnpc*);
 };
 
 struct vupnpc {
+    void* config;
+    int   state;
+
+    struct vlock lock;
     struct vupnpc_ops* ops;
 };
 
