@@ -13,11 +13,16 @@ struct vupnpc_config {
 static struct vupnpc_config upnpc_config;
 static
 const char* upnp_proto_names[] = {
-    "udp",
-    "tcp",
+    "UDP",
+    "TCP",
     0
 };
 
+/*
+ * the routine to setup up stuffs before mapping port
+ *
+ * @upnpc:
+ */
 static
 int _vupnpc_setup(struct vupnpc* upnpc)
 {
@@ -45,6 +50,11 @@ int _vupnpc_setup(struct vupnpc* upnpc)
     return 0;
 }
 
+/*
+ * the routine to shutdown upnpc
+ *
+ * @upnpc
+ */
 static
 int _vupnpc_shutdown(struct vupnpc* upnpc)
 {
@@ -69,6 +79,15 @@ int _vupnpc_shutdown(struct vupnpc* upnpc)
     return 0;
 }
 
+/*
+ * the routine to map a port to IGD
+ *
+ * @upnpc:
+ * @iport:
+ * @eport:
+ * @proto:
+ * @ext_addr:
+ */
 static
 int _vupnpc_map_port(struct vupnpc* upnpc, int in_port, int ext_port, int proto, struct sockaddr_in* ext_addr)
 {
@@ -144,6 +163,13 @@ int _vupnpc_map_port(struct vupnpc* upnpc, int in_port, int ext_port, int proto,
     return 0;
 }
 
+/*
+ * the routine to unmap port to IGD.
+ *
+ * @upnpc
+ * @ext_port:
+ * @proto
+ */
 static
 int _vupnpc_unmap_port(struct vupnpc* upnpc, int ext_port, int proto)
 {
@@ -169,6 +195,12 @@ int _vupnpc_unmap_port(struct vupnpc* upnpc, int ext_port, int proto)
     return 0;
 }
 
+/*
+ * the routine to get status from IGD
+ *
+ * @upnpc
+ * @status:
+ */
 static
 int _vupnpc_get_status(struct vupnpc* upnpc, struct vupnpc_status* status)
 {
@@ -179,6 +211,11 @@ int _vupnpc_get_status(struct vupnpc* upnpc, struct vupnpc_status* status)
     return 0;
 }
 
+/*
+ * the routine to dump all mapping address infomation
+ *
+ * @upnpc
+ */
 static
 void _vupnpc_dump_mapping_port(struct vupnpc* upnpc)
 {
