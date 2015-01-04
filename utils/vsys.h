@@ -29,7 +29,7 @@ struct vcond {
 
 extern int  vcond_init  (struct vcond*);
 extern int  vcond_wait  (struct vcond*, struct vlock*);
-extern int  vcond_signa (struct vcond*);
+extern int  vcond_signal(struct vcond*);
 extern void vcond_deinit(struct vcond*);
 
 /*
