@@ -75,9 +75,10 @@ void vcond_deinit(struct vcond* cond)
 
 
 static
-void* _aux_entry(void* argv)
+void* _aux_thread_entry(void* argv)
 {
     struct vthread* thread = (struct vthread*)argv;
+
     pthread_mutex_lock(&thread->mutex);
     pthread_mutex_unlock(&thread->mutex);
 
@@ -101,7 +102,7 @@ int vthread_init(struct vthread* thread, vthread_entry_t entry, void* argv)
     thread->started = 0;
 
     pthread_mutex_lock(&thread->mutex);
-    res = pthread_create(&thread->thread, 0, _aux_entry, thread);
+    res = pthread_create(&thread->thread, 0, _aux_thread_entry, thread);
     vlog((res), elog_pthread_create);
     if (res) {
         pthread_mutex_unlock(&thread->mutex);

@@ -56,7 +56,7 @@ int _vupnpc_setup(struct vupnpc* upnpc)
     }
     _aux_dump_IGD_devices(cfg->devlist);
     ret = UPNP_GetValidIGD(cfg->devlist, &cfg->urls, &cfg->data, cfg->lan_addr, 32);
-    if (!ret) {
+    if (ret < 0) {
         elog_UPNP_GetValidIGD;
         vlogI(printf("No IGD found"));
         freeUPNPDevlist(cfg->devlist);
@@ -120,6 +120,7 @@ int _vupnpc_map_port(struct vupnpc* upnpc)
     char sduration[8];
     char siaddr_tmp[32];
     char siport_tmp[8];
+    char tmp[64];
     int  ret = 0;
 
     vassert(upnpc);
@@ -146,7 +147,7 @@ int _vupnpc_map_port(struct vupnpc* upnpc)
     snprintf(sproto, 8, "%s", upnp_protos[upnpc->proto]);
 
     retE((UPNPC_READY != upnpc->state));
-    ret = UPNP_GetExternalIPAddress(cfg->urls.controlURL, cfg->data.CIF.servicetype, seaddr);
+    ret = UPNP_GetExternalIPAddress(cfg->urls.controlURL, cfg->data.first.servicetype, seaddr);
     vlog((ret < 0), elog_UPNP_GetExternalIPAddress);
     retE((ret < 0));
     vlog((!seaddr[0]), vlogI(printf("External address is empty")));
@@ -154,22 +155,25 @@ int _vupnpc_map_port(struct vupnpc* upnpc)
 
     vlogI(printf("External address: %s", seaddr));
 
+    memset(tmp, 0, 64);
     ret = UPNP_AddPortMapping(cfg->urls.controlURL,
-                cfg->data.CIF.servicetype,
+                cfg->data.first.servicetype,
                 seport, siport,
-                siaddr, NULL,
-                sproto, seaddr,
-                NULL);
+                siaddr, "aaaa",
+                sproto, 0,
+                "0");
     vlog((ret < 0), elog_UPNP_AddPortMapping);
     retE((ret < 0));
 
+
     ret = UPNP_GetSpecificPortMappingEntry(cfg->urls.controlURL,
-                cfg->data.CIF.servicetype,
-                seport, sproto, seaddr,
+                cfg->data.first.servicetype,
+                seport, sproto, NULL,
                 siaddr_tmp, siport_tmp,
-                NULL, NULL, NULL);
+                NULL, NULL, tmp);
     vlog((ret < 0), elog_UPNP_GetSpecificPortMappingEntry);
     retE((ret < 0));
+    printf("<%s> siaddr_tmp:%s\n", __FUNCTION__, siaddr_tmp);
     vlog((!siaddr_tmp[0]), vlogI(printf("Local address is empty")));
     retE((!siaddr_tmp[0]));
 
@@ -210,7 +214,7 @@ int _vupnpc_unmap_port(struct vupnpc* upnpc)
     retE((UPNPC_ACTIVE != upnpc->state));
 
     ret = UPNP_DeletePortMapping(cfg->urls.controlURL,
-                cfg->data.CIF.servicetype,
+                cfg->data.first.servicetype,
                 seport, sproto, NULL);
     vlog((ret < 0), elog_UPNP_DeletePortMapping);
     retE((ret < 0));
@@ -268,14 +272,24 @@ int _aux_upnpc_thread_entry(void* argv)
     vlock_enter(&upnpc->lock);
     while(!upnpc->to_quit) {
         vcond_wait(&upnpc->cond, &upnpc->lock);
-        if (upnpc->action) {
+        switch(upnpc->state) {
+        case UPNPC_RAW:
+            vlock_leave(&upnpc->lock);
+            upnpc->act_ops->setup(upnpc);
+            //fall throught to next.
+        case UPNPC_READY:
+            upnpc->act_ops->map_port(upnpc);
+            break;
+        case UPNPC_ACTIVE:
             vlock_leave(&upnpc->lock);
             upnpc->act_ops->unmap_port(upnpc);
-            upnpc->act_ops->shutdown(upnpc);
-            upnpc->act_ops->setup(upnpc);
             upnpc->act_ops->map_port(upnpc);
-            vlock_enter(&upnpc->lock);
+            break;
+        default:
+            //todo;
+            break;
         }
+        vlock_enter(&upnpc->lock);
     }
     vlock_leave(&upnpc->lock);
     upnpc->act_ops->unmap_port(upnpc);
@@ -319,10 +333,7 @@ int _vupnpc_set_internal_port(struct vupnpc* upnpc, uint16_t iport)
     if (upnpc->iport != iport) {
         upnpc->old_iport = upnpc->iport;
         upnpc->iport  = iport;
-        if (UPNPC_ACTIVE == upnpc->state) {
-            upnpc->action = 1;
-            vcond_signal(&upnpc->cond);
-        }
+        vcond_signal(&upnpc->cond);
     }
     vlock_leave(&upnpc->lock);
     return 0;
@@ -338,10 +349,7 @@ int _vupnpc_set_external_port(struct vupnpc* upnpc, uint16_t eport)
     if (upnpc->eport != eport) {
         upnpc->old_eport = upnpc->eport;
         upnpc->eport = eport;
-        if (UPNPC_ACTIVE == upnpc->state) {
-            upnpc->action = 1;
-            vcond_signal(&upnpc->cond);
-        }
+        vcond_signal(&upnpc->cond);
     }
     vlock_leave(&upnpc->lock);
     return 0;
@@ -414,6 +422,8 @@ int vupnpc_init(struct vupnpc* upnpc)
     upnpc->state  = UPNPC_RAW;
     upnpc->action = 0;
     upnpc->proto  = UPNP_PROTO_UDP;
+    upnpc->iport  = 14999;
+    upnpc->eport  = 15999;
 
     vlock_init(&upnpc->lock);
     vcond_init(&upnpc->cond);

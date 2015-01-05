@@ -46,6 +46,7 @@
 #include "vmsger.h"
 #include "vroute.h"
 #include "vlsctl.h"
+#include "vupnpc.h"
 #include "vnodeId.h"
 #include "vticker.h"
 #include "vhashgen.h"
