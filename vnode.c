@@ -165,16 +165,14 @@ struct vnode_ops node_ops = {
  * @ticker:
  * @addr:
  */
-int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, struct vroute* route, vnodeInfo* node_info)
+int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, struct vroute* route)
 {
     int ret = 0;
 
     vassert(vnd);
     vassert(cfg);
     vassert(ticker);
-    vassert(node_info);
 
-    vnd->own_node_info = node_info;
     vlock_init(&vnd->lock);
     vnd->mode  = VDHT_OFF;
 

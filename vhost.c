@@ -445,7 +445,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&info.addr));
     ret += vticker_init(&host->ticker);
     ret += vroute_init (&host->route, cfg, &host->msger, &info);
-    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &info);
+    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vkicker_init(&host->kicker, &host->route, cfg);
@@ -483,7 +483,7 @@ void vhost_destroy(struct vhost* host)
 
     vhashgen_deinit(&host->hashgen);
     vstunc_deinit (&host->stunc);
-    vkicker_deinit (&host->kicker);
+    vkicker_deinit(&host->kicker);
     vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);

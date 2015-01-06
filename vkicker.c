@@ -142,7 +142,6 @@ int _vkicker_kick_nat_type(struct vkicker* kicker)
     return 0;
 }
 
-
 static
 struct vkicker_ops kicker_ops = {
     .kick_nice       = _vkicker_kick_nice,
