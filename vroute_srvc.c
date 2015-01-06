@@ -155,8 +155,8 @@ int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vtoken* svc_h
     svcs = &space->bucket[vsrvcId_bucket(svc_hash)].srvcs;
     {
         void* argv[] = {
-            svc_hash,
             &to,
+            svc_hash,
             &min_nice
         };
         varray_iterate(svcs, _aux_srvc_get_service_cb, argv);

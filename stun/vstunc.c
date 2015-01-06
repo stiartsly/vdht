@@ -272,7 +272,7 @@ void _vstunc_clear(struct vstunc* stunc)
         vstunc_req_free(req);
     }
     while(varray_size(&stunc->servers) > 0) {
-        srv = (struct vstunc_srv*)varray_del(&stunc->items, 0);
+        srv = (struct vstunc_srv*)varray_del(&stunc->servers, 0);
         vstunc_srv_free(srv);
     }
     vlock_leave(&stunc->lock);
