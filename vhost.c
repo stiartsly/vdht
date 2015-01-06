@@ -85,17 +85,17 @@ int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
 static
 int _aux_host_tick_cb(void* cookie)
 {
-    struct vhost*  host  = (struct vhost*)cookie;
-    struct vroute* route = &host->route;
-    struct vspy*   spy   = &host->spy;
-    int nice = 0;
+    struct vhost*   host   = (struct vhost*)cookie;
+    struct vkicker* kicker = &host->kicker;
     int ret = 0;
 
     vassert(host);
 
-    ret = spy->ops->get_nice(spy, &nice);
+    ret = kicker->ops->kick_nice(kicker);
     retE((ret < 0));
-    route->ops->kick_nice(route, nice);
+
+    //todo;
+
     return 0;
 }
 
@@ -448,13 +448,13 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route, &info);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
-    ret += vspy_init   (&host->spy, cfg);
+    ret += vkicker_init(&host->kicker, &host->route, cfg);
     ret += vstunc_init (&host->stunc, &host->msger, &host->ticker, &host->route);
     ret += vhashgen_init(&host->hashgen);
     if (ret < 0) {
         vhashgen_deinit(&host->hashgen);
         vstunc_deinit  (&host->stunc);
-        vspy_deinit    (&host->spy);
+        vkicker_deinit (&host->kicker);
         vlsctl_deinit  (&host->lsctl);
         vwaiter_deinit (&host->waiter);
         vnode_deinit   (&host->node);
@@ -483,7 +483,7 @@ void vhost_destroy(struct vhost* host)
 
     vhashgen_deinit(&host->hashgen);
     vstunc_deinit (&host->stunc);
-    vspy_deinit   (&host->spy);
+    vkicker_deinit (&host->kicker);
     vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);

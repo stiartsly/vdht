@@ -39,7 +39,6 @@
 #include "vdht.h"
 #include "vdht_core.h"
 #include "vrpc.h"
-#include "vspy.h"
 #include "vhost.h"
 #include "vnode.h"
 #include "vperf.h"
@@ -49,6 +48,7 @@
 #include "vupnpc.h"
 #include "vnodeId.h"
 #include "vticker.h"
+#include "vkicker.h"
 #include "vhashgen.h"
 
 #if 0

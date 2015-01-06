@@ -2,11 +2,11 @@
 #define __VHOST_H__
 
 #include "vrpc.h"
-#include "vspy.h"
 #include "vnode.h"
 #include "vlsctl.h"
 #include "vmsger.h"
 #include "vticker.h"
+#include "vkicker.h"
 #include "vhashgen.h"
 #include "stun/vstunc.h"
 
@@ -42,7 +42,7 @@ struct vhost {
     struct vroute   route;
     struct vnode    node;
     struct vlsctl   lsctl;
-    struct vspy     spy;
+    struct vkicker  kicker;
     struct vstunc   stunc;
     struct vhashgen hashgen;
 
