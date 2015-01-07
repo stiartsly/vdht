@@ -3,43 +3,44 @@
 
 #include "vlist.h"
 
-struct vhash_item {
+struct vhashmap_item {
     struct vlist list;
-    void* key;
     void* val;
-    int   hash_val;
 };
 
-struct vhash_bucket {
+struct vhashmap_bucket {
     struct vlist list;
 };
 
-typedef int (*vhash_func_t)(void*, void*);
-typedef int (*vhash_cmp_t) (void*, void*, void*);
+typedef int (*vhashmap_hash_t)(void*, void*);
+typedef int (*vhashmap_cmp_t) (void*, void*);
+typedef int (*vhashmap_free_t)(void*);
 
-struct vhash {
+struct vhashmap {
     int capc;
-    int used;
     int mask;
+    int used;
     void* cookie;
 
-    vhash_func_t hash_cb;
-    vhash_cmp_t  cmp_cb;
+    vhashmap_hash_t hash_cb;
+    vhashmap_cmp_t  cmp_cb;
+    vhashmap_free_t free_cb;
 
-    struct vhash_bucket** buckets;
+    struct vhashmap_bucket** buckets;
 };
 
-typedef int (*vhash_iterate_t)(void*, void*, void*);
-typedef int (*vhash_zero_t)   (void*, void*);
+typedef int (*vhashmap_iterate_t)(void*, void*);
 
-int   vhash_init   (struct vhash*, int, void*, vhash_func_t, vhash_cmp_t);
-void  vhash_deinit (struct vhash*, vhash_zero_t, void*);
+int   vhashmap_init   (struct vhashmap*, int, void*, vhashmap_hash_t, vhashmap_cmp_t, vhashmap_free_t);
+void  vhashmap_deinit (struct vhashmap*);
 
-void* vhash_get    (struct vhash*, void*);
-int   vhash_add    (struct vhash*, void*, void*);
-int   vhash_size   (struct vhash*);
-void* vhash_del    (struct vhash*, void*);
-void* vhash_del_by_val(struct vhash*, void*);
-void  vhash_iterate(struct vhash*, vhash_iterate_t, void*);
+int   vhashmap_size   (struct vhashmap*);
+void* vhashmap_get    (struct vhashmap*, void*);
+int   vhashmap_add    (struct vhashmap*, void*, void*);
+void* vhashmap_del    (struct vhashmap*, void*);
+void* vhashmap_del_by_value(struct vhashmap*, void*);
+void  vhashmap_zero   (struct vhashmap*);
+void  vhashmap_iterate(struct vhashmap*, vhashmap_iterate_t, void*);
 
 #endif
+
