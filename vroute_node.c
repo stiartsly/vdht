@@ -588,10 +588,11 @@ int _aux_space_prepare_db(struct vroute_node_space* space)
 
     memset(sql_buf, 0, BUF_SZ);
     ret += sprintf(sql_buf + ret, "CREATE TABLE '%s' (", VPEER_TB);
-    ret += sprintf(sql_buf + ret, "id INTEGER PRIOMARY_KEY ");
-    ret += sprintf(sql_buf + ret, "host TEXT ");
-    ret += sprintf(sql_buf + ret, "port INTEGER ");
-    ret += sprintf(sql_buf + ret, "ver TEXT)");
+    ret += sprintf(sql_buf + ret, "'id' INTEGER PRIOMARY_KEY,");
+    ret += sprintf(sql_buf + ret, "'host' TEXT,");
+    ret += sprintf(sql_buf + ret, "'port' INTEGER,");
+    ret += sprintf(sql_buf + ret, "'nodeId' TEXT,");
+    ret += sprintf(sql_buf + ret, "'ver' TEXT)");
 
     ret = sqlite3_exec(db, sql_buf, NULL, NULL, &err);
     vlog((ret && err), printf("db err:%s\n", err));
