@@ -17,8 +17,8 @@ struct vhost_ops {
     int   (*join)       (struct vhost*, struct sockaddr_in*);
     int   (*drop)       (struct vhost*, struct sockaddr_in*);
     int   (*stabilize)  (struct vhost*);
-    int   (*loop)       (struct vhost*);
-    int   (*req_quit)   (struct vhost*);
+    int   (*daemonize)  (struct vhost*);
+    int   (*shutdown)   (struct vhost*);
     void  (*dump)       (struct vhost*);
     char* (*get_version)(struct vhost*);
     int   (*bogus_query)(struct vhost*, int, struct sockaddr_in*);
@@ -35,6 +35,7 @@ struct vhost {
     int  to_quit;
     int  tick_tmo;
 
+    struct vthread  thread;
     struct vmsger   msger;
     struct vrpc     rpc;
     struct vwaiter  waiter;

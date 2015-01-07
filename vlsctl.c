@@ -75,7 +75,7 @@ int _vcmd_host_exit(struct vlsctl* lsctl, void* data, int offset)
     vassert(data);
     vassert(offset > 0);
 
-    ret = host->ops->req_quit(host);
+    ret = host->ops->shutdown(host);
     retE((ret < 0));
     return 0;
 }

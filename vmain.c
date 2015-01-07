@@ -145,6 +145,7 @@ int main(int argc, char** argv)
 
     host->ops->stabilize(host);
     host->ops->start(host);
+    host->ops->daemonize(host);
 
     using_stun = cfg.ops->check_section(&cfg, "stun");
     if (using_stun) {
@@ -158,7 +159,6 @@ int main(int argc, char** argv)
         stun->ops->daemonize(stun);
         stun->ops->render(stun);
     }
-    host->ops->loop(host);
 
     if (using_stun) {
         stun->ops->unrender(stun);

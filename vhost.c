@@ -143,13 +143,10 @@ void _vhost_dump(struct vhost* host)
     return;
 }
 
-/*
- * the routine to get into a loop of rpc laundry
- * @host:
- */
 static
-int _vhost_loop(struct vhost* host)
+int _aux_host_loop_entry(void* argv)
 {
+    struct vhost*   host   = (struct vhost*)argv;
     struct vwaiter* waiter = &host->waiter;
     int ret = 0;
 
@@ -167,16 +164,39 @@ int _vhost_loop(struct vhost* host)
 }
 
 /*
- * the routine to reqeust to quit from laundry loop
+ * todo:
  * @host:
  */
 static
-int _vhost_req_quit(struct vhost* host)
+int _vhost_daemonize(struct vhost* host)
 {
+    int ret = 0;
+    vassert(host);
+
+    host->to_quit = 0;
+    ret = vthread_init(&host->thread, _aux_host_loop_entry, host);
+    vlog((ret < 0), elog_vthread_init);
+    retE((ret < 0));
+
+    vthread_start(&host->thread);
+    return 0;
+}
+
+/*
+ * the routine to reqeust to quit from laundry loop and wait for
+ * thread to quit.
+ * @host:
+ */
+static
+int _vhost_shutdown(struct vhost* host)
+{
+    int exit_code = 0;
     vassert(host);
 
     host->to_quit = 1;
-    vlogI(printf("Host about to quit."));
+    vthread_join(&host->thread, &exit_code);
+
+    vlogI(printf("Host Exited"));
     return 0;
 }
 
@@ -250,8 +270,8 @@ struct vhost_ops host_ops = {
     .join        = _vhost_join,
     .drop        = _vhost_drop,
     .stabilize   = _vhost_stabilize,
-    .loop        = _vhost_loop,
-    .req_quit    = _vhost_req_quit,
+    .daemonize   = _vhost_daemonize,
+    .shutdown    = _vhost_shutdown,
     .dump        = _vhost_dump,
     .get_version = _vhost_get_version,
     .bogus_query = _vhost_bogus_query
@@ -477,6 +497,11 @@ struct vhost* vhost_create(struct vconfig* cfg)
 void vhost_destroy(struct vhost* host)
 {
     vassert(host);
+
+    {
+        int exit_code = 0;
+        vthread_join(&host->thread, &exit_code);
+    }
 
     host->waiter.ops->remove(&host->waiter, &host->lsctl.rpc);
     host->waiter.ops->remove(&host->waiter, &host->rpc);
