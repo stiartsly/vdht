@@ -147,6 +147,7 @@ int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vtoken* svc_h
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
     int min_nice = 100;
+    int found = 0;
 
     vassert(space);
     vassert(svc);
@@ -162,9 +163,10 @@ int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vtoken* svc_h
         varray_iterate(svcs, _aux_srvc_get_service_cb, argv);
         if (to) {
             vsrvcInfo_copy(svc, &to->svc);
+            found = 1;
         }
     }
-    return 0;
+    return (found ? 0 : -1);
 }
 
 /*
