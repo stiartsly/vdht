@@ -1,5 +1,8 @@
 #include "vglobal.h"
 #include "vroute.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define VPEER_TB ((const char*)"dht_peer")
 
@@ -569,6 +572,37 @@ struct vroute_node_space_ops route_space_ops = {
     .dump          = _vroute_node_space_dump
 };
 
+static
+int _aux_space_prepare_db(struct vroute_node_space* space)
+{
+    char sql_buf[BUF_SZ];
+    sqlite3* db = NULL;
+    struct stat stat_buf;
+    char* err = NULL;
+    int ret = 0;
+
+    errno = 0;
+    ret = stat(space->db, &stat_buf);
+    retS((ret >= 0));
+
+    ret = sqlite3_open(space->db, &db);
+    vlog((ret), elog_sqlite3_open);
+    retE((ret));
+
+    memset(sql_buf, 0, BUF_SZ);
+    ret += sprintf(sql_buf + ret, "CREATE TABLE '%s' (", VPEER_TB);
+    ret += sprintf(sql_buf + ret, "id INTEGER PRIOMARY_KEY ");
+    ret += sprintf(sql_buf + ret, "host TEXT ");
+    ret += sprintf(sql_buf + ret, "port INTEGER ");
+    ret += sprintf(sql_buf + ret, "ver TEXT)");
+
+    ret = sqlite3_exec(db, sql_buf, NULL, NULL, &err);
+    vlog((ret && err), printf("db err:%s\n", err));
+    vlog((ret), elog_sqlite3_exec);
+    sqlite3_close(db);
+    return 0;
+}
+
 int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route, struct vconfig* cfg, vnodeInfo* node_info)
 {
     int ret = 0;
@@ -582,6 +616,9 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     ret += cfg->inst_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
     ret += cfg->inst_ops->get_route_max_snd_tms(cfg, &space->max_snd_tms);
     ret += cfg->inst_ops->get_route_max_rcv_period(cfg, &space->max_rcv_period);
+    retE((ret < 0));
+
+    ret = _aux_space_prepare_db(space);
     retE((ret < 0));
 
     for (; i < NBUCKETS; i++) {
