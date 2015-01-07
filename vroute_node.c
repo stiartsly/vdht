@@ -1,8 +1,5 @@
 #include "vglobal.h"
 #include "vroute.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #define VPEER_TB ((const char*)"dht_peer")
 
