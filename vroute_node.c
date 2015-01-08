@@ -110,7 +110,7 @@ int _aux_space_broadcast_cb(void* item, void* cookie)
     if (peer->ntries >= space->max_snd_tms) {
         return 0; //unreachable.
     }
-    route->dht_ops->post_service(route, &peer->node.addr, svc);
+    route->dht_ops->post_service(route, &peer->node, svc);
     return 0;
 }
 
@@ -131,7 +131,7 @@ int _aux_space_tick_cb(void* item, void* cookie)
     }
     if ((!peer->snd_ts) ||
         (*now - peer->rcv_ts > space->max_rcv_period)) {
-        route->dht_ops->ping(route, &peer->node.addr);
+        route->dht_ops->ping(route, &peer->node);
         peer->snd_ts = *now;
         peer->ntries++;
     }
@@ -144,22 +144,23 @@ static
 int _aux_space_load_cb(void* priv, int col, char** value, char** field)
 {
     struct vroute_node_space* space = (struct vroute_node_space*)priv;
-    char* ip =   (char*)((void**)value)[1];
-    char* port = (char*)((void**)value)[2];
-    char* id   = (char*)((void**)value)[3];
-    char* ver  = (char*)((void**)value)[4];
+    char* id    = (char*)((void**)value)[1];
+    char* ver   = (char*)((void**)value)[2];
+    char* laddr = (char*)((void**)value)[3];
+    char* uaddr = (char*)((void**)value)[4];
+    char* eaddr = (char*)((void**)value)[5];
+    char* raddr = (char*)((void**)value)[6];
     vnodeInfo node_info;
-    int iport = 0;
 
-    errno = 0;
-    iport = strtol(port, NULL, 10);
-    retE((errno));
-
-    memset(&node_info, 0, sizeof(node_info));
-    vtoken_unstrlize(id, &node_info.id);
-    vsockaddr_convert(ip, iport, &node_info.addr);
-    vnodeVer_unstrlize(ver, &node_info.ver);
-    node_info.weight = 0;
+    {
+        memset(&node_info, 0, sizeof(node_info));
+        vtoken_unstrlize(id, &node_info.id);
+        vsockaddr_unstrlize(laddr, &node_info.laddr);
+        vsockaddr_unstrlize(uaddr, &node_info.uaddr);
+        vsockaddr_unstrlize(eaddr, &node_info.eaddr);
+        vsockaddr_unstrlize(raddr, &node_info.raddr);
+        vnodeVer_unstrlize(ver, &node_info.ver);
+    }
 
     space->ops->add_node(space, &node_info);
     return 0;
@@ -173,30 +174,43 @@ int _aux_space_store_cb(void* item, void* cookie)
     char sql_buf[BUF_SZ];
     char* err = NULL;
     char id[64];
-    char ip[64];
     char ver[64];
-    int  port = 0;
+    char laddr[64];
+    char uaddr[64];
+    char eaddr[64];
+    char raddr[64];
     int  off = 0;
     int  ret = 0;
 
     vassert(peer);
     vassert(db);
 
-    memset(id,  0, 64);
-    vtoken_strlize(&peer->node.id, id, 64);
-    memset(ip,  0, 64);
-    vsockaddr_unconvert(&peer->node.addr, ip, 64, (uint16_t*)&port);
-    memset(ver, 0, 64);
-    vnodeVer_strlize(&peer->node.ver, ver, 64);
+    {
+        memset(id,    0, 64);
+        memset(ver,   0, 64);
+        memset(laddr, 0, 64);
+        memset(uaddr, 0, 64);
+        memset(eaddr, 0, 64);
+        memset(raddr, 0, 64);
+
+        vtoken_strlize   (&peer->node.id,    id,    64);
+        vnodeVer_strlize (&peer->node.ver  , ver,   64);
+        vsockaddr_strlize(&peer->node.laddr, laddr, 64);
+        vsockaddr_strlize(&peer->node.uaddr, uaddr, 64);
+        vsockaddr_strlize(&peer->node.eaddr, eaddr, 64);
+        vsockaddr_strlize(&peer->node.raddr, raddr, 64);
+    }
 
     memset(sql_buf, 0, BUF_SZ);
     off += sprintf(sql_buf + off, "insert into '%s' ", VPEER_TB);
-    off += sprintf(sql_buf + off, " ('host', 'port', 'nodeId', 'ver') ");
+    off += sprintf(sql_buf + off, " ('nodeId', 'ver', 'laddr', 'uaddr', 'eaddr', 'raddr')");
     off += sprintf(sql_buf + off, " values (");
-    off += sprintf(sql_buf + off, " '%s',", ip);
-    off += sprintf(sql_buf + off, " '%i',", port);
-    off += sprintf(sql_buf + off, " '%s',", id);
-    off += sprintf(sql_buf + off, " '%s')", ver);
+    off += sprintf(sql_buf + off, " '%s',", id   );
+    off += sprintf(sql_buf + off, " '%s',", ver  );
+    off += sprintf(sql_buf + off, " '%s',", laddr);
+    off += sprintf(sql_buf + off, " '%s',", uaddr);
+    off += sprintf(sql_buf + off, " '%s',", eaddr);
+    off += sprintf(sql_buf + off, " '%s')", raddr);
 
     ret = sqlite3_exec(db, sql_buf, 0, 0, &err);
     vlog((ret && err), printf("db err:%s\n", err));
@@ -226,9 +240,6 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
     vassert(space);
     vassert(info);
 
-    if (vnodeInfo_equal(space->own, info)) {
-        return 0;
-    }
     if (vtoken_equal(&space->own->ver, &info->ver)) {
         info->weight++;
     }
@@ -289,7 +300,7 @@ int _vroute_node_space_del_node(struct vroute_node_space* space, struct sockaddr
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
             peer = (struct vpeer*)varray_get(peers, j);
-            if (vsockaddr_equal(addr, &peer->node.addr)) {
+            if (vnodeInfo_has_addr(&peer->node, addr)) {
                 found = 1;
                 break;
             }
@@ -451,7 +462,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
-        route->dht_ops->find_closest_nodes(route, &peer->node.addr, &space->own->id);
+        route->dht_ops->find_closest_nodes(route, &peer->node, &space->own->id);
     }
     return 0;
 }
@@ -589,10 +600,12 @@ int _aux_space_prepare_db(struct vroute_node_space* space)
     memset(sql_buf, 0, BUF_SZ);
     ret += sprintf(sql_buf + ret, "CREATE TABLE '%s' (", VPEER_TB);
     ret += sprintf(sql_buf + ret, "'id' INTEGER PRIOMARY_KEY,");
-    ret += sprintf(sql_buf + ret, "'host' TEXT,");
-    ret += sprintf(sql_buf + ret, "'port' INTEGER,");
     ret += sprintf(sql_buf + ret, "'nodeId' TEXT,");
-    ret += sprintf(sql_buf + ret, "'ver' TEXT)");
+    ret += sprintf(sql_buf + ret, "'ver'   TEXT,");
+    ret += sprintf(sql_buf + ret, "'laddr' TEXT,");
+    ret += sprintf(sql_buf + ret, "'uaddr' TEXT,");
+    ret += sprintf(sql_buf + ret, "'eaddr' TEXT,");
+    ret += sprintf(sql_buf + ret, "'raddr' TEXT)");
 
     ret = sqlite3_exec(db, sql_buf, NULL, NULL, &err);
     vlog((ret && err), printf("db err:%s\n", err));

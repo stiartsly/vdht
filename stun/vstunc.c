@@ -555,9 +555,10 @@ int _aux_stunc_tick_cb(void* cookie)
 
     //todo: svc_hash.
     ret = route->ops->get_service(route, &svc_hash, &srv_addr);
-    retE((ret < 0));
-    ret = stunc->base_ops->add_srv(stunc, &srv_addr);
-    retE((ret < 0));
+    if (ret) { // means service found.
+        ret = stunc->base_ops->add_srv(stunc, &srv_addr);
+        retE((ret < 0));
+    }
     ret = stunc->base_ops->reap_tmo_reqs(stunc);
     retE((ret < 0));
     return 0;

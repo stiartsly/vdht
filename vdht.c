@@ -93,10 +93,16 @@ struct be_node* _aux_create_vnodeInfo(vnodeInfo* info)
 
     node = be_create_vtoken(&info->id);
     be_add_keypair(dict, "id", node);
-    node = be_create_addr(&info->addr);
-    be_add_keypair(dict, "m", node);
     node = be_create_ver(&info->ver);
     be_add_keypair(dict, "v", node);
+    node = be_create_addr(&info->laddr);
+    be_add_keypair(dict, "ml", node);
+    node = be_create_addr(&info->uaddr);
+    be_add_keypair(dict, "mu", node);
+    node = be_create_addr(&info->eaddr);
+    be_add_keypair(dict, "me", node);
+    node = be_create_addr(&info->raddr);
+    be_add_keypair(dict, "mr", node);
     node = be_create_int(info->weight);
     be_add_keypair(dict, "w", node);
 
@@ -191,7 +197,7 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
  *            af69e81:m19:192.168.4.125:123001:v9:0.0.0.1.01:fi1023eeee
  */
 static
-int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result,void* buf, int   sz)
+int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -677,14 +683,32 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
     retE((ret < 0));
     ret = be_unpack_token(node, &info->id);
     retE((ret < 0));
-    ret = be_node_by_key(dict, "m", &node);
-    retE((ret < 0));
-    ret = be_unpack_addr(node, &info->addr);
-    retE((ret < 0));
+
     ret = be_node_by_key(dict, "v", &node);
     retE((ret < 0));
     ret = be_unpack_ver(node, &info->ver);
     retE((ret < 0));
+
+    ret = be_node_by_key(dict, "ml", &node);
+    retE((ret < 0));
+    ret = be_unpack_addr(node, &info->laddr);
+    retE((ret < 0));
+
+    ret = be_node_by_key(dict, "mu", &node);
+    retE((ret < 0));
+    ret = be_unpack_addr(node, &info->uaddr);
+    retE((ret < 0));
+
+    ret = be_node_by_key(dict, "me", &node);
+    retE((ret < 0));
+    ret = be_unpack_addr(node, &info->eaddr);
+    retE((ret < 0));
+
+    ret = be_node_by_key(dict, "mr", &node);
+    retE((ret < 0));
+    ret = be_unpack_addr(node, &info->raddr);
+    retE((ret < 0));
+
     ret = be_node_by_key(dict, "w", &node);
     retE((ret < 0));
     ret = be_unpack_int(node, &info->weight);
@@ -719,7 +743,7 @@ int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* info)
 }
 
 static
-int _aux_unpack_dhtId(struct be_node* dict)
+int _aux_unpack_dhtId(struct be_node* dict, vnodeId* srcId)
 {
     struct be_node* node = NULL;
     int ret = 0;
@@ -731,32 +755,39 @@ int _aux_unpack_dhtId(struct be_node* dict)
     retE((ret < 0));
     retE((BE_STR != node->type));
 
-    if (!strcmp(node->val.s, "q")) {
+    if (!strcmp(node->val.s, "q")) { //query.
+        ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+        retE((ret < 0));
+
         ret = be_node_by_key(dict, "q", &node);
         retE((ret < 0));
         retE((BE_STR != node->type));
         return vdht_get_queryId(node->val.s);
     }
-    if (!strcmp(node->val.s, "r")) {
-        ret = be_node_by_2keys(dict, "r", "nodes", &node);
-        if (!ret) {
-            return VDHT_FIND_CLOSEST_NODES_R;
-        }
-        ret = be_node_by_2keys(dict, "r", "hash", &node);
-        if (!ret) {
-            return VDHT_GET_PEERS_R;
-        }
-        ret = be_node_by_2keys(dict, "r", "node", &node);
-        if (ret < 0) {
+    if (!strcmp(node->val.s, "r")) { //response
+        ret = _aux_unpack_vnodeId(dict, "r", "id", srcId);
+        if (ret >= 0) {
+            ret = be_node_by_2keys(dict, "r", "nodes", &node);
+            if (!ret) {
+                return VDHT_FIND_CLOSEST_NODES_R;
+            }
+            ret = be_node_by_2keys(dict, "r", "hash", &node);
+            if (!ret) {
+                return VDHT_GET_PEERS_R;
+            }
+            ret = be_node_by_2keys(dict, "r", "node", &node);
+            if (!ret) {
+                return VDHT_FIND_NODE_R;
+            }
+            return VDHT_UNKNOWN;
+        } else {
+            ret = be_node_by_2keys(dict, "r", "node", &node);
+            if (!ret) {
+                return VDHT_PING_R;
+            }
             return VDHT_UNKNOWN;
         }
-        ret = be_node_by_2keys(dict, "r", "id", &node);
-        if (ret < 0) {
-            return VDHT_PING_R;
-        }
-        return VDHT_FIND_NODE_R;
     }
-
     return VDHT_UNKNOWN;
 }
 
@@ -773,19 +804,11 @@ int _aux_unpack_dhtId(struct be_node* dict)
  *            a2e7621eee
  */
 static
-int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
+int _vdht_dec_ping(void* ctxt)
 {
-    struct be_node* dict = (struct be_node*)ctxt;
-    int ret  = 0;
-
-    vassert(dict);
-    vassert(token);
-    vassert(srcId);
-
-    ret = _aux_unpack_vtoken(dict, token);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
+    //do nothing;
+    vassert(ctxt);
+    (void)ctxt;
 
     return 0;
 }
@@ -808,18 +831,14 @@ int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
  *            af69e81:m19:192.168.4.125:123001:v9:0.0.0.1.01:fi1023eeee
  */
 static
-int _vdht_dec_ping_rsp(void* ctxt, vtoken* token, vnodeInfo* result)
+int _vdht_dec_ping_rsp(void* ctxt, vnodeInfo* result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
     int ret = 0;
 
     vassert(ctxt);
-    vassert(token);
     vassert(result);
-
-    ret = _aux_unpack_vtoken(dict, token);
-    retE((ret < 0));
 
     ret = be_node_by_2keys(dict, "r", "node", &node);
     retE((ret < 0));
@@ -846,27 +865,16 @@ int _vdht_dec_ping_rsp(void* ctxt, vtoken* token, vnodeInfo* result)
  *             1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
-int _vdht_dec_find_node(
-        void* ctxt,
-        vtoken* token,
-        vnodeId* srcId,
-        vnodeId* targetId)
+int _vdht_dec_find_node(void* ctxt, vnodeId* targetId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
-    vassert(srcId);
     vassert(targetId);
 
-    ret = _aux_unpack_vtoken(dict, token);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
     ret = _aux_unpack_vnodeId(dict, "a", "target", targetId);
     retE((ret < 0));
-
     return 0;
 }
 
@@ -891,25 +899,14 @@ int _vdht_dec_find_node(
  *            .0.0.01:fi0eeee
  */
 static
-int _vdht_dec_find_node_rsp(
-        void* ctxt,
-        vtoken* token,
-        vnodeId* srcId,
-        vnodeInfo* result)
+int _vdht_dec_find_node_rsp(void* ctxt, vnodeInfo* result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
-    vassert(srcId);
     vassert(result);
-
-    ret = _aux_unpack_vtoken(dict, token);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "r", "id", srcId);
-    retE((ret < 0));
 
     ret = be_node_by_2keys(dict, "r", "node", &node);
     retE((ret < 0));
@@ -936,27 +933,16 @@ int _vdht_dec_find_node_rsp(
  *            d20:7ba29c1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
-int _vdht_dec_find_closest_nodes(
-        void* ctxt,
-        vtoken* token,
-        vnodeId* srcId,
-        vnodeId* targetId)
+int _vdht_dec_find_closest_nodes(void* ctxt, vnodeId* targetId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
-    vassert(srcId);
     vassert(targetId);
 
-    ret = _aux_unpack_vtoken(dict, token);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
     ret = _aux_unpack_vnodeId(dict, "a", "target", targetId);
     retE((ret < 0));
-
     return 0;
 }
 
@@ -982,11 +968,7 @@ int _vdht_dec_find_closest_nodes(
  *            9:0.0.0.0.01:fi1417421748eeeee
  */
 static
-int _vdht_dec_find_closest_nodes_rsp(
-        void* ctxt,
-        vtoken* token,
-        vnodeId* srcId,
-        struct varray* closest)
+int _vdht_dec_find_closest_nodes_rsp(void* ctxt, struct varray* closest)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* list = NULL;
@@ -995,14 +977,7 @@ int _vdht_dec_find_closest_nodes_rsp(
     int i = 0;
 
     vassert(dict);
-    vassert(token);
-    vassert(srcId);
     vassert(closest);
-
-    ret = _aux_unpack_vtoken(dict, token);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "r", "id", srcId);
-    retE((ret < 0));
 
     ret = be_node_by_2keys(dict, "r", "nodes", &list);
     retE((ret < 0));
@@ -1045,25 +1020,14 @@ int _vdht_dec_find_closest_nodes_rsp(
  *            192.168.4.46:144441:fi0eeee
  */
 static
-int _vdht_dec_post_service(
-        void* ctxt,
-        vtoken* token,
-        vnodeId* srcId,
-        vsrvcInfo* service)
+int _vdht_dec_post_service(void* ctxt, vsrvcInfo* service)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
-    vassert(srcId);
     vassert(service);
-
-    ret = _aux_unpack_vtoken(dict, token);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
 
     ret = be_node_by_2keys(dict, "a", "service", &node);
     retE((ret < 0));
@@ -1074,15 +1038,9 @@ int _vdht_dec_post_service(
 }
 
 static
-int _vdht_dec_post_hash(
-        void* ctxt,
-        vtoken* token,
-        vnodeId* srcId,
-        vnodeHash* hash)
+int _vdht_dec_post_hash(void* ctxt, vnodeHash* hash)
 {
     vassert(ctxt);
-    vassert(token);
-    vassert(srcId);
     vassert(hash);
 
     //todo;
@@ -1097,15 +1055,9 @@ int _vdht_dec_post_hash(
  * @hash:
  */
 static
-int _vdht_dec_get_peers(
-        void* ctxt,
-        vtoken* token,
-        vnodeId* srcId,
-        vnodeHash* hash)
+int _vdht_dec_get_peers(void* ctxt, vnodeHash* hash)
 {
     vassert(ctxt);
-    vassert(token);
-    vassert(srcId);
     vassert(hash);
 
     //todo;
@@ -1120,15 +1072,9 @@ int _vdht_dec_get_peers(
  * @result:
  */
 static
-int _vdht_dec_get_peers_rsp(
-        void* ctxt,
-        vtoken* token,
-        vnodeId* srcId,
-        struct varray* result)
+int _vdht_dec_get_peers_rsp(void* ctxt, struct varray* result)
 {
     vassert(ctxt);
-    vassert(token);
-    vassert(srcId);
     vassert(result);
 
     //todo;
@@ -1136,7 +1082,7 @@ int _vdht_dec_get_peers_rsp(
 }
 
 static
-int _vdht_dec(void* buf, int len, void** ctxt)
+int _vdht_dec_begin(void* buf, int len, vtoken* token, vnodeId* srcId, void** ctxt)
 {
     struct be_node* dict = NULL;
     int ret = 0;
@@ -1149,8 +1095,11 @@ int _vdht_dec(void* buf, int len, void** ctxt)
     vlog((!dict), elog_be_decode);
     retE((!dict));
 
-    ret = _aux_unpack_dhtId(dict);
-    retE((ret < 0));
+    ret = _aux_unpack_vtoken(dict, token);
+    ret1E((ret < 0), be_free(dict));
+
+    ret = _aux_unpack_dhtId(dict, srcId);
+    ret1E((ret < 0), be_free(dict));
 
     *ctxt = (void*)dict;
     return ret;
@@ -1165,7 +1114,7 @@ int _vdht_dec_done(void* ctxt)
 }
 
 struct vdht_dec_ops dht_dec_ops = {
-    .dec                    = _vdht_dec,
+    .dec_begin              = _vdht_dec_begin,
     .dec_done               = _vdht_dec_done,
 
     .ping                   = _vdht_dec_ping,

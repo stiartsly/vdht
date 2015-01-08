@@ -73,7 +73,6 @@ struct vroute_srvc_space_ops {
 
 struct vroute_srvc_space {
     int bucket_sz;
-
     struct vroute_srvc_space_bucket {
         struct varray srvcs;
     } bucket[NBUCKETS];
@@ -102,7 +101,6 @@ struct vroute_ops {
     int  (*unreg_service)(struct vroute*, vtoken*, struct sockaddr_in*);
     int  (*get_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
     int  (*kick_nice)    (struct vroute*, int32_t);
-    int  (*dsptch)       (struct vroute*, struct vmsg_usr*);
     int  (*permit)       (struct vroute*, uint32_t);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
@@ -112,19 +110,19 @@ struct vroute_ops {
 };
 
 struct vroute_dht_ops {
-    int (*ping)          (struct vroute*, struct sockaddr_in*);
-    int (*ping_rsp)      (struct vroute*, struct sockaddr_in*, vtoken*, vnodeInfo*);
-    int (*find_node)     (struct vroute*, struct sockaddr_in*, vnodeId*);
-    int (*find_node_rsp) (struct vroute*, struct sockaddr_in*, vtoken*, vnodeInfo*);
-    int (*find_closest_nodes)    (struct vroute*, struct sockaddr_in*, vnodeId*);
-    int (*find_closest_nodes_rsp)(struct vroute*, struct sockaddr_in*, vtoken*, struct varray*);
-    int (*post_service)  (struct vroute*, struct sockaddr_in*, vsrvcInfo*);
-    int (*post_hash)     (struct vroute*, struct sockaddr_in*, vtoken*);
-    int (*get_peers)     (struct vroute*, struct sockaddr_in*, vtoken*);
-    int (*get_peers_rsp) (struct vroute*, struct sockaddr_in*, vtoken*, struct varray*);
+    int (*ping)          (struct vroute*, vnodeInfo*);
+    int (*ping_rsp)      (struct vroute*, vnodeInfo*, vtoken*, vnodeInfo*);
+    int (*find_node)     (struct vroute*, vnodeInfo*, vnodeId*);
+    int (*find_node_rsp) (struct vroute*, vnodeInfo*, vtoken*, vnodeInfo*);
+    int (*find_closest_nodes)    (struct vroute*, vnodeInfo*, vnodeId*);
+    int (*find_closest_nodes_rsp)(struct vroute*, vnodeInfo*, vtoken*, struct varray*);
+    int (*post_service)  (struct vroute*, vnodeInfo*, vsrvcInfo*);
+    int (*post_hash)     (struct vroute*, vnodeInfo*, vtoken*);
+    int (*get_peers)     (struct vroute*, vnodeInfo*, vtoken*);
+    int (*get_peers_rsp) (struct vroute*, vnodeInfo*, vtoken*, struct varray*);
 };
 
-typedef int (*vroute_dht_cb_t)(struct vroute*, struct sockaddr_in*, void*);
+typedef int (*vroute_dht_cb_t)(struct vroute*, vnodeInfo*, vtoken*, void*);
 struct vroute {
     vnodeInfo     own_node;
     struct varray own_svcs;

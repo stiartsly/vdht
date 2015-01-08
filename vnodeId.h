@@ -42,15 +42,20 @@ typedef struct vtoken vnodeVer;
 void vnodeVer_dump     (vnodeVer*);
 int  vnodeVer_strlize  (vnodeVer*, char*, int);
 int  vnodeVer_unstrlize(const char*, vnodeVer*);
+extern vtoken zero_node_ver;
 
 /*
  * for vnodeInfo
  */
 struct vnodeInfo  {
     vnodeId  id;
-    struct sockaddr_in addr;
     vnodeVer ver;
     int32_t weight;
+
+    struct sockaddr_in laddr; // local address
+    struct sockaddr_in uaddr; // upnp  address
+    struct sockaddr_in eaddr; // external address.
+    struct sockaddr_in raddr; // relay address
 };
 typedef struct vnodeInfo vnodeInfo;
 
@@ -60,6 +65,7 @@ int  vnodeInfo_equal(vnodeInfo*, vnodeInfo*);
 void vnodeInfo_copy (vnodeInfo*, vnodeInfo*);
 int  vnodeInfo_init (vnodeInfo*, vnodeId*, struct sockaddr_in*, vnodeVer*, int32_t);
 void vnodeInfo_dump (vnodeInfo*);
+int  vnodeInfo_has_addr(vnodeInfo*, struct sockaddr_in*);
 
 /*
  * for vsrvcId

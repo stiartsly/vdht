@@ -166,7 +166,7 @@ int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vtoken* svc_h
             found = 1;
         }
     }
-    return (found ? 0 : -1);
+    return found;
 }
 
 /*

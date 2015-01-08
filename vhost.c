@@ -48,10 +48,8 @@ int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
 
     vassert(host);
     vassert(wellknown_addr);
+    retE((vnodeInfo_has_addr(&host->own_node_info, wellknown_addr)));
 
-    if (vsockaddr_equal(&host->own_node_info.addr, wellknown_addr)) {
-        return 0;
-    }
     ret = route->ops->join_node(route, wellknown_addr);
     retE((ret < 0));
     vlogI(printf("Joined a node"));
@@ -72,9 +70,7 @@ int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
     vassert(host);
     vassert(addr);
 
-    if (vsockaddr_equal(&host->own_node_info.addr, addr)) {
-        return 0;
-    }
+    retE((vnodeInfo_has_addr(&host->own_node_info, addr)));
 
     ret = route->ops->drop_node(route, addr);
     retE((ret < 0));
@@ -133,7 +129,7 @@ void _vhost_dump(struct vhost* host)
     vassert(host);
 
     vdump(printf("-> HOST"));
-    vsockaddr_dump(&host->own_node_info.addr);
+    vsockaddr_dump(&host->own_node_info.laddr);
     host->route.ops->dump(&host->route);
     host->node.ops->dump(&host->node);
     host->msger.ops->dump(&host->msger);
@@ -231,25 +227,30 @@ char* _vhost_get_version(struct vhost* host)
  *
  */
 static
-int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest)
+int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest_addr)
 {
     struct vroute* route = &host->route;
+    vnodeInfo dest_node;
+    vnodeId   dest_id;
     int ret = 0;
 
     vassert(host);
-    vassert(dest);
+    vassert(dest_addr);
+
+    vtoken_make(&dest_id);
+    vnodeInfo_init(&dest_node, &dest_id, dest_addr, &zero_node_ver, 0);
 
     switch(what) {
     case VDHT_PING:
-        ret = route->dht_ops->ping(route, dest);
+        ret = route->dht_ops->ping(route, &dest_node);
         break;
 
     case VDHT_FIND_NODE:
-        ret = route->dht_ops->find_node(route, dest, &host->own_node_info.id);
+        ret = route->dht_ops->find_node(route, &dest_node, &host->own_node_info.id);
         break;
 
     case VDHT_FIND_CLOSEST_NODES:
-        ret = route->dht_ops->find_closest_nodes(route, dest, &host->own_node_info.id);
+        ret = route->dht_ops->find_closest_nodes(route, &dest_node, &host->own_node_info.id);
         break;
 
     case VDHT_POST_SERVICE:
@@ -436,14 +437,10 @@ int _aux_vhost_set_addr(struct vconfig* cfg, struct sockaddr_in* addr)
 struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
-    vnodeInfo info;
     int tmo = 0;
     int ret = 0;
     vassert(cfg);
 
-    vtoken_make(&info.id);
-    ret = _aux_vhost_set_addr(cfg, &info.addr);
-    retE_p((ret < 0));
     ret = cfg->inst_ops->get_host_tick_tmo(cfg, &tmo);
     retE_p((ret < 0));
 
@@ -458,13 +455,23 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->ops      = &host_ops;
     host->svc_ops  = &host_svc_ops;
 
-    vnodeVer_unstrlize(host->ops->get_version(host), &info.ver);
-    vnodeInfo_init(&host->own_node_info, &info.id, &info.addr, &info.ver, 0);
+    {
+        vnodeId  nid;
+        vnodeVer ver;
+        struct sockaddr_in addr;
+
+        vtoken_make(&nid);
+        ret = _aux_vhost_set_addr(cfg, &addr);
+        ret1E_p((ret < 0), free(host));
+
+        vnodeVer_unstrlize(host->ops->get_version(host), &ver);
+        vnodeInfo_init(&host->own_node_info, &nid, &addr, &ver, 0);
+    }
 
     ret += vmsger_init (&host->msger);
-    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&info.addr));
+    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&host->own_node_info.laddr));
     ret += vticker_init(&host->ticker);
-    ret += vroute_init (&host->route, cfg, &host->msger, &info);
+    ret += vroute_init (&host->route, cfg, &host->msger, &host->own_node_info);
     ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);

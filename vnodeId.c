@@ -190,6 +190,9 @@ int vnodeMetric_cmp(vnodeMetric* a, vnodeMetric* b)
 /*
  * for vnodeVer funcs
  */
+vtoken zero_node_ver = {
+    .data = {0, 0, 0, 0, 0}
+};
 
 int vnodeVer_strlize(vnodeVer* ver, char* buf, int len)
 {
@@ -289,7 +292,12 @@ int vnodeInfo_equal(vnodeInfo* a, vnodeInfo* b)
     vassert(a);
     vassert(b);
 
-    return (vtoken_equal(&a->id, &b->id) || vsockaddr_equal(&a->addr,&b->addr));
+    if (vtoken_equal(&a->id, &b->id)) {
+        return 1;
+    }
+    return (vsockaddr_equal(&a->laddr, &b->laddr)
+         && vsockaddr_equal(&a->uaddr, &b->uaddr)
+         && vsockaddr_equal(&a->eaddr, &b->eaddr));
 }
 
 void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
@@ -297,9 +305,12 @@ void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
     vassert(dest);
     vassert(src);
 
-    vtoken_copy(&dest->id, &src->id);
-    vsockaddr_copy(&dest->addr, &src->addr);
+    vtoken_copy(&dest->id,  &src->id);
     vtoken_copy(&dest->ver, &src->ver);
+    vsockaddr_copy(&dest->laddr, &src->laddr);
+    vsockaddr_copy(&dest->uaddr, &src->uaddr);
+    vsockaddr_copy(&dest->eaddr, &src->eaddr);
+    vsockaddr_copy(&dest->raddr, &src->raddr);
     dest->weight = src->weight;
     return ;
 }
@@ -307,21 +318,17 @@ void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
 int vnodeInfo_init(vnodeInfo* info, vnodeId* id, struct sockaddr_in* addr, vnodeVer* ver, int32_t weight)
 {
     vassert(info);
-    vassert(id || !id) ;
+    vassert(id);
     vassert(addr);
-    vassert(ver || !ver);
+    vassert(ver);
+    vassert(weight >= 0);
 
-    if (!id) {
-        vtoken_make(&info->id);
-    } else {
-        vtoken_copy(&info->id, id);
-    }
-    vsockaddr_copy(&info->addr, addr);
-    if (!ver) {
-        vnodeVer_unstrlize("0.0.0.0.0", &info->ver);
-    } else {
-        vtoken_copy(&info->ver, ver);
-    }
+    vtoken_copy(&info->id,  id );
+    vtoken_copy(&info->ver, ver);
+    vsockaddr_copy(&info->laddr, addr);
+    vsockaddr_copy(&info->uaddr, addr);
+    vsockaddr_copy(&info->eaddr, addr);
+    vsockaddr_copy(&info->raddr, addr);
     info->weight = weight;
     return 0;
 }
@@ -331,10 +338,22 @@ void vnodeInfo_dump(vnodeInfo* info)
     vassert(info);
 
     vtoken_dump(&info->id);
-    vsockaddr_dump(&info->addr);
     vnodeVer_dump(&info->ver);
+    vsockaddr_dump(&info->laddr);
+    vsockaddr_dump(&info->uaddr);
+    vsockaddr_dump(&info->eaddr);
     vdump(printf("weight: %d", info->weight));
     return ;
+}
+
+int vnodeInfo_has_addr(vnodeInfo* info, struct sockaddr_in* addr)
+{
+    vassert(info);
+    vassert(addr);
+
+    return (vsockaddr_equal(&info->laddr, addr)
+         || vsockaddr_equal(&info->uaddr, addr)
+         || vsockaddr_equal(&info->eaddr, addr));
 }
 
 /*
