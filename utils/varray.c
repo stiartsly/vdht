@@ -180,7 +180,6 @@ void* varray_pop_tail(struct varray* array)
     }
     item = array->items[--array->used];
     array->items[array->used] = NULL;
-    array->used--;
     return item;
 }
 
