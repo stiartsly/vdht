@@ -23,5 +23,10 @@ int  vsockaddr_unstrlize (const char*, struct sockaddr_in*);
 int  vsockaddr_combine   (struct sockaddr_in*, struct sockaddr_in*, struct sockaddr_in*);
 int  vsockaddr_dump      (struct sockaddr_in*);
 
+/*
+ * for macaddr
+ */
+int  vmacaddr_get(uint8_t*, int);
+
 #endif
 

@@ -235,3 +235,27 @@ int vsockaddr_dump(struct sockaddr_in* addr)
     return 0;
 }
 
+int vmacaddr_get(uint8_t* macaddr, int len)
+{
+    struct ifreq req;
+    int ret = 0;
+    int fd  = 0;
+
+    vassert(macaddr);
+    vassert(len > 0);
+    retE((len < ETH_ALEN)); // ETH_ALEN (6).
+
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    vlog((fd < 0), elog_socket);
+    retE((fd < 0));
+
+    strcpy(req.ifr_name, "eth0");
+    ret = ioctl(fd, SIOCGIFHWADDR, &req);
+    close(fd);
+    vlog((ret < 0), elog_ioctl);
+    retE((ret < 0));
+
+    memcpy(macaddr, req.ifr_hwaddr.sa_data, ETH_ALEN);
+    return 0;
+}
+
