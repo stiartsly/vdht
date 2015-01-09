@@ -131,6 +131,7 @@
 #define elog_vhostaddr_get_next     vlogE(printf("vhostaddr_get_next"))
 #define elog_vsockaddr_convert      vlogE(printf("vsockaddr_convert"))
 #define elog_vsockaddr_unconvert    vlogE(printf("vsockaddr_unconvert"))
+#define elog_vmacaddr_get           vlogE(printf("vmacaddr_get"))
 #define elog_vservice_alloc         vlogE(printf("vservice_alloc"))
 #define elog_vsrvcInfo_alloc        vlogE(printf("vsrvcInfo_alloc"))
 #define elog_vnodeInfo_alloc        vlogE(printf("vnodeInfo_alloc"))
