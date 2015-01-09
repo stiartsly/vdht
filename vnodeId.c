@@ -1,16 +1,46 @@
 #include "vglobal.h"
 #include "vnodeId.h"
 
+static uint32_t token_dynamic_magic = 0;
+
+static
+uint32_t get_macaddr_hash(void)
+{
+    static uint8_t  macaddr[8];
+    static uint32_t hash = 0;
+    int got = 0;
+    int ret = 0;
+    int i = 0;
+
+    if (!got) {
+        memset(macaddr, 0, sizeof(macaddr));
+        ret = vmacaddr_get(macaddr, 8);
+        vlog((ret < 0), elog_vmacaddr_get);
+        for (i = 0; i < 6; i++) {
+            hash += (uint32_t)(macaddr[i] << i);
+        }
+        got = 1;
+    }
+    return hash;
+}
+
 /*
  * for vtoken funcs
  */
 void vtoken_make(vtoken* token)
 {
+    uint32_t seed = (uint32_t)time(NULL);
     char* data = NULL;
     int i = 0;
     vassert(token);
 
-    srand(time(NULL)); // TODO: need use mac as srand seed.
+    seed += token_dynamic_magic;
+    seed += (uint32_t)pthread_self();
+    seed += (uint32_t)getpid();
+    seed += get_macaddr_hash();
+    srand(seed);
+    token_dynamic_magic = seed;
+
     data = (char*)token->data;
     for (; i < VTOKEN_LEN; i++) {
         data[i] = (uint8_t)rand();
@@ -70,26 +100,24 @@ int vtoken_unstrlize(const char* id_str, vtoken* token)
 {
     uint32_t low  = 0;
     uint32_t high = 0;
-    char data = 0;
+    char data[2] = {'\0', '\0'};
     int ret = 0;
     int i = 0;
     vassert(id_str);
     vassert(token);
 
     for (; i < VTOKEN_LEN; i++) {
-        data = *id_str;
-        ret = sscanf(&data, "%x", &high);
+        data[0] = *id_str++;
+        ret = sscanf(data, "%x", &high);
         vlog((!ret), elog_sscanf);
         retE((!ret));
-        id_str++;
 
-        data = *id_str;
-        ret = sscanf(&data, "%x", &low);
+        data[0] = *id_str++;
+        ret = sscanf(data, "%x", &low);
         vlog((!ret), elog_sscanf);
         retE((!ret));
-        id_str++;
 
-        token->data[i] = ((high << 4) | low);
+        token->data[i] = ((high << 4) | (0x0f & low));
     }
     return 0;
 }

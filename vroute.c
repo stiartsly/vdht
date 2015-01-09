@@ -563,7 +563,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeInfo* dest)
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
-    route->record_ops->make(route, &token); // record this request query.
+    route->record_ops->make(route, &token); // record this query.
     vlogI(printf("send @ping"));
     return 0;
 }

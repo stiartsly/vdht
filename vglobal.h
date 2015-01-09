@@ -22,6 +22,7 @@
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <netinet/if_ether.h>
 #include <pthread.h>
 #include <sqlite3.h>
 
@@ -107,6 +108,7 @@
 #define open
 #define fstat
 #define read
+#define getpid
 
 #define inet_aton
 #define inet_ntoa
@@ -134,6 +136,7 @@
 #define pthread_cond_destroy
 #define pthread_create
 #define pthread_join
+#define pthread_self
 
 #define timer_create
 #define timer_settime
