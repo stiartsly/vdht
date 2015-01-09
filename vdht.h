@@ -98,9 +98,11 @@ struct vdht_enc_ops {
  */
 
 struct vdht_dec_ops {
-    int (*dec) (
+    int (*dec_begin) (
             void* buf,
             int sz,
+            vtoken* token,
+            vnodeId* srcId,
             void** ctxt
         );
 
@@ -109,70 +111,51 @@ struct vdht_dec_ops {
         );
 
     int (*ping)(
-            void* ctxt,
-            vtoken* token, // transaction Id for the query.
-            vnodeId* srcId // where query is from.
+            void* ctxt
         );
 
     int (*ping_rsp)(
             void* ctxt,
-            vtoken* token,
             vnodeInfo* result
         );
 
     int (*find_node)(
             void* ctxt,
-            vtoken* token,
-            vnodeId* srcId,   // quering vnode id,
             vnodeId* targetId // queried vnode Id.
         );
 
     int (*find_node_rsp)(
             void* ctxt,
-            vtoken* token,
-            vnodeId* srcId,
             vnodeInfo* result
         );
 
     int (*find_closest_nodes)(
             void* ctxt,
-            vtoken* token,
-            vnodeId* srcId,
             vnodeId* targetId
         );
 
     int (*find_closest_nodes_rsp)(
             void* ctxt,
-            vtoken* token,
-            vnodeId* srcId,
             struct varray* result
         );
 
     int (*post_service) (
             void* ctxt,
-            vtoken* token,
-            vnodeId* srcId,
             vsrvcInfo* service
         );
 
     int (*post_hash)(
             void* ctxt,
-            vtoken* token,
-            vnodeId* srcId,
             vnodeHash* hash
         );
 
     int (*get_peers)(
             void* ctxt,
-            vtoken* token,
-            vnodeId* srcId,
             vnodeHash* hash
         );
 
     int (*get_peers_rsp)(
             void* ctxt,
-            vtoken* token,
-            vnodeId* srcId,
             struct varray* result
         );
 };

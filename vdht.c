@@ -101,8 +101,8 @@ struct be_node* _aux_create_vnodeInfo(vnodeInfo* info)
     be_add_keypair(dict, "mu", node);
     node = be_create_addr(&info->eaddr);
     be_add_keypair(dict, "me", node);
-    node = be_create_addr(&info->raddr);
-    be_add_keypair(dict, "mr", node);
+   // node = be_create_addr(&info->raddr);
+   // be_add_keypair(dict, "mr", node);
     node = be_create_int(info->weight);
     be_add_keypair(dict, "w", node);
 
@@ -661,9 +661,9 @@ int _aux_unpack_vnodeId(struct be_node* dict, char* key1, char* key2, vnodeId* i
     vassert(id);
 
     ret = be_node_by_2keys(dict, key1, key2, &node);
-    retE((ret < 0));
-    retE((BE_STR != node->type));
-
+    if ((ret < 0) || (BE_STR != node->type)) {
+        return -1;
+    }
     ret = be_unpack_token(node, id);
     retE((ret < 0));
     return 0;
@@ -704,10 +704,10 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
     ret = be_unpack_addr(node, &info->eaddr);
     retE((ret < 0));
 
-    ret = be_node_by_key(dict, "mr", &node);
-    retE((ret < 0));
-    ret = be_unpack_addr(node, &info->raddr);
-    retE((ret < 0));
+  //  ret = be_node_by_key(dict, "mr", &node);
+  //  retE((ret < 0));
+  //  ret = be_unpack_addr(node, &info->raddr);
+  //  retE((ret < 0));
 
     ret = be_node_by_key(dict, "w", &node);
     retE((ret < 0));
