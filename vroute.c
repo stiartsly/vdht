@@ -495,14 +495,6 @@ void _vroute_dump(struct vroute* route)
 }
 
 static
-int _vroute_permit(struct vroute* route, uint32_t prop)
-{
-    vassert(route);
-
-    return ((route->props & prop));
-}
-
-static
 struct vroute_ops route_ops = {
     .join_node     = _vroute_join_node,
     .drop_node     = _vroute_drop_node,
@@ -510,7 +502,6 @@ struct vroute_ops route_ops = {
     .unreg_service = _vroute_unreg_service,
     .get_service   = _vroute_get_service,
     .kick_nice     = _vroute_kick_nice,
-    .permit        = _vroute_permit,
     .load          = _vroute_load,
     .store         = _vroute_store,
     .tick          = _vroute_tick,
@@ -545,7 +536,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeInfo* dest)
 
     vassert(route);
     vassert(dest);
-    retS((!route->ops->permit(route, PROP_PING))); //ping disabled.
+    retS(((route->props & PROP_PING))); //ping disabled.
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -586,7 +577,7 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeInfo* dest, vtoken* token, v
     vassert(dest);
     vassert(token);
     vassert(info);
-    retS((!route->ops->permit(route, PROP_PING_R))); // ping_rsp disabled.
+    retS((!(route->props & PROP_PING_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -624,7 +615,7 @@ int _vroute_dht_find_node(struct vroute* route, vnodeInfo* dest, vnodeId* target
     vassert(route);
     vassert(dest);
     vassert(target);
-    retS((!route->ops->permit(route, PROP_FIND_NODE))); //find_node disabled.
+    retS((!(route->props & PROP_FIND_NODE)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -662,7 +653,7 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeInfo* dest, vtoken* tok
     vassert(dest);
     vassert(token);
     vassert(info);
-    retS((!route->ops->permit(route, PROP_FIND_NODE_R))); //find_node_rsp disabled.
+    retS((!(route->props & PROP_FIND_NODE_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -699,7 +690,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeInfo* dest, vnodeI
     vassert(route);
     vassert(dest);
     vassert(target);
-    retS((!route->ops->permit(route, PROP_FIND_CLOSEST_NODES)));
+    retS((!(route->props & PROP_FIND_CLOSEST_NODES)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -739,7 +730,7 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeInfo* dest, vt
     vassert(dest);
     vassert(token);
     vassert(closest);
-    retS((!route->ops->permit(route, PROP_FIND_CLOSEST_NODES_R)));
+    retS((!(route->props & PROP_FIND_CLOSEST_NODES_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -771,7 +762,7 @@ int _vroute_dht_post_service(struct vroute* route, vnodeInfo* dest, vsrvcInfo* s
     vassert(route);
     vassert(dest);
     vassert(service);
-    retS((!route->ops->permit(route, PROP_POST_SERVICE)));
+    retS((!(route->props & PROP_POST_SERVICE)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -804,7 +795,7 @@ int _vroute_dht_post_hash(struct vroute* route, vnodeInfo* dest, vtoken* hash)
     vassert(route);
     vassert(dest);
     vassert(hash);
-    retS((!route->ops->permit(route, PROP_POST_HASH)));
+    retS((!(route->props & PROP_POST_HASH)));
 
     //todo;
     return 0;
@@ -826,7 +817,7 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeInfo* dest, vtoken* hash)
     vassert(route);
     vassert(dest);
     vassert(hash);
-    retS((!route->ops->permit(route, PROP_GET_PEERS)));
+    retS((!(route->props & PROP_GET_PEERS)));
 
     buf = vdht_buf_alloc();
     retE((!buf));
@@ -866,7 +857,7 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeInfo* dest, vtoken* tok
     vassert(dest);
     vassert(token);
     vassert(peers);
-    retS((!route->ops->permit(route, PROP_GET_PEERS_R)));
+    retS((!(route->props & PROP_GET_PEERS_R)));
 
     buf = vdht_buf_alloc();
     retE((!buf));

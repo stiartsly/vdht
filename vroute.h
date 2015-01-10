@@ -101,7 +101,6 @@ struct vroute_ops {
     int  (*unreg_service)(struct vroute*, vtoken*, struct sockaddr_in*);
     int  (*get_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
     int  (*kick_nice)    (struct vroute*, int32_t);
-    int  (*permit)       (struct vroute*, uint32_t);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
