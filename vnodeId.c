@@ -133,16 +133,27 @@ void vtoken_dump(vtoken* token)
 
     memset(buf, 0, 64);
     sz = snprintf(buf, 64, "ID:");
+    while(i < VTOKEN_LEN - 2) {
+        data = token->data[i];
+        ret = snprintf(buf+sz, 64-sz, "%x%x",  (data >> 4), (data & 0x0f));
+        sz += ret;
+        i++;
 
-    for (; i < VTOKEN_LEN-1; i++) {
         data = token->data[i];
         ret = snprintf(buf+sz, 64-sz, "%x%x-", (data >> 4), (data & 0x0f));
         sz += ret;
+        i++;
     }
     data = token->data[i];
-    snprintf(buf+sz, 64-sz, "%x%x", (data >> 4), (data & 0x0f));
-    vdump(printf("%s",buf));
+    ret = snprintf(buf+sz, 64-sz, "%x%x", (data >> 4), (data & 0x0f));
+    sz += ret;
+    i++;
 
+    data = token->data[i];
+    ret = snprintf(buf+sz, 64-sz, "%x%x", (data >> 4), (data & 0x0f));
+    sz += ret;
+    i++;
+    vdump(printf("%s", buf));
     return;
 }
 
