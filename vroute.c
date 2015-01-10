@@ -1304,7 +1304,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     vroute_node_space_init(&route->node_space, route, cfg, &route->own_node);
     vroute_srvc_space_init(&route->srvc_space, cfg);
 
-    cfg->inst_ops->get_route_max_record_period(cfg, &route->max_record_period);
+    route->max_record_period = 5; //5s
     vlist_init(&route->records);
     vlock_init(&route->record_lock);
     route->record_ops = &route_record_ops;

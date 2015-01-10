@@ -23,7 +23,6 @@ struct vconfig_inst_ops {
     int (*get_route_bucket_sz)   (struct vconfig*, int*);
     int (*get_route_max_snd_tms) (struct vconfig*, int*);
     int (*get_route_max_rcv_period)   (struct vconfig*, int*);
-    int (*get_route_max_record_period)(struct vconfig*, int*);
 
     int (*get_dht_port)          (struct vconfig*, int*);
 

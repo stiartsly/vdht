@@ -759,40 +759,6 @@ int _vcfg_get_route_max_rcv_period(struct vconfig* cfg, int* period)
 }
 
 static
-int _vcfg_get_route_max_record_period(struct vconfig* cfg, int* period)
-{
-    char buf[32];
-    int tms = 0;
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(period);
-
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str_ext(cfg, "route.max_record_period", buf, 32, DEF_ROUTE_MAX_RECORD_PERIOD);
-    retE((ret < 0));
-
-    ret = strlen(buf);
-    switch(buf[ret-1]) {
-    case 's':
-        tms = 1;
-        break;
-    case 'm':
-        tms = 60;
-        break;
-    default:
-        retE((1));
-    }
-    errno = 0;
-    ret = strtol(buf, NULL, 10);
-    vlog((errno), elog_strtol);
-    retE((errno));
-
-    *period = (ret * tms);
-    return 0;
-}
-
-static
 int _vcfg_get_dht_port(struct vconfig* cfg, int* port)
 {
     int ret = 0;
