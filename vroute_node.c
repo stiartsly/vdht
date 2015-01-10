@@ -296,7 +296,7 @@ int _vroute_node_space_del_node(struct vroute_node_space* space, struct sockaddr
     vassert(space);
     vassert(addr);
 
-    for (; i < NBUCKETS; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
             peer = (struct vpeer*)varray_get(peers, j);
@@ -334,11 +334,12 @@ int _vroute_node_space_get_node(struct vroute_node_space* space, vnodeId* target
 
     idx = vnodeId_bucket(&space->own->id, target);
     peers = &space->bucket[idx].peers;
-    for (; i < varray_size(peers); i++) {
+    for (i = 0; i < varray_size(peers); i++) {
         peer = (struct vpeer*)varray_get(peers, i);
         if (vtoken_equal(&peer->node.id, target)) {
             vnodeInfo_copy(info, &peer->node);
             if (vtoken_equal(&peer->node.ver, &space->own->ver)) {
+                //minus because uncareness of version as to other nodes.
                 info->weight -= 1;
             }
             ret = 0;
@@ -390,7 +391,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
     vmem_aux_init(&maux, sizeof(struct vpeer_track), 8);
     vsorted_array_init(&array, 0,  _aux_space_track_cmp_cb, space);
 
-    for (; i < NBUCKETS; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
             track = (struct vpeer_track*)vmem_aux_alloc(&maux);
@@ -418,6 +419,13 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
     return 0;
 }
 
+/*
+ *  the routine to broadcast the give service @svci to all nodes in routing
+ *  table. which is provied by local node.
+ *
+ * @space:
+ * @svci:  metadata of service.
+ */
 static
 int _vroute_node_space_broadcast(struct vroute_node_space* space, void* svci)
 {
@@ -435,6 +443,14 @@ int _vroute_node_space_broadcast(struct vroute_node_space* space, void* svci)
     return 0;
 }
 
+/*
+ * the routine to activate dynamicness of node routing table. the actions
+ * includes send dht @ping msg to all nodes if possible and send @find_closest_nodes
+ * msg to a random node if routing table has not been refreshed for a certain
+ * time.
+ *
+ * @space:
+ */
 static
 int _vroute_node_space_tick(struct vroute_node_space* space)
 {
@@ -445,7 +461,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
     int i  = 0;
     vassert(space);
 
-    for (; i < NBUCKETS; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         void* argv[] = {
             space,
             space->route,
@@ -462,6 +478,9 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
+        if (peer->ntries >= space->max_snd_tms) {
+            continue;
+        }
         route->dht_ops->find_closest_nodes(route, &peer->node, &space->own->id);
     }
     return 0;

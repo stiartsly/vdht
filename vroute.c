@@ -536,7 +536,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeInfo* dest)
 
     vassert(route);
     vassert(dest);
-    retS(((route->props & PROP_PING))); //ping disabled.
+    retS((!(route->props & PROP_PING))); //ping disabled.
 
     buf = vdht_buf_alloc();
     retE((!buf));
