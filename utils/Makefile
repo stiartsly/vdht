@@ -3,6 +3,7 @@ utils_objs = \
     vhashmap.o \
     varray.o \
     vmisc.o \
+    vdict.o \
     vmem.o \
     vsys.o 
 

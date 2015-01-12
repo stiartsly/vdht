@@ -28,6 +28,7 @@
 
 #include "utils/vlist.h"
 #include "utils/varray.h"
+#include "utils/vdict.h"
 #include "utils/vmem.h"
 #include "utils/vsys.h"
 #include "utils/vmisc.h"
@@ -72,6 +73,7 @@
 #define strlen
 #define strcpy
 #define strncpy
+#define strdup
 #define snprintf
 #define sscanf
 #define strcmp
