@@ -1117,7 +1117,6 @@ struct vconfig_inst_ops cfg_inst_ops = {
     .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
     .get_route_max_snd_tms  = _vcfg_get_route_max_snd_tms,
     .get_route_max_rcv_period    = _vcfg_get_route_max_rcv_period,
-    .get_route_max_record_period = _vcfg_get_route_max_record_period,
 
     .get_dht_port           = _vcfg_get_dht_port,
 
