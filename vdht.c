@@ -39,6 +39,22 @@ char* vdht_get_desc(int dhtId)
     return desc->desc;
 }
 
+int vdht_get_dhtId_by_desc(const char* dht_str)
+{
+    struct vdhtId_desc* desc = dhtId_desc;
+    int dhtId = -1;
+
+    vassert(dht_str);
+
+    for (; desc->desc; desc++) {
+        if (!strcmp(dht_str, desc->desc)) {
+            dhtId = desc->id;
+            break;
+        }
+    }
+    return dhtId;
+}
+
 static
 int  vdht_get_queryId(char* desc)
 {

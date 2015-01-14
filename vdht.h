@@ -161,6 +161,7 @@ struct vdht_dec_ops {
 };
 
 char* vdht_get_desc(int);
+int   vdht_get_dhtId_by_desc(const char*);
 void* vdht_buf_alloc(void);
 int   vdht_buf_len(void);
 void  vdht_buf_free(void*);
