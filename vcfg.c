@@ -1005,15 +1005,16 @@ int _vcfg_get_route_max_rcv_period(struct vconfig* cfg, int* period)
 }
 
 static
-int _vcfg_get_dht_port(struct vconfig* cfg, int* port)
+int _aux_get_addr_port(struct vconfig* cfg, const char* key, int* port)
 {
     struct varray* tuple = NULL;
     struct vcfg_item* item = NULL;
 
     vassert(cfg);
+    vassert(key);
     vassert(port);
 
-    tuple = cfg->ops->get_tuple_val(cfg, "dht.address");
+    tuple = cfg->ops->get_tuple_val(cfg, key);
     retE((!tuple));
 
     item = (struct vcfg_item*)varray_get(tuple, 1);
@@ -1027,12 +1028,26 @@ int _vcfg_get_dht_port(struct vconfig* cfg, int* port)
 }
 
 static
-int _vcfg_get_stun_port(struct vconfig* cfg, int* port)
+int _vcfg_get_dht_port(struct vconfig* cfg, int* port)
 {
+    int ret = 0;
     vassert(cfg);
     vassert(port);
 
-    //todo;
+    ret = _aux_get_addr_port(cfg, "dht.address", port);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vcfg_get_stun_port(struct vconfig* cfg, int* port)
+{
+    int ret = 0;
+    vassert(cfg);
+    vassert(port);
+
+    ret = _aux_get_addr_port(cfg, "ice.address", port);
+    retE((ret < 0));
     return 0;
 }
 
