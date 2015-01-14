@@ -39,12 +39,10 @@ void vdict_item_free(struct vdict_item* item)
     return ;
 }
 
-int vdict_init(struct vdict* dict, int capc)
+int vdict_init(struct vdict* dict)
 {
     vassert(dict);
-    vassert(capc > 0);
 
-    dict->capc = capc;
     dict->used = 0;
     vlist_init(&dict->items);
 
@@ -96,6 +94,7 @@ int vdict_add(struct vdict* dict, char* key, void* val)
     item->val = val;
 
     vlist_add_tail(&dict->items, &item->list);
+    dict->used++;
     return 0;
 }
 
@@ -123,6 +122,7 @@ void* vdict_del(struct vdict* dict, char* key)
         val = item->val;
         item->val = NULL;
         vdict_item_free(item);
+        dict->used--;
     }
     return val;
 }
@@ -148,6 +148,7 @@ void* vdict_del_by_val(struct vdict* dict, void* val)
         vlist_del(&item->list);
         item->val = NULL;
         vdict_item_free(item);
+        dict->used--;
     }
     return (found ? val: NULL);
 }
@@ -183,6 +184,7 @@ void vdict_zero(struct vdict* dict, vdict_zero_t cb, void* cookie)
 
         cb(item, cookie);
         vdict_item_free(item);
+        dict->used--;
     }
     return ;
 }

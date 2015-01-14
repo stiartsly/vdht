@@ -4,7 +4,6 @@
 #include "vlist.h"
 
 struct vdict {
-    int capc;
     int used;
     struct vlist items;
 };
@@ -12,7 +11,7 @@ struct vdict {
 typedef int  (*vdict_iterate_t)(char*, void*, void*);
 typedef void (*vdict_zero_t)(void*, void*);
 
-int   vdict_init   (struct vdict*, int);
+int   vdict_init   (struct vdict*);
 void  vdict_deinit (struct vdict*);
 void* vdict_get    (struct vdict*, char*);
 int   vdict_add    (struct vdict*, char*, void*);
