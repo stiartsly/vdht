@@ -13,7 +13,7 @@ int _vstuns_render_service(struct vstuns* stun)
     int ret = 0;
     vassert(stun);
 
-    ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+    ret = hashgen->ext_ops->get_stun_hash(hashgen, &hash);
     retE((ret < 0));
     ret = host->svc_ops->publish(host, &hash, &stun->my_addr);
     retE((ret < 0));
@@ -30,7 +30,7 @@ int _vstuns_unrender_service(struct vstuns * stun)
     int ret = 0;
     vassert(stun);
 
-    ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+    ret = hashgen->ext_ops->get_stun_hash(hashgen, &hash);
     retE((ret < 0));
     ret = host->svc_ops->cancel(host, &hash, &stun->my_addr);
     retE((ret < 0));
@@ -213,7 +213,7 @@ int _aux_stuns_get_addr(struct vconfig* cfg, struct sockaddr_in* addr)
     ret = vhostaddr_get_first(buf, 64);
     vlog((ret < 0), elog_vhostaddr_get_first);
     retE((ret < 0));
-    ret = cfg->inst_ops->get_stun_port(cfg, &port);
+    ret = cfg->ext_ops->get_stun_port(cfg, &port);
     retE((ret < 0));
     ret = vsockaddr_convert(buf, port, addr);
     vlog((ret < 0), elog_vsockaddr_convert);

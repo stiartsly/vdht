@@ -1084,8 +1084,8 @@ int vconfig_init(struct vconfig* cfg)
 
     cfg->dict.type = CFG_DICT;
     vcfg_item_init(&cfg->dict, 0);
-    cfg->ops      = &cfg_ops;
-    cfg->inst_ops = &cfg_ext_ops;
+    cfg->ops     = &cfg_ops;
+    cfg->ext_ops = &cfg_ext_ops;
     return 0;
 }
 

@@ -642,10 +642,10 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     vassert(cfg);
     vassert(node_info);
 
-    ret += cfg->inst_ops->get_route_db_file(cfg, space->db, BUF_SZ);
-    ret += cfg->inst_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
-    ret += cfg->inst_ops->get_route_max_snd_tms(cfg, &space->max_snd_tms);
-    ret += cfg->inst_ops->get_route_max_rcv_period(cfg, &space->max_rcv_period);
+    ret += cfg->ext_ops->get_route_db_file(cfg, space->db, BUF_SZ);
+    ret += cfg->ext_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
+    ret += cfg->ext_ops->get_route_max_snd_tms(cfg, &space->max_snd_tms);
+    ret += cfg->ext_ops->get_route_max_rcv_period(cfg, &space->max_rcv_period);
     retE((ret < 0));
 
     ret = _aux_space_prepare_db(space);

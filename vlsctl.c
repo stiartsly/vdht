@@ -206,10 +206,10 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+        ret = hashgen->ext_ops->get_stun_hash(hashgen, &hash);
         break;
     case PLUGIN_RELAY:
-        ret = hashgen->inst_ops->get_relay_hash(hashgen, &hash);
+        ret = hashgen->ext_ops->get_relay_hash(hashgen, &hash);
         break;
     default:
         retE((1));
@@ -250,10 +250,10 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+        ret = hashgen->ext_ops->get_stun_hash(hashgen, &hash);
         break;
     case PLUGIN_RELAY:
-        ret = hashgen->inst_ops->get_relay_hash(hashgen, &hash);
+        ret = hashgen->ext_ops->get_relay_hash(hashgen, &hash);
         break;
     default:
         retE((1));
@@ -290,10 +290,10 @@ int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = hashgen->inst_ops->get_stun_hash(hashgen, &hash);
+        ret = hashgen->ext_ops->get_stun_hash(hashgen, &hash);
         break;
     case PLUGIN_RELAY:
-        ret = hashgen->inst_ops->get_relay_hash(hashgen, &hash);
+        ret = hashgen->ext_ops->get_relay_hash(hashgen, &hash);
         break;
     default:
         retE((1));
@@ -410,7 +410,7 @@ int vlsctl_init(struct vlsctl* lsctl, struct vhost* host, struct vconfig* cfg)
     vassert(host);
 
     sun->sun_family = AF_UNIX;
-    ret = cfg->inst_ops->get_lsctl_unix_path(cfg, sun->sun_path, 105);
+    ret = cfg->ext_ops->get_lsctl_unix_path(cfg, sun->sun_path, 105);
     retE((ret < 0));
 
     lsctl->host    = host;

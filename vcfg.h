@@ -58,7 +58,7 @@ struct vconfig {
     struct vcfg_item dict;
 
     struct vconfig_ops* ops;
-    struct vconfig_ext_ops* inst_ops;
+    struct vconfig_ext_ops* ext_ops;
 };
 
 int  vconfig_init  (struct vconfig*);

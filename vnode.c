@@ -181,7 +181,7 @@ int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, s
     vnd->route  = route;
     vnd->ops    = &node_ops;
 
-    ret = cfg->inst_ops->get_host_tick_tmo(cfg, &vnd->tick_interval);
+    ret = cfg->ext_ops->get_host_tick_tmo(cfg, &vnd->tick_interval);
     retE((ret < 0));
     return 0;
 }

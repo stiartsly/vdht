@@ -351,7 +351,7 @@ int _vhashgen_get_relay_svc_hash(struct vhashgen* gen, vtoken* token)
 }
 
 static
-struct vhashgen_inst_ops hashgen_inst_ops = {
+struct vhashgen_ext_ops hashgen_ext_ops = {
     .get_stun_hash  = _vhashgen_get_stun_svc_hash,
     .get_relay_hash = _vhashgen_get_relay_svc_hash
 };
@@ -360,10 +360,10 @@ int vhashgen_init (struct vhashgen* gen)
 {
     vassert(gen);
 
-    gen->ctxt     = &hashgen_ctxt_sha1;
-    gen->sha_ops  = &hashgen_sha1_ops;
-    gen->ops      = &hashgen_ops;
-    gen->inst_ops = &hashgen_inst_ops;
+    gen->ctxt    = &hashgen_ctxt_sha1;
+    gen->sha_ops = &hashgen_sha1_ops;
+    gen->ops     = &hashgen_ops;
+    gen->ext_ops = &hashgen_ext_ops;
 
     return 0;
 }

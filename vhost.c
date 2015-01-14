@@ -425,7 +425,7 @@ int _aux_vhost_set_addr(struct vconfig* cfg, struct sockaddr_in* addr)
     ret = vhostaddr_get_first(ip, 64);
     vlog((ret < 0), elog_vhostaddr_get_first);
     retE((ret < 0));
-    ret = cfg->inst_ops->get_dht_port(cfg, &port);
+    ret = cfg->ext_ops->get_dht_port(cfg, &port);
     retE((ret < 0));
     ret = vsockaddr_convert(ip, (uint16_t)port, addr);
     vlog((ret < 0), elog_vsockaddr_convert);
@@ -441,7 +441,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     int ret = 0;
     vassert(cfg);
 
-    ret = cfg->inst_ops->get_host_tick_tmo(cfg, &tmo);
+    ret = cfg->ext_ops->get_host_tick_tmo(cfg, &tmo);
     retE_p((ret < 0));
 
     host = (struct vhost*)malloc(sizeof(struct vhost));
