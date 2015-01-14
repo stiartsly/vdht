@@ -45,7 +45,6 @@ struct vresource_ops resource_ops = {
 
 int vresource_init(struct vresource* res, struct vconfig* cfg)
 {
-    int ret = 0;
     vassert(res);
     vassert(cfg);
 
@@ -55,18 +54,47 @@ int vresource_init(struct vresource* res, struct vconfig* cfg)
     res->up.ratio   = 0;
     res->down.ratio = 0;
 
-    ret += cfg->inst_ops->get_cpu_criteria(cfg, &res->cpu.criteria);
-    ret += cfg->inst_ops->get_mem_criteria(cfg, &res->mem.criteria);
-    ret += cfg->inst_ops->get_io_criteria (cfg, &res->io.criteria);
-    ret += cfg->inst_ops->get_up_criteria (cfg, &res->up.criteria);
-    ret += cfg->inst_ops->get_down_criteria(cfg, &res->down.criteria);
-    ret += cfg->inst_ops->get_cpu_factor(cfg, &res->cpu.factor);
-    ret += cfg->inst_ops->get_mem_factor(cfg, &res->mem.factor);
-    ret += cfg->inst_ops->get_io_factor (cfg, &res->io.factor);
-    ret += cfg->inst_ops->get_up_factor (cfg, &res->up.factor);
-    ret += cfg->inst_ops->get_down_factor(cfg, &res->down.factor);
-    retE((ret < 0));
+    res->cpu.criteria = cfg->ops->get_int_val(cfg, "adjust.cpu.criteria");
+    if (res->cpu.criteria < 0) {
+        res->cpu.criteria = 5;
+    }
+    res->mem.criteria = cfg->ops->get_int_val(cfg, "adjust.memory.criteria");
+    if (res->mem.criteria < 0) {
+        res->mem.criteria = 5;
+    }
+    res->io.criteria  = cfg->ops->get_int_val(cfg, "adjust.io.criteria");
+    if (res->io.criteria < 0) {
+        res->io.criteria = 5;
+    }
+    res->up.criteria  = cfg->ops->get_int_val(cfg, "adjust.network_upload.criteria");
+    if (res->up.criteria < 0) {
+        res->up.criteria = 5;
+    }
+    res->down.criteria  = cfg->ops->get_int_val(cfg, "adjust.network_download.criteria");
+    if (res->down.criteria < 0) {
+        res->down.criteria = 5;
+    }
 
+    res->cpu.factor = cfg->ops->get_int_val(cfg, "adjust.cpu.factor");
+    if (res->cpu.factor < 0) {
+        res->cpu.factor = 6;
+    }
+    res->mem.factor = cfg->ops->get_int_val(cfg, "adjust.memory.factor");
+    if (res->mem.factor < 0) {
+        res->mem.factor = 5;
+    }
+    res->io.factor = cfg->ops->get_int_val(cfg, "adjust.io.factor");
+    if (res->io.factor < 0) {
+        res->io.factor = 3;
+    }
+    res->up.factor = cfg->ops->get_int_val(cfg, "adjust.network_upload.factor");
+    if (res->up.factor < 0) {
+        res->up.factor = 6;
+    }
+    res->down.factor = cfg->ops->get_int_val(cfg, "adjust.network_download.factor");
+    if (res->down.factor < 0) {
+        res->down.factor = 6;
+    }
     res->ops = &resource_ops;
     return 0;
 }

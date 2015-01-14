@@ -147,7 +147,7 @@ int main(int argc, char** argv)
     host->ops->start(host);
     host->ops->daemonize(host);
 
-    using_stun = cfg.ops->check_section(&cfg, "stun");
+    using_stun = cfg.ops->check(&cfg, "stun");
     if (using_stun) {
         stun = vstuns_create(host, &cfg);
         if (!stun) {

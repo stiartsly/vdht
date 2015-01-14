@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -65,6 +66,7 @@
 #define sockaddr_un
 #define sockaddr
 
+#define isdigit
 #define perror
 #define printf
 #define malloc
@@ -73,7 +75,6 @@
 #define strlen
 #define strcpy
 #define strncpy
-#define strdup
 #define snprintf
 #define sscanf
 #define strcmp
@@ -82,6 +83,8 @@
 #define strchr
 #define strcat
 #define strncat
+#define strdup
+#define strndup
 #define memset
 #define memcpy
 #define memcmp

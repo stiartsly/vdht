@@ -1241,50 +1241,29 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
 static
 int _aux_route_load_proto_caps(struct vconfig* cfg, uint32_t* props)
 {
-    int on = 0;
+    struct varray* tuple = NULL;
+    int i = 0;
+
     vassert(cfg);
     vassert(props);
 
-    *props = 0;
-    cfg->inst_ops->get_ping_cap(cfg, &on);
-    if (on) {
+    tuple = cfg->ops->get_tuple_val(cfg, "dht.protocol");
+    if (!tuple) {
         *props |= PROP_PING;
-    }
-    cfg->inst_ops->get_ping_rsp_cap(cfg, &on);
-    if (on) {
         *props |= PROP_PING_R;
+        return 0;
     }
-    cfg->inst_ops->get_find_node_cap(cfg, &on);
-    if (on) {
-        *props |= PROP_FIND_NODE;
-    }
-    cfg->inst_ops->get_find_node_rsp_cap(cfg, &on);
-    if (on) {
-        *props |= PROP_FIND_NODE_R;
-    }
-    cfg->inst_ops->get_find_closest_nodes_cap(cfg, &on);
-    if (on) {
-        *props |= PROP_FIND_CLOSEST_NODES;
-    }
-    cfg->inst_ops->get_find_closest_nodes_rsp_cap(cfg, &on);
-    if (on) {
-        *props |= PROP_FIND_CLOSEST_NODES_R;
-    }
-    cfg->inst_ops->get_post_service_cap(cfg, &on);
-    if (on) {
-        *props |= PROP_POST_SERVICE;
-    }
-    cfg->inst_ops->get_post_hash_cap(cfg, &on);
-    if (on) {
-        *props |= PROP_POST_HASH;
-    }
-    cfg->inst_ops->get_get_peers_cap(cfg, &on);
-    if (on) {
-        *props |= PROP_GET_PEERS;
-    }
-    cfg->inst_ops->get_get_peers_rsp_cap(cfg, &on);
-    if (on) {
-        *props |= PROP_GET_PEERS_R;
+    for (i = 0; i < varray_size(tuple); i++) {
+        struct vcfg_item* item = NULL;
+        int   dht_id  = -1;
+
+        item = (struct vcfg_item*)varray_get(tuple, i);
+        retE((item->type != CFG_STR));
+        dht_id = vdht_get_dhtId_by_desc(item->val.s);
+        retE((dht_id < 0));
+        retE((dht_id >= VDHT_UNKNOWN));
+
+        *props |= (1 << dht_id);
     }
     return 0;
 }

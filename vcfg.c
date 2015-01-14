@@ -1,315 +1,671 @@
 #include "vglobal.h"
 #include "vcfg.h"
 
-#define DEF_HOST_TICK_TMO       "5s"
-#define DEF_NODE_TICK_INTERVAL  "7s"
-
-#define DEF_ROUTE_DB_FILE       "route.db"
-#define DEF_ROUTE_BUCKET_CAPC   ((int)10)
-#define DEF_ROUTE_MAX_SND_TIMES ((int)5)
-#define DEF_ROUTE_MAX_RCV_PERIOD "1m"
-#define DEF_ROUTE_MAX_RECORD_PERIOD "5s"
-#define DEF_LSCTL_UNIX_PATH     "/var/run/vdht/lsctl_socket"
-
-#define DEF_DHT_PORT            ((int)12300)
-
-#define DEF_SPY_CPU_CRITERIA    (5)
-#define DEF_SPY_MEM_CRITERIA    (5)
-#define DEF_SPY_IO_CRITERIA     (5)
-#define DEF_SPY_UP_CRITERIA     (5)
-#define DEF_SPY_DOWN_CRITERIA   (5)
-
-#define DEF_SPY_CPU_FACTOR      (6)
-#define DEF_SPY_MEM_FACTOR      (5)
-#define DEF_SPY_IO_FACTOR       (2)
-#define DEF_SPY_UP_FACTOR       (4)
-#define DEF_SPY_DOWN_FACTOR     (4)
-
-#define DEF_STUN_PORT           (13999)
-
-enum {
-    CFG_INT = 0,
-    CFG_STR,
-    CFG_UNKOWN
-};
-
-struct vcfg_item {
-    struct vlist list;
-    int   type;
-    char* key;
-    char* val;
-    int   nval;
-};
+static char* def_cfg_key = "__dht_def_empty_key__";
 
 static MEM_AUX_INIT(cfg_item_cache, sizeof(struct vcfg_item), 8);
 static
-struct vcfg_item* vitem_alloc(void)
+struct vcfg_item* vcfg_item_alloc(int type)
 {
     struct vcfg_item* item = NULL;
 
     item = (struct vcfg_item*)vmem_aux_alloc(&cfg_item_cache);
     vlog((!item), elog_vmem_aux_alloc);
     retE_p((!item));
+
+    memset(item, 0, sizeof(*item));
+    item->type  = type;
+    item->depth = 0;
     return item;
 }
 
 static
-void vitem_free(struct vcfg_item* item)
+void vcfg_item_init(struct vcfg_item* item, int depth)
 {
     vassert(item);
-    if (item->key) {
-        free(item->key);
+
+    item->depth = depth;
+    switch(item->type) {
+    case CFG_DICT:
+        vdict_init(&item->val.d);
+        break;
+    case CFG_LIST:
+        item->val.l.key = NULL;
+        varray_init(&item->val.l.l, 4);
+        break;
+    case CFG_TUPLE:
+        varray_init(&item->val.t, 4);
+        break;
+    case CFG_STR:
+        item->val.s = NULL;
+        break;
+    default:
+        vassert(0);
+        break;
     }
-    if (item->val) {
-        free(item->val);
+    return ;
+}
+
+static
+void _aux_cfg_item_free(void* item, void* cookie)
+{
+    extern void vcfg_item_free(struct vcfg_item*);
+
+    vcfg_item_free((struct vcfg_item*)item);
+    return ;
+}
+
+void vcfg_item_free(struct vcfg_item* item)
+{
+    vassert(item);
+
+    switch(item->type) {
+    case CFG_DICT:
+        vdict_zero(&item->val.d, _aux_cfg_item_free, NULL);
+        vdict_deinit(&item->val.d);
+        break;
+    case CFG_LIST:
+        if (item->val.l.key) {
+            free(item->val.l.key);
+        }
+        varray_zero(&item->val.l.l, _aux_cfg_item_free, NULL);
+        varray_deinit(&item->val.l.l);
+        break;
+    case CFG_TUPLE:
+        varray_zero(&item->val.t, _aux_cfg_item_free, NULL);
+        varray_deinit(&item->val.t);
+        break;
+    case CFG_STR:
+        free((void*)item->val.s);
+        break;
+    default:
+        vassert(0);
+        break;
     }
     vmem_aux_free(&cfg_item_cache, item);
     return ;
 }
 
+extern void vcfg_item_dump(struct vcfg_item*);
 static
-void vitem_init_int(struct vcfg_item* item, char* key, int nval)
+void _aux_dump_align(int depth)
 {
-    vassert(item);
-    vassert(key);
+    int i = 0;
+    vassert(depth >= 0);
 
-    vlist_init(&item->list);
-    item->type = CFG_INT;
-    item->key  = key;
-    item->val  = NULL;
-    item->nval = nval;
+    printf("##");
+    for (i = 1; i < depth; i++) {
+        printf("  ");
+    }
     return ;
 }
 
 static
-void vitem_init_str(struct vcfg_item* item, char* key, char* val)
+int _aux_dump_dict_item(char* key, void* val, void* cookie)
 {
-    vassert(item);
+    struct vcfg_item* item = (struct vcfg_item*)val;
     vassert(key);
     vassert(val);
 
-    vlist_init(&item->list);
-    item->type = CFG_STR;
-    item->key  = key;
-    item->val  = val;
-    item->nval = 0;
-    return ;
-}
-
-/*
- * strip underlines '_' from head and tail of string.
- */
-static
-int _strip_underline(char* str)
-{
-    char* cur = str;
-    vassert(str);
-
-    // strip '_' from the head of str.
-    while(*cur == '_') {
-        char* tmp = cur;
-        while(*tmp != '\0') {
-            *tmp = *(tmp + 1);
-            tmp++;
-        }
+    _aux_dump_align(item->depth);
+    if (strcmp(key, def_cfg_key)) {
+        printf("%s: ", key);
     }
-    // strip '_' from the tail of str.
-    cur += strlen(str) -1;
-    while(*cur == '_') {
-        *cur = '\0';
-        cur--;
-    }
+    vcfg_item_dump(item);
     return 0;
 }
 
-static char last_section[64];
 static
-int eat_section_ln(struct vconfig* cfg, char* section_ln)
+int _aux_dump_list_item(void* val, void* cookie)
 {
-    char* cur = section_ln;
-    int section_aten = 0;
+    struct vcfg_item* prev = (struct vcfg_item*)cookie;
+    struct vcfg_item* item = (struct vcfg_item*)val;
+    vassert(item);
 
-    vassert(cfg);
-    vassert(section_ln);
+    switch(prev->type) {
+    case CFG_LIST:
+        if (prev->val.l.key) {
+            _aux_dump_align(item->depth);
+            printf("%s: ", prev->val.l.key);
+        }
+        break;
+    case CFG_TUPLE:
+        _aux_dump_align(item->depth);
+        break;
+    default:
+        vassert(0);
+        break;
+    }
+    vcfg_item_dump(item);
+    return 0;
+}
 
-    cur++; //skip '['
-    while (*cur != '\n') {
-        switch(*cur) {
+void vcfg_item_dump(struct vcfg_item* item)
+{
+    vassert(item);
+
+    switch(item->type) {
+    case CFG_DICT:
+        if (item->depth > 0) {
+            printf("{\n");
+        }
+        vdict_iterate(&item->val.d, _aux_dump_dict_item, NULL);
+        _aux_dump_align(item->depth);
+        if (item->depth > 0) {
+            printf("}\n");
+        }
+        break;
+    case CFG_LIST:
+        printf("[\n");
+        varray_iterate(&item->val.l.l, _aux_dump_list_item, item);
+        _aux_dump_align(item->depth);
+        printf("]\n");
+        break;
+    case CFG_TUPLE:
+        printf("(\n");
+        varray_iterate(&item->val.t, _aux_dump_list_item, item);
+        _aux_dump_align(item->depth);
+        printf(")\n");
+        break;
+    case CFG_STR:
+        printf("%s\n", item->val.s);
+        break;
+    default:
+        vassert(0);
+        break;
+    }
+    return ;
+}
+
+static
+struct vcfg_item* vcfg_item_get(struct vcfg_item* item, char* key)
+{
+    struct vcfg_item* tgt = NULL;
+    vassert(item);
+    vassert(key);
+
+    switch(item->type) {
+    case CFG_DICT:
+        tgt = (struct vcfg_item*)vdict_get(&item->val.d, key);
+        break;
+    case CFG_LIST:
+        if (!strcmp(key, item->val.l.key)) {
+            tgt = item;
+        }
+        break;
+    case CFG_TUPLE: {
+        struct vcfg_item* item = NULL;
+        int i = 0;
+        for (i = 0; i < varray_size(&item->val.t); i++) {
+            item = (struct vcfg_item*)varray_get(&item->val.t, i);
+            tgt = vcfg_item_get(item, key);
+            if (tgt) {
+                break;
+            }
+        }
+        break;
+    }
+    case CFG_STR:
+        break;
+    default:
+        vassert(0);
+        break;
+    }
+    return tgt;
+}
+
+static
+void _aux_eat_newline(char** cur)
+{
+    char seps[] = " \t\n";
+    vassert(cur && *cur);
+
+    while (strchr(seps, **cur)) {
+        (*cur)++;
+    }
+    return;
+}
+
+static
+void _aux_eat_blanks(char** cur)
+{
+    char seps[] = " \t";
+    vassert(cur && *cur);
+
+    while (strchr(seps, **cur)) {
+        (*cur)++;
+    }
+    return;
+}
+
+static
+void _aux_eat_endings(char** cur)
+{
+    char seps[] = " \t\n";
+    vassert(cur && *cur);
+
+    while ((**cur != '\0') && strchr(seps, **cur)) {
+        (*cur)++;
+    }
+    return;
+}
+
+static
+void _aux_eat_comments(char** cur)
+{
+    char seps[] = "\n";
+    vassert(cur && *cur);
+
+    while (!strchr(seps, **cur)) {
+        (*cur)++;
+    }
+    return;
+}
+
+static
+int _aux_eat_separator(char** cur)
+{
+    char seps1[] = "abcdefghijklmnopqrstuvwxyz";
+    char seps2[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    char seps3[] = "0123456789";
+    char seps4[] = "({[/";
+
+    vassert(cur && *cur);
+    while (!strchr(seps1, **cur) &&
+           !strchr(seps2, **cur) &&
+           !strchr(seps3, **cur) &&
+           !strchr(seps4, **cur)) {
+        switch(**cur) {
         case ' ':
         case '\t':
-            retE((!section_aten));
-            cur++;
+            (*cur)++;
             break;
-        case ']': {
-            retE((section_aten));
-            memset(last_section, 0, 64);
-            strncpy(last_section, section_ln + 1, cur-section_ln - 1);
-            section_aten = 1;
-            cur++;
-            break;
-        }
-        case '0'...'9':
-        case 'a'...'z':
-        case 'A'...'Z':
-            retE((section_aten));
-            cur++;
-            break;
-        default:
-            retE((1));
-        }
-    }
-    cur++; // skip '\n'
-    return (cur - section_ln);
-}
-
-static
-int eat_comment_ln(struct vconfig* cfg, char* comm_ln)
-{
-    char* cur = (char*)comm_ln;
-
-    vassert(cfg);
-    vassert(comm_ln);
-
-    cur++; // skip ';'
-    while(*cur != '\n') cur++;
-    cur++;
-
-    return (cur - comm_ln);
-}
-
-static
-int eat_param_ln(struct vconfig* cfg, char* param_ln)
-{
-    struct vcfg_item* item = NULL;
-    char* cur = (char*)param_ln;
-    char* val_pos = NULL;
-    int key_aten = 0;
-    int is_int   = 1;
-    char* key = NULL;
-    char* val = NULL;
-    int  nval = 0;
-
-    vassert(cfg);
-    vassert(param_ln);
-
-    while(*cur != '\n') {
-        switch(*cur) {
-        case '0'...'9':
-            cur++;
-            break;
-        case 'a'...'z':
-        case 'A'...'Z':
-        case '.':
-        case '/':
-        case '_':
-            cur++;
-            if (key_aten) {
-                is_int = 0;
-            }
-            break;
-        case ' ':    //change whitepsace and tab to be '_'.
-        case '\t':
-            *cur = '_';
-            cur++;
-            retE((*cur == ' ' || *cur == '\t'));
-            break;
-        case '=': {
-            int sz = 0;
-            retE(key_aten);
-
-            sz = cur - param_ln;
-            sz += 1; // for '\0'
-            sz += strlen(last_section);
-            sz += 1; // for '.'
-
-            key = malloc(sz);
-            vlog((!key), elog_malloc);
-            retE((!key));
-            memset(key, 0, sz);
-
-            strcpy(key, last_section);
-            strcat(key, ".");
-            strncat(key, param_ln, cur-param_ln);
-            _strip_underline(key);
-
-            key_aten = 1;
-            val_pos = ++cur;
-            break;
-        }
         default:
             retE(1);
             break;
         }
     }
-
-    { // meet line feed '\n'.
-      // deal with value.
-        char tmp[32];
-        memset(tmp, 0, 32);
-        strncpy(tmp, val_pos, cur - val_pos);
-        _strip_underline(tmp);
-
-        if (is_int) {
-            errno = 0;
-            nval = strtol(tmp, NULL, 10);
-            retE((errno));
-        } else {
-            val = malloc(strlen(tmp) + 1);
-            vlog((!val), elog_malloc);
-            ret1E((!val), free(key));
-            strcpy(val, tmp);
-        }
-    }
-    cur++; //skip '\n'
-
-    item = vitem_alloc();
-    ret2E((!item), free(key), free(val));
-
-    if (is_int) {
-        vitem_init_int(item, key, nval);
-    } else {
-        vitem_init_str(item, key, val);
-    }
-    vlist_add_tail(&cfg->items, &item->list);
-    return (cur - param_ln);
+    return 0;
 }
 
 static
-int _aux_parse(struct vconfig* cfg, void* buf)
+char* _aux_create_key(char** cur)
 {
-    char* cur = (char*)buf;
-    int ret = 0;
+    char seps[] = ";:\n{}[]()";
+    char* key = NULL;
+    int blanked = 0;
+    int sz = 0;
 
-    vassert(cfg);
-    vassert(buf);
+    vassert(cur && *cur);
 
-    while(*cur != '\0') {
-        switch(*cur) {
+    key = (char*)malloc(32);
+    vlog((!key), elog_malloc);
+    retE_p((!key));
+
+    while (!strchr(seps, **cur)) {
+        switch(**cur) {
+        case 'a' ... 'z':
+        case 'A' ... 'Z':
+        case '0' ... '9':
+            if (key[0] && blanked) {
+                key[sz++] = '_';
+                blanked = 0;
+            }
+            key[sz++] = **cur;
+            break;
         case ' ':
         case '\t':
-        case '\n':
+            if (key[0] && !blanked) {
+                blanked = 1;
+            }
+            break;
+        default:
+            free(key);
+            retE_p((1));
+            break;
+        }
+        (*cur)++;
+        retE_p((sz >= 30));
+    }
+    key[sz] = '\0';
+    return key;
+}
+
+static
+char* _aux_create_val(char** cur)
+{
+    char seps[] = ";:\n}])";
+    char* pos = *cur;
+    char* val = NULL;
+    int blanked = 0;
+    int sz = 0;
+
+    vassert(cur && *cur);
+
+    while(!strchr(seps, *pos)) {
+        switch(*pos) {
+        case 'a' ... 'z':
+        case 'A' ... 'Z':
+        case '0' ... '9':
         case '/':
-            cur++;
+        case '.':
+        case '_':
+            sz++;
+            break;
+        case ' ':
+        case '\t':
+            if ((sz > 0) && !blanked) {
+                blanked = 1;
+            }
+            break;
+        default:
+            retE_p((1));
+            break;
+        }
+        pos++;
+    }
+
+    val = (char*)malloc(sz + 1);
+    vlog((!val), elog_malloc);
+    retE_p((!val));
+    memset(val, 0, sz + 1);
+
+    blanked = 0;
+    sz = 0;
+    while(!strchr(seps, **cur)) {
+        switch(**cur) {
+        case 'a' ... 'z':
+        case 'A' ... 'Z':
+        case '0' ... '9':
+        case '/':
+        case '.':
+        case '_':
+            if (blanked) {
+                val[sz++] = '_';
+                blanked = 0;
+            }
+            val[sz++] = **cur;
+            break;
+        case ' ':
+        case '\t':
+            if (val[0] && !blanked) {
+                blanked = 1;
+            }
+            break;
+        default:
+            free(val);
+            retE_p((1));
+            break;
+        }
+        (*cur)++;
+    }
+    val[sz] = '\0';
+    return val;
+}
+
+static
+int _aux_parse_str(struct vcfg_item* str, char** cur)
+{
+    char* val = NULL;
+
+    vassert(str);
+    vassert(str->type == CFG_STR);
+    vassert(cur && *cur);
+
+    val = _aux_create_val(cur);
+    retE((!val));
+    str->val.s = val;
+
+    return 0;
+}
+
+static
+int _aux_parse_tuple(struct vcfg_item* tuple, char** cur)
+{
+    char seps[] = "\0";
+    struct vcfg_item* item = NULL;
+    int ret = 0;
+
+    vassert(tuple);
+    vassert(tuple->type == CFG_TUPLE);
+    vassert(cur && *cur);
+
+    while (!strchr(seps, **cur)) {
+        switch(**cur) {
+        case 'a' ... 'z':
+        case 'A' ... 'Z':
+        case '0' ... '9':
+            item = vcfg_item_alloc(CFG_STR);
+            retE((!item));
+            vcfg_item_init(item, tuple->depth + 1);
+
+            ret = _aux_parse_str(item, cur);
+            ret1E((ret < 0), vcfg_item_free(item));
+
+            varray_add_tail(&tuple->val.t, item);
+            break;
+        case ')':
+            (*cur)++;
+            _aux_eat_endings(cur);
+            return 0;
+            break;
+        case ' ':
+        case '\t':
+            (*cur)++;
+            _aux_eat_blanks(cur);
+            break;
+        case '\n':
+            (*cur)++;
+            _aux_eat_newline(cur);
+            break;
+        default:
+            vassert(0);
+            break;
+        }
+    }
+    return 0;
+}
+
+int _aux_parse_list(struct vcfg_item* list, char** cur)
+{
+    extern int _aux_parse_dict(struct vcfg_item*, char**);
+
+    char seps[] = "\0";
+    struct vcfg_item* item = NULL;
+    char* key = NULL;
+    int ret = 0;
+
+    vassert(list);
+    vassert(list->type == CFG_LIST);
+    vassert(cur && *cur);
+
+    while(!strchr(seps, **cur)) {
+        switch(**cur) {
+        case ';':
+            (*cur)++;
+            _aux_eat_comments(cur);
+            break;
+        case ':':
+            (*cur)++;
+            ret = _aux_eat_separator(cur);
+            retE((ret < 0));
+            break;
+        case '{':
+            (*cur)++;
+            item = vcfg_item_alloc(CFG_DICT);
+            retE((!item));
+            vcfg_item_init(item, list->depth + 1);
+
+            ret = _aux_parse_dict(item, cur);
+            ret1E((ret < 0), vcfg_item_free(item));
+
+            varray_add_tail(&list->val.l.l, item);
             break;
         case '[':
-            ret = eat_section_ln(cfg, cur);
-            retE((ret < 0));
-            cur += ret;
+            (*cur)++;
+            item = vcfg_item_alloc(CFG_LIST);
+            retE((!item));
+            vcfg_item_init(item, list->depth + 1);
+            ret  = _aux_parse_list(item, cur);
+            ret1E((ret < 0), vcfg_item_free(item));
+
+            varray_add_tail(&list->val.l.l, item);
             break;
-        case ';':
-            ret = eat_comment_ln(cfg, cur);
-            retE((ret < 0));
-            cur += ret;
+        case '(':
+            (*cur)++;
+            item = vcfg_item_alloc(CFG_TUPLE);
+            retE((!item));
+            vcfg_item_init(item, list->depth + 1);
+            ret = _aux_parse_tuple(item, cur);
+            ret1E((ret < 0), vcfg_item_free(item));
+
+            varray_add_tail(&list->val.l.l, item);
+            break;
+        case ']':
+            (*cur)++;
+            _aux_eat_endings(cur);
+            return 0;
             break;
         case 'a' ... 'z':
         case 'A' ... 'Z':
         case '0' ... '9':
-            ret = eat_param_ln(cfg, cur);
-            retE((ret < 0));
-            cur += ret;
+            key = _aux_create_key(cur);
+            retE((!key));
+            if (!list->val.l.key) {
+                list->val.l.key = key;
+            }else {
+                retE((strcmp(key, list->val.l.key)));
+                free(key);
+            }
+            break;
+        case ' ':
+        case '\t':
+            (*cur)++;
+            _aux_eat_blanks(cur);
+            break;
+        case '\n':
+            (*cur)++;
+            _aux_eat_newline(cur);
             break;
         default:
             retE((1));
+            break;
+        }
+    }
+    return 0;
+}
+
+int _aux_parse_dict(struct vcfg_item* dict, char** cur)
+{
+    char seps[] = "\0";
+    struct vcfg_item* item = NULL;
+    char* key = NULL;
+    int val_come = 0;
+    int ret = 0;
+
+    vassert(dict);
+    vassert(dict->type == CFG_DICT);
+    vassert(cur && *cur);
+
+    while(!strchr(seps, **cur)) {
+        switch(**cur) {
+        case ';':
+            (*cur)++;
+            _aux_eat_comments(cur);
+            break;
+        case ':':
+            (*cur)++;
+            ret = _aux_eat_separator(cur);
+            retE((ret < 0));
+            val_come = 1;
+            break;
+        case '{':
+            (*cur)++;
+            item = vcfg_item_alloc(CFG_DICT);
+            retE((!item));
+            vcfg_item_init(item, dict->depth + 1);
+
+            ret = _aux_parse_dict(item, cur);
+            ret1E((ret < 0), vcfg_item_free(item));
+
+            val_come = 0;
+            if (!key) {
+                key = strdup(def_cfg_key);
+            }
+            vdict_add(&dict->val.d, key, item);
+            key = NULL;
+            break;
+        case '[':
+            (*cur)++;
+            item = vcfg_item_alloc(CFG_LIST);
+            retE((!item));
+            vcfg_item_init(item, dict->depth + 1);
+
+            ret = _aux_parse_list(item, cur);
+            ret1E((ret < 0), vcfg_item_free(item));
+
+            val_come = 0;
+            if (!key) {
+                key = strdup(def_cfg_key);
+            }
+            vdict_add(&dict->val.d, key, item);
+            key  = NULL;
+            break;
+        case '(':
+            (*cur)++;
+            item = vcfg_item_alloc(CFG_TUPLE);
+            retE((!item));
+            vcfg_item_init(item, dict->depth + 1);
+            ret = _aux_parse_tuple(item, cur);
+            ret1E((ret < 0), vcfg_item_free(item));
+
+            val_come = 0;
+            if (!key) {
+                key = strdup(def_cfg_key);
+            }
+            vdict_add(&dict->val.d, key, item);
+            key = NULL;
+            break;
+        case '}':
+            (*cur)++;
+            _aux_eat_endings(cur);
+            return 0;
+            break;
+        case 'a' ... 'z':
+        case 'A' ... 'Z':
+        case '0' ... '9':
+        case '/':
+            if (val_come) {
+                item = vcfg_item_alloc(CFG_STR);
+                retE((!item));
+                vcfg_item_init(item, dict->depth + 1);
+
+                ret = _aux_parse_str(item, cur);
+                ret1E((ret < 0), vcfg_item_free(item));
+
+                val_come = 0;
+                if (!key) {
+                    key = strdup(def_cfg_key);
+                }
+                vdict_add(&dict->val.d, key, item);
+                key = NULL;
+            } else {
+                key = _aux_create_key(cur);
+                retE((!key));
+            }
+            break;
+        case ' ':
+        case '\t':
+            (*cur)++;
+            _aux_eat_blanks(cur);
+            break;
+        case '\n':
+            (*cur)++;
+            _aux_eat_newline(cur);
+            break;
+        default:
+            retE((1));
+            break;
         }
     }
     return 0;
@@ -353,10 +709,20 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
     buf[stat.st_size] = '\0';
     close(fd);
 
-    vlock_enter(&cfg->lock);
-    ret = _aux_parse(cfg, buf);
-    vlock_leave(&cfg->lock);
+    ret = _aux_parse_dict(&cfg->dict, (char**)&buf);
     retE((ret < 0));
+    return 0;
+}
+
+/*
+ * the routine to clear all config items
+ * @cfg:
+ */
+static
+int _vcfg_clear(struct vconfig* cfg)
+{
+    vassert(cfg);
+    vcfg_item_dump(&cfg->dict);
     return 0;
 }
 
@@ -367,271 +733,179 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
 static
 void _vcfg_dump(struct vconfig* cfg)
 {
-    struct vcfg_item* item = NULL;
-    struct vlist* node = NULL;
     vassert(cfg);
-
-    vdump(printf("-> CONFIG"));
-    vlock_enter(&cfg->lock);
-    __vlist_for_each(node, &cfg->items) {
-        item = vlist_entry(node, struct vcfg_item, list);
-        switch(item->type) {
-        case CFG_INT:
-            vdump(printf("[%s]:%d", item->key, item->nval));
-            break;
-        case CFG_STR:
-            vdump(printf("[%s]:%s", item->key, item->val));
-            break;
-        default:
-            vassert(0);
-            break;
-        }
-    }
-    vlock_leave(&cfg->lock);
-    vdump(printf("<- CONFIG"));
+    vdump(printf("-> CFG"));
+    vcfg_item_dump(&cfg->dict);
+    vdump(printf("<- CFG"));
     return ;
 }
 
-/*
- * the routine to clear all config items
- * @cfg:
- */
 static
-int _vcfg_clear(struct vconfig* cfg)
+struct vcfg_item* _aux_get_cfg_item(struct vcfg_item* item, const char* long_key)
 {
-    struct vcfg_item* item = NULL;
-    struct vlist* node = NULL;
-    vassert(cfg);
+    struct vcfg_item* sub_item = NULL;
+    char* comma = NULL;
+    char* key   = NULL;
 
-    vlock_enter(&cfg->lock);
-    while(!vlist_is_empty(&cfg->items)) {
-        node = vlist_pop_head(&cfg->items);
-        item = vlist_entry(node, struct vcfg_item, list);
-        vitem_free(item);
+    vassert(item);
+    vassert(long_key);
+
+    comma = strchr(long_key, '.');
+    if (!comma) {
+        return vcfg_item_get(item, (char*)long_key);
+    } else {
+        key = strndup(long_key, comma-long_key);
     }
-    vlock_leave(&cfg->lock);
-    return 0;
+
+    sub_item = vcfg_item_get(item, key);
+    free(key);
+    retE_p((!sub_item));
+
+    return _aux_get_cfg_item(sub_item, ++comma);
 }
 
-/*
- * the routine to get value of config item by given kye @key.
- * @cfg:
- * @key:
- * @value:
- */
 static
-int _vcfg_get_int(struct vconfig* cfg, const char* key, int* value)
+int _vcfg_check(struct vconfig* cfg, const char* key)
 {
     struct vcfg_item* item = NULL;
-    struct vlist* node = NULL;
-    int ret = -1;
-
     vassert(cfg);
     vassert(key);
-    vassert(value);
 
-    vlock_enter(&cfg->lock);
-    __vlist_for_each(node, &cfg->items) {
-        item = vlist_entry(node, struct vcfg_item, list);
-        if ((!strcmp(item->key, key)) && (item->type == CFG_INT)) {
-            *value = item->nval;
-            ret = 0;
-            break;
-        }
-    }
-    vlock_leave(&cfg->lock);
-    return ret;
+    item = _aux_get_cfg_item(&cfg->dict, (char*)key);
+    return (!!item);
 }
 
-/*
- * the routine to get value of config item by given kye @key.
- * @cfg:
- * @key:
- * @value:
- * @def_value:
- */
 static
-int _vcfg_get_int_ext(struct vconfig* cfg, const char* key, int* value, int def_value)
+int _vcfg_get_int_val(struct vconfig* cfg, const char* key)
 {
     struct vcfg_item* item = NULL;
-    char* kay = NULL;
+    char* cur = NULL;
     int ret = 0;
 
     vassert(cfg);
     vassert(key);
-    vassert(value);
 
-    ret = cfg->ops->get_int(cfg, key, value);
-    retS((ret >= 0));
+    item = _aux_get_cfg_item(&cfg->dict, (char*)key);
+    retE((!item));
+    retE((CFG_STR != item->type));
 
-    kay = (char*)malloc(strlen(key) + 1);
-    retE((!kay));
-    strcpy(kay, key);
-
-    item = vitem_alloc();
-    ret1E((!item), free(kay));
-    vlist_init(&item->list);
-    item->key = kay;
-    item->val = NULL;
-    item->nval = def_value;
-    item->type = CFG_INT;
-
-    vlock_enter(&cfg->lock);
-    vlist_add_tail(&cfg->items, &item->list);
-    vlock_leave(&cfg->lock);
-
-    *value = def_value;
-    return 0;
-}
-
-/*
- * the routine to get value of config item by given kye @key.
- * @cfg:
- * @key:
- * @value:
- * @sz:
- */
-static
-int _vcfg_get_str(struct vconfig* cfg, const char* key, char* value, int sz)
-{
-    struct vcfg_item* item = NULL;
-    struct vlist* node = NULL;
-    int ret = -1;
-
-    vassert(cfg);
-    vassert(key);
-    vassert(value);
-    vassert(sz > 0);
-
-    vlock_enter(&cfg->lock);
-    __vlist_for_each(node, &cfg->items) {
-        item = vlist_entry(node, struct vcfg_item, list);
-        if ((!strcmp(item->key, key))
-             && (item->type == CFG_STR)
-             && (strlen(item->val) < sz)) {
-            strcpy(value, item->val);
-            ret = 0;
+    // check if numeric number
+    cur = item->val.s;
+    while (*cur != '\0') {
+        if (!isdigit(*cur)) {
             break;
+        } else {
+            cur++;
         }
     }
-    vlock_leave(&cfg->lock);
+    retE((*cur != '\0'));
+
+    errno = 0;
+    ret = strtol(item->val.s, NULL, 10);
+    retE((errno));
     return ret;
 }
 
-/*
- * the routine to get value of config item by given kye @key.
- * @cfg:
- * @key:
- * @value:
- * @sz:
- * @def_value:
- */
 static
-int _vcfg_get_str_ext(struct vconfig* cfg, const char* key, char* value, int sz, char* def_value)
+const char* _vcfg_get_str_val(struct vconfig* cfg, const char* key)
 {
-    struct vcfg_item* item = NULL;
-    char* val = NULL;
-    char* kay = NULL;
-    int ret = 0;
-
+    struct vcfg_item* item  = NULL;
     vassert(cfg);
     vassert(key);
-    vassert(value);
-    vassert(sz > 0);
-    vassert(def_value);
 
-    ret = cfg->ops->get_str(cfg, key, value, sz);
-    retS((ret >= 0));
-    retE((sz < strlen(def_value) + 1));
-
-    val = (char*)malloc(strlen(def_value) + 1);
-    retE((!val));
-    strcpy(val, def_value);
-    kay  = (char*)malloc(strlen(key) + 1);
-    ret1E((!kay), free(val));
-    strcpy(kay, key);
-
-    item = vitem_alloc();
-    ret2E((!item), free(val), free(kay));
-    vlist_init(&item->list);
-    item->key  = kay;
-    item->val  = val;
-    item->type = CFG_STR;
-    item->nval = 0;
-
-    vlock_enter(&cfg->lock);
-    vlist_add_tail(&cfg->items, &item->list);
-    vlock_leave(&cfg->lock);
-
-    strcpy(value, def_value);
-    return 0;
+    item = _aux_get_cfg_item(&cfg->dict, (char*)key);
+    retE_p((!item));
+    retE_p((CFG_STR != item->type));
+    return item->val.s;
 }
 
 static
-int _vcfg_check_section(struct vconfig* cfg, char* section)
+struct vdict* _vcfg_get_dict_val(struct vconfig* cfg, const char* key)
 {
     struct vcfg_item* item = NULL;
-    struct vlist* node = NULL;
-    int len = strlen(section);
-    int found = 0;
-
     vassert(cfg);
-    vassert(section);
+    vassert(key);
 
-    vlock_enter(&cfg->lock);
-    __vlist_for_each(node, &cfg->items) {
-        item = vlist_entry(node, struct vcfg_item, list);
-        if ((len < strlen(item->key)) && !strncmp(section, item->key, len)) {
-            found = 1;
-            break;
-        }
-    }
-    vlock_leave(&cfg->lock);
-    return found;
+    item = _aux_get_cfg_item(&cfg->dict, (char*)key);
+    retE_p((!item));
+    retE_p((CFG_DICT != item->type));
+    return &item->val.d;
 }
 
 static
+struct varray* _vcfg_get_list_val(struct vconfig* cfg, const char* key)
+{
+    struct vcfg_item* item = NULL;
+    vassert(cfg);
+    vassert(key);
+
+    item = _aux_get_cfg_item(&cfg->dict, (char*)key);
+    retE_p((!item));
+    retE_p((CFG_LIST != item->type));
+    return &item->val.l.l;
+}
+
+static
+struct varray* _vcfg_get_tuple_val(struct vconfig* cfg, const char* key)
+{
+    struct vcfg_item* item = NULL;
+    vassert(cfg);
+    vassert(key);
+
+    item = _aux_get_cfg_item(&cfg->dict, (char*)key);
+    retE_p((!item));
+    retE_p((CFG_TUPLE != item->type));
+    return &item->val.t;
+}
+
 struct vconfig_ops cfg_ops = {
-    .parse       = _vcfg_parse,
-    .clear       = _vcfg_clear,
-    .dump        = _vcfg_dump,
-    .get_int     = _vcfg_get_int,
-    .get_int_ext = _vcfg_get_int_ext,
-    .get_str     = _vcfg_get_str,
-    .get_str_ext = _vcfg_get_str_ext,
-    .check_section = _vcfg_check_section
+    .parse         = _vcfg_parse,
+    .clear         = _vcfg_clear,
+    .dump          = _vcfg_dump,
+    .check         = _vcfg_check,
+    .get_int_val   = _vcfg_get_int_val,
+    .get_str_val   = _vcfg_get_str_val,
+    .get_dict_val  = _vcfg_get_dict_val,
+    .get_list_val  = _vcfg_get_list_val,
+    .get_tuple_val = _vcfg_get_tuple_val
 };
 
 static
 int _vcfg_get_lsctl_unix_path(struct vconfig* cfg, char* path, int len)
 {
-    int ret = 0;
+    const char* unix_path = NULL;
 
     vassert(cfg);
     vassert(path);
     vassert(len > 0);
 
-    ret = cfg->ops->get_str_ext(cfg, "lsctl.unix_path", path, len, DEF_LSCTL_UNIX_PATH);
-    retE((ret < 0));
+    unix_path = cfg->ops->get_str_val(cfg, "lsctl.unix_path");
+    if (!unix_path) {
+        unix_path = "/var/run/vdht/lsctl_socket";
+    }
+    retE((strlen(unix_path) + 1 > len));
+    strcpy(path, unix_path);
     return 0;
 }
 
 static
 int _vcfg_get_host_tick_tmo(struct vconfig* cfg, int* tmo)
 {
-    char buf[32];
+    const char* val = NULL;
     int tms = 0;
     int ret = 0;
 
     vassert(cfg);
     vassert(tmo);
 
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str_ext(cfg, "global.tick_tmo", buf, 32, DEF_HOST_TICK_TMO);
-    retE((ret < 0));
+    val = cfg->ops->get_str_val(cfg, "global.tick_timeout");
+    if (!val) {
+        *tmo = 5;
+        return 0;
+    }
 
-    ret = strlen(buf);
-    switch(buf[ret-1]) {
+    ret = strlen(val);
+    switch(val[ret-1]) {
     case 's':
         tms = 1;
         break;
@@ -643,7 +917,7 @@ int _vcfg_get_host_tick_tmo(struct vconfig* cfg, int* tmo)
         break;
     }
     errno = 0;
-    ret = strtol(buf, NULL, 10);
+    ret = strtol(val, NULL, 10);
     retE((errno));
 
     *tmo = (ret * tms);
@@ -651,95 +925,67 @@ int _vcfg_get_host_tick_tmo(struct vconfig* cfg, int* tmo)
 }
 
 static
-int _vcfg_get_node_tick_interval(struct vconfig* cfg, int* interval)
-{
-    char buf[32];
-    int tms = 0;
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(interval);
-
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str_ext(cfg, "node.tick_interval", buf, 32, DEF_NODE_TICK_INTERVAL);
-    retE((ret < 0));
-
-    ret = strlen(buf);
-    switch(buf[ret-1]) {
-    case 's':
-        tms = 1;
-        break;
-    case 'm':
-        tms = 60;
-        break;
-    default:
-        retE((1));
-    }
-    errno = 0;
-    ret = strtol(buf, NULL, 10);
-    vlog((errno), elog_strtol);
-    retE((errno));
-
-    *interval = (ret * tms);
-    return 0;
-}
-
-static
 int _vcfg_get_route_db_file(struct vconfig* cfg, char* db, int len)
 {
-    int ret = 0;
+    const char* file = NULL;
 
     vassert(cfg);
     vassert(db);
     vassert(len > 0);
 
-    ret = cfg->ops->get_str_ext(cfg, "route.db_file", db, len, DEF_ROUTE_DB_FILE);
-    retE((ret < 0));
+    file = cfg->ops->get_str_val(cfg, "route.db_file");
+    if (!file) {
+        file = "route.db";
+    }
+    retE((strlen(file) + 1 > len));
+    strcpy(db, file);
     return 0;
 }
 
 static
 int _vcfg_get_route_bucket_sz(struct vconfig* cfg, int* sz)
 {
-    int ret = 0;
-
     vassert(cfg);
     vassert(sz);
 
-    ret = cfg->ops->get_int_ext(cfg, "route.bucket_sz", sz, DEF_ROUTE_BUCKET_CAPC);
-    retE((ret < 0));
+    *sz = cfg->ops->get_int_val(cfg, "route.bucket_size");
+    if (*sz < 0) {
+        *sz = 0;
+    }
     return 0;
 }
 
 static
 int _vcfg_get_route_max_snd_tms(struct vconfig* cfg, int* tms)
 {
-    int ret = 0;
-
     vassert(cfg);
     vassert(tms);
 
-    ret = cfg->ops->get_int_ext(cfg, "route.max_send_tims", tms, DEF_ROUTE_MAX_SND_TIMES);
-    retE((ret < 0));
+    *tms = cfg->ops->get_int_val(cfg, "route.max_send_times");
+    if (*tms < 0) {
+        *tms = 5;
+    }
     return 0;
 }
 
 static
 int _vcfg_get_route_max_rcv_period(struct vconfig* cfg, int* period)
 {
-    char buf[32];
+    const char* val = NULL;
     int tms = 0;
     int ret = 0;
 
     vassert(cfg);
     vassert(period);
 
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str_ext(cfg, "route.max_rcv_period", buf, 32, DEF_ROUTE_MAX_RCV_PERIOD);
-    retE((ret < 0));
+    val = cfg->ops->get_str_val(cfg, "global.tick_timeout");
+    if (!val) {
+        *period = 60; //1 minute.
+        return 0;
+    }
 
-    ret = strlen(buf);
-    switch(buf[ret-1]) {
+    ret = strlen(val);
+    switch(val[ret-1]) {
     case 's':
         tms = 1;
         break;
@@ -748,370 +994,63 @@ int _vcfg_get_route_max_rcv_period(struct vconfig* cfg, int* period)
         break;
     default:
         retE((1));
+        break;
     }
     errno = 0;
-    ret = strtol(buf, NULL, 10);
-    vlog((errno), elog_strtol);
+    ret = strtol(val, NULL, 10);
     retE((errno));
 
-    *period = (ret * tms);
+    *period = ret * tms;
     return 0;
 }
 
 static
 int _vcfg_get_dht_port(struct vconfig* cfg, int* port)
 {
-    int ret = 0;
+    struct varray* tuple = NULL;
+    struct vcfg_item* item = NULL;
+
     vassert(cfg);
     vassert(port);
 
-    ret = cfg->ops->get_int_ext(cfg, "dht.port", port, DEF_DHT_PORT);
-    retE((ret < 0));
-    return 0;
-}
+    tuple = cfg->ops->get_tuple_val(cfg, "dht.address");
+    retE((!tuple));
 
-static
-int _vcfg_get_cpu_criteria(struct vconfig* cfg, int* criteria)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(criteria);
+    item = (struct vcfg_item*)varray_get(tuple, 1);
+    retE((!item));
+    retE((item->type != CFG_STR));
+    errno = 0;
+    *port = strtol(item->val.s, NULL, 10);
+    retE((errno));
 
-    ret = cfg->ops->get_int_ext(cfg, "spy.cpu_criteria", criteria, DEF_SPY_CPU_CRITERIA);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_mem_criteria(struct vconfig* cfg, int* criteria)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(criteria);
-
-    ret = cfg->ops->get_int_ext(cfg, "spy.mem_criteria", criteria, DEF_SPY_MEM_CRITERIA);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_io_criteria(struct vconfig* cfg, int* criteria)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(criteria);
-
-    ret = cfg->ops->get_int_ext(cfg, "spy.io_criteria", criteria, DEF_SPY_IO_CRITERIA);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_up_criteria(struct vconfig* cfg, int* criteria)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(criteria);
-
-    ret = cfg->ops->get_int_ext(cfg, "spy.up_criteria", criteria, DEF_SPY_UP_CRITERIA);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_down_criteria(struct vconfig* cfg, int* criteria)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(criteria);
-
-    ret = cfg->ops->get_int_ext(cfg, "spy.down_criteria", criteria, DEF_SPY_DOWN_CRITERIA);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_cpu_factor(struct vconfig* cfg, int* factor)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(factor);
-
-    ret = cfg->ops->get_int_ext(cfg, "spy.cpu_factor", factor, DEF_SPY_CPU_FACTOR);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_mem_factor(struct vconfig* cfg, int* factor)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(factor);
-
-    ret = cfg->ops->get_int_ext(cfg, "spy.mem_factor", factor, DEF_SPY_MEM_FACTOR);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_io_factor(struct vconfig* cfg, int* factor)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(factor);
-
-    ret = cfg->ops->get_int_ext(cfg, "spy.io_factor", factor, DEF_SPY_IO_FACTOR);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_up_factor(struct vconfig* cfg, int* factor)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(factor);
-
-    ret = cfg->ops->get_int_ext(cfg, "spy.up_factor", factor, DEF_SPY_UP_FACTOR);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_down_factor(struct vconfig* cfg, int* factor)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(factor);
-
-    ret = cfg->ops->get_int_ext(cfg, "spy.down_factor", factor, DEF_SPY_DOWN_FACTOR);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_ping_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.ping", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
-    return 0;
-}
-
-static
-int _vcfg_get_ping_rsp_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.ping_rsp", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
-    return 0;
-}
-
-static
-int _vcfg_get_find_node_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.find_node", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
-    return 0;
-}
-
-static
-int _vcfg_get_find_node_rsp_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.find_node_rsp", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
-    return 0;
-}
-
-static
-int _vcfg_get_find_closest_nodes_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.find_closest_nodes", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
-    return 0;
-}
-
-static
-int _vcfg_get_finde_closest_nodes_rsp_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.find_closest_nodes_rsp", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
-    return 0;
-}
-
-static
-int _vcfg_get_post_service_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.post_service", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
-    return 0;
-}
-
-static
-int _vcfg_get_post_hash_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.post_hash", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
-    return 0;
-}
-
-static
-int _vcfg_get_get_peers_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.get_peers", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
-    return 0;
-}
-
-static
-int _vcfg_get_get_peers_rsp_cap(struct vconfig* cfg, int* on)
-{
-    char buf[32];
-    int ret = 0;
-
-    vassert(cfg);
-    vassert(on);
-
-    *on = 0;
-    memset(buf, 0, 32);
-    ret = cfg->ops->get_str(cfg, "proto.get_peers_rsp", buf, 32);
-    retS((ret < 0));
-    if (!strcmp(buf, "on")) {
-        *on = 1;
-    }
     return 0;
 }
 
 static
 int _vcfg_get_stun_port(struct vconfig* cfg, int* port)
 {
-    int ret = 0;
     vassert(cfg);
     vassert(port);
 
-    *port = 0;
-    ret = cfg->ops->get_int_ext(cfg, "stun.port", port, DEF_STUN_PORT);
-    retE((ret < 0));
+    //todo;
     return 0;
 }
 
 static
 int _vcfg_get_stun_server_name(struct vconfig* cfg, char* buf, int len)
 {
-    int ret = 0;
-
     vassert(cfg);
     vassert(buf);
     vassert(len > 0);
 
-    ret = cfg->ops->get_str_ext(cfg, "stun.name", buf, len, "empty");
-    retE((ret < 0));
+    //todo;
     return 0;
 }
 
 static
-struct vconfig_inst_ops cfg_inst_ops = {
+struct vconfig_ext_ops cfg_ext_ops = {
     .get_lsctl_unix_path    = _vcfg_get_lsctl_unix_path,
     .get_host_tick_tmo      = _vcfg_get_host_tick_tmo,
-    .get_node_tick_interval = _vcfg_get_node_tick_interval,
 
     .get_route_db_file      = _vcfg_get_route_db_file,
     .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
@@ -1119,29 +1058,6 @@ struct vconfig_inst_ops cfg_inst_ops = {
     .get_route_max_rcv_period    = _vcfg_get_route_max_rcv_period,
 
     .get_dht_port           = _vcfg_get_dht_port,
-
-    .get_cpu_criteria       = _vcfg_get_cpu_criteria,
-    .get_mem_criteria       = _vcfg_get_mem_criteria,
-    .get_io_criteria        = _vcfg_get_io_criteria,
-    .get_up_criteria        = _vcfg_get_up_criteria,
-    .get_down_criteria      = _vcfg_get_down_criteria,
-
-    .get_cpu_factor         = _vcfg_get_cpu_factor,
-    .get_mem_factor         = _vcfg_get_mem_factor,
-    .get_io_factor          = _vcfg_get_io_factor,
-    .get_up_factor          = _vcfg_get_up_factor,
-    .get_down_factor        = _vcfg_get_down_factor,
-
-    .get_ping_cap           = _vcfg_get_ping_cap,
-    .get_ping_rsp_cap       = _vcfg_get_ping_rsp_cap,
-    .get_find_node_cap      = _vcfg_get_find_node_cap,
-    .get_find_node_rsp_cap  = _vcfg_get_find_node_rsp_cap,
-    .get_find_closest_nodes_cap     = _vcfg_get_find_closest_nodes_cap,
-    .get_find_closest_nodes_rsp_cap = _vcfg_get_finde_closest_nodes_rsp_cap,
-    .get_post_service_cap   = _vcfg_get_post_service_cap,
-    .get_post_hash_cap      = _vcfg_get_post_hash_cap,
-    .get_get_peers_cap      = _vcfg_get_get_peers_cap,
-    .get_get_peers_rsp_cap  = _vcfg_get_get_peers_rsp_cap,
 
     .get_stun_port          = _vcfg_get_stun_port,
     .get_stun_server_name   = _vcfg_get_stun_server_name
@@ -1151,10 +1067,10 @@ int vconfig_init(struct vconfig* cfg)
 {
     vassert(cfg);
 
-    vlist_init(&cfg->items);
-    vlock_init(&cfg->lock);
+    cfg->dict.type = CFG_DICT;
+    vcfg_item_init(&cfg->dict, 0);
     cfg->ops      = &cfg_ops;
-    cfg->inst_ops = &cfg_inst_ops;
+    cfg->inst_ops = &cfg_ext_ops;
     return 0;
 }
 
@@ -1163,7 +1079,7 @@ void vconfig_deinit(struct vconfig* cfg)
     vassert(cfg);
 
     cfg->ops->clear(cfg);
-    vlock_deinit(&cfg->lock);
+    vdict_deinit(&cfg->dict.val.d);
     return ;
 }
 

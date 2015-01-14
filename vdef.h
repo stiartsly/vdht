@@ -108,6 +108,7 @@
 #define elog_timer_delete   perror("[timer_delete]")
 
 #define elog_strdup         vlogE(printf("strdup"))
+#define elog_strndup        vlogE(printf("strndup"))
 #define elog_strtol         vlogE(printf("strtol"))
 #define elog_snprintf       vlogE(printf("snprintf"))
 #define elog_sscanf         vlogE(printf("sscanf"))
