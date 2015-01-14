@@ -27,7 +27,33 @@ enum {
 
 char* vroute_srvc_get_desc(int);
 
+/*
+ * for record space
+ */
 struct vroute;
+struct vroute_record_space;
+struct vroute_record_space_ops {
+    int  (*make)         (struct vroute_record_space*, vtoken*);
+    int  (*check_exist)  (struct vroute_record_space*, vtoken*);
+    void (*reap)         (struct vroute_record_space*);
+    void (*clear)        (struct vroute_record_space*);
+    void (*dump)         (struct vroute_record_space*);
+};
+
+struct vroute_record_space {
+    int max_record_period;
+    struct vlist records; //has all dht query(but not received rsp yet) records;
+    struct vlock lock;
+
+    struct vroute_record_space_ops* ops;
+};
+
+int  vroute_record_space_init  (struct vroute_record_space*);
+void vroute_record_space_deinit(struct vroute_record_space*);
+
+/*
+ * for node space
+ */
 struct vroute_node_space;
 struct vroute_node_space_ops {
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*);
@@ -85,15 +111,6 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space*);
 /*
  * for routing table.
  */
-struct vroute;
-struct vroute_record_ops {
-    int  (*make) (struct vroute*, vtoken*);
-    int  (*check)(struct vroute*, vtoken*);
-    void (*reap) (struct vroute*);
-    void (*clear)(struct vroute*);
-    void (*dump) (struct vroute*);
-};
-
 struct vroute_ops {
     int  (*join_node)    (struct vroute*, struct sockaddr_in*);
     int  (*drop_node)    (struct vroute*, struct sockaddr_in*);
@@ -128,15 +145,12 @@ struct vroute {
     uint32_t props;
     int32_t  nice;
 
-    struct vroute_node_space  node_space;
-    struct vroute_srvc_space  srvc_space;
+    struct vroute_node_space   node_space;
+    struct vroute_srvc_space   srvc_space;
+    struct vroute_record_space record_space;
 
     struct vlock lock;
 
-    int max_record_period;
-    struct vlist records;     // has all dht query records.
-    struct vlock record_lock;
-    struct vroute_record_ops* record_ops;
 
     struct vroute_ops*     ops;
     struct vroute_dht_ops* dht_ops;

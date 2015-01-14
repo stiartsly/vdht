@@ -18,6 +18,7 @@ vdht_objs = \
     vhashgen.o \
     vroute_node.o  \
     vroute_srvc.o  \
+    vroute_record.o  \
     vlsctl.o  \
     vticker.o \
     vnodeId.o \
