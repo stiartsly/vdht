@@ -49,6 +49,36 @@ struct vnode_nice_ops node_nice_ops = {
 
 int vnode_nice_init(struct vnode_nice* node_nice, struct vconfig* cfg)
 {
+    struct vnice_criteria_desc {
+        const char* key;
+        int* criteria;
+        int  def_val;
+    };
+    struct vnice_factor_desc {
+        const char* key;
+        int* factor;
+        int  def_val;
+    };
+
+    struct vnice_criteria_desc nice_criteria_desc[] = {
+        {"adjust.cpu.criteria",              &node_nice->cpu.criteria,      5 },
+        {"adjust.memory.criteria",           &node_nice->mem.criteria,      5 },
+        {"adjust.io.criteria",               &node_nice->io.criteria,       5 },
+        {"adjust.network_upload.criteria",   &node_nice->net_up.criteria,   5 },
+        {"adjust.network_download.criteria", &node_nice->net_down.criteria, 5 },
+        {NULL, NULL, 0}
+    };
+    struct vnice_criteria_desc* criteria_desc = nice_criteria_desc;
+    struct vnice_factor_desc nice_factor_desc[] = {
+        {"adjust.cpu.factor",                &node_nice->cpu.factor,        6 },
+        {"adjust.memory.factor",             &node_nice->mem.factor,        5 },
+        {"adjust.io.factor",                 &node_nice->io.factor,         3 },
+        {"adjust.network_upload.factor",     &node_nice->net_up.factor,     6 },
+        {"adjust.network_download.factor",   &node_nice->net_down.factor,   6 },
+        {NULL, NULL, 0}
+    };
+    struct vnice_factor_desc* factor_desc = nice_factor_desc;
+
     vassert(node_nice);
     vassert(cfg);
 
@@ -58,46 +88,19 @@ int vnode_nice_init(struct vnode_nice* node_nice, struct vconfig* cfg)
     node_nice->net_up.ratio   = 5;
     node_nice->net_down.ratio = 5;
 
-    node_nice->cpu.criteria = cfg->ops->get_int_val(cfg, "adjust.cpu.criteria");
-    if (node_nice->cpu.criteria < 0) {
-        node_nice->cpu.criteria = 5;
+    for (; criteria_desc->key; criteria_desc++) {
+        int criteria = cfg->ops->get_int_val(cfg, criteria_desc->key);
+        if (criteria < 0) {
+            criteria = criteria_desc->def_val;
+        }
+        *criteria_desc->criteria = criteria;
     }
-    node_nice->mem.criteria = cfg->ops->get_int_val(cfg, "adjust.memory.criteria");
-    if (node_nice->mem.criteria < 0) {
-        node_nice->mem.criteria = 5;
-    }
-    node_nice->io.criteria  = cfg->ops->get_int_val(cfg, "adjust.io.criteria");
-    if (node_nice->io.criteria < 0) {
-        node_nice->io.criteria = 5;
-    }
-    node_nice->net_up.criteria  = cfg->ops->get_int_val(cfg, "adjust.network_upload.criteria");
-    if (node_nice->net_up.criteria < 0) {
-        node_nice->net_up.criteria = 5;
-    }
-    node_nice->net_down.criteria  = cfg->ops->get_int_val(cfg, "adjust.network_download.criteria");
-    if (node_nice->net_down.criteria < 0) {
-        node_nice->net_down.criteria = 5;
-    }
-
-    node_nice->cpu.factor = cfg->ops->get_int_val(cfg, "adjust.cpu.factor");
-    if (node_nice->cpu.factor < 0) {
-        node_nice->cpu.factor = 6;
-    }
-    node_nice->mem.factor = cfg->ops->get_int_val(cfg, "adjust.memory.factor");
-    if (node_nice->mem.factor < 0) {
-        node_nice->mem.factor = 5;
-    }
-    node_nice->io.factor = cfg->ops->get_int_val(cfg, "adjust.io.factor");
-    if (node_nice->io.factor < 0) {
-        node_nice->io.factor = 3;
-    }
-    node_nice->net_up.factor = cfg->ops->get_int_val(cfg, "adjust.network_upload.factor");
-    if (node_nice->net_up.factor < 0) {
-        node_nice->net_up.factor = 6;
-    }
-    node_nice->net_down.factor = cfg->ops->get_int_val(cfg, "adjust.network_download.factor");
-    if (node_nice->net_down.factor < 0) {
-        node_nice->net_down.factor = 6;
+    for (; factor_desc->key; factor_desc++) {
+        int factor = cfg->ops->get_int_val(cfg, factor_desc->key);
+        if (factor < 0) {
+            factor = factor_desc->def_val;
+        }
+        *factor_desc->factor = factor;
     }
 
     node_nice->prev_nice_val = 8;
