@@ -292,17 +292,17 @@ void _vnode_service_unregister(struct vnode* node, vtoken* srvcId, struct sockad
  *
  */
 static
-void _vnode_service_update(struct vnode* node, int32_t nice)
+void _vnode_service_update(struct vnode* node)
 {
+    struct vnode_nice* node_nice = &node->node_nice;
     vsrvcInfo* svc = NULL;
+    int nice = 0;
     int i = 0;
 
     vassert(node);
-    vassert(nice >= 0);
-    //vassert(nice <= 10);
 
     vlock_enter(&node->lock);
-    node->nice = nice;
+    node->nice = node_nice->ops->get_nice(node_nice);
     for (i = 0; i < varray_size(&node->services); i++) {
         svc = (vsrvcInfo*)varray_get(&node->services, i);
         svc->nice = nice;
@@ -396,6 +396,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     vnodeInfo_copy(&node->node_info, node_info);
     node->nice = 5;
     varray_init(&node->services, 4);
+    vnode_nice_init(&node->node_nice, cfg);
 
     node->cfg     = cfg;
     node->ticker  = &host->ticker;

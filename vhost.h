@@ -42,7 +42,6 @@ struct vhost {
     struct vroute   route;
     struct vnode    node;
     struct vlsctl   lsctl;
-    struct vkicker  kicker;
     struct vstunc   stunc;
     struct vhashgen hashgen;
 

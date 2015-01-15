@@ -10,6 +10,7 @@ vdht_objs = \
     vdht_core.o \
     vhost.o \
     vnode.o \
+    vnode_nice.o \
     vperf.o \
     vmsger.o  \
     vroute.o  \

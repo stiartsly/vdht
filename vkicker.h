@@ -15,33 +15,8 @@ enum {
     VNAT_BUTT
 };
 
-struct vspy_res_status {
-    int ratio;
-    int criteria;
-    int factor;
-};
-
-struct vresource;
-struct vresource_ops {
-    int (*get_nice)(struct vresource*, int*);
-};
-
-struct vresource {
-    struct vspy_res_status cpu;
-    struct vspy_res_status mem;
-    struct vspy_res_status io;
-    struct vspy_res_status up;   // network upload
-    struct vspy_res_status down; // network download
-
-    struct vresource_ops* ops;
-};
-
-int  vresource_init  (struct vresource*, struct vconfig*);
-void vresource_deinit(struct vresource*);
-
 struct vkicker;
 struct vkicker_ops {
-    int (*kick_nice)      (struct vkicker*);
     int (*kick_upnp_addr) (struct vkicker*);
     int (*kick_ext_addr)  (struct vkicker*);
     int (*kick_relay_addr)(struct vkicker*);
@@ -49,7 +24,6 @@ struct vkicker_ops {
 };
 
 struct vkicker {
-    struct vresource res;
     struct vupnpc upnpc;
 //    struct vstunc stunc;
 

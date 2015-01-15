@@ -56,23 +56,6 @@ int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
     return 0;
 }
 
-static
-int _aux_host_tick_cb(void* cookie)
-{
-    struct vhost*   host   = (struct vhost*)cookie;
-    struct vkicker* kicker = &host->kicker;
-    int ret = 0;
-
-    vassert(host);
-
-    ret = kicker->ops->kick_nice(kicker);
-    retE((ret < 0));
-
-    //todo;
-
-    return 0;
-}
-
 /*
  * the routine to register the periodical work with certian interval
  * to the ticker, which is running peridically at background in the
@@ -89,8 +72,6 @@ int _vhost_stabilize(struct vhost* host)
     vassert(host);
 
     ret = node->ops->stabilize(node);
-    retE((ret < 0));
-    ret = ticker->ops->add_cb(ticker, _aux_host_tick_cb, host);
     retE((ret < 0));
     ret = ticker->ops->start(ticker, host->tick_tmo);
     retE((ret < 0));
@@ -444,13 +425,11 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vnode_init  (&host->node,  cfg, host, &node_info);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
-    ret += vkicker_init(&host->kicker, &host->node, cfg);
     ret += vstunc_init (&host->stunc, &host->msger, &host->ticker, &host->route);
     ret += vhashgen_init(&host->hashgen);
     if (ret < 0) {
         vhashgen_deinit(&host->hashgen);
         vstunc_deinit  (&host->stunc);
-        vkicker_deinit (&host->kicker);
         vlsctl_deinit  (&host->lsctl);
         vwaiter_deinit (&host->waiter);
         vnode_deinit   (&host->node);
@@ -484,7 +463,6 @@ void vhost_destroy(struct vhost* host)
 
     vhashgen_deinit(&host->hashgen);
     vstunc_deinit (&host->stunc);
-    vkicker_deinit(&host->kicker);
     vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);

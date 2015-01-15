@@ -8,12 +8,38 @@
 #include "vmsger.h"
 #include "vsys.h"
 
-struct vhost;
+struct vnice_res_status {
+    int ratio;
+    int criteria;
+    int factor;
+};
+
+struct vnode_nice;
+struct vnode_nice_ops {
+    int  (*get_nice)(struct vnode_nice*);
+    void (*dump)    (struct vnode_nice*);
+};
+
+struct vnode_nice {
+    struct vnice_res_status cpu;
+    struct vnice_res_status mem;
+    struct vnice_res_status io;
+    struct vnice_res_status net_up;   //network upload occupied status.
+    struct vnice_res_status net_down;
+
+    int prev_nice_val;
+    struct vnode_nice_ops* ops;
+};
+
+int  vnode_nice_init  (struct vnode_nice*, struct vconfig*);
+void vnode_nice_deinit(struct vnode_nice*);
+
+
 struct vnode;
 struct vnode_svc_ops {
     int  (*registers) (struct vnode*, vsrvcId*, struct sockaddr_in*);
     void (*unregister)(struct vnode*, vsrvcId*, struct sockaddr_in*);
-    void (*update)    (struct vnode*, int);
+    void (*update)    (struct vnode*);
     void (*post)      (struct vnode*);
     void (*clear)     (struct vnode*);
     void (*dump)      (struct vnode*);
@@ -39,6 +65,8 @@ struct vnode {
     vnodeInfo node_info;
     int nice;
     struct varray services;
+
+    struct vnode_nice node_nice;
 
     struct vconfig* cfg;
     struct vticker* ticker;
