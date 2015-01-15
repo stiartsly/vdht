@@ -34,30 +34,6 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
 }
 
 /*
- * the routine to drop a node with well-known address from routing table,
- * whose ID usually is fake and trivial.
- *
- * @route: routing table.
- * @node_addr: address of node to be dropped
- *
- */
-static
-int _vroute_drop_node(struct vroute* route, struct sockaddr_in* addr)
-{
-    struct vroute_node_space* space = &route->node_space;
-    int ret = 0;
-
-    vassert(route);
-    vassert(addr);
-
-    vlock_enter(&route->lock);
-    ret = space->ops->del_node(space, addr);
-    vlock_leave(&route->lock);
-    retE((ret < 0));
-    return 0;
-}
-
-/*
  * the routine to find best suitable service node from service routing table
  * so that local app can meet its needs with that service.
  *
@@ -207,7 +183,6 @@ void _vroute_dump(struct vroute* route)
 static
 struct vroute_ops route_ops = {
     .join_node    = _vroute_join_node,
-    .drop_node    = _vroute_drop_node,
     .get_service  = _vroute_get_service,
     .post_service = _vroute_post_service,
     .load         = _vroute_load,

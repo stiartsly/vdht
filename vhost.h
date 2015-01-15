@@ -15,7 +15,6 @@ struct vhost_ops {
     int   (*start)      (struct vhost*);
     int   (*stop)       (struct vhost*);
     int   (*join)       (struct vhost*, struct sockaddr_in*);
-    int   (*drop)       (struct vhost*, struct sockaddr_in*);
     int   (*stabilize)  (struct vhost*);
     int   (*daemonize)  (struct vhost*);
     int   (*shutdown)   (struct vhost*);

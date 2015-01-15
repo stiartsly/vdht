@@ -56,28 +56,6 @@ int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
     return 0;
 }
 
-/*
- * the routine to drop given node out of route table.
- * @host:
- * @addr: address of node to drop.
- */
-static
-int _vhost_drop(struct vhost* host, struct sockaddr_in* addr)
-{
-    struct vroute* route = &host->route;
-    int ret = 0;
-
-    vassert(host);
-    vassert(addr);
-
-    retE((vnodeInfo_has_addr(&host->own_node_info, addr)));
-
-    ret = route->ops->drop_node(route, addr);
-    retE((ret < 0));
-    vlogI(printf("Dropped a node"));
-    return 0;
-}
-
 static
 int _aux_host_tick_cb(void* cookie)
 {
@@ -269,7 +247,6 @@ struct vhost_ops host_ops = {
     .start       = _vhost_start,
     .stop        = _vhost_stop,
     .join        = _vhost_join,
-    .drop        = _vhost_drop,
     .stabilize   = _vhost_stabilize,
     .daemonize   = _vhost_daemonize,
     .shutdown    = _vhost_shutdown,

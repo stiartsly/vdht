@@ -157,7 +157,6 @@ int _vcmd_join_node(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vcmd_drop_node(struct vlsctl* lsctl, void* data, int offset)
 {
-    struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
     int ret  = 0;
     int sz   = 0;
@@ -170,8 +169,7 @@ int _vcmd_drop_node(struct vlsctl* lsctl, void* data, int offset)
     retE((ret < 0));
     sz += ret;
 
-    ret = host->ops->drop(host, &sin);
-    retE((ret < 0));
+    vlogI(printf("[vlsctl] deprecated"));
     return sz;
 }
 

@@ -279,41 +279,6 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
 }
 
 /*
- * the routine to remove a node given by @node_addr from route table.
- * @route:
- * @node_addr:
- *
- */
-static
-int _vroute_node_space_del_node(struct vroute_node_space* space, struct sockaddr_in* addr)
-{
-    struct varray* peers = NULL;
-    struct vpeer*  peer  = NULL;
-    int found = 0;
-    int i   = 0;
-    int j   = 0;
-
-    vassert(space);
-    vassert(addr);
-
-    for (i = 0; i < NBUCKETS; i++) {
-        peers = &space->bucket[i].peers;
-        for (j = 0; j < varray_size(peers); j++) {
-            peer = (struct vpeer*)varray_get(peers, j);
-            if (vnodeInfo_has_addr(&peer->node, addr)) {
-                found = 1;
-                break;
-            }
-        }
-        if (found) {
-            vpeer_free(varray_del(peers, j));
-            break;
-        }
-    }
-    return 0;
-}
-
-/*
  * the routine to find info structure of give nodeId
  * @route: handle to route table.
  * @targetId: node ID.
@@ -588,7 +553,6 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
 
 struct vroute_node_space_ops route_space_ops = {
     .add_node      = _vroute_node_space_add_node,
-    .del_node      = _vroute_node_space_del_node,
     .get_node      = _vroute_node_space_get_node,
     .get_neighbors = _vroute_node_space_get_neighbors,
     .broadcast     = _vroute_node_space_broadcast,
