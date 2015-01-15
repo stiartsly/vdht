@@ -3,18 +3,6 @@
 
 #define MAX_CAPC ((int)8)
 
-static
-int _aux_route_tick_cb(void* item, void* cookie)
-{
-    struct vroute_node_space* space = (struct vroute_node_space*)cookie;
-    int ret = 0;
-    vassert(space);
-
-    ret = space->ops->broadcast(space, item);
-    retE((ret < 0));
-    return 0;
-}
-
 /*
  * the routine to join a node with well known address into routing table,
  * whose ID usually is fake and trivial.
@@ -70,84 +58,6 @@ int _vroute_drop_node(struct vroute* route, struct sockaddr_in* addr)
 }
 
 /*
- * the routine to register a service info (only contain meta info) as local
- * service, and the service will be published to all nodes in routing table.
- *
- * @route:
- * @svc_hash: service Id.
- * @addr:  address of service to provide.
- *
- */
-static
-int _vroute_reg_service(struct vroute* route, vtoken* svc_hash, struct sockaddr_in* addr)
-{
-    vsrvcInfo* svc = NULL;
-    int found = 0;
-    int i = 0;
-
-    vassert(route);
-    vassert(addr);
-    vassert(svc_hash);
-
-    vlock_enter(&route->lock);
-    for (; i < varray_size(&route->own_svcs); i++){
-        svc = (vsrvcInfo*)varray_get(&route->own_svcs, i);
-        if (vtoken_equal(&svc->id, svc_hash) &&
-            vsockaddr_equal(&svc->addr, addr)) {
-            found = 1;
-            break;
-        }
-    }
-    if (!found) {
-        svc = vsrvcInfo_alloc();
-        vlog((!svc), elog_vsrvcInfo_alloc);
-        ret1E((!svc), vlock_leave(&route->lock));
-        vsrvcInfo_init(svc, svc_hash, route->nice, addr);
-        varray_add_tail(&route->own_svcs, svc);
-        route->own_node.weight++;
-    }
-    vlock_leave(&route->lock);
-    return 0;
-}
-
-/*
- * the routine to unregister or nulify a service info, which registered before.
- *
- * @route:
- * @svc_hash: service hash Id.
- * @addr: address of service to provide.
- *
- */
-static
-int _vroute_unreg_service(struct vroute* route, vtoken* svc_hash, struct sockaddr_in* addr)
-{
-    vsrvcInfo* svc = NULL;
-    int found = 0;
-    int i = 0;
-
-    vassert(route);
-    vassert(addr);
-    vassert(svc_hash);
-
-    vlock_enter(&route->lock);
-    for (; i < varray_size(&route->own_svcs); i++) {
-        svc = (vsrvcInfo*)varray_get(&route->own_svcs, i);
-        if (vtoken_equal(&svc->id, svc_hash) &&
-            vsockaddr_equal(&svc->addr, addr)) {
-            found = 1;
-            break;
-        }
-    }
-    if (found) {
-        svc = (vsrvcInfo*)varray_del(&route->own_svcs, i);
-        vsrvcInfo_free(svc);
-        route->own_node.weight--;
-    }
-    vlock_leave(&route->lock);
-    return 0;
-}
-
-/*
  * the routine to find best suitable service node from service routing table
  * so that local app can meet its needs with that service.
  *
@@ -175,32 +85,18 @@ int _vroute_get_service(struct vroute* route, vtoken* svc_hash, struct sockaddr_
     return found;
 }
 
-/*
- * the routine to update the nice index ( the index of resource avaiblility)
- * of local host. The higher the nice value is, the lower availability for
- * other nodes can provide.
- *
- * @route:
- * @nice : an index of resource availability.
- *
- */
 static
-int _vroute_kick_nice(struct vroute* route, int32_t nice)
+int _vroute_post_service(struct vroute* route, vsrvcInfo* srvc)
 {
-    vsrvcInfo* svc = NULL;
-    int i = 0;
-
+    struct vroute_node_space* node_space = &route->node_space;
+    int ret = 0;
     vassert(route);
-    vassert(nice >= 0);
-    //vassert(nice <= 10);
+    vassert(srvc);
 
     vlock_enter(&route->lock);
-    route->nice = nice;
-    for (; i < varray_size(&route->own_svcs); i++) {
-        svc = (vsrvcInfo*)varray_get(&route->own_svcs, i);
-        svc->nice = nice;
-    }
+    ret = node_space->ops->broadcast(node_space, srvc);
     vlock_leave(&route->lock);
+    retE((ret < 0));
     return 0;
 }
 
@@ -258,7 +154,6 @@ int _vroute_tick(struct vroute* route)
 
     vlock_enter(&route->lock);
     node_space->ops->tick(node_space);
-    varray_iterate(&route->own_svcs, _aux_route_tick_cb, node_space);
     vlock_leave(&route->lock);
     record_space->ops->reap(record_space);// reap all timeout records.
     return 0;
@@ -295,7 +190,6 @@ void _vroute_dump(struct vroute* route)
 {
     struct vroute_node_space* node_space = &route->node_space;
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
-    int i = 0;
     vassert(route);
 
     vdump(printf("-> ROUTE"));
@@ -303,12 +197,6 @@ void _vroute_dump(struct vroute* route)
     vdump(printf("-> MY NODE"));
     vnodeInfo_dump(&route->own_node);
     vdump(printf("<- MY NODE"));
-    vdump(printf("-> LOCAL SERVICES"));
-    for (; i < varray_size(&route->own_svcs); i++) {
-        vsrvcInfo_dump((vsrvcInfo*)varray_get(&route->own_svcs, i));
-    }
-    vdump(printf("<- LOCAL SERVICES"));
-
     node_space->ops->dump(node_space);
     srvc_space->ops->dump(srvc_space);
     vlock_leave(&route->lock);
@@ -318,17 +206,15 @@ void _vroute_dump(struct vroute* route)
 
 static
 struct vroute_ops route_ops = {
-    .join_node     = _vroute_join_node,
-    .drop_node     = _vroute_drop_node,
-    .reg_service   = _vroute_reg_service,
-    .unreg_service = _vroute_unreg_service,
-    .get_service   = _vroute_get_service,
-    .kick_nice     = _vroute_kick_nice,
-    .load          = _vroute_load,
-    .store         = _vroute_store,
-    .tick          = _vroute_tick,
-    .clear         = _vroute_clear,
-    .dump          = _vroute_dump
+    .join_node    = _vroute_join_node,
+    .drop_node    = _vroute_drop_node,
+    .get_service  = _vroute_get_service,
+    .post_service = _vroute_post_service,
+    .load         = _vroute_load,
+    .store        = _vroute_store,
+    .tick         = _vroute_tick,
+    .clear        = _vroute_clear,
+    .dump         = _vroute_dump
 };
 
 static
@@ -1099,8 +985,6 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
 
     vnodeInfo_copy(&route->own_node, own_info);
     _aux_route_load_proto_caps(cfg, &route->props);
-    route->nice = 5;
-    varray_init(&route->own_svcs, 4);
 
     vlock_init(&route->lock);
     vroute_node_space_init  (&route->node_space, route, cfg, &route->own_node);
@@ -1120,16 +1004,11 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
 
 void vroute_deinit(struct vroute* route)
 {
-    int i = 0;
     vassert(route);
 
     vroute_record_space_deinit(&route->record_space);
     vroute_node_space_deinit(&route->node_space);
     vroute_srvc_space_deinit(&route->srvc_space);
-    for (; i < varray_size(&route->own_svcs); i++) {
-        vsrvcInfo_free((vsrvcInfo*)varray_get(&route->own_svcs, i));
-    }
-    varray_deinit(&route->own_svcs);
     vlock_deinit(&route->lock);
     return ;
 }

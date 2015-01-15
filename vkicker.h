@@ -2,7 +2,7 @@
 #define __VKICKER_H__
 
 #include "vupnpc.h"
-#include "vroute.h"
+#include "vnode.h"
 #include "vcfg.h"
 
 enum {
@@ -54,12 +54,12 @@ struct vkicker {
 //    struct vstunc stunc;
 
     struct vconfig* cfg;
-    struct vroute*  route;
+    struct vnode*  node;
 
     struct vkicker_ops* ops;
 };
 
-int  vkicker_init  (struct vkicker*, struct vroute* route, struct vconfig*);
+int  vkicker_init  (struct vkicker*, struct vnode*, struct vconfig*);
 void vkicker_deinit(struct vkicker*);
 
 #endif

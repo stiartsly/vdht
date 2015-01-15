@@ -22,53 +22,53 @@ char* node_mode_desc[] = {
 
 /*
  * start current dht node.
- * @vnd:
+ * @node:
  */
 static
-int _vnode_start(struct vnode* vnd)
+int _vnode_start(struct vnode* node)
 {
-    vassert(vnd);
+    vassert(node);
 
-    vlock_enter(&vnd->lock);
-    if (vnd->mode != VDHT_OFF) {
-        vlock_leave(&vnd->lock);
+    vlock_enter(&node->lock);
+    if (node->mode != VDHT_OFF) {
+        vlock_leave(&node->lock);
         return 0;
     }
-    vnd->mode = VDHT_UP;
-    vlock_leave(&vnd->lock);
+    node->mode = VDHT_UP;
+    vlock_leave(&node->lock);
     return 0;
 }
 
 /*
- * @vnd
+ * @node
  */
 static
-int _vnode_stop(struct vnode* vnd)
+int _vnode_stop(struct vnode* node)
 {
-    vassert(vnd);
+    vassert(node);
 
-    vlock_enter(&vnd->lock);
-    if ((vnd->mode == VDHT_OFF) || (vnd->mode == VDHT_ERR)) {
-        vlock_leave(&vnd->lock);
+    vlock_enter(&node->lock);
+    if ((node->mode == VDHT_OFF) || (node->mode == VDHT_ERR)) {
+        vlock_leave(&node->lock);
         return 0;
     }
-    vnd->mode = VDHT_DOWN;
-    vlock_leave(&vnd->lock);
+    node->mode = VDHT_DOWN;
+    vlock_leave(&node->lock);
     return 0;
 }
 
 static
-int _vnode_join(struct vnode* vnd)
+int _vnode_join(struct vnode* node)
 {
-    vassert(vnd);
+    vassert(node);
 
-    vlock_enter(&vnd->lock);
-    while (vnd->mode != VDHT_OFF) {
-        vlock_leave(&vnd->lock);
+    vlock_enter(&node->lock);
+    while (node->mode != VDHT_OFF) {
+        vlock_leave(&node->lock);
         sleep(1);
-        vlock_enter(&vnd->lock);
+        vlock_enter(&node->lock);
     }
-    vlock_leave(&vnd->lock);
+    vlock_leave(&node->lock);
 
     return 0;
 }
@@ -76,13 +76,13 @@ int _vnode_join(struct vnode* vnd)
 static
 int _aux_node_tick_cb(void* cookie)
 {
-    struct vnode* vnd    = (struct vnode*)cookie;
-    struct vroute* route = (struct vroute*)vnd->route;
+    struct vnode* node    = (struct vnode*)cookie;
+    struct vroute* route = node->route;
     time_t now = time(NULL);
-    vassert(vnd);
+    vassert(node);
 
-    vlock_enter(&vnd->lock);
-    switch (vnd->mode) {
+    vlock_enter(&node->lock);
+    switch (node->mode) {
     case VDHT_OFF:
     case VDHT_ERR:  {
         //do nothing;
@@ -90,61 +90,62 @@ int _aux_node_tick_cb(void* cookie)
     }
     case VDHT_UP: {
         if (route->ops->load(route) < 0) {
-            vnd->mode = VDHT_ERR;
+            node->mode = VDHT_ERR;
             break;
         }
-        vnd->ts   = now;
-        vnd->mode = VDHT_RUN;
+        node->ts   = now;
+        node->mode = VDHT_RUN;
         vlogI(printf("DHT start running"));
         break;
     }
     case VDHT_RUN: {
-        if (now - vnd->ts > vnd->tick_interval) {
+        if (now - node->ts > node->tick_interval) {
             route->ops->tick(route);
-            vnd->ts = now;
+            node->ts = now;
         }
+        node->svc_ops->post(node);
         break;
     }
     case VDHT_DOWN: {
-        vnd->route->ops->store(vnd->route);
-        vnd->mode = VDHT_OFF;
+        node->route->ops->store(node->route);
+        node->mode = VDHT_OFF;
         vlogI(printf("DHT become offline"));
         break;
     }
     default:
         vassert(0);
     }
-    vlock_leave(&vnd->lock);
+    vlock_leave(&node->lock);
     return 0;
 }
 
 /*
- * @vnd
+ * @node
  */
 static
-int _vnode_stabilize(struct vnode* vnd)
+int _vnode_stabilize(struct vnode* node)
 {
-    struct vticker* ticker = vnd->ticker;
+    struct vticker* ticker = node->ticker;
     int ret = 0;
 
-    vassert(vnd);
+    vassert(node);
     vassert(ticker);
 
-    ret = ticker->ops->add_cb(ticker, _aux_node_tick_cb, vnd);
+    ret = ticker->ops->add_cb(ticker, _aux_node_tick_cb, node);
     retE((ret < 0));
     return 0;
 }
 
 /*
- * @vnd:
+ * @node:
  */
 static
-int _vnode_dump(struct vnode* vnd)
+int _vnode_dump(struct vnode* node)
 {
-    vassert(vnd);
+    vassert(node);
 
     vdump(printf("-> NODE"));
-    vdump(printf("state:%s", node_mode_desc[vnd->mode]));
+    vdump(printf("state:%s", node_mode_desc[node->mode]));
     vdump(printf("<- NODE"));
 
     return 0;
@@ -160,41 +161,217 @@ struct vnode_ops node_ops = {
 };
 
 /*
- * @vnd:
+ * the routine to register a service info (only contain meta info) as local
+ * service, and the service will be published to all nodes in routing table.
+ *
+ * @node:
+ * @srvcId: service Id.
+ * @addr:  address of service to provide.
+ *
+ */
+static
+int _vnode_service_register(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* addr)
+{
+    vsrvcInfo* svc = NULL;
+    int found = 0;
+    int i = 0;
+
+    vassert(node);
+    vassert(addr);
+    vassert(srvcId);
+
+    vlock_enter(&node->lock);
+    for (i = 0; i < varray_size(&node->services); i++){
+        svc = (vsrvcInfo*)varray_get(&node->services, i);
+        if (vtoken_equal(&svc->id, srvcId) &&
+            vsockaddr_equal(&svc->addr, addr)) {
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        svc = vsrvcInfo_alloc();
+        vlog((!svc), elog_vsrvcInfo_alloc);
+        ret1E((!svc), vlock_leave(&node->lock));
+        vsrvcInfo_init(svc, srvcId, node->nice, addr);
+        varray_add_tail(&node->services, svc);
+        //node->own_node.weight++;
+    }
+    vlock_leave(&node->lock);
+    return 0;
+}
+
+/*
+ * the routine to unregister or nulify a service info, which registered before.
+ *
+ * @node:
+ * @srvcId: service hash Id.
+ * @addr: address of service to provide.
+ *
+ */
+static
+void _vnode_service_unregister(struct vnode* node, vtoken* srvcId, struct sockaddr_in* addr)
+{
+    vsrvcInfo* svc = NULL;
+    int found = 0;
+    int i = 0;
+
+    vassert(node);
+    vassert(addr);
+    vassert(srvcId);
+
+    vlock_enter(&node->lock);
+    for (i = 0; i < varray_size(&node->services); i++) {
+        svc = (vsrvcInfo*)varray_get(&node->services, i);
+        if (vtoken_equal(&svc->id, srvcId) &&
+            vsockaddr_equal(&svc->addr, addr)) {
+            found = 1;
+            break;
+        }
+    }
+    if (found) {
+        svc = (vsrvcInfo*)varray_del(&node->services, i);
+        vsrvcInfo_free(svc);
+        //node->own_node.weight--;
+    }
+    vlock_leave(&node->lock);
+    return;
+}
+
+/*
+ * the routine to update the nice index ( the index of resource avaiblility)
+ * of local host. The higher the nice value is, the lower availability for
+ * other nodes can provide.
+ *
+ * @node:
+ * @nice : an index of resource availability.
+ *
+ */
+static
+void _vnode_service_update(struct vnode* node, int32_t nice)
+{
+    vsrvcInfo* svc = NULL;
+    int i = 0;
+
+    vassert(node);
+    vassert(nice >= 0);
+    //vassert(nice <= 10);
+
+    vlock_enter(&node->lock);
+    node->nice = nice;
+    for (i = 0; i < varray_size(&node->services); i++) {
+        svc = (vsrvcInfo*)varray_get(&node->services, i);
+        svc->nice = nice;
+    }
+    vlock_leave(&node->lock);
+    return ;
+}
+
+static
+void _vnode_service_post(struct vnode* node)
+{
+    struct vroute* route = node->route;
+    vsrvcInfo* svc = NULL;
+    int i = 0;
+    vassert(node);
+
+    vlock_enter(&node->lock);
+    for (i= 0; i < varray_size(&node->services); i++) {
+        svc = (vsrvcInfo*)varray_get(&node->services, i);
+        route->ops->post_service(route, svc);
+    }
+    vlock_leave(&node->lock);
+    return ;
+}
+
+/*
+ * the routine to clear all registered service infos.
+ *
+ * @node:
+ */
+static
+void _vnode_service_clear(struct vnode* node)
+{
+    vsrvcInfo* svc = NULL;
+    vassert(node);
+
+    vlock_enter(&node->lock);
+    while(varray_size(&node->services) > 0) {
+        svc = (vsrvcInfo*)varray_pop_tail(&node->services);
+        vsrvcInfo_free(svc);
+    }
+    vlock_leave(&node->lock);
+    return ;
+}
+
+static
+void _vnode_service_dump(struct vnode* node)
+{
+    vsrvcInfo* svc = NULL;
+    int i = 0;
+    vassert(node);
+
+    vlock_enter(&node->lock);
+    for (i= 0; i < varray_size(&node->services); i++) {
+        svc = (vsrvcInfo*)varray_get(&node->services, i);
+        vsrvcInfo_dump(svc);
+    }
+    vlock_leave(&node->lock);
+    return ;
+}
+
+struct vnode_svc_ops node_svc_ops = {
+    .registers  = _vnode_service_register,
+    .unregister = _vnode_service_unregister,
+    .update     = _vnode_service_update,
+    .post       = _vnode_service_post,
+    .clear      = _vnode_service_clear,
+    .dump       = _vnode_service_dump
+};
+
+/*
+ * @node:
  * @msger:
  * @ticker:
  * @addr:
  */
-int vnode_init(struct vnode* vnd, struct vconfig* cfg, struct vticker* ticker, struct vroute* route)
+int vnode_init(struct vnode* node, struct vconfig* cfg, struct vticker* ticker, struct vroute* route)
 {
     int ret = 0;
 
-    vassert(vnd);
+    vassert(node);
     vassert(cfg);
     vassert(ticker);
 
-    vlock_init(&vnd->lock);
-    vnd->mode  = VDHT_OFF;
+    vlock_init(&node->lock);
+    node->mode  = VDHT_OFF;
 
-    vnd->cfg    = cfg;
-    vnd->ticker = ticker;
-    vnd->route  = route;
-    vnd->ops    = &node_ops;
+    node->nice = 5;
+    varray_init(&node->services, 4);
 
-    ret = cfg->ext_ops->get_host_tick_tmo(cfg, &vnd->tick_interval);
+    node->cfg     = cfg;
+    node->ticker  = ticker;
+    node->route   = route;
+    node->ops     = &node_ops;
+    node->svc_ops = &node_svc_ops;
+
+    ret = cfg->ext_ops->get_host_tick_tmo(cfg, &node->tick_interval);
     retE((ret < 0));
     return 0;
 }
 
 /*
- * @vnd:
+ * @node:
  */
-void vnode_deinit(struct vnode* vnd)
+void vnode_deinit(struct vnode* node)
 {
-    vassert(vnd);
+    vassert(node);
 
-    vnd->ops->join(vnd);
-    vlock_deinit (&vnd->lock);
+    node->svc_ops->clear(node);
+    varray_deinit(&node->services);
+
+    node->ops->join(node);
+    vlock_deinit (&node->lock);
 
     return ;
 }

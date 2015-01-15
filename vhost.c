@@ -284,16 +284,16 @@ struct vhost_ops host_ops = {
  * @waht: plugin ID.
  */
 static
-int _vhost_publish_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
+int _vhost_publish_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
 {
-    struct vroute* route = &host->route;
+    struct vnode* node = &host->node;
     int ret = 0;
 
     vassert(host);
     vassert(addr);
-    vassert(svc_hash);
+    vassert(srvcId);
 
-    ret = route->ops->reg_service(route, svc_hash, addr);
+    ret = node->svc_ops->registers(node, srvcId, addr);
     retE((ret < 0));
     return 0;
 }
@@ -304,31 +304,28 @@ int _vhost_publish_service(struct vhost* host, vtoken* svc_hash, struct sockaddr
  * @waht: plugin ID.
  */
 static
-int _vhost_cancel_service(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
+int _vhost_cancel_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
 {
-    struct vroute* route = &host->route;
-    int ret = 0;
-
+    struct vnode* node = &host->node;
     vassert(host);
     vassert(addr);
-    vassert(svc_hash);
+    vassert(srvcId);
 
-    ret = route->ops->unreg_service(route, svc_hash, addr);
-    retE((ret < 0));
+    node->svc_ops->unregister(node, srvcId, addr);
     return 0;
 }
 
 static
-int _vhost_get_service_metainfo(struct vhost* host, vtoken* svc_hash, struct sockaddr_in* addr)
+int _vhost_get_service_metainfo(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
 {
     struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
     vassert(addr);
-    vassert(svc_hash);
+    vassert(srvcId);
 
-    ret = route->ops->get_service(route, svc_hash, addr);
+    ret = route->ops->get_service(route, srvcId, addr);
     retE((ret < 0));
     return 0;
 }
@@ -475,7 +472,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
-    ret += vkicker_init(&host->kicker, &host->route, cfg);
+    ret += vkicker_init(&host->kicker, &host->node, cfg);
     ret += vstunc_init (&host->stunc, &host->msger, &host->ticker, &host->route);
     ret += vhashgen_init(&host->hashgen);
     if (ret < 0) {

@@ -111,38 +111,49 @@ static
 int _vkicker_kick_nice(struct vkicker* kicker)
 {
     struct vresource* res = &kicker->res;
-    struct vroute*  route = kicker->route;
+    struct vnode* node = kicker->node;
     int nice = 0;
     int ret  = 0;
 
     vassert(kicker);
-    vassert(route);
 
     ret = res->ops->get_nice(res, &nice);
     retE((ret < 0));
 
-    ret = route->ops->kick_nice(route, nice);
-    retE((ret < 0));
+    node->svc_ops->update(node, nice);
     return 0;
 }
 
 static
 int _vkicker_kick_upnp_addr(struct vkicker* kicker)
 {
-    struct vupnpc* upnpc = &kicker->upnpc;
-    struct vroute* route = kicker->route;
+    struct vupnpc*  upnpc = &kicker->upnpc;
+    //struct vroute*  route = kicker->route;
+    struct vconfig* cfg   = kicker->cfg;
     struct sockaddr_in upnp_addr;
+    int iport = 0;
+    int eport = 0;
     int ret = 0;
+    int i = 0;
 
     vassert(kicker);
-    vassert(route);
+
+    ret = cfg->ext_ops->get_dht_port(cfg, &iport);
+    retE((ret < 0));
 
     ret = upnpc->ops->setup(upnpc);
     retE((ret < 0));
-    ret = upnpc->ops->map(upnpc, 15999, 17999, 1, &upnp_addr);
-    retE((ret < 0));
 
-    //todo;
+    for (i = 0; i < 5; i++) {
+        eport = iport + i;
+        ret = upnpc->ops->map(upnpc, (uint16_t)iport, (uint16_t)eport , 1, &upnp_addr);
+        if (ret >= 0) {
+            break;
+        }
+    }
+  //  ret = route->ops->kick_upnp_addr(route, &upnp_addr);
+  //  retE((ret < 0));
+    vsockaddr_dump(&upnp_addr);
     return 0;
 }
 
@@ -179,11 +190,11 @@ struct vkicker_ops kicker_ops = {
     .kick_nat_type   = _vkicker_kick_nat_type
 };
 
-int vkicker_init(struct vkicker* kicker, struct vroute* route, struct vconfig* cfg)
+int vkicker_init(struct vkicker* kicker, struct vnode* node, struct vconfig* cfg)
 {
     int ret = 0;
     vassert(kicker);
-    vassert(route);
+    vassert(node);
     vassert(cfg);
 
     ret = vresource_init(&kicker->res, cfg);
@@ -191,8 +202,8 @@ int vkicker_init(struct vkicker* kicker, struct vroute* route, struct vconfig* c
     ret = vupnpc_init(&kicker->upnpc);
     retE((ret < 0));
 
-    kicker->route = route;
-    kicker->cfg   = cfg;
+    kicker->node = node;
+    kicker->cfg  = cfg;
     //todo;
     kicker->ops = &kicker_ops;
     return 0;

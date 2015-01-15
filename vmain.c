@@ -160,6 +160,9 @@ int main(int argc, char** argv)
         stun->ops->render(stun);
     }
 
+    while(1) {
+        sleep(60);
+    }
     if (using_stun) {
         stun->ops->unrender(stun);
         vstuns_destroy(stun);

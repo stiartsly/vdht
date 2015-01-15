@@ -114,10 +114,8 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space*);
 struct vroute_ops {
     int  (*join_node)    (struct vroute*, struct sockaddr_in*);
     int  (*drop_node)    (struct vroute*, struct sockaddr_in*);
-    int  (*reg_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
-    int  (*unreg_service)(struct vroute*, vtoken*, struct sockaddr_in*);
     int  (*get_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
-    int  (*kick_nice)    (struct vroute*, int32_t);
+    int  (*post_service) (struct vroute*, vsrvcInfo*);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
@@ -140,10 +138,8 @@ struct vroute_dht_ops {
 
 typedef int (*vroute_dht_cb_t)(struct vroute*, vnodeInfo*, vtoken*, void*);
 struct vroute {
-    vnodeInfo     own_node;
-    struct varray own_svcs;
+    vnodeInfo own_node;
     uint32_t props;
-    int32_t  nice;
 
     struct vroute_node_space   node_space;
     struct vroute_srvc_space   srvc_space;
