@@ -6,7 +6,6 @@
 #include "vlsctl.h"
 #include "vmsger.h"
 #include "vticker.h"
-#include "vkicker.h"
 #include "vhashgen.h"
 #include "stun/vstunc.h"
 

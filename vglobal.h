@@ -51,7 +51,6 @@
 #include "vupnpc.h"
 #include "vnodeId.h"
 #include "vticker.h"
-#include "vkicker.h"
 #include "vhashgen.h"
 
 #if 0
