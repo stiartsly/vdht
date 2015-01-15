@@ -1,12 +1,11 @@
 #ifndef __VNODE_H__
 #define __VNODE_H__
 
+#include "vsys.h"
 #include "vcfg.h"
 #include "vroute.h"
+#include "vupnpc.h"
 #include "vnodeId.h"
-#include "vticker.h"
-#include "vmsger.h"
-#include "vsys.h"
 
 struct vnice_res_status {
     int ratio;
@@ -66,6 +65,9 @@ struct vnode {
     int nice;
     struct varray services;
 
+    int iport;
+    int eport;
+    struct vupnpc upnpc;
     struct vnode_nice node_nice;
 
     struct vconfig* cfg;

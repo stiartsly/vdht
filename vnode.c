@@ -27,7 +27,12 @@ char* node_mode_desc[] = {
 static
 int _vnode_start(struct vnode* node)
 {
+    struct vupnpc* upnpc = &node->upnpc;
+    int ret = 0;
     vassert(node);
+
+    ret = upnpc->ops->setup(upnpc);
+    retE((ret < 0));
 
     vlock_enter(&node->lock);
     if (node->mode != VDHT_OFF) {
@@ -45,6 +50,7 @@ int _vnode_start(struct vnode* node)
 static
 int _vnode_stop(struct vnode* node)
 {
+    struct vupnpc* upnpc = &node->upnpc;
     vassert(node);
 
     vlock_enter(&node->lock);
@@ -54,6 +60,8 @@ int _vnode_stop(struct vnode* node)
     }
     node->mode = VDHT_DOWN;
     vlock_leave(&node->lock);
+
+    upnpc->ops->shutdown(upnpc);
     return 0;
 }
 
@@ -77,6 +85,7 @@ static
 int _aux_node_tick_cb(void* cookie)
 {
     struct vnode* node    = (struct vnode*)cookie;
+    struct vupnpc* upnpc = &node->upnpc;
     struct vroute* route = node->route;
     time_t now = time(NULL);
     vassert(node);
@@ -89,6 +98,12 @@ int _aux_node_tick_cb(void* cookie)
         break;
     }
     case VDHT_UP: {
+        struct sockaddr_in uaddr;
+
+        if (upnpc->ops->map(upnpc, node->iport, node->eport, UPNP_PROTO_UDP, &uaddr) >= 0) {
+            vsockaddr_copy(&node->node_info.uaddr, &uaddr);
+        }
+
         if (route->ops->load(route) < 0) {
             node->mode = VDHT_ERR;
             break;
@@ -107,6 +122,7 @@ int _aux_node_tick_cb(void* cookie)
         break;
     }
     case VDHT_DOWN: {
+        upnpc->ops->unmap(upnpc, node->eport, UPNP_PROTO_UDP);
         node->route->ops->store(node->route);
         node->mode = VDHT_OFF;
         vlogI(printf("DHT become offline"));
@@ -396,6 +412,10 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     vnodeInfo_copy(&node->node_info, node_info);
     node->nice = 5;
     varray_init(&node->services, 4);
+   
+    node->iport = 13999;
+    node->eport = 13999;
+    vupnpc_init(&node->upnpc);
     vnode_nice_init(&node->node_nice, cfg);
 
     node->cfg     = cfg;
@@ -420,6 +440,8 @@ void vnode_deinit(struct vnode* node)
     varray_deinit(&node->services);
 
     node->ops->join(node);
+    vupnpc_deinit(&node->upnpc);
+    vnode_nice_deinit(&node->node_nice);
     vlock_deinit (&node->lock);
 
     return ;
