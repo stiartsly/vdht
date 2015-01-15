@@ -3,6 +3,7 @@
 
 #include "vnodeId.h"
 #include "varray.h"
+#include "vhost.h"
 #include "vcfg.h"
 #include "vsys.h"
 #include "vdef.h"
@@ -30,6 +31,7 @@ char* vroute_srvc_get_desc(int);
 /*
  * for record space
  */
+struct vhost;
 struct vroute;
 struct vroute_record_space;
 struct vroute_record_space_ops {
@@ -68,7 +70,8 @@ struct vroute_node_space_ops {
 };
 
 struct vroute_node_space {
-    vnodeInfo* own;
+    vnodeId  node_id;
+    vnodeVer node_ver;
     char db[BUF_SZ];
     int  bucket_sz;
     int  max_snd_tms;
@@ -136,7 +139,7 @@ struct vroute_dht_ops {
 
 typedef int (*vroute_dht_cb_t)(struct vroute*, vnodeInfo*, vtoken*, void*);
 struct vroute {
-    vnodeInfo own_node;
+    vnodeId  node_id;
     uint32_t props;
 
     struct vroute_node_space   node_space;
@@ -152,9 +155,10 @@ struct vroute {
 
     struct vconfig* cfg;
     struct vmsger*  msger;
+    struct vnode*   node;
 };
 
-int  vroute_init  (struct vroute*, struct vconfig*, struct vmsger*, vnodeInfo*);
+int  vroute_init  (struct vroute*, struct vconfig*, struct vhost*, vnodeInfo*);
 void vroute_deinit(struct vroute*);
 
 #endif

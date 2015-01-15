@@ -8,6 +8,7 @@
 #include "vmsger.h"
 #include "vsys.h"
 
+struct vhost;
 struct vnode;
 struct vnode_svc_ops {
     int  (*registers) (struct vnode*, vsrvcId*, struct sockaddr_in*);
@@ -24,6 +25,9 @@ struct vnode_ops {
     int  (*join)      (struct vnode*);
     int  (*stabilize) (struct vnode*);
     int  (*dump)      (struct vnode*);
+
+    void (*get_own_node_info)(struct vnode*, vnodeInfo*);
+    struct sockaddr_in* (*get_best_usable_addr)(struct vnode*, vnodeInfo*);
 };
 
 struct vnode {
@@ -32,6 +36,7 @@ struct vnode {
     int    mode;
     struct vlock lock;  // for mode.
 
+    vnodeInfo node_info;
     int nice;
     struct varray services;
 
@@ -43,7 +48,7 @@ struct vnode {
     struct vnode_svc_ops* svc_ops;
 };
 
-int  vnode_init  (struct vnode*, struct vconfig*, struct vticker*, struct vroute*);
+int  vnode_init  (struct vnode*, struct vconfig*, struct vhost*, vnodeInfo*);
 void vnode_deinit(struct vnode*);
 
 #endif

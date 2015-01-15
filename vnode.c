@@ -145,19 +145,63 @@ int _vnode_dump(struct vnode* node)
     vassert(node);
 
     vdump(printf("-> NODE"));
+    vlock_enter(&node->lock);
     vdump(printf("state:%s", node_mode_desc[node->mode]));
+    vdump(printf("-> NODE_INFO"));
+    vnodeInfo_dump(&node->node_info);
+    vdump(printf("<- NODE_INFO"));
+    node->svc_ops->dump(node);
+    vlock_leave(&node->lock);
     vdump(printf("<- NODE"));
 
     return 0;
 }
 
+/*
+ * @node
+ */
+static
+struct sockaddr_in* _vnode_get_best_usable_addr(struct vnode* node, vnodeInfo* dest)
+{
+    struct sockaddr_in* addr = NULL;
+    vassert(node);
+    vassert(dest);
+
+    vlock_enter(&node->lock);
+    if (!vsockaddr_equal(&node->node_info.eaddr, &dest->eaddr)) {
+        addr = &dest->eaddr;
+    } else if (!vsockaddr_equal(&node->node_info.uaddr, &dest->uaddr)) {
+        addr = &dest->uaddr;
+    } else {
+        addr = &dest->laddr;
+    }
+    vlock_leave(&node->lock);
+    return addr;
+}
+
+static
+void _vnode_get_own_node_info(struct vnode* node, vnodeInfo* node_info)
+{
+    vassert(node);
+    vassert(node_info);
+
+    vlock_enter(&node->lock);
+    vnodeInfo_copy(node_info, &node->node_info);
+    vlock_leave(&node->lock);
+
+    return ;
+}
+
 static
 struct vnode_ops node_ops = {
-    .start     = _vnode_start,
-    .stop      = _vnode_stop,
-    .join      = _vnode_join,
-    .stabilize = _vnode_stabilize,
-    .dump      = _vnode_dump
+    .start                = _vnode_start,
+    .stop                 = _vnode_stop,
+    .join                 = _vnode_join,
+    .stabilize            = _vnode_stabilize,
+    .dump                 = _vnode_dump,
+    .get_best_usable_addr = _vnode_get_best_usable_addr,
+    .get_own_node_info    = _vnode_get_own_node_info
+
 };
 
 /*
@@ -311,12 +355,14 @@ void _vnode_service_dump(struct vnode* node)
     int i = 0;
     vassert(node);
 
+    vdump(printf("-> LOCAL SERVICES"));
     vlock_enter(&node->lock);
     for (i= 0; i < varray_size(&node->services); i++) {
         svc = (vsrvcInfo*)varray_get(&node->services, i);
         vsrvcInfo_dump(svc);
     }
     vlock_leave(&node->lock);
+    vdump(printf("<- LOCAL SERVICES"));
     return ;
 }
 
@@ -335,23 +381,25 @@ struct vnode_svc_ops node_svc_ops = {
  * @ticker:
  * @addr:
  */
-int vnode_init(struct vnode* node, struct vconfig* cfg, struct vticker* ticker, struct vroute* route)
+int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnodeInfo* node_info)
 {
     int ret = 0;
 
     vassert(node);
     vassert(cfg);
-    vassert(ticker);
+    vassert(host);
+    vassert(node_info);
 
     vlock_init(&node->lock);
     node->mode  = VDHT_OFF;
 
+    vnodeInfo_copy(&node->node_info, node_info);
     node->nice = 5;
     varray_init(&node->services, 4);
 
     node->cfg     = cfg;
-    node->ticker  = ticker;
-    node->route   = route;
+    node->ticker  = &host->ticker;
+    node->route   = &host->route;
     node->ops     = &node_ops;
     node->svc_ops = &node_svc_ops;
 

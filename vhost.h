@@ -53,5 +53,6 @@ struct vhost {
 
 struct vhost* vhost_create(struct vconfig*);
 void vhost_destroy(struct vhost*);
+const char*   vhost_get_version(void);
 
 #endif

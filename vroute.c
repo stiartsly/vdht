@@ -20,7 +20,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
 
     vassert(route);
     vassert(addr);
-    retE((vnodeInfo_has_addr(&route->own_node, addr)));
+    //retE((vnodeInfo_has_addr(&route->own_node, addr)));
 
     {
         vtoken_make(&node_info.id);
@@ -170,9 +170,6 @@ void _vroute_dump(struct vroute* route)
 
     vdump(printf("-> ROUTE"));
     vlock_enter(&route->lock);
-    vdump(printf("-> MY NODE"));
-    vnodeInfo_dump(&route->own_node);
-    vdump(printf("<- MY NODE"));
     node_space->ops->dump(node_space);
     srvc_space->ops->dump(srvc_space);
     vlock_leave(&route->lock);
@@ -195,18 +192,11 @@ struct vroute_ops route_ops = {
 static
 struct sockaddr_in* most_efficient_addr(struct vroute* route, vnodeInfo* dest)
 {
-    struct sockaddr_in* addr = NULL;
+    struct vnode* node = route->node;
     vassert(route);
     vassert(dest);
 
-    if (!vsockaddr_equal(&route->own_node.eaddr, &dest->eaddr)) {
-        addr = &dest->eaddr;
-    }else if (!vsockaddr_equal(&route->own_node.uaddr, &dest->uaddr)) {
-        addr = &dest->uaddr;
-    }else {
-        addr = &dest->laddr;
-    }
-    return addr;
+    return node->ops->get_best_usable_addr(node, dest);
 }
 
 static
@@ -226,7 +216,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeInfo* dest)
     retE((!buf));
 
     vtoken_make(&token);
-    ret = enc_ops->ping(&token, &route->own_node.id, buf, vdht_buf_len());
+    ret = enc_ops->ping(&token, &route->node_id, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
         struct vmsg_usr msg = {
@@ -306,7 +296,7 @@ int _vroute_dht_find_node(struct vroute* route, vnodeInfo* dest, vnodeId* target
     retE((!buf));
 
     vtoken_make(&token);
-    ret = enc_ops->find_node(&token, &route->own_node.id, target, buf, vdht_buf_len());
+    ret = enc_ops->find_node(&token, &route->node_id, target, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
         struct vmsg_usr msg = {
@@ -343,7 +333,7 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeInfo* dest, vtoken* tok
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->find_node_rsp(token, &route->own_node.id, info, buf, vdht_buf_len());
+    ret = enc_ops->find_node_rsp(token, &route->node_id, info, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
         struct vmsg_usr msg = {
@@ -382,7 +372,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeInfo* dest, vnodeI
     retE((!buf));
 
     vtoken_make(&token);
-    ret = enc_ops->find_closest_nodes(&token, &route->own_node.id, target, buf, vdht_buf_len());
+    ret = enc_ops->find_closest_nodes(&token, &route->node_id, target, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
         struct vmsg_usr msg = {
@@ -421,7 +411,7 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeInfo* dest, vt
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->find_closest_nodes_rsp(token, &route->own_node.id, closest, buf, vdht_buf_len());
+    ret = enc_ops->find_closest_nodes_rsp(token, &route->node_id, closest, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
         struct vmsg_usr msg = {
@@ -454,7 +444,7 @@ int _vroute_dht_post_service(struct vroute* route, vnodeInfo* dest, vsrvcInfo* s
     retE((!buf));
 
     vtoken_make(&token);
-    ret = enc_ops->post_service(&token, &route->own_node.id, service, buf, vdht_buf_len());
+    ret = enc_ops->post_service(&token, &route->node_id, service, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
         struct vmsg_usr msg = {
@@ -510,7 +500,7 @@ int _vroute_dht_get_peers(struct vroute* route, vnodeInfo* dest, vtoken* hash)
     retE((!buf));
 
     vtoken_make(&token);
-    ret = enc_ops->get_peers(&token, &route->own_node.id, hash, buf, vdht_buf_len());
+    ret = enc_ops->get_peers(&token, &route->node_id, hash, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
         struct vmsg_usr msg = {
@@ -549,7 +539,7 @@ int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeInfo* dest, vtoken* tok
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->get_peers_rsp(token, &route->own_node.id, peers, buf, vdht_buf_len());
+    ret = enc_ops->get_peers_rsp(token, &route->node_id, peers, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     {
         struct vmsg_usr msg = {
@@ -598,6 +588,8 @@ int _vroute_cb_ping(struct vroute* route, vnodeInfo* from, vtoken* token, void* 
 {
     struct vroute_node_space* node_space = &route->node_space;
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
+    struct vnode* node = route->node;
+    vnodeInfo own_node_info;
     int ret = 0;
 
     vassert(route);
@@ -610,7 +602,8 @@ int _vroute_cb_ping(struct vroute* route, vnodeInfo* from, vtoken* token, void* 
     ret = node_space->ops->add_node(node_space, from);
     retE((ret < 0));
 
-    ret = route->dht_ops->ping_rsp(route, from, token, &route->own_node);
+    node->ops->get_own_node_info(node, &own_node_info);
+    ret = route->dht_ops->ping_rsp(route, from, token, &own_node_info);
     retE((ret < 0));
     return 0;
 }
@@ -952,17 +945,17 @@ int _aux_route_load_proto_caps(struct vconfig* cfg, uint32_t* props)
     return 0;
 }
 
-int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger, vnodeInfo* own_info)
+int vroute_init(struct vroute* route, struct vconfig* cfg, struct vhost* host, vnodeInfo* own_info)
 {
     vassert(route);
-    vassert(msger);
+    vassert(host);
     vassert(own_info);
 
-    vnodeInfo_copy(&route->own_node, own_info);
+    vtoken_copy(&route->node_id, &own_info->id);
     _aux_route_load_proto_caps(cfg, &route->props);
 
     vlock_init(&route->lock);
-    vroute_node_space_init  (&route->node_space, route, cfg, &route->own_node);
+    vroute_node_space_init  (&route->node_space, route, cfg, own_info);
     vroute_srvc_space_init  (&route->srvc_space, cfg);
     vroute_record_space_init(&route->record_space);
 
@@ -971,9 +964,10 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vmsger* msger,
     route->cb_ops  = route_cb_ops;
 
     route->cfg   = cfg;
-    route->msger = msger;
+    route->msger = &host->msger;
+    route->node  = &host->node;
 
-    msger->ops->add_cb(msger, route, _aux_route_msg_cb, VMSG_DHT);
+    route->msger->ops->add_cb(route->msger, route, _aux_route_msg_cb, VMSG_DHT);
     return 0;
 }
 

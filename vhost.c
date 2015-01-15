@@ -182,18 +182,8 @@ int _vhost_shutdown(struct vhost* host)
 static
 char* _vhost_get_version(struct vhost* host)
 {
-    /*
-     * version : a.b.c.d.e
-     * a: major
-     * b: minor
-     * c: bugfix
-     * d: demo(candidate)
-     * e: skipped.
-     */
-    const char* version = "0.0.0.1.0";
     vassert(host);
-
-    return (char*)version;
+    return (char*)vhost_get_version();
 }
 
 /*
@@ -387,34 +377,52 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
 }
 
 static
-int _aux_vhost_set_addr(struct vconfig* cfg, struct sockaddr_in* addr)
+int _aux_host_get_own_nodeinfo(struct vconfig* cfg, vnodeInfo* node_info)
 {
-    char ip[64];
-    int port = 0;
-    int ret  = 0;
+    struct sockaddr_in node_laddr;
+    vnodeId  node_id;
+    vnodeVer node_ver;
+
     vassert(cfg);
-    vassert(addr);
+    vassert(node_info);
 
-    memset(ip, 0, 64);
-    ret = vhostaddr_get_first(ip, 64);
-    vlog((ret < 0), elog_vhostaddr_get_first);
-    retE((ret < 0));
-    ret = cfg->ext_ops->get_dht_port(cfg, &port);
-    retE((ret < 0));
-    ret = vsockaddr_convert(ip, (uint16_t)port, addr);
-    vlog((ret < 0), elog_vsockaddr_convert);
-    retE((ret < 0));
+    {
+        char ip[64];
+        int port = 0;
+        int ret  = 0;
 
+        memset(ip, 0, 64);
+        ret = vhostaddr_get_first(ip, 64);
+        vlog((ret < 0), elog_vhostaddr_get_first);
+        retE((ret < 0));
+
+        ret = cfg->ext_ops->get_dht_port(cfg, &port);
+        retE((ret < 0));
+        ret = vsockaddr_convert(ip, port, &node_laddr);
+    }
+
+    {
+        vtoken_make(&node_id);
+    }
+    {
+         const char* ver_str = vhost_get_version();
+         vnodeVer_unstrlize(ver_str, &node_ver);
+    }
+
+    vnodeInfo_init(node_info, &node_id, &node_laddr, &node_ver, 0);
     return 0;
 }
 
 struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
+    vnodeInfo node_info;
     int tmo = 0;
     int ret = 0;
     vassert(cfg);
 
+    ret = _aux_host_get_own_nodeinfo(cfg, &node_info);
+    retE_p((ret < 0));
     ret = cfg->ext_ops->get_host_tick_tmo(cfg, &tmo);
     retE_p((ret < 0));
 
@@ -429,24 +437,11 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->ops      = &host_ops;
     host->svc_ops  = &host_svc_ops;
 
-    {
-        vnodeId  nid;
-        vnodeVer ver;
-        struct sockaddr_in addr;
-
-        vtoken_make(&nid);
-        ret = _aux_vhost_set_addr(cfg, &addr);
-        ret1E_p((ret < 0), free(host));
-
-        vnodeVer_unstrlize(host->ops->get_version(host), &ver);
-        vnodeInfo_init(&host->own_node_info, &nid, &addr, &ver, 0);
-    }
-
     ret += vmsger_init (&host->msger);
-    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&host->own_node_info.laddr));
+    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&node_info.laddr));
     ret += vticker_init(&host->ticker);
-    ret += vroute_init (&host->route, cfg, &host->msger, &host->own_node_info);
-    ret += vnode_init  (&host->node,  cfg, &host->ticker,&host->route);
+    ret += vroute_init (&host->route, cfg, host, &node_info);
+    ret += vnode_init  (&host->node,  cfg, host, &node_info);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vkicker_init(&host->kicker, &host->node, cfg);
@@ -500,5 +495,19 @@ void vhost_destroy(struct vhost* host)
 
     free(host);
     return ;
+}
+
+const char* vhost_get_version(void)
+{
+    /*
+     * version : a.b.c.d.e
+     * a: major
+     * b: minor
+     * c: bugfix
+     * d: demo(candidate)
+     * e: skipped.
+     */
+    const char* version = "0.0.0.1.0";
+    return (const char*)version;
 }
 

@@ -240,12 +240,12 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
     vassert(space);
     vassert(info);
 
-    if (vtoken_equal(&space->own->ver, &info->ver)) {
+    if (vtoken_equal(&space->node_ver, &info->ver)) {
         info->weight++;
     }
 
     min_weight = info->weight;
-    idx = vnodeId_bucket(&space->own->id, &info->id);
+    idx = vnodeId_bucket(&space->node_id, &info->id);
     peers = &space->bucket[idx].peers;
     {
         void* argv[] = {
@@ -297,13 +297,13 @@ int _vroute_node_space_get_node(struct vroute_node_space* space, vnodeId* target
     vassert(target);
     vassert(info);
 
-    idx = vnodeId_bucket(&space->own->id, target);
+    idx = vnodeId_bucket(&space->node_id, target);
     peers = &space->bucket[idx].peers;
     for (i = 0; i < varray_size(peers); i++) {
         peer = (struct vpeer*)varray_get(peers, i);
         if (vtoken_equal(&peer->node.id, target)) {
             vnodeInfo_copy(info, &peer->node);
-            if (vtoken_equal(&peer->node.ver, &space->own->ver)) {
+            if (vtoken_equal(&peer->node.ver, &space->node_ver)) {
                 //minus because uncareness of version as to other nodes.
                 info->weight -= 1;
             }
@@ -374,7 +374,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
         item  = (struct vpeer*)varray_get(peers, track->item_idx);
         info  = vnodeInfo_alloc(); //todo;
         vnodeInfo_copy(info, &item->node);
-        if (vtoken_equal(&info->ver, &space->own->ver)) {
+        if (vtoken_equal(&info->ver, &space->node_ver)) {
             info->weight--;
         }
         varray_add_tail(closest, info);
@@ -446,7 +446,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
         if (peer->ntries >= space->max_snd_tms) {
             continue;
         }
-        route->dht_ops->find_closest_nodes(route, &peer->node, &space->own->id);
+        route->dht_ops->find_closest_nodes(route, &peer->node, &space->node_id);
     }
     return 0;
 }
@@ -619,8 +619,9 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
         varray_init(&space->bucket[i].peers, 8);
         space->bucket[i].ts = 0;
     }
+    vtoken_copy(&space->node_ver, &node_info->ver);
+    vtoken_copy(&space->node_id,  &node_info->id);
     space->route = route;
-    space->own = node_info;
     space->ops = &route_space_ops;
     return 0;
 }
