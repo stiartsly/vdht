@@ -34,6 +34,33 @@ int  vnode_nice_init  (struct vnode_nice*, struct vconfig*);
 void vnode_nice_deinit(struct vnode_nice*);
 
 
+/*
+ * for node upnp address/ external address/relayed address
+ *
+ */
+struct vnode_addr;
+struct vnode_addr_ops {
+    int  (*setup)     (struct vnode_addr*);
+    void (*shutdown)  (struct vnode_addr*);
+    int  (*get_uaddr) (struct vnode_addr*, struct sockaddr_in*);
+    int  (*get_eaddr) (struct vnode_addr*, struct sockaddr_in*);
+    int  (*get_raddr) (struct vnode_addr*, struct sockaddr_in*);
+};
+
+struct vnode_addr {
+    int iport;
+    int eport;
+    struct vupnpc upnpc;
+
+    struct vnode_addr_ops* ops;
+};
+
+int  vnode_addr_init  (struct vnode_addr*, struct vconfig*);
+void vnode_addr_deinit(struct vnode_addr*);
+
+/*
+ * for vnode
+ */
 struct vnode;
 struct vnode_svc_ops {
     int  (*registers) (struct vnode*, vsrvcId*, struct sockaddr_in*);
@@ -65,10 +92,8 @@ struct vnode {
     int nice;
     struct varray services;
 
-    int iport;
-    int eport;
-    struct vupnpc upnpc;
     struct vnode_nice node_nice;
+    struct vnode_addr node_addr;
 
     struct vconfig* cfg;
     struct vticker* ticker;

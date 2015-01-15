@@ -11,6 +11,7 @@ vdht_objs = \
     vhost.o \
     vnode.o \
     vnode_nice.o \
+    vnode_addr.o \
     vperf.o \
     vmsger.o  \
     vroute.o  \
