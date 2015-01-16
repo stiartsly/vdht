@@ -182,7 +182,7 @@ void vdict_zero(struct vdict* dict, vdict_zero_t cb, void* cookie)
         node = vlist_pop_head(&dict->items);
         item = vlist_entry(node, struct vdict_item, list);
 
-        cb(item, cookie);
+        cb(item->val, cookie);
         vdict_item_free(item);
         dict->used--;
     }

@@ -593,6 +593,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
                 key = strdup(def_cfg_key);
             }
             vdict_add(&dict->val.d, key, item);
+            free(key);
             key = NULL;
             break;
         case '[':
@@ -609,6 +610,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
                 key = strdup(def_cfg_key);
             }
             vdict_add(&dict->val.d, key, item);
+            free(key);
             key  = NULL;
             break;
         case '(':
@@ -624,6 +626,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
                 key = strdup(def_cfg_key);
             }
             vdict_add(&dict->val.d, key, item);
+            free(key);
             key = NULL;
             break;
         case '}':
@@ -648,6 +651,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
                     key = strdup(def_cfg_key);
                 }
                 vdict_add(&dict->val.d, key, item);
+                free(key);
                 key = NULL;
             } else {
                 key = _aux_create_key(cur);
@@ -681,6 +685,7 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
 {
     struct stat stat;
     char* buf = NULL;
+    char* cur = NULL;
     int fd  = 0;
     int ret = 0;
 
@@ -701,15 +706,15 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
     ret1E((!buf), close(fd));
 
     ret = read(fd, buf, stat.st_size);
+    close(fd);
     vlog((!buf), elog_read);
-    vcall_cond((!buf), close(fd));
-    vcall_cond((!buf), free(buf));
-    retE((!buf));
+    ret1E((!buf), free(buf));
 
     buf[stat.st_size] = '\0';
-    close(fd);
 
-    ret = _aux_parse_dict(&cfg->dict, (char**)&buf);
+    cur = buf;
+    ret = _aux_parse_dict(&cfg->dict, (char**)&cur);
+    free(buf);
     retE((ret < 0));
     return 0;
 }
@@ -722,7 +727,7 @@ static
 int _vcfg_clear(struct vconfig* cfg)
 {
     vassert(cfg);
-    vcfg_item_dump(&cfg->dict);
+    vcfg_item_free(&cfg->dict);
     return 0;
 }
 
