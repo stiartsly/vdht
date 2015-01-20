@@ -3,6 +3,7 @@
 
 #include "vsys.h"
 #include "vcfg.h"
+#include "vstun.h"
 #include "vroute.h"
 #include "vupnpc.h"
 #include "vnodeId.h"
@@ -43,7 +44,7 @@ struct vnode_addr_ops {
     int  (*setup)     (struct vnode_addr*);
     void (*shutdown)  (struct vnode_addr*);
     int  (*get_uaddr) (struct vnode_addr*, struct sockaddr_in*);
-    int  (*get_eaddr) (struct vnode_addr*, struct sockaddr_in*);
+    int  (*get_eaddr) (struct vnode_addr*, get_ext_addr_t, void*);
     int  (*get_raddr) (struct vnode_addr*, struct sockaddr_in*);
 };
 
@@ -51,11 +52,12 @@ struct vnode_addr {
     int iport;
     int eport;
     struct vupnpc upnpc;
+    struct vstun  stun;
 
     struct vnode_addr_ops* ops;
 };
 
-int  vnode_addr_init  (struct vnode_addr*, struct vconfig*);
+int  vnode_addr_init  (struct vnode_addr*, struct vconfig*, struct vmsger*, struct vroute*, struct vhashgen*);
 void vnode_addr_deinit(struct vnode_addr*);
 
 /*

@@ -418,6 +418,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->ops      = &host_ops;
     host->svc_ops  = &host_svc_ops;
 
+    ret += vhashgen_init(&host->hashgen);
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&node_info.laddr));
     ret += vticker_init(&host->ticker);
@@ -425,11 +426,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vnode_init  (&host->node,  cfg, host, &node_info);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
-    ret += vstunc_init (&host->stunc, &host->msger, &host->ticker, &host->route);
-    ret += vhashgen_init(&host->hashgen);
     if (ret < 0) {
-        vhashgen_deinit(&host->hashgen);
-        vstunc_deinit  (&host->stunc);
         vlsctl_deinit  (&host->lsctl);
         vwaiter_deinit (&host->waiter);
         vnode_deinit   (&host->node);
@@ -437,6 +434,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
         vticker_deinit (&host->ticker);
         vrpc_deinit    (&host->rpc);
         vmsger_deinit  (&host->msger);
+        vhashgen_deinit(&host->hashgen);
         free(host);
         return NULL;
     }
@@ -462,7 +460,6 @@ void vhost_destroy(struct vhost* host)
     host->waiter.ops->remove(&host->waiter, &host->rpc);
 
     vhashgen_deinit(&host->hashgen);
-    vstunc_deinit (&host->stunc);
     vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vnode_deinit  (&host->node);

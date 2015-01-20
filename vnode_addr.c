@@ -45,12 +45,16 @@ int _vnode_addr_get_uaddr(struct vnode_addr* node_addr, struct sockaddr_in* uadd
 }
 
 static
-int _vnode_addr_get_eaddr(struct vnode_addr* node_addr, struct sockaddr_in* eaddr)
+int _vnode_addr_get_eaddr(struct vnode_addr* node_addr, get_ext_addr_t cb, void* cookie)
 {
-    vassert(node_addr);
-    vassert(eaddr);
+    struct vstun* stun = &node_addr->stun;
+    int ret = 0;
 
-    //todo;
+    vassert(node_addr);
+    vassert(cb);
+
+    ret = stun->ops->get_ext_addr(stun, cb, cookie);
+    retE((ret < 0));
     return 0;
 }
 
@@ -73,7 +77,7 @@ struct vnode_addr_ops node_addr_ops = {
     .get_raddr = _vnode_addr_get_raddr
 };
 
-int vnode_addr_init(struct vnode_addr* node_addr, struct vconfig* cfg)
+int vnode_addr_init(struct vnode_addr* node_addr, struct vconfig* cfg, struct vmsger* msger, struct vroute* route, struct vhashgen* hashgen)
 {
     int ret = 0;
     vassert(node_addr);
@@ -84,6 +88,7 @@ int vnode_addr_init(struct vnode_addr* node_addr, struct vconfig* cfg)
     node_addr->eport = 0;
 
     vupnpc_init(&node_addr->upnpc);
+    vstun_init (&node_addr->stun, msger, route, hashgen);
     node_addr->ops = &node_addr_ops;
     return 0;
 }
@@ -92,6 +97,7 @@ void vnode_addr_deinit(struct vnode_addr* node_addr)
 {
     vassert(node_addr);
 
+    vstun_deinit (&node_addr->stun);
     vupnpc_deinit(&node_addr->upnpc);
     return ;
 }

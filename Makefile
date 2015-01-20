@@ -20,6 +20,8 @@ vdht_objs = \
     vroute_node.o  \
     vroute_srvc.o  \
     vroute_record.o  \
+    vstun.o \
+    vstun_proto.o \
     vlsctl.o  \
     vticker.o \
     vnodeId.o \
@@ -31,7 +33,7 @@ vdht_objs = \
 
 all: vdhtd vlsctlc 
 
-vdhtd: vmain.o libvdht.a libutils.a libstun.a
+vdhtd: vmain.o libvdht.a libutils.a 
 	@$(CC) -o $@ $^ libutils.a  $(LDFLAGS)
 
 vlsctlc:
@@ -43,8 +45,8 @@ libvdht.a: $(vdht_objs)
 libutils.a:
 	@cd utils && make libutils.a
 
-libstun.a:
-	@cd stun  && make libstun.a
+#libstun.a:
+#	@cd stun  && make libstun.a
 
 clean:
 	@cd lsctl && make clean

@@ -7,7 +7,7 @@
 #include "vmsger.h"
 #include "vticker.h"
 #include "vhashgen.h"
-#include "stun/vstunc.h"
+//#include "stun/vstunc.h"
 
 struct vhost;
 struct vhost_ops {
@@ -41,7 +41,6 @@ struct vhost {
     struct vroute   route;
     struct vnode    node;
     struct vlsctl   lsctl;
-    struct vstunc   stunc;
     struct vhashgen hashgen;
 
     struct vconfig*   cfg;
@@ -49,8 +48,8 @@ struct vhost {
     struct vhost_svc_ops* svc_ops;
 };
 
+const char* vhost_get_version(void);
 struct vhost* vhost_create(struct vconfig*);
 void vhost_destroy(struct vhost*);
-const char*   vhost_get_version(void);
 
 #endif
