@@ -53,8 +53,8 @@ int _vnode_addr_get_eaddr(struct vnode_addr* node_addr, get_ext_addr_t cb, void*
     vassert(node_addr);
     vassert(cb);
 
-    ret = stun->ops->get_ext_addr(stun, cb, cookie);
-    retE((ret < 0));
+//    ret = stun->ops->get_ext_addr(stun, cb, cookie);
+//    retE((ret < 0));
     return 0;
 }
 
