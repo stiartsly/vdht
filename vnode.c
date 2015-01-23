@@ -32,7 +32,9 @@ int _vnode_start(struct vnode* node)
     vassert(node);
 
     ret = node_addr->ops->setup(node_addr);
-    retE((ret < 0));
+    if (ret < 0) {
+        vlogI(printf("upnp setup failed"));
+    }
 
     vlock_enter(&node->lock);
     if (node->mode != VDHT_OFF) {
@@ -81,6 +83,7 @@ int _vnode_join(struct vnode* node)
     return 0;
 }
 
+#if 0
 static
 int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookie)
 {
@@ -94,6 +97,7 @@ int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookie)
 
     return 0;
 }
+#endif
 
 static
 int _aux_node_tick_cb(void* cookie)
@@ -116,10 +120,12 @@ int _aux_node_tick_cb(void* cookie)
             node->mode = VDHT_ERR;
             break;
         }
+#if 0
         if (node_addr->ops->get_eaddr(node_addr, _aux_node_get_eaddr, node) < 0) {
             node->mode = VDHT_ERR;
             break;
         }
+#endif
         if (route->ops->load(route) < 0) {
             node->mode = VDHT_ERR;
             break;
@@ -134,7 +140,7 @@ int _aux_node_tick_cb(void* cookie)
             route->ops->tick(route);
             node->ts = now;
         }
-        node->svc_ops->post(node);
+        node->ops->tick(node);
         break;
     }
     case VDHT_DOWN: {
@@ -171,8 +177,9 @@ int _vnode_stabilize(struct vnode* node)
  * @node:
  */
 static
-int _vnode_dump(struct vnode* node)
+void _vnode_dump(struct vnode* node)
 {
+    int i = 0;
     vassert(node);
 
     vdump(printf("-> NODE"));
@@ -181,12 +188,36 @@ int _vnode_dump(struct vnode* node)
     vdump(printf("-> NODE_INFO"));
     vnodeInfo_dump(&node->node_info);
     vdump(printf("<- NODE_INFO"));
-    node->svc_ops->dump(node);
+    vdump(printf("-> LOCAL SVCS"));
+    for (i = 0; i < varray_size(&node->services); i++) {
+        vsrvcInfo* svc = (vsrvcInfo*)varray_get(&node->services, i);
+        vsrvcInfo_free(svc);
+    }
+    vdump(printf("<- LOCAL SVCS"));
     vlock_leave(&node->lock);
     vdump(printf("<- NODE"));
-
-    return 0;
+    return ;
 }
+
+/*
+ * the routine to clear all registered service infos.
+ *
+ * @node:
+ */
+static
+void _vnode_clear(struct vnode* node)
+{
+    vassert(node);
+
+    vlock_enter(&node->lock);
+    while(varray_size(&node->services) > 0) {
+        vsrvcInfo* svc = (vsrvcInfo*)varray_pop_tail(&node->services);
+        vsrvcInfo_free(svc);
+    }
+    vlock_leave(&node->lock);
+    return ;
+}
+
 
 /*
  * @node
@@ -223,18 +254,6 @@ void _vnode_get_own_node_info(struct vnode* node, vnodeInfo* node_info)
     return ;
 }
 
-static
-struct vnode_ops node_ops = {
-    .start                = _vnode_start,
-    .stop                 = _vnode_stop,
-    .join                 = _vnode_join,
-    .stabilize            = _vnode_stabilize,
-    .dump                 = _vnode_dump,
-    .get_best_usable_addr = _vnode_get_best_usable_addr,
-    .get_own_node_info    = _vnode_get_own_node_info
-
-};
-
 /*
  * the routine to register a service info (only contain meta info) as local
  * service, and the service will be published to all nodes in routing table.
@@ -245,7 +264,7 @@ struct vnode_ops node_ops = {
  *
  */
 static
-int _vnode_service_register(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* addr)
+int _vnode_reg_service(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* addr)
 {
     vsrvcInfo* svc = NULL;
     int found = 0;
@@ -285,7 +304,7 @@ int _vnode_service_register(struct vnode* node, vsrvcId* srvcId, struct sockaddr
  *
  */
 static
-void _vnode_service_unregister(struct vnode* node, vtoken* srvcId, struct sockaddr_in* addr)
+void _vnode_unreg_service(struct vnode* node, vtoken* srvcId, struct sockaddr_in* addr)
 {
     vsrvcInfo* svc = NULL;
     int found = 0;
@@ -323,7 +342,7 @@ void _vnode_service_unregister(struct vnode* node, vtoken* srvcId, struct sockad
  *
  */
 static
-void _vnode_service_update(struct vnode* node)
+int _vnode_renice(struct vnode* node)
 {
     struct vnode_nice* node_nice = &node->node_nice;
     vsrvcInfo* svc = NULL;
@@ -339,11 +358,11 @@ void _vnode_service_update(struct vnode* node)
         svc->nice = nice;
     }
     vlock_leave(&node->lock);
-    return ;
+    return 0;
 }
 
 static
-void _vnode_service_post(struct vnode* node)
+void _vnode_tick(struct vnode* node)
 {
     struct vroute* route = node->route;
     vsrvcInfo* svc = NULL;
@@ -359,51 +378,20 @@ void _vnode_service_post(struct vnode* node)
     return ;
 }
 
-/*
- * the routine to clear all registered service infos.
- *
- * @node:
- */
 static
-void _vnode_service_clear(struct vnode* node)
-{
-    vsrvcInfo* svc = NULL;
-    vassert(node);
-
-    vlock_enter(&node->lock);
-    while(varray_size(&node->services) > 0) {
-        svc = (vsrvcInfo*)varray_pop_tail(&node->services);
-        vsrvcInfo_free(svc);
-    }
-    vlock_leave(&node->lock);
-    return ;
-}
-
-static
-void _vnode_service_dump(struct vnode* node)
-{
-    vsrvcInfo* svc = NULL;
-    int i = 0;
-    vassert(node);
-
-    vdump(printf("-> LOCAL SERVICES"));
-    vlock_enter(&node->lock);
-    for (i= 0; i < varray_size(&node->services); i++) {
-        svc = (vsrvcInfo*)varray_get(&node->services, i);
-        vsrvcInfo_dump(svc);
-    }
-    vlock_leave(&node->lock);
-    vdump(printf("<- LOCAL SERVICES"));
-    return ;
-}
-
-struct vnode_svc_ops node_svc_ops = {
-    .registers  = _vnode_service_register,
-    .unregister = _vnode_service_unregister,
-    .update     = _vnode_service_update,
-    .post       = _vnode_service_post,
-    .clear      = _vnode_service_clear,
-    .dump       = _vnode_service_dump
+struct vnode_ops node_ops = {
+    .start                = _vnode_start,
+    .stop                 = _vnode_stop,
+    .join                 = _vnode_join,
+    .stabilize            = _vnode_stabilize,
+    .dump                 = _vnode_dump,
+    .clear                = _vnode_clear,
+    .reg_service          = _vnode_reg_service,
+    .unreg_service        = _vnode_unreg_service,
+    .renice               = _vnode_renice,
+    .tick                 = _vnode_tick,
+    .get_best_usable_addr = _vnode_get_best_usable_addr,
+    .get_own_node_info    = _vnode_get_own_node_info
 };
 
 /*
@@ -434,7 +422,6 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     node->ticker  = &host->ticker;
     node->route   = &host->route;
     node->ops     = &node_ops;
-    node->svc_ops = &node_svc_ops;
 
     ret = cfg->ext_ops->get_host_tick_tmo(cfg, &node->tick_interval);
     retE((ret < 0));
@@ -448,7 +435,7 @@ void vnode_deinit(struct vnode* node)
 {
     vassert(node);
 
-    node->svc_ops->clear(node);
+    node->ops->clear(node);
     varray_deinit(&node->services);
 
     node->ops->join(node);

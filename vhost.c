@@ -241,7 +241,7 @@ int _vhost_publish_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_
     vassert(addr);
     vassert(srvcId);
 
-    ret = node->svc_ops->registers(node, srvcId, addr);
+    ret = node->ops->reg_service(node, srvcId, addr);
     retE((ret < 0));
     return 0;
 }
@@ -259,7 +259,7 @@ int _vhost_cancel_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_i
     vassert(addr);
     vassert(srvcId);
 
-    node->svc_ops->unregister(node, srvcId, addr);
+    node->ops->unreg_service(node, srvcId, addr);
     return 0;
 }
 

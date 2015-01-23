@@ -47,8 +47,8 @@ int _vnode_addr_get_uaddr(struct vnode_addr* node_addr, struct sockaddr_in* uadd
 static
 int _vnode_addr_get_eaddr(struct vnode_addr* node_addr, get_ext_addr_t cb, void* cookie)
 {
-    struct vstun* stun = &node_addr->stun;
-    int ret = 0;
+    //struct vstun* stun = &node_addr->stun;
+    //int ret = 0;
 
     vassert(node_addr);
     vassert(cb);
