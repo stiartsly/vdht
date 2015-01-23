@@ -398,6 +398,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
     vnodeInfo node_info;
+    struct sockaddr_in zaddr;
     int tmo = 0;
     int ret = 0;
     vassert(cfg);
@@ -418,12 +419,18 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->ops      = &host_ops;
     host->svc_ops  = &host_svc_ops;
 
+    {
+        int port = 12300;
+        cfg->ext_ops->get_dht_port(cfg, &port);
+        vsockaddr_convert("0.0.0.0", port, &zaddr);
+    }
+
     ret += vhashgen_init(&host->hashgen);
     ret += vticker_init(&host->ticker);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vmsger_init (&host->msger);
-    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&node_info.laddr));
+    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&zaddr));
     ret += vroute_init (&host->route, cfg, host, &node_info);
     ret += vnode_init  (&host->node,  cfg, host, &node_info);
     if (ret < 0) {
