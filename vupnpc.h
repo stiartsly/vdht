@@ -4,8 +4,8 @@
 #include "vsys.h"
 
 enum {
-    UPNP_PROTO_TCP,
     UPNP_PROTO_UDP,
+    UPNP_PROTO_TCP,
     UPNP_PROTO_BUTT
 };
 

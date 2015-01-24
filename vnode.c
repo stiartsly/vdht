@@ -83,7 +83,6 @@ int _vnode_join(struct vnode* node)
     return 0;
 }
 
-#if 0
 static
 int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookie)
 {
@@ -97,7 +96,6 @@ int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookie)
 
     return 0;
 }
-#endif
 
 static
 int _aux_node_tick_cb(void* cookie)
@@ -120,12 +118,10 @@ int _aux_node_tick_cb(void* cookie)
             node->mode = VDHT_ERR;
             break;
         }
-#if 0
         if (node_addr->ops->get_eaddr(node_addr, _aux_node_get_eaddr, node) < 0) {
             node->mode = VDHT_ERR;
             break;
         }
-#endif
         if (route->ops->load(route) < 0) {
             node->mode = VDHT_ERR;
             break;
@@ -416,7 +412,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     node->nice = 5;
     varray_init(&node->services, 4);
     vnode_nice_init(&node->node_nice, cfg);
-    vnode_addr_init(&node->node_addr, cfg, &host->msger, &host->route, &host->hashgen);
+    vnode_addr_init(&node->node_addr, cfg, &host->msger, node, &node_info->laddr);
 
     node->cfg     = cfg;
     node->ticker  = &host->ticker;

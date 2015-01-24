@@ -53,11 +53,12 @@ struct vnode_addr {
     int eport;
     struct vupnpc upnpc;
     struct vstun  stun;
+    struct vnode* node;
 
     struct vnode_addr_ops* ops;
 };
 
-int  vnode_addr_init  (struct vnode_addr*, struct vconfig*, struct vmsger*, struct vroute*, struct vhashgen*);
+int  vnode_addr_init  (struct vnode_addr*, struct vconfig*, struct vmsger*, struct vnode*, struct sockaddr_in*);
 void vnode_addr_deinit(struct vnode_addr*);
 
 /*

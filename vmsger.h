@@ -9,7 +9,6 @@ enum {
     VMSG_DHT   = 0x01,
 
     VMSG_LSCTL = 0x45,
-    VMSG_PLUG  = 0x48,
     VMSG_STUN  = 0x50,
     VMSG_RELAY = 0x70,
     VMSG_VPN   = 0x90,
@@ -18,7 +17,7 @@ enum {
 };
 
 #define VDHT_MSG(msgId)  (msgId == VMSG_DHT)
-#define VPLUG_MSG(msgId) (msgId == VMSG_PLUG)
+#define VSTUN_MSG(msgId) (msgId == VMSG_STUN)
 
 struct vsockaddr {
     union {

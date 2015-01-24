@@ -319,6 +319,12 @@ int _aux_vhost_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys* s
         vmsg_sys_init(sm, um->addr, um->len + sz, data);
         return 0;
     }
+
+    if (VSTUN_MSG(um->msgId)) {
+        vmsg_sys_init(sm, um->addr, um->len, um->data);
+        return 0;
+    }
+
     //todo;
     return -1;
 }

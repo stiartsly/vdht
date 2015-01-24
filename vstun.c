@@ -226,24 +226,19 @@ void _aux_trans_id_make(uint8_t* trans_id)
 }
 
 static
-int _vstun_get_ext_addr(struct vstun* stun, get_ext_addr_t cb, void* cookie)
+int _vstun_get_ext_addr(struct vstun* stun, get_ext_addr_t cb, void* cookie, struct sockaddr_in* stuns_addr)
 {
-    struct vroute* route = stun->route;
     struct vstun_msg msg;
-    struct sockaddr_in stuns_addr;
-    vtoken hash;
+    struct vhashgen hashgen;
+    vsrvcId srvId;
     int ret = 0;
 
     vassert(stun);
 
-    {
-        struct vhashgen gen;
-        vhashgen_init(&gen);
-        gen.ext_ops->get_stun_hash(&gen, &hash);
-        vhashgen_deinit(&gen);
-    }
-
-    ret = route->ops->get_service(route, &hash, &stuns_addr);
+    ret = vhashgen_init(&hashgen);
+    retE((ret < 0));
+    ret = hashgen.ext_ops->get_stun_hash(&hashgen, &srvId);
+    vhashgen_deinit(&hashgen);
     retE((ret < 0));
 
     memset(&msg, 0, sizeof(msg));
@@ -252,13 +247,57 @@ int _vstun_get_ext_addr(struct vstun* stun, get_ext_addr_t cb, void* cookie)
     msg.header.magic = STUN_MAGIC;
 
     _aux_trans_id_make(msg.header.trans_id);
-    ret = stun->base_ops->snd_req_msg(stun, &msg, &stuns_addr, cb, cookie);
+    ret = stun->base_ops->snd_req_msg(stun, &msg, stuns_addr, cb, cookie);
     retE((ret < 0));
     return 0;
 }
 
+
+static
+int _vstun_register_service(struct vstun* stun)
+{
+    struct vnode* node = stun->node;
+    struct vhashgen hashgen;
+    vsrvcId srvId;
+    int ret = 0;
+
+    vassert(stun);
+
+    ret = vhashgen_init(&hashgen);
+    retE((ret < 0));
+    ret = hashgen.ext_ops->get_stun_hash(&hashgen, &srvId);
+    vhashgen_deinit(&hashgen);
+    retE((ret < 0));
+
+    ret = node->ops->reg_service(node, &srvId, &stun->stun_addr);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vstun_unregister_service(struct vstun* stun)
+{
+    struct vnode* node = stun->node;
+    struct vhashgen hashgen;
+    vsrvcId srvId;
+    int ret = 0;
+
+    vassert(stun);
+
+    ret = vhashgen_init(&hashgen);
+    retE((ret < 0));
+    ret = hashgen.ext_ops->get_stun_hash(&hashgen, &srvId);
+    vhashgen_deinit(&hashgen);
+    retE((ret < 0));
+
+    node->ops->unreg_service(node, &srvId, &stun->stun_addr);
+    return 0;
+}
+
 struct vstun_ops stun_ops = {
-    .get_ext_addr = _vstun_get_ext_addr
+    .get_ext_addr  = _vstun_get_ext_addr,
+    .reg_service   = _vstun_register_service,
+    .unreg_service = _vstun_unregister_service
 };
 
 static
@@ -282,6 +321,7 @@ int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
         break;
     case msg_bind_rsp:
         ret = stun->base_ops->rcv_rsp_msg(stun, &msg, to_sockaddr_sin(mu->addr));
+        retE((ret < 0));
         break;
     default:
         retE((1));
@@ -290,24 +330,24 @@ int _aux_stun_msg_cb(void* cookie, struct vmsg_usr* mu)
     return 0;
 }
 
-int vstun_init(struct vstun* stun, struct vmsger* msger, struct vroute* route, struct vhashgen* hashgen)
+int vstun_init(struct vstun* stun, struct vmsger* msger, struct vnode* node, struct sockaddr_in* addr)
 {
     vassert(stun);
     vassert(msger);
-    vassert(route);
-    vassert(hashgen);
+
 
     vlist_init(&stun->reqs);
     vlock_init(&stun->lock);
 
-    stun->msger   = msger;
-    stun->route   = route;
-    stun->hashgen = hashgen;
-    stun->ops     = &stun_ops;
+    vsockaddr_copy(&stun->stun_addr, addr);
+    stun->msger     = msger;
+    stun->node      = node;
+    stun->ops       = &stun_ops;
     stun->base_ops  = &stun_base_ops;
     stun->proto_ops = &stun_proto_ops;
 
     msger->ops->add_cb(msger, stun, _aux_stun_msg_cb, VMSG_STUN);
+
     return 0;
 }
 

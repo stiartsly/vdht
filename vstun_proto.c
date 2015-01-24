@@ -28,11 +28,10 @@ void vattr_addrv4_enc(struct vattr_addrv4* addr, char* buf, int len)
     sz += sizeof(uint8_t);
     set_uint8(offset_addr(buf, sz), addr->family);
     sz += sizeof(uint8_t);
-    addr->port = htons(addr->port);
-    addr->addr = htonl(addr->addr);
-    set_uint16(offset_addr(buf, sz), addr->port);
+    set_uint16(offset_addr(buf, sz), htons(addr->port));
     sz += sizeof(uint16_t);
-    set_uint32(offset_addr(buf, sz), addr->port);
+    set_uint32(offset_addr(buf, sz), htonl(addr->addr));
+    sz += sizeof(uint32_t);
 
     return ;
 }
@@ -102,16 +101,6 @@ int _vattr_enc_error_code(struct vstun_msg* msg, char* buf, int len)
 }
 
 static
-int _vattr_enc_server_name(struct vstun_msg* msg, char* buf, int len)
-{
-    vassert(msg);
-    vassert(buf);
-
-    //todo;
-    return 0;
-}
-
-static
 int _vattr_enc_unknown_attrs(struct vstun_msg* msg, char* buf, int len)
 {
     vassert(msg);
@@ -135,7 +124,6 @@ static
 struct vattr_enc_routine attr_enc_routines[] = {
     {attr_mapped_addr,     _vattr_enc_mapped_addr  },
     {attr_error_code,      _vattr_enc_error_code   },
-    {attr_server_name,     _vattr_enc_server_name  },
     {attr_response_addr,   _vattr_enc_todo_attrs   },
     {attr_changed_addr,    _vattr_enc_todo_attrs   },
     {attr_source_addr ,    _vattr_enc_todo_attrs   },
@@ -145,7 +133,6 @@ struct vattr_enc_routine attr_enc_routines[] = {
     {attr_msg_intgrity,    _vattr_enc_todo_attrs   },
     {attr_reflected_from,  _vattr_enc_todo_attrs   },
     {attr_xor_mapped_addr, _vattr_enc_todo_attrs   },
-    {attr_xor_only,        _vattr_enc_todo_attrs   },
     {attr_unknown_attr,    _vattr_enc_unknown_attrs},
     {0, 0}
 };

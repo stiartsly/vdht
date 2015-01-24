@@ -19,18 +19,20 @@ struct vstun_base_ops {
 };
 
 struct vstun_ops {
-    int  (*get_ext_addr)(struct vstun*, get_ext_addr_t, void*);
+    int  (*get_ext_addr)(struct vstun*, get_ext_addr_t, void*, struct sockaddr_in*);
+    int  (*reg_service) (struct vstun*);
+    int  (*unreg_service)(struct vstun*);
 };
 
 struct vstun {
     struct vlist  reqs;
     struct vlock  lock;
 
+    struct sockaddr_in stun_addr;
     int max_tmo;
 
-    struct vmsger*   msger;
-    struct vroute*   route;
-    struct vhashgen* hashgen;
+    struct vnode*  node;
+    struct vmsger* msger;
 
     struct vstun_ops *ops;
     struct vstun_base_ops *base_ops;
@@ -38,7 +40,7 @@ struct vstun {
 
 };
 
-int  vstun_init  (struct vstun*, struct vmsger*, struct vroute*, struct vhashgen* hashgen);
+int  vstun_init  (struct vstun*, struct vmsger*, struct vnode*, struct sockaddr_in*);
 void vstun_deinit(struct vstun*);
 
 #endif
