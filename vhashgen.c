@@ -43,9 +43,6 @@ struct vhashgen_ctxt_sha1 {
 };
 
 static
-struct vhashgen_ctxt_sha1 hashgen_ctxt_sha1;
-
-static
 void _aux_sha1_digest_msgbuf(struct vhashgen_ctxt_sha1* ctxt)
 {
     uint32_t k[] = /* Constants defined in SHA-1   */
@@ -358,9 +355,15 @@ struct vhashgen_ext_ops hashgen_ext_ops = {
 
 int vhashgen_init (struct vhashgen* gen)
 {
+    void* ctxt = NULL;
     vassert(gen);
 
-    gen->ctxt    = &hashgen_ctxt_sha1;
+    ctxt = malloc(sizeof(struct vhashgen_ctxt_sha1));
+    vlog((!ctxt), elog_malloc);
+    retE((!ctxt));
+    memset(ctxt, 0, sizeof(struct vhashgen_ctxt_sha1));
+
+    gen->ctxt    = ctxt;
     gen->sha_ops = &hashgen_sha1_ops;
     gen->ops     = &hashgen_ops;
     gen->ext_ops = &hashgen_ext_ops;
@@ -371,8 +374,9 @@ int vhashgen_init (struct vhashgen* gen)
 void vhashgen_deinit(struct vhashgen* gen)
 {
     vassert(gen);
-
-    //todo;
+    if (gen->ctxt) {
+        free(gen->ctxt);
+    }
     return ;
 }
 
