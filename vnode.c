@@ -133,10 +133,10 @@ int _aux_node_tick_cb(void* cookie)
     }
     case VDHT_RUN: {
         if (now - node->ts > node->tick_interval) {
+            node->ops->tick(node);
             route->ops->tick(route);
             node->ts = now;
         }
-        node->ops->tick(node);
         break;
     }
     case VDHT_DOWN: {

@@ -9,12 +9,10 @@ int _vnode_addr_setup(struct vnode_addr* node_addr)
     int ret = 0;
     vassert(node_addr);
 
-    ret = upnpc->ops->setup(upnpc);
-    retE((ret < 0));
-
     ret = stun->ops->reg_service(stun);
     retE((ret < 0));
 
+    upnpc->ops->setup(upnpc);
     return 0;
 }
 
