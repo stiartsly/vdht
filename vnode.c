@@ -187,7 +187,7 @@ void _vnode_dump(struct vnode* node)
     vdump(printf("-> LOCAL SVCS"));
     for (i = 0; i < varray_size(&node->services); i++) {
         vsrvcInfo* svc = (vsrvcInfo*)varray_get(&node->services, i);
-        vsrvcInfo_free(svc);
+        vsrvcInfo_dump(svc);
     }
     vdump(printf("<- LOCAL SVCS"));
     vlock_leave(&node->lock);
