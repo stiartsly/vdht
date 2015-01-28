@@ -115,12 +115,12 @@ int _aux_node_tick_cb(void* cookie)
     }
     case VDHT_UP: {
         if (node_addr->ops->get_uaddr(node_addr, &node->node_info.uaddr) < 0) {
-            node->mode = VDHT_ERR;
-            break;
+           // node->mode = VDHT_ERR;
+           // break;
         }
         if (node_addr->ops->get_eaddr(node_addr, _aux_node_get_eaddr, node) < 0) {
-            node->mode = VDHT_ERR;
-            break;
+           //node->mode = VDHT_ERR;
+           // break;
         }
         if (route->ops->load(route) < 0) {
             node->mode = VDHT_ERR;
@@ -133,8 +133,8 @@ int _aux_node_tick_cb(void* cookie)
     }
     case VDHT_RUN: {
         if (now - node->ts > node->tick_interval) {
-            node->ops->tick(node);
             route->ops->tick(route);
+            node->ops->tick(node);
             node->ts = now;
         }
         break;

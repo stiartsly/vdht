@@ -224,22 +224,24 @@ int _vstun_proto_encode(struct vstun_msg* msg, char* buf, int len)
     struct vattr_enc_routine* encoder = attr_enc_routines;
     int ret = 0;
     int sz  = 0;
+    int attr_sz = 0;
 
     vassert(msg);
     vassert(buf);
     vassert(len > 0);
 
     memcpy(hdr, &msg->header, sizeof(*hdr));
-    hdr->type  = htons(hdr->type);
-    hdr->len   = htons(hdr->len);
-    hdr->magic = htonl(STUN_MAGIC);
-    sz += sizeof(*hdr);
+    sz += sizeof(struct vstun_msg_header);
 
     for (; encoder->enc_cb; encoder++) {
         ret = encoder->enc_cb(msg, buf + sz, len - sz);
         retE((ret < 0));
         sz  += ret;
+        attr_sz += ret;
     }
+    hdr->type  = htons(hdr->type);
+    hdr->len   = htons(attr_sz);
+    hdr->magic = htonl(STUN_MAGIC);
     return sz;
 }
 
@@ -255,7 +257,7 @@ int _vstun_proto_decode(char* buf, int len, struct vstun_msg* msg)
     vassert(msg);
     vassert(buf);
     vassert(len > 0);
-    retE((len <= sizeof(*hdr)));
+    retE((len < sizeof(*hdr)));
 
     memcpy(hdr, buf, sizeof(*hdr));
     hdr->type  = ntohs(hdr->type);

@@ -358,8 +358,10 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
     if (IS_DHT_MSG(magic)) {
         vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
         return 0;
+    } else {
+        vmsg_usr_init(um, VMSG_STUN, &sm->addr, sm->len, sm->data);
+        return 0;
     }
-    //todo;
     return 0;
 }
 
