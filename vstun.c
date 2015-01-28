@@ -110,12 +110,13 @@ int _vstun_rcv_req_msg(struct vstun* stun, struct vstun_msg* msg, struct sockadd
     vassert(from);
     vassert(msg_bind_req == msg->header.type);
 
+    memset(&rsp_msg, 0, sizeof(rsp_msg));
+
     rsp_msg.has_mapped_addr = 1;
     vsockaddr_to_addrv4(from, &rsp_msg.mapped_addr);
 
-    memset(&rsp_msg, 0, sizeof(rsp_msg));
     rsp_msg.header.type  = msg_bind_rsp;
-    rsp_msg.header.len   = -1;
+    rsp_msg.header.len   = 0;
     rsp_msg.header.magic = STUN_MAGIC;
     memcpy(rsp_msg.header.trans_id, msg->header.trans_id, 12);
 

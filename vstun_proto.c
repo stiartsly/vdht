@@ -83,9 +83,10 @@ int _vattr_enc_mapped_addr(struct vstun_msg* msg, char* buf, int len)
     sz += sizeof(*attr);
 
     vattr_addrv4_enc(addr, (char*)(attr + 1), attr->len);
+    sz += attr->len;
+
     attr->type = htons(attr->type);
     attr->len  = htons(attr->len);
-    sz += attr->len;
 
     return sz;
 }
@@ -267,22 +268,22 @@ int _vstun_proto_decode(char* buf, int len, struct vstun_msg* msg)
     data = offset_addr(buf, sizeof(*hdr));
     sz   = hdr->len;
     while (sz > 0) {
-        struct vattr_header attr;
-        attr.type = ntohs(attr.type);
-        attr.len  = ntohs(attr.len);
+        struct vattr_header* attr = (struct vattr_header*)data;
+        attr->type = ntohs(attr->type);
+        attr->len  = ntohs(attr->len);
 
-        data = offset_addr(data, sizeof(attr));
-        sz  -= sizeof(attr);
+        data = offset_addr(data, sizeof(*attr));
+        sz  -= sizeof(*attr);
 
         for (; decoder->attr != attr_unknown_attr; decoder++) {
-            if (decoder->attr == attr.type) {
+            if (decoder->attr == attr->type) {
                 break;
             }
         }
-        ret = decoder->dec_cb(data, attr.len, msg);
+        ret = decoder->dec_cb(data, attr->len, msg);
         retE((ret < 0));
-        data = offset_addr(data, attr.len);
-        sz  -= attr.len;
+        data = offset_addr(data, attr->len);
+        sz  -= attr->len;
     }
     return 0;
 }
