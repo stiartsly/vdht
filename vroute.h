@@ -85,7 +85,7 @@ struct vroute_node_space {
     struct vroute_node_space_ops* ops;
 };
 
-int  vroute_node_space_init  (struct vroute_node_space*, struct vroute*, struct vconfig*, vnodeInfo*);
+int  vroute_node_space_init  (struct vroute_node_space*, struct vroute*, struct vconfig*, vnodeId*);
 void vroute_node_space_deinit(struct vroute_node_space*);
 
 /*
@@ -158,7 +158,7 @@ struct vroute {
     struct vnode*   node;
 };
 
-int  vroute_init  (struct vroute*, struct vconfig*, struct vhost*, vnodeInfo*);
+int  vroute_init  (struct vroute*, struct vconfig*, struct vhost*, vnodeId*);
 void vroute_deinit(struct vroute*);
 
 #endif

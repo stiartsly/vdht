@@ -944,17 +944,17 @@ int _aux_route_load_proto_caps(struct vconfig* cfg, uint32_t* props)
     return 0;
 }
 
-int vroute_init(struct vroute* route, struct vconfig* cfg, struct vhost* host, vnodeInfo* own_info)
+int vroute_init(struct vroute* route, struct vconfig* cfg, struct vhost* host, vnodeId* my_id)
 {
     vassert(route);
     vassert(host);
-    vassert(own_info);
+    vassert(my_id);
 
-    vtoken_copy(&route->node_id, &own_info->id);
+    vtoken_copy(&route->node_id, my_id);
     _aux_route_load_proto_caps(cfg, &route->props);
 
     vlock_init(&route->lock);
-    vroute_node_space_init  (&route->node_space, route, cfg, own_info);
+    vroute_node_space_init  (&route->node_space, route, cfg, my_id);
     vroute_srvc_space_init  (&route->srvc_space, cfg);
     vroute_record_space_init(&route->record_space);
 

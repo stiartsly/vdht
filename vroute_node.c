@@ -597,14 +597,15 @@ int _aux_space_prepare_db(struct vroute_node_space* space)
     return 0;
 }
 
-int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route, struct vconfig* cfg, vnodeInfo* node_info)
+int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route, struct vconfig* cfg, vnodeId* my_id)
 {
+    vnodeVer my_ver;
     int ret = 0;
     int i = 0;
 
     vassert(space);
     vassert(cfg);
-    vassert(node_info);
+    vassert(my_id);
 
     ret += cfg->ext_ops->get_route_db_file(cfg, space->db, BUF_SZ);
     ret += cfg->ext_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
@@ -619,8 +620,10 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
         varray_init(&space->bucket[i].peers, 8);
         space->bucket[i].ts = 0;
     }
-    vtoken_copy(&space->node_ver, &node_info->ver);
-    vtoken_copy(&space->node_id,  &node_info->id);
+
+    vnodeVer_unstrlize(vhost_get_version(), &my_ver);
+    vtoken_copy(&space->node_ver, &my_ver);
+    vtoken_copy(&space->node_id,  my_id);
     space->route = route;
     space->ops = &route_space_ops;
     return 0;

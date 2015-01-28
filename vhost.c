@@ -92,10 +92,8 @@ void _vhost_dump(struct vhost* host)
     vassert(host);
 
     vdump(printf("-> HOST"));
-    vsockaddr_dump(&host->own_node_info.laddr);
-    host->route.ops->dump(&host->route);
     host->node.ops->dump(&host->node);
-    host->msger.ops->dump(&host->msger);
+    host->route.ops->dump(&host->route);
     host->waiter.ops->dump(&host->waiter);
     vdump(printf("<- HOST"));
 
@@ -437,7 +435,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&zaddr));
-    ret += vroute_init (&host->route, cfg, host, &node_info);
+    ret += vroute_init (&host->route, cfg, host, &node_info.id);
     ret += vnode_init  (&host->node,  cfg, host, &node_info);
     if (ret < 0) {
         vnode_deinit   (&host->node);
