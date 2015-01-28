@@ -380,3 +380,31 @@ void vhashgen_deinit(struct vhashgen* gen)
     return ;
 }
 
+int vhashgen_get_stun_srvcId(vsrvcId* srvcId)
+{
+    struct vhashgen hashgen;
+    int ret = 0;
+    vassert(srvcId);
+
+    ret = vhashgen_init(&hashgen);
+    retE((ret < 0));
+    ret = hashgen.ext_ops->get_stun_hash(&hashgen, srvcId);
+    vhashgen_deinit(&hashgen);
+    retE((ret < 0));
+    return 0;
+}
+
+int vhashgen_get_relay_srvcId(vsrvcId* srvcId)
+{
+    struct vhashgen hashgen;
+    int ret = 0;
+    vassert(srvcId);
+
+    ret = vhashgen_init(&hashgen);
+    retE((ret < 0));
+    ret = hashgen.ext_ops->get_relay_hash(&hashgen, srvcId);
+    vhashgen_deinit(&hashgen);
+    retE((ret < 0));
+    return 0;
+}
+

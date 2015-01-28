@@ -38,5 +38,8 @@ struct vhashgen {
 int  vhashgen_init  (struct vhashgen*);
 void vhashgen_deinit(struct vhashgen*);
 
+int vhashgen_get_stun_srvcId (vsrvcId*);
+int vhashgen_get_relay_srvcId(vsrvcId*);
+
 #endif
 
