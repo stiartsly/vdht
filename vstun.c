@@ -244,7 +244,6 @@ int _vstun_get_ext_addr(struct vstun* stun, get_ext_addr_t cb, void* cookie, str
     return 0;
 }
 
-
 static
 int _vstun_register_service(struct vstun* stun)
 {
