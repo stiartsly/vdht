@@ -238,7 +238,7 @@ struct sockaddr_in* _vnode_get_best_usable_addr(struct vnode* node, vnodeInfo* d
 }
 
 static
-void _vnode_get_own_node_info(struct vnode* node, vnodeInfo* node_info)
+int _vnode_self(struct vnode* node, vnodeInfo* node_info)
 {
     vassert(node);
     vassert(node_info);
@@ -247,7 +247,21 @@ void _vnode_get_own_node_info(struct vnode* node, vnodeInfo* node_info)
     vnodeInfo_copy(node_info, &node->node_info);
     vlock_leave(&node->lock);
 
-    return ;
+    return 0;
+}
+
+static
+int _vnode_is_self(struct vnode* node, struct sockaddr_in* addr)
+{
+    int yes = 0;
+    vassert(node);
+    vassert(addr);
+
+    vlock_enter(&node->lock);
+    yes = vnodeInfo_has_addr(&node->node_info, addr);
+    vlock_leave(&node->lock);
+
+    return yes;
 }
 
 /*
@@ -387,7 +401,8 @@ struct vnode_ops node_ops = {
     .renice               = _vnode_renice,
     .tick                 = _vnode_tick,
     .get_best_usable_addr = _vnode_get_best_usable_addr,
-    .get_own_node_info    = _vnode_get_own_node_info
+    .self                 = _vnode_self,
+    .is_self              = _vnode_is_self
 };
 
 /*

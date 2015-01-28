@@ -71,12 +71,13 @@ struct vnode_ops {
     int  (*stabilize) (struct vnode*);
     void (*dump)      (struct vnode*);
     void (*clear)     (struct vnode*);
-    int  (*reg_service)  (struct vnode*, vsrvcId*, struct sockaddr_in*);
-    void (*unreg_service)(struct vnode*, vsrvcId*, struct sockaddr_in*);
     int  (*renice)    (struct vnode*);
     void (*tick)      (struct vnode*);
+    int  (*self)      (struct vnode*, vnodeInfo*);
+    int  (*is_self)   (struct vnode*, struct sockaddr_in*);
+    int  (*reg_service)  (struct vnode*, vsrvcId*, struct sockaddr_in*);
+    void (*unreg_service)(struct vnode*, vsrvcId*, struct sockaddr_in*);
 
-    void (*get_own_node_info)(struct vnode*, vnodeInfo*);
     struct sockaddr_in* (*get_best_usable_addr)(struct vnode*, vnodeInfo*);
 };
 

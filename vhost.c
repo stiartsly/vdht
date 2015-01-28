@@ -44,11 +44,15 @@ static
 int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
 {
     struct vroute* route = &host->route;
+    struct vnode*  node  = &host->node;
     int ret = 0;
 
     vassert(host);
     vassert(wellknown_addr);
-    retE((vnodeInfo_has_addr(&host->own_node_info, wellknown_addr)));
+
+    if (node->ops->is_self(node, wellknown_addr)) {
+        return -1;
+    }
 
     ret = route->ops->join_node(route, wellknown_addr);
     retE((ret < 0));

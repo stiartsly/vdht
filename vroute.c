@@ -589,7 +589,7 @@ int _vroute_cb_ping(struct vroute* route, vnodeInfo* from, vtoken* token, void* 
     struct vroute_node_space* node_space = &route->node_space;
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
     struct vnode* node = route->node;
-    vnodeInfo own_node_info;
+    vnodeInfo self_info;
     int ret = 0;
 
     vassert(route);
@@ -602,8 +602,8 @@ int _vroute_cb_ping(struct vroute* route, vnodeInfo* from, vtoken* token, void* 
     ret = node_space->ops->add_node(node_space, from);
     retE((ret < 0));
 
-    node->ops->get_own_node_info(node, &own_node_info);
-    ret = route->dht_ops->ping_rsp(route, from, token, &own_node_info);
+    (void)node->ops->self(node, &self_info);
+    ret = route->dht_ops->ping_rsp(route, from, token, &self_info);
     retE((ret < 0));
     return 0;
 }
