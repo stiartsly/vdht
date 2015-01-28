@@ -52,24 +52,16 @@ int _vnode_addr_get_eaddr(struct vnode_addr* node_addr, get_ext_addr_t cb, void*
     struct vroute* route = node_addr->node->route;
     struct vstun* stun   = &node_addr->stun;
     struct sockaddr_in stuns_addr;
+    vsrvcId srvId;
     int ret = 0;
 
     vassert(node_addr);
     vassert(cb);
 
-    {
-        struct vhashgen hashgen;
-        vsrvcId srvId;
-        ret = vhashgen_init(&hashgen);
-        retE((ret < 0));
-        ret = hashgen.ext_ops->get_stun_hash(&hashgen, &srvId);
-        vhashgen_deinit(&hashgen);
-        retE((ret < 0));
-
-        ret = route->ops->get_service(route, &srvId, &stuns_addr);
-        retS((ret <= 0));
-    }
-
+    ret = vhashgen_get_stun_srvcId(&srvId);
+    retE((ret < 0));
+    ret = route->ops->get_service(route, &srvId, &stuns_addr);
+    retS((ret <= 0));
     ret = stun->ops->get_ext_addr(stun, cb, cookie, &stuns_addr);
     retE((ret < 0));
     return 0;

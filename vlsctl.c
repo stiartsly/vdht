@@ -182,9 +182,8 @@ static
 int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost*    host    = lsctl->host;
-    struct vhashgen* hashgen = lsctl->hashgen;
     struct sockaddr_in sin;
-    vtoken hash;
+    vsrvcId srvcId;
     int what = 0;
     int ret = 0;
     int sz = 0;
@@ -204,17 +203,17 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = hashgen->ext_ops->get_stun_hash(hashgen, &hash);
+        ret = vhashgen_get_stun_srvcId(&srvcId);
         break;
     case PLUGIN_RELAY:
-        ret = hashgen->ext_ops->get_relay_hash(hashgen, &hash);
+        ret = vhashgen_get_relay_srvcId(&srvcId);
         break;
     default:
         retE((1));
         break;
     }
     retE((ret < 0));
-    ret = host->svc_ops->publish(host, &hash, &sin);
+    ret = host->svc_ops->publish(host, &srvcId, &sin);
     retE((ret < 0));
     return sz;
 }
@@ -225,10 +224,9 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 {
-    struct vhost*     host   = lsctl->host;
-    struct vhashgen* hashgen = lsctl->hashgen;
+    struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
-    vtoken hash;
+    vsrvcId srvcId;
     int what = 0;
     int ret = 0;
     int sz  = 0;
@@ -248,17 +246,17 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = hashgen->ext_ops->get_stun_hash(hashgen, &hash);
+        ret = vhashgen_get_stun_srvcId(&srvcId);
         break;
     case PLUGIN_RELAY:
-        ret = hashgen->ext_ops->get_relay_hash(hashgen, &hash);
+        ret = vhashgen_get_relay_srvcId(&srvcId);
         break;
     default:
         retE((1));
         break;
     }
     retE((ret < 0));
-    ret = host->svc_ops->cancel(host, &hash, &sin);
+    ret = host->svc_ops->cancel(host, &srvcId, &sin);
     retE((ret < 0));
     return sz;
 }
@@ -269,10 +267,9 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
 static
 int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
 {
-    struct vhost*     host   = lsctl->host;
-    struct vhashgen* hashgen = lsctl->hashgen;
+    struct vhost* host = lsctl->host;
     struct sockaddr_in addr;
-    vtoken hash;
+    vsrvcId srvcId;
     int what = 0;
     int ret = 0;
     int sz  = 0;
@@ -288,17 +285,17 @@ int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = hashgen->ext_ops->get_stun_hash(hashgen, &hash);
+        ret = vhashgen_get_stun_srvcId(&srvcId);
         break;
     case PLUGIN_RELAY:
-        ret = hashgen->ext_ops->get_relay_hash(hashgen, &hash);
+        ret = vhashgen_get_relay_srvcId(&srvcId);
         break;
     default:
         retE((1));
         break;
     }
 
-    ret = host->svc_ops->get(host, &hash, &addr);
+    ret = host->svc_ops->get(host, &srvcId, &addr);
     retE((ret < 0));
     vsockaddr_dump(&addr);
     return sz;
@@ -412,7 +409,6 @@ int vlsctl_init(struct vlsctl* lsctl, struct vhost* host, struct vconfig* cfg)
     retE((ret < 0));
 
     lsctl->host    = host;
-    lsctl->hashgen = &host->hashgen;
     lsctl->ops     = &lsctl_ops;
     lsctl->cmds    = lsctl_cmds;
 

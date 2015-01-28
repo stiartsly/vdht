@@ -433,7 +433,6 @@ struct vhost* vhost_create(struct vconfig* cfg)
         vsockaddr_convert("0.0.0.0", port, &zaddr);
     }
 
-    ret += vhashgen_init(&host->hashgen);
     ret += vticker_init(&host->ticker);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
@@ -449,7 +448,6 @@ struct vhost* vhost_create(struct vconfig* cfg)
         vlsctl_deinit  (&host->lsctl);
         vwaiter_deinit (&host->waiter);
         vticker_deinit (&host->ticker);
-        vhashgen_deinit(&host->hashgen);
         free(host);
         return NULL;
     }
@@ -481,7 +479,6 @@ void vhost_destroy(struct vhost* host)
     vwaiter_deinit(&host->waiter);
     vticker_deinit(&host->ticker);
     vmsger_deinit (&host->msger);
-    vhashgen_deinit(&host->hashgen);
 
     free(host);
     return ;

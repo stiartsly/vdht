@@ -6,8 +6,6 @@
 #include "vlsctl.h"
 #include "vmsger.h"
 #include "vticker.h"
-#include "vhashgen.h"
-//#include "stun/vstunc.h"
 
 struct vhost;
 struct vhost_ops {
@@ -41,7 +39,6 @@ struct vhost {
     struct vroute   route;
     struct vnode    node;
     struct vlsctl   lsctl;
-    struct vhashgen hashgen;
 
     struct vconfig*   cfg;
     struct vhost_ops* ops;

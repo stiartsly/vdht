@@ -45,7 +45,6 @@ struct vlsctl {
     struct vrpc      rpc;
     struct vmsger    msger;
     struct vhost*    host;
-    struct vhashgen* hashgen;
 
     struct vsockaddr   addr;
     struct vlsctl_ops* ops;

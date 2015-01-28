@@ -89,7 +89,6 @@ int _vstun_snd_req_msg(struct vstun* stun, struct vstun_msg* msg, struct sockadd
 
     req = vstun_req_alloc();
     retE((!req));
-
     vstun_req_init(req, msg->header.trans_id, cb, cookie);
 
     vlock_enter(&stun->lock);
@@ -230,17 +229,9 @@ static
 int _vstun_get_ext_addr(struct vstun* stun, get_ext_addr_t cb, void* cookie, struct sockaddr_in* stuns_addr)
 {
     struct vstun_msg msg;
-    struct vhashgen hashgen;
-    vsrvcId srvId;
     int ret = 0;
 
     vassert(stun);
-
-    ret = vhashgen_init(&hashgen);
-    retE((ret < 0));
-    ret = hashgen.ext_ops->get_stun_hash(&hashgen, &srvId);
-    vhashgen_deinit(&hashgen);
-    retE((ret < 0));
 
     memset(&msg, 0, sizeof(msg));
     msg.header.type  = msg_bind_req;
@@ -258,18 +249,13 @@ static
 int _vstun_register_service(struct vstun* stun)
 {
     struct vnode* node = stun->node;
-    struct vhashgen hashgen;
     vsrvcId srvId;
     int ret = 0;
 
     vassert(stun);
 
-    ret = vhashgen_init(&hashgen);
+    ret = vhashgen_get_stun_srvcId(&srvId);
     retE((ret < 0));
-    ret = hashgen.ext_ops->get_stun_hash(&hashgen, &srvId);
-    vhashgen_deinit(&hashgen);
-    retE((ret < 0));
-
     ret = node->ops->reg_service(node, &srvId, &stun->stun_addr);
     retE((ret < 0));
     return 0;
@@ -279,18 +265,13 @@ static
 int _vstun_unregister_service(struct vstun* stun)
 {
     struct vnode* node = stun->node;
-    struct vhashgen hashgen;
     vsrvcId srvId;
     int ret = 0;
 
     vassert(stun);
 
-    ret = vhashgen_init(&hashgen);
+    ret = vhashgen_get_stun_srvcId(&srvId);
     retE((ret < 0));
-    ret = hashgen.ext_ops->get_stun_hash(&hashgen, &srvId);
-    vhashgen_deinit(&hashgen);
-    retE((ret < 0));
-
     node->ops->unreg_service(node, &srvId, &stun->stun_addr);
     return 0;
 }
