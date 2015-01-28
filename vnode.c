@@ -83,21 +83,21 @@ int _vnode_join(struct vnode* node)
     return 0;
 }
 
-#if 0
 static
-int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookie)
+int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookies)
 {
-    struct vnode* node = (struct vnode*)cookie;
+    struct vnode* node = ((void**)cookies)[0];
+    vnodeInfo* ni = ((void**)cookies)[1];
     vassert(eaddr);
     vassert(node);
 
     vlock_enter(&node->lock);
-    vsockaddr_copy(&node->node_info.eaddr, eaddr);
+    vsockaddr_copy(&ni->eaddr, eaddr);
     vlock_leave(&node->lock);
 
+    free(cookies);
     return 0;
 }
-#endif
 
 static
 int _aux_node_tick_cb(void* cookie)
@@ -120,12 +120,17 @@ int _aux_node_tick_cb(void* cookie)
         int i = 0;
         for (i = 0; i < varray_size(&node->nodeinfos); i++) {
             ni = (vnodeInfo*)varray_get(&node->nodeinfos, i);
+            void* cookies = NULL;
             (void)node_addr->ops->get_uaddr(node_addr, &ni->uaddr);
+
+            cookies = malloc(sizeof(void*) * 2);
+            if (!cookie) {
+               continue;
+            }
+            ((void**)cookies)[0] = node;
+            ((void**)cookies)[1] = ni;
+            (void)node_addr->ops->get_eaddr(node_addr, _aux_node_get_eaddr, cookies);
         }
-      //  if (node_addr->ops->get_eaddr(node_addr, _aux_node_get_eaddr, node) < 0) {
-           //node->mode = VDHT_ERR;
-           // break;
-      //  }
         if (route->ops->load(route) < 0) {
             node->mode = VDHT_ERR;
             break;
