@@ -16,7 +16,7 @@ struct vhost_ops {
     int   (*daemonize)  (struct vhost*);
     int   (*shutdown)   (struct vhost*);
     void  (*dump)       (struct vhost*);
-    char* (*get_version)(struct vhost*);
+    char* (*version)    (struct vhost*);
     int   (*bogus_query)(struct vhost*, int, struct sockaddr_in*);
 };
 

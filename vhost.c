@@ -165,7 +165,7 @@ int _vhost_shutdown(struct vhost* host)
  * @len : buffer length.
  */
 static
-char* _vhost_get_version(struct vhost* host)
+char* _vhost_version(struct vhost* host)
 {
     vassert(host);
     return (char*)vhost_get_version();
@@ -183,7 +183,9 @@ static
 int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest_addr)
 {
     struct vroute* route = &host->route;
+    struct vnode*  node  = &host->node;
     vnodeInfo dest_node;
+    vnodeInfo self_node;
     vnodeId   dest_id;
     int ret = 0;
 
@@ -191,7 +193,8 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest_ad
     vassert(dest_addr);
 
     vtoken_make(&dest_id);
-    vnodeInfo_init(&dest_node, &dest_id, dest_addr, &zero_node_ver, 0);
+    vnodeInfo_init(&dest_node, &dest_id, dest_addr, &unknown_node_ver, 0);
+    (void)node->ops->self(node, &self_node);
 
     switch(what) {
     case VDHT_PING:
@@ -199,11 +202,11 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest_ad
         break;
 
     case VDHT_FIND_NODE:
-        ret = route->dht_ops->find_node(route, &dest_node, &host->own_node_info.id);
+        ret = route->dht_ops->find_node(route, &dest_node, &self_node.id);
         break;
 
     case VDHT_FIND_CLOSEST_NODES:
-        ret = route->dht_ops->find_closest_nodes(route, &dest_node, &host->own_node_info.id);
+        ret = route->dht_ops->find_closest_nodes(route, &dest_node, &self_node.id);
         break;
 
     case VDHT_POST_SERVICE:
@@ -226,7 +229,7 @@ struct vhost_ops host_ops = {
     .daemonize   = _vhost_daemonize,
     .shutdown    = _vhost_shutdown,
     .dump        = _vhost_dump,
-    .get_version = _vhost_get_version,
+    .version     = _vhost_version,
     .bogus_query = _vhost_bogus_query
 };
 

@@ -42,7 +42,7 @@ typedef struct vtoken vnodeVer;
 void vnodeVer_dump     (vnodeVer*);
 int  vnodeVer_strlize  (vnodeVer*, char*, int);
 int  vnodeVer_unstrlize(const char*, vnodeVer*);
-extern vtoken zero_node_ver;
+extern vnodeVer unknown_node_ver;
 
 /*
  * for vnodeInfo

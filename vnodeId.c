@@ -229,7 +229,7 @@ int vnodeMetric_cmp(vnodeMetric* a, vnodeMetric* b)
 /*
  * for vnodeVer funcs
  */
-vtoken zero_node_ver = {
+vnodeVer unknown_node_ver = {
     .data = {0, 0, 0, 0, 0}
 };
 
