@@ -83,6 +83,7 @@ int _vnode_join(struct vnode* node)
     return 0;
 }
 
+#if 0
 static
 int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookie)
 {
@@ -96,6 +97,7 @@ int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookie)
 
     return 0;
 }
+#endif
 
 static
 int _aux_node_tick_cb(void* cookie)
@@ -114,14 +116,16 @@ int _aux_node_tick_cb(void* cookie)
         break;
     }
     case VDHT_UP: {
-        if (node_addr->ops->get_uaddr(node_addr, &node->node_info.uaddr) < 0) {
-           // node->mode = VDHT_ERR;
-           // break;
+        vnodeInfo* ni = NULL;
+        int i = 0;
+        for (i = 0; i < varray_size(&node->nodeinfos); i++) {
+            ni = (vnodeInfo*)varray_get(&node->nodeinfos, i);
+            (void)node_addr->ops->get_uaddr(node_addr, &ni->uaddr);
         }
-        if (node_addr->ops->get_eaddr(node_addr, _aux_node_get_eaddr, node) < 0) {
+      //  if (node_addr->ops->get_eaddr(node_addr, _aux_node_get_eaddr, node) < 0) {
            //node->mode = VDHT_ERR;
            // break;
-        }
+      //  }
         if (route->ops->load(route) < 0) {
             node->mode = VDHT_ERR;
             break;
@@ -182,7 +186,10 @@ void _vnode_dump(struct vnode* node)
     vlock_enter(&node->lock);
     vdump(printf("state:%s", node_mode_desc[node->mode]));
     vdump(printf("-> NODE_INFO"));
-    vnodeInfo_dump(&node->node_info);
+    for (i = 0; i < varray_size(&node->nodeinfos); i++) {
+        vnodeInfo* ninfo = (vnodeInfo*)varray_get(&node->nodeinfos, i);
+        vnodeInfo_dump(ninfo);
+    }
     vdump(printf("<- NODE_INFO"));
     vdump(printf("-> LOCAL SVCS"));
     for (i = 0; i < varray_size(&node->services); i++) {
@@ -226,9 +233,10 @@ struct sockaddr_in* _vnode_get_best_usable_addr(struct vnode* node, vnodeInfo* d
     vassert(dest);
 
     vlock_enter(&node->lock);
-    if (!vsockaddr_equal(&node->node_info.eaddr, &dest->eaddr)) {
+    vnodeInfo* ni = (vnodeInfo*)varray_get(&node->nodeinfos, 0);
+    if (!vsockaddr_equal(&ni->eaddr, &dest->eaddr)) {
         addr = &dest->eaddr;
-    } else if (!vsockaddr_equal(&node->node_info.uaddr, &dest->uaddr)) {
+    } else if (!vsockaddr_equal(&ni->uaddr, &dest->uaddr)) {
         addr = &dest->uaddr;
     } else {
         addr = &dest->laddr;
@@ -238,13 +246,13 @@ struct sockaddr_in* _vnode_get_best_usable_addr(struct vnode* node, vnodeInfo* d
 }
 
 static
-int _vnode_self(struct vnode* node, vnodeInfo* node_info)
+int _vnode_self(struct vnode* node, vnodeInfo* ni)
 {
     vassert(node);
-    vassert(node_info);
+    vassert(ni);
 
     vlock_enter(&node->lock);
-    vnodeInfo_copy(node_info, &node->node_info);
+    vnodeInfo_copy(ni, (vnodeInfo*)varray_get(&node->nodeinfos, 0));
     vlock_leave(&node->lock);
 
     return 0;
@@ -253,12 +261,17 @@ int _vnode_self(struct vnode* node, vnodeInfo* node_info)
 static
 int _vnode_is_self(struct vnode* node, struct sockaddr_in* addr)
 {
+    vnodeInfo* ni = NULL;
     int yes = 0;
+    int i = 0;
     vassert(node);
     vassert(addr);
 
     vlock_enter(&node->lock);
-    yes = vnodeInfo_has_addr(&node->node_info, addr);
+    for (i = 0; i < varray_size(&node->nodeinfos); i++) {
+        ni = (vnodeInfo*)varray_get(&node->nodeinfos, i);
+        yes += vnodeInfo_has_addr(ni, addr);
+    }
     vlock_leave(&node->lock);
 
     return yes;
@@ -405,29 +418,80 @@ struct vnode_ops node_ops = {
     .is_self              = _vnode_is_self
 };
 
+static
+int _aux_node_get_nodeinfos(struct vconfig* cfg, vnodeId* my_id, struct varray* nodes, vnodeInfo* main_node)
+{
+    vnodeInfo* ni = NULL;
+    struct sockaddr_in laddr;
+    vnodeVer node_ver;
+    char ip[64];
+    int port = 0;
+    int ret = 0;
+
+    vassert(cfg);
+    vassert(my_id);
+    vassert(nodes);
+
+    port = cfg->ext_ops->get_dht_port(cfg);
+    vnodeVer_unstrlize(vhost_get_version(), &node_ver);
+
+    memset(ip, 0, 64);
+    ret = vhostaddr_get_first(ip, 64);
+    retE((ret < 0));
+    vsockaddr_convert(ip, port, &laddr);
+
+    ni = vnodeInfo_alloc();
+    retE((!ni));
+    vnodeInfo_init(ni, my_id, &laddr, &node_ver, 0);
+    varray_add_tail(nodes, ni);
+    vnodeInfo_copy(main_node, ni);
+
+    while (1) {
+        memset(ip, 0, 64);
+        ret = vhostaddr_get_next(ip, 64);
+        if (ret < 0) {
+            break;
+        }
+        vsockaddr_convert(ip, port, &laddr);
+
+        ni = vnodeInfo_alloc();
+        if (!ni) {
+            vlog((!ni), elog_vnodeInfo_alloc);
+            break;
+        }
+        vnodeInfo_init(ni, my_id, &laddr, &node_ver, 0);
+        varray_add_tail(nodes, ni);
+    }
+    return 0;
+}
+
 /*
  * @node:
  * @msger:
  * @ticker:
  * @addr:
  */
-int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnodeInfo* node_info)
+int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnodeId* my_id)
 {
+    vnodeInfo main_node;
     int ret = 0;
 
     vassert(node);
     vassert(cfg);
     vassert(host);
-    vassert(node_info);
+    vassert(my_id);
 
     vlock_init(&node->lock);
     node->mode  = VDHT_OFF;
 
-    vnodeInfo_copy(&node->node_info, node_info);
     node->nice = 5;
+    varray_init(&node->nodeinfos, 2);
     varray_init(&node->services, 4);
+    ret = _aux_node_get_nodeinfos(cfg, my_id, &node->nodeinfos, &main_node);
+    retE((ret < 0));
+
     vnode_nice_init(&node->node_nice, cfg);
-    vnode_addr_init(&node->node_addr, cfg, &host->msger, node, &node_info->laddr);
+    vnode_addr_init(&node->node_addr, cfg, &host->msger, node, &main_node.laddr);
 
     node->cfg     = cfg;
     node->ticker  = &host->ticker;

@@ -87,8 +87,8 @@ struct vnode {
     int    mode;
     struct vlock lock;  // for mode.
 
-    vnodeInfo node_info;
     int nice;
+    struct varray nodeinfos;
     struct varray services;
 
     struct vnode_nice node_nice;
@@ -101,7 +101,7 @@ struct vnode {
     struct vnode_ops* ops;
 };
 
-int  vnode_init  (struct vnode*, struct vconfig*, struct vhost*, vnodeInfo*);
+int  vnode_init  (struct vnode*, struct vconfig*, struct vhost*, vnodeId*);
 void vnode_deinit(struct vnode*);
 
 #endif

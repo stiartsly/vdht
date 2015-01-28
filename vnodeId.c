@@ -331,10 +331,8 @@ int vnodeInfo_equal(vnodeInfo* a, vnodeInfo* b)
     vassert(a);
     vassert(b);
 
-    if (vtoken_equal(&a->id, &b->id)) {
-        return 1;
-    }
-    return (vsockaddr_equal(&a->laddr, &b->laddr)
+    return (vtoken_equal(&a->id, &b->id)
+         && vsockaddr_equal(&a->laddr, &b->laddr)
          && vsockaddr_equal(&a->uaddr, &b->uaddr)
          && vsockaddr_equal(&a->eaddr, &b->eaddr));
 }

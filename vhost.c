@@ -370,50 +370,15 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
     return 0;
 }
 
-static
-int _aux_host_get_own_nodeinfo(struct vconfig* cfg, vnodeInfo* node_info)
-{
-    struct sockaddr_in node_laddr;
-    vnodeId  node_id;
-    vnodeVer node_ver;
-
-    vassert(cfg);
-    vassert(node_info);
-
-    {
-        char ip[64];
-        int ret  = 0;
-
-        memset(ip, 0, 64);
-        ret = vhostaddr_get_first(ip, 64);
-        vlog((ret < 0), elog_vhostaddr_get_first);
-        retE((ret < 0));
-        ret = vsockaddr_convert(ip, cfg->ext_ops->get_dht_port(cfg), &node_laddr);
-    }
-
-    {
-        vtoken_make(&node_id);
-    }
-    {
-         const char* ver_str = vhost_get_version();
-         vnodeVer_unstrlize(ver_str, &node_ver);
-    }
-
-    vnodeInfo_init(node_info, &node_id, &node_laddr, &node_ver, 0);
-    return 0;
-}
-
 struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
-    vnodeInfo node_info;
     struct sockaddr_in zaddr;
+    vnodeId my_id;
     int tmo = 0;
     int ret = 0;
     vassert(cfg);
 
-    ret = _aux_host_get_own_nodeinfo(cfg, &node_info);
-    retE_p((ret < 0));
     ret = cfg->ext_ops->get_host_tick_tmo(cfg, &tmo);
     retE_p((ret < 0));
 
@@ -429,14 +394,15 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->svc_ops  = &host_svc_ops;
 
     vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &zaddr);
+    vtoken_make(&my_id);
 
     ret += vticker_init(&host->ticker);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&zaddr));
-    ret += vroute_init (&host->route, cfg, host, &node_info.id);
-    ret += vnode_init  (&host->node,  cfg, host, &node_info);
+    ret += vroute_init (&host->route, cfg, host, &my_id);
+    ret += vnode_init  (&host->node,  cfg, host, &my_id);
     if (ret < 0) {
         vnode_deinit   (&host->node);
         vroute_deinit  (&host->route);
