@@ -88,12 +88,10 @@ struct vnode_addr_ops node_addr_ops = {
 
 int vnode_addr_init(struct vnode_addr* node_addr, struct vconfig* cfg, struct vmsger* msger, struct vnode* node, struct sockaddr_in* laddr)
 {
-    int ret = 0;
     vassert(node_addr);
     vassert(cfg);
 
-    ret = cfg->ext_ops->get_dht_port(cfg, &node_addr->iport);
-    retE((ret < 0));
+    node_addr->iport = cfg->ext_ops->get_dht_port(cfg);
     node_addr->eport = 0;
     node_addr->node  = node;
 

@@ -377,17 +377,13 @@ int _aux_host_get_own_nodeinfo(struct vconfig* cfg, vnodeInfo* node_info)
 
     {
         char ip[64];
-        int port = 0;
         int ret  = 0;
 
         memset(ip, 0, 64);
         ret = vhostaddr_get_first(ip, 64);
         vlog((ret < 0), elog_vhostaddr_get_first);
         retE((ret < 0));
-
-        ret = cfg->ext_ops->get_dht_port(cfg, &port);
-        retE((ret < 0));
-        ret = vsockaddr_convert(ip, port, &node_laddr);
+        ret = vsockaddr_convert(ip, cfg->ext_ops->get_dht_port(cfg), &node_laddr);
     }
 
     {
@@ -427,11 +423,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->ops      = &host_ops;
     host->svc_ops  = &host_svc_ops;
 
-    {
-        int port = 12300;
-        cfg->ext_ops->get_dht_port(cfg, &port);
-        vsockaddr_convert("0.0.0.0", port, &zaddr);
-    }
+    vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &zaddr);
 
     ret += vticker_init(&host->ticker);
     ret += vwaiter_init(&host->waiter);

@@ -48,10 +48,7 @@ struct vconfig_ext_ops {
     int (*get_route_max_snd_tms) (struct vconfig*, int*);
     int (*get_route_max_rcv_period)   (struct vconfig*, int*);
 
-    int (*get_dht_port)          (struct vconfig*, int*);
-
-    int (*get_stun_port)         (struct vconfig*, int*);
-    int (*get_stun_server_name)  (struct vconfig*, char*, int);
+    int (*get_dht_port)          (struct vconfig*);
 };
 
 struct vconfig {

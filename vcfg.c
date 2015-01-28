@@ -1033,38 +1033,14 @@ int _aux_get_addr_port(struct vconfig* cfg, const char* key, int* port)
 }
 
 static
-int _vcfg_get_dht_port(struct vconfig* cfg, int* port)
+int _vcfg_get_dht_port(struct vconfig* cfg)
 {
+    int port = 0;
     int ret = 0;
     vassert(cfg);
-    vassert(port);
 
-    ret = _aux_get_addr_port(cfg, "dht.address", port);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_stun_port(struct vconfig* cfg, int* port)
-{
-    int ret = 0;
-    vassert(cfg);
-    vassert(port);
-
-    ret = _aux_get_addr_port(cfg, "ice.address", port);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vcfg_get_stun_server_name(struct vconfig* cfg, char* buf, int len)
-{
-    vassert(cfg);
-    vassert(buf);
-    vassert(len > 0);
-
-    //todo;
-    return 0;
+    ret = _aux_get_addr_port(cfg, "dht.address", &port);
+    return (ret >= 0) ? port : 12300;
 }
 
 static
@@ -1078,9 +1054,6 @@ struct vconfig_ext_ops cfg_ext_ops = {
     .get_route_max_rcv_period    = _vcfg_get_route_max_rcv_period,
 
     .get_dht_port           = _vcfg_get_dht_port,
-
-    .get_stun_port          = _vcfg_get_stun_port,
-    .get_stun_server_name   = _vcfg_get_stun_server_name
 };
 
 int vconfig_init(struct vconfig* cfg)
