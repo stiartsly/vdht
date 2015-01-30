@@ -84,7 +84,7 @@ int _vnode_join(struct vnode* node)
 }
 
 static
-int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookies)
+int _aux_node_get_eaddr_cb(struct sockaddr_in* eaddr, void* cookies)
 {
     struct vnode* node = ((void**)cookies)[0];
     vnodeInfo* ni = ((void**)cookies)[1];
@@ -100,11 +100,54 @@ int _aux_node_get_eaddr(struct sockaddr_in* eaddr, void* cookies)
 }
 
 static
+int _aux_node_load_boot_node_cb(struct sockaddr_in* boot_addr, void* cookie)
+{
+    struct vnode*  node  = (struct vnode*)cookie;
+    struct vroute* route = node->route;
+    int ret = 0;
+    vassert(boot_addr);
+
+    if (node->ops->is_self(node, boot_addr)) {
+        return 0;
+    }
+
+    vsockaddr_dump(boot_addr);
+    ret = route->ops->join_node(route, boot_addr);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _aux_node_get_all_addrs(struct vnode* node)
+{
+    struct vnode_addr* node_addr = &node->node_addr;
+    vnodeInfo* ni = NULL;
+    int i = 0;
+
+    for (i = 0;i < varray_size(&node->nodeinfos); i++) {
+        ni = (vnodeInfo*)varray_get(&node->nodeinfos, i);
+        void* cookies = NULL;
+
+        (void)node_addr->ops->get_uaddr(node_addr, &ni->uaddr);
+
+        cookies = malloc(sizeof(void*) * 2);
+        if (!cookies) {
+            continue;
+        }
+        ((void**)cookies)[0] = node;
+        ((void**)cookies)[1] = ni;
+        (void)node_addr->ops->get_eaddr(node_addr, _aux_node_get_eaddr_cb, cookies);
+    }
+
+    return 0;
+}
+
+static
 int _aux_node_tick_cb(void* cookie)
 {
     struct vnode* node   = (struct vnode*)cookie;
     struct vroute* route = node->route;
-    struct vnode_addr* node_addr = &node->node_addr;
+    struct vconfig* cfg  = node->cfg;
     time_t now = time(NULL);
     vassert(node);
 
@@ -116,25 +159,10 @@ int _aux_node_tick_cb(void* cookie)
         break;
     }
     case VDHT_UP: {
-        vnodeInfo* ni = NULL;
-        int i = 0;
-        for (i = 0; i < varray_size(&node->nodeinfos); i++) {
-            ni = (vnodeInfo*)varray_get(&node->nodeinfos, i);
-            void* cookies = NULL;
-            (void)node_addr->ops->get_uaddr(node_addr, &ni->uaddr);
+        (void)_aux_node_get_all_addrs(node);
+        (void)route->ops->load(route);
+        (void)cfg->ext_ops->get_boot_nodes(cfg, _aux_node_load_boot_node_cb, node);
 
-            cookies = malloc(sizeof(void*) * 2);
-            if (!cookie) {
-               continue;
-            }
-            ((void**)cookies)[0] = node;
-            ((void**)cookies)[1] = ni;
-            (void)node_addr->ops->get_eaddr(node_addr, _aux_node_get_eaddr, cookies);
-        }
-        if (route->ops->load(route) < 0) {
-            node->mode = VDHT_ERR;
-            break;
-        }
         node->ts   = now;
         node->mode = VDHT_RUN;
         vlogI(printf("DHT start running"));

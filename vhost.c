@@ -51,9 +51,8 @@ int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
     vassert(wellknown_addr);
 
     if (node->ops->is_self(node, wellknown_addr)) {
-        return -1;
+        return 0;
     }
-
     ret = route->ops->join_node(route, wellknown_addr);
     retE((ret < 0));
     vlogI(printf("Joined a node"));

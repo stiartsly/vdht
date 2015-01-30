@@ -37,9 +37,11 @@ struct vconfig_ops {
     struct varray* (*get_tuple_val)(struct vconfig*, const char*);
 };
 
+typedef int (*vcfg_load_boot_node_t)(struct sockaddr_in*, void*);
 struct vconfig_ext_ops {
     int (*get_lsctl_unix_path)   (struct vconfig*, char*, int);
 
+    int (*get_boot_nodes)        (struct vconfig*, vcfg_load_boot_node_t, void*);
     int (*get_host_tick_tmo)     (struct vconfig*);
 
     int (*get_route_db_file)     (struct vconfig*, char*, int);
