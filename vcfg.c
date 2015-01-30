@@ -894,19 +894,16 @@ int _vcfg_get_lsctl_unix_path(struct vconfig* cfg, char* path, int len)
 }
 
 static
-int _vcfg_get_host_tick_tmo(struct vconfig* cfg, int* tmo)
+int _vcfg_get_host_tick_tmo(struct vconfig* cfg)
 {
     const char* val = NULL;
     int tms = 0;
     int ret = 0;
 
     vassert(cfg);
-    vassert(tmo);
-
     val = cfg->ops->get_str_val(cfg, "global.tick_timeout");
     if (!val) {
-        *tmo = 5;
-        return 0;
+        goto error_exit;
     }
 
     ret = strlen(val);
@@ -918,15 +915,18 @@ int _vcfg_get_host_tick_tmo(struct vconfig* cfg, int* tmo)
         tms = 60;
         break;
     default:
-        retE((1));
+        goto error_exit;
         break;
     }
     errno = 0;
     ret = strtol(val, NULL, 10);
-    retE((errno));
+    if (errno) {
+        goto error_exit;
+    }
+    return (ret* tms);
 
-    *tmo = (ret * tms);
-    return 0;
+error_exit:
+    return (5);
 }
 
 static
@@ -948,45 +948,43 @@ int _vcfg_get_route_db_file(struct vconfig* cfg, char* db, int len)
 }
 
 static
-int _vcfg_get_route_bucket_sz(struct vconfig* cfg, int* sz)
+int _vcfg_get_route_bucket_sz(struct vconfig* cfg)
 {
+    int sz = 0;
     vassert(cfg);
-    vassert(sz);
 
-    *sz = cfg->ops->get_int_val(cfg, "route.bucket_size");
-    if (*sz < 0) {
-        *sz = 0;
+    sz = cfg->ops->get_int_val(cfg, "route.bucket_size");
+    if (sz < 0) {
+        sz = 10;
     }
-    return 0;
+    return sz;
 }
 
 static
-int _vcfg_get_route_max_snd_tms(struct vconfig* cfg, int* tms)
+int _vcfg_get_route_max_snd_tms(struct vconfig* cfg)
 {
+    int tms = 0;
     vassert(cfg);
-    vassert(tms);
 
-    *tms = cfg->ops->get_int_val(cfg, "route.max_send_times");
-    if (*tms < 0) {
-        *tms = 5;
+    tms = cfg->ops->get_int_val(cfg, "route.max_send_times");
+    if (tms < 0) {
+        tms = 5;
     }
-    return 0;
+    return tms;
 }
 
 static
-int _vcfg_get_route_max_rcv_period(struct vconfig* cfg, int* period)
+int _vcfg_get_route_max_rcv_tmo(struct vconfig* cfg)
 {
     const char* val = NULL;
     int tms = 0;
     int ret = 0;
 
     vassert(cfg);
-    vassert(period);
 
     val = cfg->ops->get_str_val(cfg, "global.tick_timeout");
     if (!val) {
-        *period = 60; //1 minute.
-        return 0;
+        goto error_exit;
     }
 
     ret = strlen(val);
@@ -998,15 +996,18 @@ int _vcfg_get_route_max_rcv_period(struct vconfig* cfg, int* period)
         tms = 60;
         break;
     default:
-        retE((1));
+        goto error_exit;
         break;
     }
     errno = 0;
     ret = strtol(val, NULL, 10);
-    retE((errno));
+    if (errno) {
+        goto error_exit;
+    }
+    return (ret * tms);
 
-    *period = ret * tms;
-    return 0;
+error_exit:
+    return (60); //default value;
 }
 
 static
@@ -1040,7 +1041,10 @@ int _vcfg_get_dht_port(struct vconfig* cfg)
     vassert(cfg);
 
     ret = _aux_get_addr_port(cfg, "dht.address", &port);
-    return (ret >= 0) ? port : 12300;
+    if (ret < 0) {
+        port = (12300);
+    }
+    return port;
 }
 
 static
@@ -1051,8 +1055,7 @@ struct vconfig_ext_ops cfg_ext_ops = {
     .get_route_db_file      = _vcfg_get_route_db_file,
     .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
     .get_route_max_snd_tms  = _vcfg_get_route_max_snd_tms,
-    .get_route_max_rcv_period    = _vcfg_get_route_max_rcv_period,
-
+    .get_route_max_rcv_tmo  = _vcfg_get_route_max_rcv_tmo,
     .get_dht_port           = _vcfg_get_dht_port,
 };
 

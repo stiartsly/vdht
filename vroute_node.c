@@ -130,7 +130,7 @@ int _aux_space_tick_cb(void* item, void* cookie)
         return 0;
     }
     if ((!peer->snd_ts) ||
-        (*now - peer->rcv_ts > space->max_rcv_period)) {
+        (*now - peer->rcv_ts > space->max_rcv_tmo)) {
         route->dht_ops->ping(route, &peer->node);
         peer->snd_ts = *now;
         peer->ntries++;
@@ -439,7 +439,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
         if (varray_size(peers) <= 0) {
             continue;
         }
-        if ((space->bucket[i].ts + space->max_rcv_period) >= now) {
+        if ((space->bucket[i].ts + space->max_rcv_tmo) >= now) {
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
@@ -607,11 +607,11 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     vassert(cfg);
     vassert(my_id);
 
-    ret += cfg->ext_ops->get_route_db_file(cfg, space->db, BUF_SZ);
-    ret += cfg->ext_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
-    ret += cfg->ext_ops->get_route_max_snd_tms(cfg, &space->max_snd_tms);
-    ret += cfg->ext_ops->get_route_max_rcv_period(cfg, &space->max_rcv_period);
+    ret = cfg->ext_ops->get_route_db_file(cfg, space->db, BUF_SZ);
     retE((ret < 0));
+    space->bucket_sz   = cfg->ext_ops->get_route_bucket_sz(cfg);
+    space->max_snd_tms = cfg->ext_ops->get_route_max_snd_tms(cfg);
+    space->max_rcv_tmo = cfg->ext_ops->get_route_max_rcv_tmo(cfg);
 
     ret = _aux_space_prepare_db(space);
     retE((ret < 0));

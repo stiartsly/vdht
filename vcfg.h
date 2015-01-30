@@ -40,13 +40,12 @@ struct vconfig_ops {
 struct vconfig_ext_ops {
     int (*get_lsctl_unix_path)   (struct vconfig*, char*, int);
 
-    int (*get_host_tick_tmo)     (struct vconfig*, int*);
-    int (*get_node_tick_interval)(struct vconfig*, int*);
+    int (*get_host_tick_tmo)     (struct vconfig*);
 
     int (*get_route_db_file)     (struct vconfig*, char*, int);
-    int (*get_route_bucket_sz)   (struct vconfig*, int*);
-    int (*get_route_max_snd_tms) (struct vconfig*, int*);
-    int (*get_route_max_rcv_period)   (struct vconfig*, int*);
+    int (*get_route_bucket_sz)   (struct vconfig*);
+    int (*get_route_max_snd_tms) (struct vconfig*);
+    int (*get_route_max_rcv_tmo) (struct vconfig*);
 
     int (*get_dht_port)          (struct vconfig*);
 };

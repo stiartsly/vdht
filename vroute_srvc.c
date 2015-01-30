@@ -225,17 +225,14 @@ struct vroute_srvc_space_ops route_srvc_space_ops = {
 
 int vroute_srvc_space_init(struct vroute_srvc_space* space, struct vconfig* cfg)
 {
-    int ret = 0;
     int i = 0;
-
     vassert(space);
     vassert(cfg);
 
     for (i = 0; i < NBUCKETS; i++) {
         varray_init(&space->bucket[i].srvcs, 8);
     }
-    ret = cfg->ext_ops->get_route_bucket_sz(cfg, &space->bucket_sz);
-    retE((ret < 0));
+    space->bucket_sz = cfg->ext_ops->get_route_bucket_sz(cfg);
     space->ops = &route_srvc_space_ops;
 
     return 0;

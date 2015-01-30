@@ -375,19 +375,15 @@ struct vhost* vhost_create(struct vconfig* cfg)
     struct vhost* host = NULL;
     struct sockaddr_in zaddr;
     vnodeId my_id;
-    int tmo = 0;
     int ret = 0;
     vassert(cfg);
-
-    ret = cfg->ext_ops->get_host_tick_tmo(cfg, &tmo);
-    retE_p((ret < 0));
 
     host = (struct vhost*)malloc(sizeof(struct vhost));
     vlog((!host), elog_malloc);
     retE_p((!host));
     memset(host, 0, sizeof(*host));
 
-    host->tick_tmo = tmo;
+    host->tick_tmo = cfg->ext_ops->get_host_tick_tmo(cfg);
     host->to_quit  = 0;
     host->cfg      = cfg;
     host->ops      = &host_ops;

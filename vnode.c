@@ -141,7 +141,7 @@ int _aux_node_tick_cb(void* cookie)
         break;
     }
     case VDHT_RUN: {
-        if (now - node->ts > node->tick_interval) {
+        if (now - node->ts > node->tick_tmo) {
             route->ops->tick(route);
             node->ops->tick(node);
             node->ts = now;
@@ -502,9 +502,8 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     node->ticker  = &host->ticker;
     node->route   = &host->route;
     node->ops     = &node_ops;
+    node->tick_tmo= cfg->ext_ops->get_host_tick_tmo(cfg);
 
-    ret = cfg->ext_ops->get_host_tick_tmo(cfg, &node->tick_interval);
-    retE((ret < 0));
     return 0;
 }
 

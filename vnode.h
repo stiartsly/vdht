@@ -82,7 +82,7 @@ struct vnode_ops {
 };
 
 struct vnode {
-    int    tick_interval;
+    int    tick_tmo;
     time_t ts;
     int    mode;
     struct vlock lock;  // for mode.

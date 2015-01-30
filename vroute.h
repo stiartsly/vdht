@@ -75,7 +75,7 @@ struct vroute_node_space {
     char db[BUF_SZ];
     int  bucket_sz;
     int  max_snd_tms;
-    int  max_rcv_period;
+    int  max_rcv_tmo;
 
     struct vroute* route;
     struct vroute_node_space_bucket {
