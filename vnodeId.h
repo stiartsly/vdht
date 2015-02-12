@@ -47,6 +47,13 @@ extern vnodeVer unknown_node_ver;
 /*
  * for vnodeInfo
  */
+enum {
+    VNODEINFO_LADDR = 1 << 0,
+    VNODEINFO_UADDR = 1 << 1,
+    VNODEINFO_EADDR = 1 << 2,
+    VNODEINFO_RADDR = 1 << 3
+};
+
 struct vnodeInfo  {
     vnodeId  id;
     vnodeVer ver;
@@ -56,6 +63,7 @@ struct vnodeInfo  {
     struct sockaddr_in uaddr; // upnp  address
     struct sockaddr_in eaddr; // external address.
     struct sockaddr_in raddr; // relay address
+    uint32_t addr_flags;
 };
 typedef struct vnodeInfo vnodeInfo;
 
@@ -63,7 +71,10 @@ vnodeInfo* vnodeInfo_alloc(void);
 void vnodeInfo_free (vnodeInfo*);
 int  vnodeInfo_equal(vnodeInfo*, vnodeInfo*);
 void vnodeInfo_copy (vnodeInfo*, vnodeInfo*);
-int  vnodeInfo_init (vnodeInfo*, vnodeId*, struct sockaddr_in*, vnodeVer*, int32_t);
+int  vnodeInfo_init (vnodeInfo*, vnodeId*, vnodeVer*, int32_t);
+void vnodeInfo_set_laddr(vnodeInfo*, struct sockaddr_in*);
+void vnodeInfo_set_uaddr(vnodeInfo*, struct sockaddr_in*);
+void vnodeInfo_set_eaddr(vnodeInfo*, struct sockaddr_in*);
 void vnodeInfo_dump (vnodeInfo*);
 int  vnodeInfo_has_addr(vnodeInfo*, struct sockaddr_in*);
 

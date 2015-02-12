@@ -180,30 +180,28 @@ static
 int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest_addr)
 {
     struct vroute* route = &host->route;
-    struct vnode*  node  = &host->node;
-    vnodeInfo dest_node;
-    vnodeInfo self_node;
-    vnodeId   dest_id;
+    vnodeInfo dest;
+    vnodeId id;
     int ret = 0;
 
     vassert(host);
     vassert(dest_addr);
 
-    vtoken_make(&dest_id);
-    vnodeInfo_init(&dest_node, &dest_id, dest_addr, &unknown_node_ver, 0);
-    (void)node->ops->self(node, &self_node);
+    vtoken_make(&id);
+    vnodeInfo_init(&dest, &id, &unknown_node_ver, 0);
+    vnodeInfo_set_eaddr(&dest, dest_addr);
 
     switch(what) {
     case VDHT_PING:
-        ret = route->dht_ops->ping(route, &dest_node);
+        ret = route->dht_ops->ping(route, &dest);
         break;
 
     case VDHT_FIND_NODE:
-        ret = route->dht_ops->find_node(route, &dest_node, &self_node.id);
+        ret = route->dht_ops->find_node(route, &dest, &host->myid);
         break;
 
     case VDHT_FIND_CLOSEST_NODES:
-        ret = route->dht_ops->find_closest_nodes(route, &dest_node, &self_node.id);
+        ret = route->dht_ops->find_closest_nodes(route, &dest, &host->myid);
         break;
 
     case VDHT_POST_SERVICE:
@@ -373,7 +371,6 @@ struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
     struct sockaddr_in zaddr;
-    vnodeId my_id;
     int ret = 0;
     vassert(cfg);
 
@@ -389,15 +386,15 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->svc_ops  = &host_svc_ops;
 
     vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &zaddr);
-    vtoken_make(&my_id);
+    vtoken_make(&host->myid);
 
     ret += vticker_init(&host->ticker);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&zaddr));
-    ret += vroute_init (&host->route, cfg, host, &my_id);
-    ret += vnode_init  (&host->node,  cfg, host, &my_id);
+    ret += vroute_init (&host->route, cfg, host, &host->myid);
+    ret += vnode_init  (&host->node,  cfg, host, &host->myid);
     if (ret < 0) {
         vnode_deinit   (&host->node);
         vroute_deinit  (&host->route);

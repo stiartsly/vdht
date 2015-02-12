@@ -100,7 +100,7 @@ int _vupnpc_shutdown(struct vupnpc* upnpc)
  * @eaddr:
  */
 static
-int _vupnpc_map(struct vupnpc* upnpc, uint16_t iport, uint16_t eport, int proto, struct sockaddr_in* eaddr)
+int _vupnpc_map(struct vupnpc* upnpc, struct sockaddr_in* laddr, int proto, struct sockaddr_in* eaddr)
 {
     struct vupnpc_config* cfg = (struct vupnpc_config*)upnpc->config;
     char siaddr[32];
@@ -111,11 +111,12 @@ int _vupnpc_map(struct vupnpc* upnpc, uint16_t iport, uint16_t eport, int proto,
     char sduration[8];
     char siaddr_tmp[32];
     char siport_tmp[8];
+    int16_t eport = 0;
     char tmp[64];
     int  ret = 0;
 
     vassert(upnpc);
-    retE((UPNPC_READY != upnpc->state));
+    retE((UPNPC_READY != upnpc->state) && (UPNPC_ACTIVE != upnpc->state));
 
     memset(siaddr, 0, 32);
     memset(seaddr, 0, 32);
@@ -127,20 +128,19 @@ int _vupnpc_map(struct vupnpc* upnpc, uint16_t iport, uint16_t eport, int proto,
     memset(siport_tmp, 0, 8);
 
     {
-        struct sockaddr_in iaddr;
         uint32_t uiaddr;
 
-        vsockaddr_convert(upnpc->lan_iaddr, iport, &iaddr);
-        uiaddr = ntohl(iaddr.sin_addr.s_addr);
+        uiaddr = ntohl(laddr->sin_addr.s_addr);
         snprintf(siaddr, 32, "%d.%d.%d.%d",
                 (uiaddr >> 24) & 0xff,
                 (uiaddr >> 16) & 0xff,
                 (uiaddr >> 8 ) & 0xff,
                 (uiaddr >> 0 ) & 0xff);
     }
-    snprintf(siport, 8, "%d", iport);
-    snprintf(seport, 8, "%d", eport);
+    snprintf(siport, 8, "%d", ntohs(laddr->sin_port));
+    snprintf(seport, 8, "%d", ntohs(laddr->sin_port));
     snprintf(sproto, 8, "%s", upnp_protos[proto]);
+    eport = ntohs(laddr->sin_port);
 
 
     ret = UPNP_GetExternalIPAddress(cfg->urls.controlURL, cfg->data.first.servicetype, seaddr);

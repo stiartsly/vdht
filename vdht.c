@@ -111,14 +111,18 @@ struct be_node* _aux_create_vnodeInfo(vnodeInfo* info)
     be_add_keypair(dict, "id", node);
     node = be_create_ver(&info->ver);
     be_add_keypair(dict, "v", node);
-    node = be_create_addr(&info->laddr);
-    be_add_keypair(dict, "ml", node);
-    node = be_create_addr(&info->uaddr);
-    be_add_keypair(dict, "mu", node);
-    node = be_create_addr(&info->eaddr);
-    be_add_keypair(dict, "me", node);
-   // node = be_create_addr(&info->raddr);
-   // be_add_keypair(dict, "mr", node);
+    if (info->addr_flags & VNODEINFO_LADDR) {
+        node = be_create_addr(&info->laddr);
+        be_add_keypair(dict, "ml", node);
+    }
+    if (info->addr_flags & VNODEINFO_UADDR) {
+        node = be_create_addr(&info->uaddr);
+        be_add_keypair(dict, "mu", node);
+    }
+    if (info->addr_flags & VNODEINFO_EADDR) {
+        node = be_create_addr(&info->eaddr);
+        be_add_keypair(dict, "me", node);
+    }
     node = be_create_int(info->weight);
     be_add_keypair(dict, "w", node);
 
@@ -689,6 +693,10 @@ static
 int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
 {
     struct be_node* node = NULL;
+    struct sockaddr_in laddr, uaddr, eaddr;
+    vnodeId  id;
+    vnodeVer ver;
+    int weight = 0;
     int ret = 0;
 
     vassert(dict);
@@ -697,38 +705,42 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
 
     ret = be_node_by_key(dict, "id", &node);
     retE((ret < 0));
-    ret = be_unpack_token(node, &info->id);
+    ret = be_unpack_token(node, &id);
     retE((ret < 0));
 
     ret = be_node_by_key(dict, "v", &node);
     retE((ret < 0));
-    ret = be_unpack_ver(node, &info->ver);
+    ret = be_unpack_ver(node, &ver);
     retE((ret < 0));
-
-    ret = be_node_by_key(dict, "ml", &node);
-    retE((ret < 0));
-    ret = be_unpack_addr(node, &info->laddr);
-    retE((ret < 0));
-
-    ret = be_node_by_key(dict, "mu", &node);
-    retE((ret < 0));
-    ret = be_unpack_addr(node, &info->uaddr);
-    retE((ret < 0));
-
-    ret = be_node_by_key(dict, "me", &node);
-    retE((ret < 0));
-    ret = be_unpack_addr(node, &info->eaddr);
-    retE((ret < 0));
-
-  //  ret = be_node_by_key(dict, "mr", &node);
-  //  retE((ret < 0));
-  //  ret = be_unpack_addr(node, &info->raddr);
-  //  retE((ret < 0));
 
     ret = be_node_by_key(dict, "w", &node);
     retE((ret < 0));
-    ret = be_unpack_int(node, &info->weight);
+    ret = be_unpack_int(node, &weight);
     retE((ret < 0));
+
+    vnodeInfo_init(info, &id, &ver, weight);
+
+    ret = be_node_by_key(dict, "ml", &node);
+    if (ret >= 0) {
+        ret = be_unpack_addr(node, &laddr);
+        retE((ret < 0));
+    }
+    ret = be_node_by_key(dict, "mu", &node);
+    if (ret >= 0) {
+        ret = be_unpack_addr(node, &uaddr);
+        retE((ret < 0));
+    }
+    ret = be_node_by_key(dict, "me", &node);
+    if (ret >= 0) {
+        ret = be_unpack_addr(node, &eaddr);
+        retE((ret < 0));
+    }
+
+    vnodeInfo_init(info, &id, &ver, weight);
+    vnodeInfo_set_laddr(info, &laddr);
+    vnodeInfo_set_uaddr(info, &uaddr);
+    vnodeInfo_set_eaddr(info, &eaddr);
+
     return 0;
 }
 

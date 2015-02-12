@@ -43,14 +43,15 @@ struct vnode_addr;
 struct vnode_addr_ops {
     int  (*setup)     (struct vnode_addr*);
     void (*shutdown)  (struct vnode_addr*);
-    int  (*get_uaddr) (struct vnode_addr*, struct sockaddr_in*);
+    int  (*get_uaddr) (struct vnode_addr*, struct sockaddr_in*, struct sockaddr_in*);
     int  (*get_eaddr) (struct vnode_addr*, get_ext_addr_t, void*);
     int  (*get_raddr) (struct vnode_addr*, struct sockaddr_in*);
+    int  (*pub_stuns) (struct vnode_addr*, struct sockaddr_in*);
 };
 
 struct vnode_addr {
-    int iport;
-    int eport;
+    int pubed;
+
     struct vupnpc upnpc;
     struct vstun  stun;
     struct vnode* node;
@@ -58,7 +59,7 @@ struct vnode_addr {
     struct vnode_addr_ops* ops;
 };
 
-int  vnode_addr_init  (struct vnode_addr*, struct vconfig*, struct vmsger*, struct vnode*, struct sockaddr_in*);
+int  vnode_addr_init  (struct vnode_addr*, struct vmsger*, struct vnode*);
 void vnode_addr_deinit(struct vnode_addr*);
 
 /*
@@ -67,7 +68,7 @@ void vnode_addr_deinit(struct vnode_addr*);
 struct vnode_ops {
     int  (*start)     (struct vnode*);
     int  (*stop)      (struct vnode*);
-    int  (*join)      (struct vnode*);
+    int  (*wait_for_stop)(struct vnode*);
     int  (*stabilize) (struct vnode*);
     void (*dump)      (struct vnode*);
     void (*clear)     (struct vnode*);
@@ -90,6 +91,8 @@ struct vnode {
     int nice;
     struct varray nodeinfos;
     struct varray services;
+    vnodeInfo* main_node_info;
+
 
     struct vnode_nice node_nice;
     struct vnode_addr node_addr;

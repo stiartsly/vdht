@@ -62,12 +62,12 @@ int vhostaddr_get_next(char* host, int sz)
     }
 
     ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
+    gindex++;
     if (strcmp(ip, "127.0.0.1")) {
         retE((strlen(ip) + 1 > sz));
         strcpy(host, ip);
         return 0;
     }
-    gindex++;
 
     retE((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
     ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);

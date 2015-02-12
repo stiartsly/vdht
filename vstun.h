@@ -20,8 +20,8 @@ struct vstun_base_ops {
 
 struct vstun_ops {
     int  (*get_ext_addr)(struct vstun*, get_ext_addr_t, void*, struct sockaddr_in*);
-    int  (*reg_service) (struct vstun*);
-    int  (*unreg_service)(struct vstun*);
+    int  (*reg_service) (struct vstun*, struct sockaddr_in*);
+    int  (*unreg_service)(struct vstun*, struct sockaddr_in*);
 };
 
 struct vstun {
@@ -40,7 +40,7 @@ struct vstun {
 
 };
 
-int  vstun_init  (struct vstun*, struct vmsger*, struct vnode*, struct sockaddr_in*);
+int  vstun_init  (struct vstun*, struct vmsger*, struct vnode*);
 void vstun_deinit(struct vstun*);
 
 #endif

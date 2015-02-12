@@ -29,6 +29,7 @@ struct vhost_svc_ops {
 struct vhost {
     int  to_quit;
     int  tick_tmo;
+    vnodeId myid;
 
     struct vthread  thread;
     struct vmsger   msger;

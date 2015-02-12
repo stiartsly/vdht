@@ -150,9 +150,9 @@ void vthread_deinit(struct vthread* thread)
  */
 
 static
-void timer_thread(union sigval sv)
+void _aux_timer_routine(union sigval sv)
 {
-    struct vtimer* timer = (struct vtimer*)(sv.sival_int);
+    struct vtimer* timer = (struct vtimer*)(sv.sival_ptr);
     vassert(timer);
 
     (void)timer->cb(timer->cookie);
@@ -172,9 +172,9 @@ int vtimer_init(struct vtimer* timer, vtimer_cb_t cb, void* cookie)
     timer->cookie = cookie;
 
     memset(&evp, 0, sizeof(evp));
-    evp.sigev_value.sival_int = (int)timer;
+    evp.sigev_value.sival_ptr = timer;
     evp.sigev_notify = SIGEV_THREAD;
-    evp.sigev_notify_function = timer_thread;
+    evp.sigev_notify_function = _aux_timer_routine;
 
     ret = timer_create(CLOCK_REALTIME, &evp, &timer->id);
     vlog((ret < 0), elog_timer_create);

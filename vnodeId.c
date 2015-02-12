@@ -352,22 +352,48 @@ void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
     return ;
 }
 
-int vnodeInfo_init(vnodeInfo* info, vnodeId* id, struct sockaddr_in* addr, vnodeVer* ver, int32_t weight)
+int vnodeInfo_init(vnodeInfo* info, vnodeId* id, vnodeVer* ver, int32_t weight)
 {
     vassert(info);
     vassert(id);
-    vassert(addr);
     vassert(ver);
     vassert(weight >= 0);
 
+    memset(info, 0, sizeof(*info));
     vtoken_copy(&info->id,  id );
     vtoken_copy(&info->ver, ver);
-    vsockaddr_copy(&info->laddr, addr);
-    vsockaddr_copy(&info->uaddr, addr);
-    vsockaddr_copy(&info->eaddr, addr);
-    vsockaddr_copy(&info->raddr, addr);
     info->weight = weight;
     return 0;
+}
+
+void vnodeInfo_set_laddr(vnodeInfo* info, struct sockaddr_in* laddr)
+{
+    vassert(info);
+    vassert(laddr);
+
+    vsockaddr_copy(&info->laddr, laddr);
+    info->addr_flags |= VNODEINFO_LADDR;
+    return ;
+}
+
+void vnodeInfo_set_uaddr(vnodeInfo* info, struct sockaddr_in* uaddr)
+{
+    vassert(info);
+    vassert(uaddr);
+
+    vsockaddr_copy(&info->uaddr, uaddr);
+    info->addr_flags |= VNODEINFO_UADDR;
+    return ;
+}
+
+void vnodeInfo_set_eaddr(vnodeInfo* info, struct sockaddr_in* eaddr)
+{
+    vassert(info);
+    vassert(eaddr);
+
+    vsockaddr_copy(&info->eaddr, eaddr);
+    info->addr_flags |= VNODEINFO_RADDR;
+    return ;
 }
 
 void vnodeInfo_dump(vnodeInfo* info)
@@ -376,10 +402,17 @@ void vnodeInfo_dump(vnodeInfo* info)
 
     vtoken_dump(&info->id);
     vnodeVer_dump(&info->ver);
-    vsockaddr_dump(&info->laddr);
-    vsockaddr_dump(&info->uaddr);
-    vsockaddr_dump(&info->eaddr);
     vdump(printf("weight: %d", info->weight));
+    vdump(printf("addr_flags:0x%x", info->addr_flags));
+    if (info->addr_flags & VNODEINFO_LADDR) {
+        vsockaddr_dump(&info->laddr);
+    }
+    if (info->addr_flags & VNODEINFO_UADDR) {
+        vsockaddr_dump(&info->uaddr);
+    }
+    if (info->addr_flags & VNODEINFO_EADDR) {
+        vsockaddr_dump(&info->eaddr);
+    }
     return ;
 }
 
@@ -388,9 +421,12 @@ int vnodeInfo_has_addr(vnodeInfo* info, struct sockaddr_in* addr)
     vassert(info);
     vassert(addr);
 
-    return (vsockaddr_equal(&info->laddr, addr)
-         || vsockaddr_equal(&info->uaddr, addr)
-         || vsockaddr_equal(&info->eaddr, addr));
+    return (((info->addr_flags & VNODEINFO_LADDR)
+            && vsockaddr_equal(&info->laddr, addr))
+        || ((info->addr_flags & VNODEINFO_UADDR)
+            && vsockaddr_equal(&info->uaddr, addr))
+        || ((info->addr_flags & VNODEINFO_EADDR)
+            && vsockaddr_equal(&info->eaddr, addr)));
 }
 
 /*

@@ -15,18 +15,20 @@ static
 int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
 {
     struct vroute_node_space* space = &route->node_space;
-    vnodeInfo node_info;
+    vnodeInfo ni;
     int ret = 0;
 
     vassert(route);
     vassert(addr);
 
     {
-        vtoken_make(&node_info.id);
-        vnodeInfo_init(&node_info, &node_info.id, addr, &unknown_node_ver, 0);
+        vtoken id;
+        vtoken_make(&id);
+        vnodeInfo_init(&ni, &id, &unknown_node_ver, 0);
+        vnodeInfo_set_eaddr(&ni, addr);
     }
     vlock_enter(&route->lock);
-    ret = space->ops->add_node(space, &node_info);
+    ret = space->ops->add_node(space, &ni);
     vlock_leave(&route->lock);
     retE((ret < 0));
     return 0;
@@ -907,7 +909,9 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
     retE((ret < 0));
     vlogI(printf("received @%s", vdht_get_desc(ret)));
 
-    vnodeInfo_init(&src_info, &src_id, to_sockaddr_sin(mu->addr), &unknown_node_ver, 1);
+    vnodeInfo_init(&src_info, &src_id, &unknown_node_ver, 1);
+    vnodeInfo_set_eaddr(&src_info, to_sockaddr_sin(mu->addr));
+
     ret = route->cb_ops[ret](route, &src_info, &token, ctxt);
     dec_ops->dec_done(ctxt);
     retE((ret < 0));
