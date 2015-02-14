@@ -11,8 +11,10 @@ static struct ifreq  gifr[16];
 static int gindex = 0;
 int vhostaddr_get_first(char* host, int sz)
 {
+    struct ifreq* req = NULL;
     char* ip = NULL;
     int sockfd = 0;
+    int no_ifs = 0;
     int ret = 0;
 
     vassert(host);
@@ -32,50 +34,51 @@ int vhostaddr_get_first(char* host, int sz)
     vlog((ret < 0), elog_ioctl);
     retE((ret < 0));
 
-    ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
-    if (strcmp(ip, "127.0.0.1")) {
-        retE((strlen(ip) + 1 > sz));
-        strcpy(host, ip);
-        return 0;
+    req = &gifr[gindex];
+    while (strncmp(req->ifr_name, "eth", 3)) {
+        gindex++;
+        req = &gifr[gindex];
+        if (gindex >= gifc.ifc_len/sizeof(struct ifreq)) {
+            no_ifs = 1;
+            break;
+        }
     }
-    gindex++;
+    retS((no_ifs));
 
-    retE((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
-    ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
+    ip = inet_ntoa(((struct sockaddr_in*)&(req->ifr_addr))->sin_addr);
     retE((strlen(ip) + 1 > sz));
     strcpy(host, ip);
     gindex++;
-
-    return 0;
+    return 1;
 }
 
 int vhostaddr_get_next(char* host, int sz)
 {
+    struct ifreq* req = NULL;
     char* ip = NULL;
     vassert(host);
     vassert(sz > 0);
+    int no_ifs = 0;
 
     retE((!gindex));
+    retS((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
 
-    if (gindex >= gifc.ifc_len/sizeof(struct ifreq)) {
-        return -1;
+    req = &gifr[gindex];
+    while (strncmp(req->ifr_name, "eth", 3)) {
+        gindex++;
+        req = &gifr[gindex];
+        if (gindex >= gifc.ifc_len/sizeof(struct ifreq)) {
+            no_ifs = 1;
+            break;
+        }
     }
+    retS((no_ifs));
 
-    ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
-    gindex++;
-    if (strcmp(ip, "127.0.0.1")) {
-        retE((strlen(ip) + 1 > sz));
-        strcpy(host, ip);
-        return 0;
-    }
-
-    retE((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
-    ip = inet_ntoa(((struct sockaddr_in*)&(gifr[gindex].ifr_addr))->sin_addr);
+    ip = inet_ntoa(((struct sockaddr_in*)&(req->ifr_addr))->sin_addr);
     retE((strlen(ip) + 1 > sz));
     strcpy(host, ip);
     gindex++;
-
-    return 0;
+    return 1;
 }
 
 void vsockaddr_copy(struct sockaddr_in* dst, struct sockaddr_in* src)

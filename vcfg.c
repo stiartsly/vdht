@@ -845,7 +845,11 @@ struct varray* _vcfg_get_list_val(struct vconfig* cfg, const char* key)
     vassert(key);
 
     item = _aux_get_cfg_item(&cfg->dict, (char*)key);
-    retE_p((!item));
+    if (!item) {
+        vlogI(printf("no boot nodes in config file"));
+        return NULL;
+    }
+
     retE_p((CFG_LIST != item->type));
     return &item->val.l.l;
 }
@@ -971,7 +975,7 @@ int _vcfg_load_boot_nodes(struct vconfig* cfg, vcfg_load_boot_node_t cb, void* c
     vassert(cb);
 
     boot_nodes = cfg->ops->get_list_val(cfg, "boot");
-    retE((!boot_nodes));
+    retS((!boot_nodes));
 
     for (i = 0; i < varray_size(boot_nodes); i++) {
         struct varray* tuple_addr = NULL;

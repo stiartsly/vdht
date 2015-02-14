@@ -500,7 +500,7 @@ int _aux_node_get_nodeinfos(struct vconfig* cfg, vnodeId* my_id, struct varray* 
 
     memset(ip, 0, 64);
     ret = vhostaddr_get_first(ip, 64);
-    retE((ret < 0));
+    retE((ret <= 0));
     vsockaddr_convert(ip, port, &laddr);
 
     ni = vnodeInfo_alloc();
@@ -514,7 +514,7 @@ int _aux_node_get_nodeinfos(struct vconfig* cfg, vnodeId* my_id, struct varray* 
     while (1) {
         memset(ip, 0, 64);
         ret = vhostaddr_get_next(ip, 64);
-        if (ret < 0) {
+        if (ret <= 0) {
             break;
         }
         vsockaddr_convert(ip, port, &laddr);
