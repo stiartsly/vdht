@@ -64,10 +64,9 @@ void vpeer_dump(struct vpeer* peer)
 
     vdump(printf("-> PEER"));
     vnodeInfo_dump(&peer->node);
-    vdump(printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet"));
-    vdump(printf("timestamp[rcv]: %s",  ctime(&peer->rcv_ts)));
-    vdump(printf("tried send times:%d", peer->ntries));
-    vdump(printf("<- PEER"));
+    printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet");
+    printf("timestamp[rcv]: %s",  ctime(&peer->rcv_ts));
+    printf("tried send times:%d", peer->ntries);
     return ;
 }
 
@@ -535,18 +534,23 @@ static
 void _vroute_node_space_dump(struct vroute_node_space* space)
 {
     struct varray* peers = NULL;
+    int titled = 0;
     int i = 0;
     int j = 0;
     vassert(space);
 
-    vdump(printf("-> NODE ROUTING SPACE"));
     for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
+            if (!titled) {
+                vdump(printf("-> list of peers in node routing space:"));
+                titled = 1;
+            }
+            printf("{ ");
             vpeer_dump((struct vpeer*)varray_get(peers, j));
+            printf(" }\n");
         }
     }
-    vdump(printf("<- NODE ROUTING SPACE"));
 
     return ;
 }

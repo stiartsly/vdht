@@ -505,8 +505,10 @@ void vsrvcInfo_dump(vsrvcInfo* svc_info)
 {
     vassert(svc_info);
     vtoken_dump(&svc_info->id);
+    printf(", address:");
     vsockaddr_dump(&svc_info->addr);
-    vdump(printf("nice:%d", svc_info->nice));
+    printf(", ");
+    printf("nice:%d", svc_info->nice);
 
     return ;
 }

@@ -251,7 +251,7 @@ void _vnode_dump(struct vnode* node)
     vlock_enter(&node->lock);
     vdump(printf("-> state:%s", node_mode_desc[node->mode]));
     if (varray_size(&node->nodeinfos) > 0) {
-        vdump(printf("-> node metadata: "));
+        vdump(printf("-> list of nodes:"));
         for (i = 0; i < varray_size(&node->nodeinfos); i++) {
             vnodeInfo* ninfo = (vnodeInfo*)varray_get(&node->nodeinfos, i);
             printf("{ ");
@@ -260,7 +260,7 @@ void _vnode_dump(struct vnode* node)
         }
     }
     if (varray_size(&node->services) > 0) {
-        vdump(printf("-> service metadata:"));
+        vdump(printf("-> list of services:"));
         for (i = 0; i < varray_size(&node->services); i++) {
             vsrvcInfo* svc = (vsrvcInfo*)varray_get(&node->services, i);
             printf("{ ");

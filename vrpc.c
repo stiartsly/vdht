@@ -133,9 +133,9 @@ void _vrpc_unix_dump(void* impl)
     struct vunix_domain* unx = (struct vunix_domain*)impl;
     vassert(unx);
 
-    vdump(printf("unix domain"));
-    vdump(printf("addr: %s", unx->addr.sun_path));
-    vdump(printf("fd: %d", unx->sock_fd));
+    printf("unix domain ");
+    printf("address: %s ", unx->addr.sun_path);
+    printf("fd: %d", unx->sock_fd);
     return ;
 }
 
@@ -298,10 +298,9 @@ void _vrpc_udp_dump(void* impl)
     vassert(udp);
 
     vsockaddr_unconvert(&udp->addr, buf, 64, (uint16_t*)&port);
-    vdump(printf("udp"));
-    vdump(printf("addr: %s:%d", buf, port));
-    vdump(printf("fd: %d", udp->sock_fd));
-
+    printf("udp ");
+    printf("address: %s:%d ", buf, port);
+    printf("fd: %d", udp->sock_fd);
     return ;
 }
 
@@ -404,9 +403,9 @@ static
 void _vrpc_dump(struct vrpc* rpc)
 {
     vassert(rpc);
-    vdump(printf("-> RPC"));
+    printf("{ ");
     rpc->base_ops->dump(rpc->impl);
-    vdump(printf("<- RPC"));
+    printf(" }\n");
     return ;
 }
 
@@ -627,11 +626,10 @@ int _vwaiter_dump(struct vwaiter* wt)
 {
     vassert(wt);
 
-    vdump(printf("-> WAITER"));
+    vdump(printf("-> rpc list: "));
     vlock_enter(&wt->lock);
     varray_iterate(&wt->rpcs, _aux_dump_cb, wt);
     vlock_leave(&wt->lock);
-    vdump(printf("<- WAITER"));
     return 0;
 }
 

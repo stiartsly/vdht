@@ -45,10 +45,8 @@ static
 void vservice_dump(struct vservice* item)
 {
     vassert(item);
-    vdump(printf("-> SERVICE"));
     vsrvcInfo_dump(&item->svc);
-    vdump(printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts)));
-    vdump(printf("<- SERVICE"));
+    printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts));
     return;
 }
 
@@ -199,19 +197,24 @@ static
 void _vroute_srvc_dump(struct vroute_srvc_space* space)
 {
     struct varray* svcs = NULL;
+    int titled = 0;
     int i = 0;
     int j = 0;
 
     vassert(space);
 
-    vdump(printf("-> SRVC ROUTING SPACE"));
     for (i = 0; i < NBUCKETS; i++) {
         svcs = &space->bucket[i].srvcs;
         for (j = 0; j < varray_size(svcs); j++) {
+            if (!titled) {
+                vdump(printf("-> list of services in service routing space:"));
+                titled = 1;
+            }
+            printf("{ ");
             vservice_dump((struct vservice*)varray_get(svcs, j));
+            printf(" }\n");
         }
     }
-    vdump(printf("<- SRVC ROUTING SPACE"));
     return;
 }
 

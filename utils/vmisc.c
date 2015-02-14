@@ -237,7 +237,7 @@ int vsockaddr_dump(struct sockaddr_in* addr)
     ret = vsockaddr_unconvert(addr, ip, 64, &port);
     vlog((ret < 0), elog_vsockaddr_unconvert);
     retE((ret < 0));
-    vdump(printf("ADDR:%s:%d", ip, port));
+    printf("%s:%d", ip, port);
     return 0;
 }
 
