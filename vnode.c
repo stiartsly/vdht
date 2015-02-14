@@ -249,19 +249,25 @@ void _vnode_dump(struct vnode* node)
 
     vdump(printf("-> NODE"));
     vlock_enter(&node->lock);
-    vdump(printf("state:%s", node_mode_desc[node->mode]));
-    vdump(printf("-> NODE_INFO"));
-    for (i = 0; i < varray_size(&node->nodeinfos); i++) {
-        vnodeInfo* ninfo = (vnodeInfo*)varray_get(&node->nodeinfos, i);
-        vnodeInfo_dump(ninfo);
+    vdump(printf("-> state:%s", node_mode_desc[node->mode]));
+    if (varray_size(&node->nodeinfos) > 0) {
+        vdump(printf("-> node metadata: "));
+        for (i = 0; i < varray_size(&node->nodeinfos); i++) {
+            vnodeInfo* ninfo = (vnodeInfo*)varray_get(&node->nodeinfos, i);
+            printf("{ ");
+            vnodeInfo_dump(ninfo);
+            printf(" }\n");
+        }
     }
-    vdump(printf("<- NODE_INFO"));
-    vdump(printf("-> LOCAL SVCS"));
-    for (i = 0; i < varray_size(&node->services); i++) {
-        vsrvcInfo* svc = (vsrvcInfo*)varray_get(&node->services, i);
-        vsrvcInfo_dump(svc);
+    if (varray_size(&node->services) > 0) {
+        vdump(printf("-> service metadata:"));
+        for (i = 0; i < varray_size(&node->services); i++) {
+            vsrvcInfo* svc = (vsrvcInfo*)varray_get(&node->services, i);
+            printf("{ ");
+            vsrvcInfo_dump(svc);
+            printf(" }\n");
+        }
     }
-    vdump(printf("<- LOCAL SVCS"));
     vlock_leave(&node->lock);
     vdump(printf("<- NODE"));
     return ;

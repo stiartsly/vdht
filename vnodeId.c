@@ -153,7 +153,7 @@ void vtoken_dump(vtoken* token)
     ret = snprintf(buf+sz, 64-sz, "%x%x", (data >> 4), (data & 0x0f));
     sz += ret;
     i++;
-    vdump(printf("%s", buf));
+    printf("%s", buf);
     return;
 }
 
@@ -298,9 +298,9 @@ void vnodeVer_dump(vnodeVer* ver)
     memset(sver, 0, 64);
     vnodeVer_strlize(ver, sver, 64);
     if (!strcmp("0.0.0.0.0", sver)) {
-        vdump(printf("empty"));
+        printf("version: unknown");
     } else {
-        vdump(printf("ver:%s", sver));
+        printf("version: %s", sver);
     }
     return;
 }
@@ -401,16 +401,21 @@ void vnodeInfo_dump(vnodeInfo* info)
     vassert(info);
 
     vtoken_dump(&info->id);
+    printf(", ");
     vnodeVer_dump(&info->ver);
-    vdump(printf("weight: %d", info->weight));
-    vdump(printf("addr_flags:0x%x", info->addr_flags));
+    printf(", ");
+    printf("weight: %d, ", info->weight);
+
     if (info->addr_flags & VNODEINFO_LADDR) {
+        printf(" laddr:");
         vsockaddr_dump(&info->laddr);
     }
     if (info->addr_flags & VNODEINFO_UADDR) {
+        printf(", uaddr:");
         vsockaddr_dump(&info->uaddr);
     }
     if (info->addr_flags & VNODEINFO_EADDR) {
+        printf(", eaddr:");
         vsockaddr_dump(&info->eaddr);
     }
     return ;
