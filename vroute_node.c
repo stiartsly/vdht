@@ -360,6 +360,9 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
             if (vtoken_equal(&peer->node.id, target)) {
                 continue;
             }
+            if (vtoken_equal(&peer->node.ver, &unknown_node_ver)) {
+                continue;
+            }
             vsorted_array_add(&sarray, peer);
         }
     }
