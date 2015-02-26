@@ -21,6 +21,8 @@ int  vsockaddr_unconvert2(struct sockaddr_in*, uint32_t*, uint16_t*);
 int  vsockaddr_strlize   (struct sockaddr_in*, char*, int );
 int  vsockaddr_unstrlize (const char*, struct sockaddr_in*);
 int  vsockaddr_combine   (struct sockaddr_in*, struct sockaddr_in*, struct sockaddr_in*);
+int  vsockaddr_is_public (struct sockaddr_in*);
+int  vsockaddr_is_private(struct sockaddr_in*);
 int  vsockaddr_dump      (struct sockaddr_in*);
 
 /*

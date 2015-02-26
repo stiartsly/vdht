@@ -1,6 +1,15 @@
 #include "vglobal.h"
 #include "vmisc.h"
 
+
+enum {
+    VADDR_CLASS_A,
+    VADDR_CLASS_B,
+    VADDR_CLASS_C,
+    VADDR_CLASS_D,
+    VADDR_CLASS_E
+};
+
 /**
  * @ host: [in, out]
  * @ len:  [in] buffer size;
@@ -64,7 +73,6 @@ int vhostaddr_get_next(char* host, int sz)
 
     vassert(host);
     vassert(sz > 0);
-   
 
     retE((!gindex));
     retS((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
@@ -232,6 +240,67 @@ int vsockaddr_combine(struct sockaddr_in* ip_part, struct sockaddr_in* port_part
     addr->sin_addr = ip_part->sin_addr;
 
     return 0;
+}
+
+static
+int _aux_sockaddr_class(uint32_t haddr) //host byte order
+{
+    struct addr_class_pattern {
+        int  klass;
+        uint32_t mask;
+    } patterns[] = {
+        {VADDR_CLASS_A, 0x80000000 },
+        {VADDR_CLASS_B, 0x40000000 },
+        {VADDR_CLASS_C, 0x20000000 },
+        {VADDR_CLASS_D, 0x10000000 },
+        {VADDR_CLASS_E, 0 }
+    };
+    struct addr_class_pattern* pattern = patterns;
+
+    for (; pattern->klass != VADDR_CLASS_E; pattern++) {
+        if (!(haddr & pattern->mask)) {
+            break;
+        }
+    }
+    return pattern->klass;
+}
+
+int vsockaddr_is_public(struct sockaddr_in* addr)
+{
+    vassert(addr);
+
+    //todo;
+    return !vsockaddr_is_private(addr);
+}
+
+int vsockaddr_is_private(struct sockaddr_in* addr)
+{
+    struct priv_addr_pattern {
+        int klass;
+        uint32_t mask;
+        uint32_t pattern;
+    } priv_patterns[] = {
+        {VADDR_CLASS_A, 0xff000000, 0x0a000000 }, //"10.0.0.0/8"
+        {VADDR_CLASS_B, 0xfff00000, 0xac100000 }, //"172.16.0.0/12",
+        {VADDR_CLASS_C, 0xffff0000, 0xc0a80000 }, //"192.168.0.0/16",
+        {-1, 0, 0 }
+    };
+    struct priv_addr_pattern* pattern = priv_patterns;
+    uint32_t haddr = ntohl(addr->sin_addr.s_addr);
+    int klass = 0;
+    int yes = 0;
+    vassert(addr);
+
+    klass = _aux_sockaddr_class(haddr);
+
+    for (; pattern->klass != -1; pattern++) {
+        if ((klass == pattern->klass)
+           && ((haddr & pattern->mask) == pattern->pattern)){
+            yes = 1;
+            break;
+        }
+    }
+    return yes;
 }
 
 int vsockaddr_dump(struct sockaddr_in* addr)
