@@ -96,11 +96,18 @@ void _aux_node_get_uaddrs(struct vnode* node)
 
     for (i = 0; i < varray_size(&node->nodeinfos); i++) {
         ni = (vnodeInfo*)varray_get(&node->nodeinfos, i);
+        if (vsockaddr_is_public(&ni->laddr)) {
+            // if being public side, then need not.
+            continue;
+        }
         ret = na->ops->get_uaddr(na, &ni->laddr, &uaddr);
         if (ret < 0) {
             continue;
         }
         vnodeInfo_set_uaddr(ni, &uaddr);
+        if (vsockaddr_is_public(&uaddr)) {
+            vnodeInfo_set_eaddr(ni, &uaddr);
+        }
     }
     return;
 }
@@ -135,6 +142,7 @@ void _aux_node_get_eaddrs(struct vnode* node)
     if (node->main_node_info->addr_flags & VNODEINFO_EADDR) {
         na->ops->pub_stuns(na, &node->main_node_info->eaddr);
     }
+
     for (i = 0; i < varray_size(&node->nodeinfos); i++) {
         ni = (vnodeInfo*)varray_get(&node->nodeinfos, i);
         void* cookies = NULL;
@@ -525,9 +533,14 @@ int _aux_node_get_nodeinfos(struct vconfig* cfg, vnodeId* my_id, struct varray* 
     vsockaddr_convert(ip, port, &laddr);
 
     ni = vnodeInfo_alloc();
+    vlog((!ni), elog_vnodeInfo_alloc);
     retE((!ni));
+
     vnodeInfo_init(ni, my_id, &node_ver, 0);
     vnodeInfo_set_laddr(ni, &laddr);
+    if (vsockaddr_is_public(&laddr)) {
+        vnodeInfo_set_eaddr(ni, &laddr);
+    }
     varray_add_tail(nodes, ni);
 
     *main_node_info = ni;
@@ -547,6 +560,9 @@ int _aux_node_get_nodeinfos(struct vconfig* cfg, vnodeId* my_id, struct varray* 
         }
         vnodeInfo_init(ni, my_id, &node_ver, 0);
         vnodeInfo_set_laddr(ni, &laddr);
+        if (vsockaddr_is_public(&laddr)) {
+            vnodeInfo_set_eaddr(ni, &laddr);
+        }
         varray_add_tail(nodes, ni);
     }
     return 0;
