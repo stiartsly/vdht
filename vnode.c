@@ -303,11 +303,26 @@ struct sockaddr_in* _vnode_get_best_usable_addr(struct vnode* node, vnodeInfo* d
     vassert(dest);
 
     vlock_enter(&node->lock);
-    if (!vsockaddr_equal(&node->main_node_info->eaddr, &dest->eaddr)) {
-        addr = &dest->eaddr;
-    } else if (!vsockaddr_equal(&node->main_node_info->uaddr, &dest->uaddr)) {
-        addr = &dest->uaddr;
-    } else {
+    if ((!addr) && (dest->addr_flags & VNODEINFO_EADDR)) {
+        if (node->main_node_info->addr_flags & VNODEINFO_EADDR) {
+            if (!vsockaddr_equal(&node->main_node_info->eaddr, &dest->eaddr)) {
+                addr = &dest->eaddr;
+            }
+        } else {
+            addr = &dest->eaddr;
+        }
+    }
+
+    if ((!addr) && (dest->addr_flags & VNODEINFO_UADDR)) {
+        if (node->main_node_info->addr_flags & VNODEINFO_UADDR) {
+            if (!vsockaddr_equal(&node->main_node_info->uaddr, &dest->uaddr)) {
+                addr = &dest->uaddr;
+            }
+        } else {
+            addr = &dest->uaddr;
+        }
+    }
+    if ((!addr) && (dest->addr_flags & VNODEINFO_LADDR)) {
         addr = &dest->laddr;
     }
     vlock_leave(&node->lock);

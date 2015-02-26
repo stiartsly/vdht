@@ -194,15 +194,10 @@ static
 struct sockaddr_in* most_efficient_addr(struct vroute* route, vnodeInfo* dest)
 {
     struct vnode* node = route->node;
-    struct sockaddr_in* addr = NULL;
     vassert(route);
     vassert(dest);
 
-    addr = node->ops->get_best_usable_addr(node, dest);
-    printf("--->");
-    vsockaddr_dump(addr);
-    printf("\n <---\n");
-    return addr;
+    return node->ops->get_best_usable_addr(node, dest);
 }
 
 static
