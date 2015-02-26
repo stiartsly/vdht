@@ -16,6 +16,7 @@ int vhostaddr_get_first(char* host, int sz)
     int sockfd = 0;
     int no_ifs = 0;
     int ret = 0;
+    int yes = 0;
 
     vassert(host);
     vassert(sz > 0);
@@ -35,13 +36,15 @@ int vhostaddr_get_first(char* host, int sz)
     retE((ret < 0));
 
     req = &gifr[gindex];
-    while (strncmp(req->ifr_name, "eth", 3)) {
+    yes = !strncmp(req->ifr_name, "eth", 3) || !strncmp(req->ifr_name, "wlan", 4);
+    while (!yes) {
         gindex++;
-        req = &gifr[gindex];
         if (gindex >= gifc.ifc_len/sizeof(struct ifreq)) {
             no_ifs = 1;
             break;
         }
+        req = &gifr[gindex];
+        yes = !strncmp(req->ifr_name, "eth", 3) || !strncmp(req->ifr_name, "wlan", 4);
     }
     retS((no_ifs));
 
@@ -56,21 +59,26 @@ int vhostaddr_get_next(char* host, int sz)
 {
     struct ifreq* req = NULL;
     char* ip = NULL;
+    int no_ifs = 0;
+    int yes = 0;
+
     vassert(host);
     vassert(sz > 0);
-    int no_ifs = 0;
+   
 
     retE((!gindex));
     retS((gindex >= gifc.ifc_len/sizeof(struct ifreq)));
 
     req = &gifr[gindex];
-    while (strncmp(req->ifr_name, "eth", 3)) {
+    yes = !strncmp(req->ifr_name, "eth", 3) || !strncmp(req->ifr_name, "wlan", 4);
+    while(!yes) {
         gindex++;
-        req = &gifr[gindex];
         if (gindex >= gifc.ifc_len/sizeof(struct ifreq)) {
             no_ifs = 1;
             break;
         }
+        req = &gifr[gindex];
+        yes = !strncmp(req->ifr_name, "eth", 3) || !strncmp(req->ifr_name, "wlan", 4);
     }
     retS((no_ifs));
 
