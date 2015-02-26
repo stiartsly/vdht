@@ -217,14 +217,13 @@ int _aux_space_store_cb(void* item, void* cookie)
 static
 int _aux_space_weight_cmp_cb(void* item, void* new, void* cookie)
 {
-    varg_decl(cookie, 0, struct vroute_node_space*, space);
-    varg_decl(cookie, 1, vnodeId*, targetId);
     struct vpeer* peer = (struct vpeer*)item;
     struct vpeer* tgt  = (struct vpeer*)new;
+    vnodeId* targetId  = (vnodeId*)cookie;
     vnodeMetric pm, tm;
 
-    if (tgt->ntries >= space->max_snd_tms) {
-        // if being unreachable, try not use the node.
+    if (tgt->ntries > 0) {
+        // try to not use node that may be unreachable.
         return -1;
     }
     if (!vtoken_equal(&tgt->node.ver, &peer->node.ver)) {
@@ -342,7 +341,6 @@ static
 int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* target, struct varray* closest, int num)
 {
     struct vsorted_array sarray;
-    void* argv[] = {space, target };
     int i = 0;
     int j = 0;
 
@@ -351,7 +349,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
     vassert(closest);
     vassert(num > 0);
 
-    vsorted_array_init(&sarray, 0, _aux_space_weight_cmp_cb, argv);
+    vsorted_array_init(&sarray, 0, _aux_space_weight_cmp_cb, target);
 
     for (i = 0; i < NBUCKETS; i++) {
         struct varray* peers = &space->bucket[i].peers;
