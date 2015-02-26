@@ -194,10 +194,15 @@ static
 struct sockaddr_in* most_efficient_addr(struct vroute* route, vnodeInfo* dest)
 {
     struct vnode* node = route->node;
+    struct sockaddr_in* addr = NULL;
     vassert(route);
     vassert(dest);
 
-    return node->ops->get_best_usable_addr(node, dest);
+    addr = node->ops->get_best_usable_addr(node, dest);
+    printf("--->");
+    vsockaddr_dump(addr);
+    printf("\n <---\n");
+    return addr;
 }
 
 static
@@ -742,7 +747,9 @@ int _vroute_cb_find_closest_nodes(struct vroute* route, vnodeInfo* from, vtoken*
 
     varray_init(&closest, MAX_CAPC);
     ret = space->ops->get_neighbors(space, &target, &closest, MAX_CAPC);
-    ret1E((ret <= 0), varray_deinit(&closest));
+    ret1E((ret < 0), varray_deinit(&closest));
+    retS((ret == 0)); // Do not response if no closest nodes found,
+
     ret = route->dht_ops->find_closest_nodes_rsp(route, from, token, &closest);
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
     varray_deinit(&closest);
