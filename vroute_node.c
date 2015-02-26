@@ -2,9 +2,6 @@
 #include "vroute.h"
 
 #define VPEER_TB ((const char*)"dht_peer")
-
-#define vminimum(a, b)   ((a < b) ? a: b)
-
 /*
  * for vpeer
  */
@@ -217,6 +214,34 @@ int _aux_space_store_cb(void* item, void* cookie)
     return 0;
 }
 
+static
+int _aux_space_weight_cmp_cb(void* item, void* new, void* cookie)
+{
+    varg_decl(cookie, 0, struct vroute_node_space*, space);
+    varg_decl(cookie, 1, vnodeId*, targetId);
+    struct vpeer* peer = (struct vpeer*)item;
+    struct vpeer* tgt  = (struct vpeer*)new;
+    vnodeMetric pm, tm;
+
+    if (tgt->ntries >= space->max_snd_tms) {
+        // if being unreachable, try not use the node.
+        return -1;
+    }
+    if (!vtoken_equal(&tgt->node.ver, &peer->node.ver)) {
+        // if mismatch for version, try not use the node.
+        return -1;
+    }
+    if (tgt->node.weight > peer->node.weight) {
+        // prefer to use node with hight weight
+        return 1;
+    }
+
+    vnodeId_dist(&peer->node.id, targetId, &pm);
+    vnodeId_dist(&tgt->node.id, targetId, &tm);
+
+    return vnodeMetric_cmp(&tm, &pm);
+}
+
 /*
  * the routine to add a node to routing table.
  * @route: routing table.
@@ -316,71 +341,44 @@ int _vroute_node_space_get_node(struct vroute_node_space* space, vnodeId* target
 static
 int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* target, struct varray* closest, int num)
 {
-    struct vpeer_track {
-        vnodeMetric metric;
-        int bucket_idx;
-        int item_idx;
-    };
-
-    int _aux_space_track_cmp_cb(void* a, void* b, void* cookie)
-    {
-        struct vpeer_track* item = (struct vpeer_track*)b;
-        struct vpeer_track* tgt  = (struct vpeer_track*)a;
-
-        return vnodeMetric_cmp(&tgt->metric, &item->metric);
-    }
-
-    void _aux_space_peer_free_cb(void* item, void* cookie)
-    {
-        struct vpeer_track* track = (struct vpeer_track*)item;
-        struct vmem_aux* maux = (struct vmem_aux*)cookie;
-
-        vmem_aux_free(maux, track);
-    }
-
-    struct vsorted_array array;
-    struct vmem_aux maux;
+    struct vsorted_array sarray;
+    void* argv[] = {space, target };
     int i = 0;
     int j = 0;
-
-    struct vpeer_track* track = NULL;
-    struct varray* peers = NULL;
-    struct vpeer* item = NULL;
 
     vassert(space);
     vassert(target);
     vassert(closest);
     vassert(num > 0);
 
-    vmem_aux_init(&maux, sizeof(struct vpeer_track), 8);
-    vsorted_array_init(&array, 0,  _aux_space_track_cmp_cb, space);
+    vsorted_array_init(&sarray, 0, _aux_space_weight_cmp_cb, argv);
 
     for (i = 0; i < NBUCKETS; i++) {
-        peers = &space->bucket[i].peers;
+        struct varray* peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
-            track = (struct vpeer_track*)vmem_aux_alloc(&maux);
-            item  = (struct vpeer*)varray_get(peers, j);
-            vnodeId_dist(&item->node.id, target, &track->metric);
-            track->bucket_idx = i;
-            track->item_idx   = j;
-            vsorted_array_add(&array, track);
+            vsorted_array_add(&sarray, varray_get(peers, j));
         }
     }
-    for (i = 0; i < vminimum(num, vsorted_array_size(&array)); i++) {
-        vnodeInfo* info = NULL;
-        track = (struct vpeer_track*)vsorted_array_get(&array, i);
-        peers = &space->bucket[track->bucket_idx].peers;
-        item  = (struct vpeer*)varray_get(peers, track->item_idx);
-        info  = vnodeInfo_alloc(); //todo;
-        vnodeInfo_copy(info, &item->node);
-        if (vtoken_equal(&info->ver, &space->node_ver)) {
-            info->weight--;
+    for (i = 0; i < vsorted_array_size(&sarray); i++) {
+        struct vpeer* item = (struct vpeer*)vsorted_array_get(&sarray, i);
+        vnodeInfo* ni = NULL;
+
+        if ( i >= num) {
+            break;
         }
-        varray_add_tail(closest, info);
+        ni = vnodeInfo_alloc();
+        vlog((!ni), elog_vnodeInfo_alloc);
+        if ((!ni)) {
+            break;
+        }
+        vnodeInfo_copy(ni, &item->node);
+        if (vtoken_equal(&ni->ver, &space->node_ver)) {
+            ni->weight--;
+        }
+        varray_add_tail(closest, ni);
     }
-    vsorted_array_zero(&array, _aux_space_peer_free_cb, &maux);
-    vmem_aux_deinit(&maux);
-    return 0;
+    vsorted_array_deinit(&sarray);
+    return i;
 }
 
 /*

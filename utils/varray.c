@@ -253,8 +253,8 @@ int vsorted_array_add(struct vsorted_array* sarray, void* new)
 
     for (; i < sz; i++) {
         item = varray_get(&sarray->array, i);
-        if (sarray->cmp_cb(new, item, sarray->cookie) > 0) {
-            // "new" is better than "item"
+        if (sarray->cmp_cb(item, new, sarray->cookie) >= 0) {
+            // "new" is better than current "item"
             break;
         }
     }
