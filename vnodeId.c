@@ -393,7 +393,7 @@ void vnodeInfo_set_eaddr(vnodeInfo* info, struct sockaddr_in* eaddr)
     vassert(eaddr);
 
     vsockaddr_copy(&info->eaddr, eaddr);
-    info->addr_flags |= VNODEINFO_RADDR;
+    info->addr_flags |= VNODEINFO_EADDR;
     return ;
 }
 

@@ -719,28 +719,24 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
     retE((ret < 0));
 
     vnodeInfo_init(info, &id, &ver, weight);
-
     ret = be_node_by_key(dict, "ml", &node);
     if (ret >= 0) {
         ret = be_unpack_addr(node, &laddr);
         retE((ret < 0));
+        vnodeInfo_set_laddr(info, &laddr);
     }
     ret = be_node_by_key(dict, "mu", &node);
     if (ret >= 0) {
         ret = be_unpack_addr(node, &uaddr);
         retE((ret < 0));
+        vnodeInfo_set_uaddr(info, &uaddr);
     }
     ret = be_node_by_key(dict, "me", &node);
     if (ret >= 0) {
         ret = be_unpack_addr(node, &eaddr);
         retE((ret < 0));
+        vnodeInfo_set_eaddr(info, &uaddr);
     }
-
-    vnodeInfo_init(info, &id, &ver, weight);
-    vnodeInfo_set_laddr(info, &laddr);
-    vnodeInfo_set_uaddr(info, &uaddr);
-    vnodeInfo_set_eaddr(info, &eaddr);
-
     return 0;
 }
 
