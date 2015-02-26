@@ -62,7 +62,6 @@ void vpeer_dump(struct vpeer* peer)
 {
     vassert(peer);
 
-    vdump(printf("-> PEER"));
     vnodeInfo_dump(&peer->node);
     printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet");
     printf("timestamp[rcv]: %s",  ctime(&peer->rcv_ts));
@@ -238,6 +237,7 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
 
     vassert(space);
     vassert(info);
+    retS((vtoken_equal(&space->node_id, &info->id)));
 
     if (vtoken_equal(&space->node_ver, &info->ver)) {
         info->weight++;

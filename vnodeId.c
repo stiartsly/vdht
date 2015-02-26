@@ -349,6 +349,7 @@ void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
     vsockaddr_copy(&dest->eaddr, &src->eaddr);
     vsockaddr_copy(&dest->raddr, &src->raddr);
     dest->weight = src->weight;
+    dest->addr_flags = src->addr_flags;
     return ;
 }
 
