@@ -356,14 +356,18 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
     for (i = 0; i < NBUCKETS; i++) {
         struct varray* peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
-            vsorted_array_add(&sarray, varray_get(peers, j));
+            struct vpeer* peer = (struct vpeer*)varray_get(peers, j);
+            if (vtoken_equal(&peer->node.id, target)) {
+                continue;
+            }
+            vsorted_array_add(&sarray, peer);
         }
     }
     for (i = 0; i < vsorted_array_size(&sarray); i++) {
         struct vpeer* item = (struct vpeer*)vsorted_array_get(&sarray, i);
         vnodeInfo* ni = NULL;
 
-        if ( i >= num) {
+        if (i >= num) {
             break;
         }
         ni = vnodeInfo_alloc();
