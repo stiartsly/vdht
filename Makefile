@@ -9,11 +9,8 @@ vdht_objs = \
     vdht.o  \
     vdht_core.o \
     vhost.o \
-    vstun.o \
-    vstun_proto.o \
     vnode.o \
     vnode_nice.o \
-    vnode_addr.o \
     vperf.o \
     vmsger.o  \
     vroute.o  \

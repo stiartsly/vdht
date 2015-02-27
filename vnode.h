@@ -3,7 +3,6 @@
 
 #include "vsys.h"
 #include "vcfg.h"
-#include "vstun.h"
 #include "vroute.h"
 #include "vupnpc.h"
 #include "vnodeId.h"
@@ -34,33 +33,6 @@ struct vnode_nice {
 int  vnode_nice_init  (struct vnode_nice*, struct vconfig*);
 void vnode_nice_deinit(struct vnode_nice*);
 
-
-/*
- * for node upnp address/ external address/relayed address
- *
- */
-struct vnode_addr;
-struct vnode_addr_ops {
-    int  (*setup)     (struct vnode_addr*);
-    void (*shutdown)  (struct vnode_addr*);
-    int  (*get_uaddr) (struct vnode_addr*, struct sockaddr_in*, struct sockaddr_in*);
-    int  (*get_eaddr) (struct vnode_addr*, get_ext_addr_t, void*);
-    int  (*get_raddr) (struct vnode_addr*, struct sockaddr_in*);
-    int  (*pub_stuns) (struct vnode_addr*, struct sockaddr_in*);
-};
-
-struct vnode_addr {
-    int pubed;
-
-    struct vupnpc upnpc;
-    struct vstun  stun;
-    struct vnode* node;
-
-    struct vnode_addr_ops* ops;
-};
-
-int  vnode_addr_init  (struct vnode_addr*, struct vmsger*, struct vnode*);
-void vnode_addr_deinit(struct vnode_addr*);
 
 /*
  * for vnode
@@ -96,7 +68,7 @@ struct vnode {
 
 
     struct vnode_nice node_nice;
-    struct vnode_addr node_addr;
+    struct vupnpc upnpc;
 
     struct vconfig* cfg;
     struct vticker* ticker;

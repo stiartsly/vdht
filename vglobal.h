@@ -39,8 +39,6 @@
 #include "vdht.h"
 #include "vdht_core.h"
 #include "vrpc.h"
-#include "vstun.h"
-#include "vstun_proto.h"
 #include "vhost.h"
 #include "vnode.h"
 #include "vperf.h"

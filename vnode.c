@@ -27,14 +27,13 @@ char* node_mode_desc[] = {
 static
 int _vnode_start(struct vnode* node)
 {
-    struct vnode_addr* node_addr = &node->node_addr;
+    struct vupnpc* upnpc = &node->upnpc;
     int ret = 0;
     vassert(node);
 
-    ret = node_addr->ops->setup(node_addr);
-    if (ret < 0) {
-        vlogI(printf("upnp setup failed"));
-    }
+    ret = upnpc->ops->setup(upnpc);
+    vlog((ret < 0), vlogI(printf("upnpc setup error")));
+    retE((ret < 0));
 
     vlock_enter(&node->lock);
     if (node->mode != VDHT_OFF) {
@@ -52,7 +51,7 @@ int _vnode_start(struct vnode* node)
 static
 int _vnode_stop(struct vnode* node)
 {
-    struct vnode_addr* node_addr = &node->node_addr;
+    struct vupnpc* upnpc = &node->upnpc;
     vassert(node);
 
     vlock_enter(&node->lock);
@@ -63,7 +62,7 @@ int _vnode_stop(struct vnode* node)
     node->mode = VDHT_DOWN;
     vlock_leave(&node->lock);
 
-    node_addr->ops->shutdown(node_addr);
+    upnpc->ops->shutdown(upnpc);
     return 0;
 }
 
@@ -86,7 +85,7 @@ int _vnode_wait_for_stop(struct vnode* node)
 static
 void _aux_node_get_uaddrs(struct vnode* node)
 {
-    struct vnode_addr* na = &node->node_addr;
+    struct vupnpc* upnpc = &node->upnpc;
     struct sockaddr_in uaddr;
     vnodeInfo* ni = NULL;
     int ret = 0;
@@ -100,7 +99,7 @@ void _aux_node_get_uaddrs(struct vnode* node)
             // if being public side, then need not.
             continue;
         }
-        ret = na->ops->get_uaddr(na, &ni->laddr, &uaddr);
+        ret = upnpc->ops->map(upnpc, &ni->laddr, UPNP_PROTO_UDP, &uaddr);
         if (ret < 0) {
             continue;
         }
@@ -568,7 +567,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     retE((ret < 0));
 
     vnode_nice_init(&node->node_nice, cfg);
-    vnode_addr_init(&node->node_addr, &host->msger, node);
+    vupnpc_init(&node->upnpc);
 
     node->cfg     = cfg;
     node->ticker  = &host->ticker;
@@ -590,8 +589,8 @@ void vnode_deinit(struct vnode* node)
     varray_deinit(&node->services);
 
     node->ops->wait_for_stop(node);
+    vupnpc_deinit(&node->upnpc);
     vnode_nice_deinit(&node->node_nice);
-    vnode_addr_deinit(&node->node_addr);
     vlock_deinit (&node->lock);
 
     return ;
