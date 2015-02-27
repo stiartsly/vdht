@@ -70,6 +70,7 @@ struct vnode_ops {
     int  (*stop)      (struct vnode*);
     int  (*wait_for_stop)(struct vnode*);
     int  (*stabilize) (struct vnode*);
+    int  (*set_eaddr) (struct vnode*, struct sockaddr_in*);
     void (*dump)      (struct vnode*);
     void (*clear)     (struct vnode*);
     int  (*renice)    (struct vnode*);

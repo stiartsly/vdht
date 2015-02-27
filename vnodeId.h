@@ -48,10 +48,10 @@ extern vnodeVer unknown_node_ver;
  * for vnodeInfo
  */
 enum {
-    VNODEINFO_LADDR = 1 << 0,
-    VNODEINFO_UADDR = 1 << 1,
-    VNODEINFO_EADDR = 1 << 2,
-    VNODEINFO_RADDR = 1 << 3
+    VNODEINFO_LADDR = (uint32_t)(1 << 0),
+    VNODEINFO_UADDR = (uint32_t)(1 << 1),
+    VNODEINFO_EADDR = (uint32_t)(1 << 2),
+    VNODEINFO_RADDR = (uint32_t)(1 << 3)
 };
 
 struct vnodeInfo  {

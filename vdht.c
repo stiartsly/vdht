@@ -14,6 +14,8 @@ struct vdhtId_desc dhtId_desc[] = {
     {VDHT_FIND_NODE_R,          "find_node_rsp"         },
     {VDHT_FIND_CLOSEST_NODES,   "find_closest_nodes"    },
     {VDHT_FIND_CLOSEST_NODES_R, "find_closest_nodes_rsp"},
+    {VDHT_REFLECT,              "reflect"               },
+    {VDHT_REFLECT_R,            "reflect_rsp"           },
     {VDHT_POST_SERVICE,         "post_service"          },
     {VDHT_POST_HASH,            "post_hash"             },
     {VDHT_GET_PEERS,            "get_peers"             },
@@ -155,12 +157,13 @@ struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* info)
  * @buf:
  * @len:
  *
- * ping Query = {"t":"1f4357a1bd2f006a3572",
+ * ping Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
  *               "y":"q",
  *               "q":"ping",
- *               "a":{"id":"7ba29c1b9215a2e7621"}}
- * bencoded = d1:t20:1f4357a1bd2f006a35721:y1:q1:q4:ping1:ad2:id20:7ba29c1b9215
- *            a2e7621eee
+ *               "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
+ *              }
+ * encoded = d1:t40:deafc137da918b8cd9b95e72fef379a5b54c3f361:y1:q1:q4:ping1:a
+ *           d2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
  */
 static
 int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
@@ -204,17 +207,19 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
  * @result: queried result
  * @buf:
  * @len:
- * response = {"t":"3eb2c2beb25d3ffeb4f5",
+ * response = {"t":"06d5613f3f43631c539db6f10fbd04b651a21844",
  *             "y":"r",
- *             "r":{"node" :{"id": "ce3dbcf618862baf69e8",
- *                            "m": "192.168.4.125:12300",
+ *             "r":{"node" :{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
  *                            "v": "0.0.0.1.0",
- *                            "f": "1023"
+ *                            "ml": "192.168.4.125:12300",
+ *                            "w": "0"
  *                          }
  *                 }
  *            }
- * bencoded = d1:t20:3eb2c2beb25d3ffeb4f51:y1:r1:rd4:noded2:id20:ce3dbcf618862b
- *            af69e81:m19:192.168.4.125:123001:v9:0.0.0.1.01:fi1023eeee
+ * encoded = d1:t40:06d5613f3f43631c539db6f10fbd04b651a218441:y1:r1:rd4:noded
+ *           2:id40:dbfcc5576ca7f742c802930892de9a1fb521f3911:v9:0.0.0.1.0
+ *           2:ml19:192.168.4.125:123001:wi0eeee
+ *
  */
 static
 int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result, void* buf, int sz)
@@ -509,6 +514,110 @@ int _vdht_enc_find_closest_nodes_rsp(
 /*
  * @token:
  * @srcId: Id of node sending query.
+ * @buf:
+ * @len:
+ * reflect Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
+ *                  "y":"q",
+ *                  "q":"reflect",
+ *                  "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
+ *              }
+ * encoded = d1:t40:deafc137da918b8cd9b95e72fef379a5b54c3f361:y1:q1:q4:reflect
+ *           1:ad2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
+ */
+static
+int _vdht_enc_reflect(vtoken* token, vnodeId* srcId, void* buf, int sz)
+{
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* id   = NULL;
+    int ret = 0;
+
+    vassert(token);
+    vassert(srcId);
+    vassert(buf);
+    vassert(sz > 0);
+
+    dict = be_create_dict();
+    retE((!dict));
+
+    node = be_create_vtoken(token);
+    be_add_keypair(dict, "t", node);
+
+    node = be_create_str("q");
+    be_add_keypair(dict, "y", node);
+
+    node = be_create_str("reflect");
+    be_add_keypair(dict, "q", node);
+
+    node = be_create_dict();
+    id   = be_create_vtoken(srcId);
+    be_add_keypair(node, "id", id);
+    be_add_keypair(dict, "a", node);
+
+    ret  = be_encode(dict, buf, sz);
+    be_free(dict);
+    retE((ret < 0));
+    return ret;
+}
+
+/*
+ * @token:
+ * @srcId: Id of node replying query
+ * @result: queried result.
+ * @buf:
+ * @sz:
+ *
+ *  response = {"t":"9948eb5973da8f3c3c0a",
+ *              "y":"r",
+ *              "r":{"id":"ce3dbcf618862baf69e8",
+ *                   "me" :"10.3.2.45:12300",
+ *                 }
+ *            }
+ */
+static
+int _vdht_enc_reflect_rsp(
+        vtoken* token,
+        vnodeId* srcId,
+        struct sockaddr_in* reflective_addr,
+        void* buf,
+        int sz)
+{
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* rslt = NULL;
+    int ret = 0;
+
+    vassert(token);
+    vassert(srcId);
+    vassert(reflective_addr);
+    vassert(buf);
+    vassert(sz > 0);
+
+    dict = be_create_dict();
+    retE((!dict));
+
+    node = be_create_vtoken(token);
+    be_add_keypair(dict, "t", node);
+
+    node = be_create_str("r");
+    be_add_keypair(dict, "y", node);
+
+    rslt = be_create_dict();
+    node = be_create_vtoken(srcId);
+    be_add_keypair(rslt, "id", node);
+    node = be_create_addr(reflective_addr);
+    be_add_keypair(rslt, "me", node);
+    be_add_keypair(dict, "r", rslt);
+
+    ret = be_encode(dict, buf, sz);
+    be_free(dict);
+    retE((ret < 0));
+    return ret;
+}
+
+/*
+ * @token:
+ * @srcId: Id of node sending query.
  * @target: Id of queried node.
  * @buf:
  * @len:
@@ -645,6 +754,8 @@ struct vdht_enc_ops dht_enc_ops = {
     .find_node_rsp          = _vdht_enc_find_node_rsp,
     .find_closest_nodes     = _vdht_enc_find_closest_nodes,
     .find_closest_nodes_rsp = _vdht_enc_find_closest_nodes_rsp,
+    .reflect                = _vdht_enc_reflect,
+    .reflect_rsp            = _vdht_enc_reflect_rsp,
     .post_service           = _vdht_enc_post_service,
     .post_hash              = _vdht_enc_post_hash,
     .get_peers              = _vdht_enc_get_peers,
@@ -799,6 +910,10 @@ int _aux_unpack_dhtId(struct be_node* dict, vnodeId* srcId)
             if (!ret) {
                 return VDHT_GET_PEERS_R;
             }
+            ret = be_node_by_2keys(dict, "r", "me", &node);
+            if (!ret) {
+                return VDHT_REFLECT_R;
+            }
             ret = be_node_by_2keys(dict, "r", "node", &node);
             if (!ret) {
                 return VDHT_FIND_NODE_R;
@@ -820,12 +935,13 @@ int _aux_unpack_dhtId(struct be_node* dict, vnodeId* srcId)
  * @token:
  * @srcId: source nodeId
  *
- * ping Query = {"t":"1f4357a1bd2f006a3572",
+ * ping Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
  *               "y":"q",
  *               "q":"ping",
- *               "a":{"id":"7ba29c1b9215a2e7621"}}
- * bencoded = d1:t20:1f4357a1bd2f006a35721:y1:q1:q4:ping1:ad2:id20:7ba29c1b9215
- *            a2e7621eee
+ *               "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
+ *              }
+ * encoded = d1:t40:deafc137da918b8cd9b95e72fef379a5b54c3f361:y1:q1:q4:ping1:a
+ *           d2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
  */
 static
 int _vdht_dec_ping(void* ctxt)
@@ -842,17 +958,18 @@ int _vdht_dec_ping(void* ctxt)
  * @token:
  * @result: node infos of destination node.
  *
- * response = {"t":"3eb2c2beb25d3ffeb4f5",
+ * response = {"t":"06d5613f3f43631c539db6f10fbd04b651a21844",
  *             "y":"r",
- *             "r":{"node" :{"id": "ce3dbcf618862baf69e8",
- *                            "m": "192.168.4.125:12300",
+ *             "r":{"node" :{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
  *                            "v": "0.0.0.1.0",
- *                            "f": "1023"
+ *                            "ml": "192.168.4.125:12300",
+ *                            "w": "0"
  *                          }
  *                 }
  *            }
- * bencoded = d1:t20:3eb2c2beb25d3ffeb4f51:y1:r1:rd4:noded2:id20:ce3dbcf618862b
- *            af69e81:m19:192.168.4.125:123001:v9:0.0.0.1.01:fi1023eeee
+ * encoded = d1:t40:06d5613f3f43631c539db6f10fbd04b651a218441:y1:r1:rd4:noded
+ *           2:id40:dbfcc5576ca7f742c802930892de9a1fb521f3911:v9:0.0.0.1.0
+ *           2:ml19:192.168.4.125:123001:wi0eeee
  */
 static
 int _vdht_dec_ping_rsp(void* ctxt, vnodeInfo* result)
@@ -1024,6 +1141,34 @@ int _vdht_dec_find_closest_nodes_rsp(void* ctxt, struct varray* closest)
     return 0;
 }
 
+static
+int _vdht_dec_reflect(void* ctxt)
+{
+    //do nothing;
+    vassert(ctxt);
+    (void)ctxt;
+
+    return 0;
+}
+
+static
+int _vdht_dec_reflect_rsp(void* ctxt, struct sockaddr_in* reflective_addr)
+{
+    struct be_node* dict = (struct be_node*)ctxt;
+    struct be_node* node = NULL;
+    int ret = 0;
+
+    vassert(dict);
+    vassert(reflective_addr);
+
+    ret = be_node_by_2keys(dict, "r", "me", &node);
+    retE((ret < 0));
+    ret = be_unpack_addr(node, reflective_addr);
+    retE((ret < 0));
+
+    return 0;
+}
+
 /* @ctxt:
  * @token:
  * @srcId:
@@ -1147,6 +1292,8 @@ struct vdht_dec_ops dht_dec_ops = {
     .find_node_rsp          = _vdht_dec_find_node_rsp,
     .find_closest_nodes     = _vdht_dec_find_closest_nodes,
     .find_closest_nodes_rsp = _vdht_dec_find_closest_nodes_rsp,
+    .reflect                = _vdht_dec_reflect,
+    .reflect_rsp            = _vdht_dec_reflect_rsp,
     .post_service           = _vdht_dec_post_service,
     .post_hash              = _vdht_dec_post_hash,
     .get_peers              = _vdht_dec_get_peers,

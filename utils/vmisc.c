@@ -1,7 +1,6 @@
 #include "vglobal.h"
 #include "vmisc.h"
 
-
 enum {
     VADDR_CLASS_A,
     VADDR_CLASS_B,

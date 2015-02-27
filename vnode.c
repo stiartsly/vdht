@@ -113,54 +113,16 @@ void _aux_node_get_uaddrs(struct vnode* node)
 }
 
 static
-int _aux_node_pad_eaddr_cb(struct sockaddr_in* eaddr, void* cookies)
-{
-    struct vnode* node = (struct vnode*)((void**)cookies)[0];
-    vnodeInfo* ni = (vnodeInfo*)((void**)cookies)[1];
-
-    vassert(eaddr);
-    vassert(node);
-    vassert(ni);
-
-    vlock_enter(&node->lock);
-    vnodeInfo_set_eaddr(ni, eaddr);
-    vlock_leave(&node->lock);
-
-    free(cookies);
-    return 0;
-}
-
-static
 void _aux_node_get_eaddrs(struct vnode* node)
 {
-    struct vnode_addr* na = &node->node_addr;
-    vnodeInfo* ni = NULL;
-    int i = 0;
-
+    struct vroute* route = node->route;
     vassert(node);
 
     if (node->main_node_info->addr_flags & VNODEINFO_EADDR) {
-        na->ops->pub_stuns(na, &node->main_node_info->eaddr);
+        return;
     }
-
-    for (i = 0; i < varray_size(&node->nodeinfos); i++) {
-        ni = (vnodeInfo*)varray_get(&node->nodeinfos, i);
-        void* cookies = NULL;
-
-        if (ni->addr_flags & VNODEINFO_EADDR) {
-            continue;
-        }
-
-        cookies = malloc(sizeof(void*) * 2);
-        if (!cookies) {
-            continue;
-        }
-        ((void**)cookies)[0] = node;
-        ((void**)cookies)[1] = ni;
-
-        na->ops->get_eaddr(na, _aux_node_pad_eaddr_cb, cookies);
-    }
-    return ;
+    route->ops->reflect(route);
+    return;
 }
 
 static
@@ -226,6 +188,18 @@ int _aux_node_tick_cb(void* cookie)
         vassert(0);
     }
     vlock_leave(&node->lock);
+    return 0;
+}
+
+static
+int _vnode_set_eaddr(struct vnode* node, struct sockaddr_in* eaddr)
+{
+    vlock_enter(&node->lock);
+    if (!(node->main_node_info->addr_flags & VNODEINFO_EADDR)) {
+        vnodeInfo_set_eaddr(node->main_node_info, eaddr);
+    }
+    vlock_leave(&node->lock);
+
     return 0;
 }
 
@@ -499,6 +473,7 @@ struct vnode_ops node_ops = {
     .stop                 = _vnode_stop,
     .wait_for_stop        = _vnode_wait_for_stop,
     .stabilize            = _vnode_stabilize,
+    .set_eaddr            = _vnode_set_eaddr,
     .dump                 = _vnode_dump,
     .clear                = _vnode_clear,
     .reg_service          = _vnode_reg_service,

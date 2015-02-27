@@ -62,6 +62,7 @@ struct vroute_node_space_ops {
     int  (*get_node)     (struct vroute_node_space*, vnodeId*, vnodeInfo*);
     int  (*get_neighbors)(struct vroute_node_space*, vnodeId*, struct varray*, int);
     int  (*broadcast)    (struct vroute_node_space*, void*);
+    int  (*reflect_addr) (struct vroute_node_space*);
     int  (*tick)         (struct vroute_node_space*);
     int  (*load)         (struct vroute_node_space*);
     int  (*store)        (struct vroute_node_space*);
@@ -117,6 +118,7 @@ struct vroute_ops {
     int  (*join_node)    (struct vroute*, struct sockaddr_in*);
     int  (*get_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
     int  (*post_service) (struct vroute*, vsrvcInfo*);
+    int  (*reflect)      (struct vroute*);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
@@ -131,6 +133,8 @@ struct vroute_dht_ops {
     int (*find_node_rsp) (struct vroute*, vnodeInfo*, vtoken*, vnodeInfo*);
     int (*find_closest_nodes)    (struct vroute*, vnodeInfo*, vnodeId*);
     int (*find_closest_nodes_rsp)(struct vroute*, vnodeInfo*, vtoken*, struct varray*);
+    int (*reflect)       (struct vroute*, vnodeInfo*);
+    int (*reflect_rsp)   (struct vroute*, vnodeInfo*, vtoken*, struct sockaddr_in*);
     int (*post_service)  (struct vroute*, vnodeInfo*, vsrvcInfo*);
     int (*post_hash)     (struct vroute*, vnodeInfo*, vtoken*);
     int (*get_peers)     (struct vroute*, vnodeInfo*, vtoken*);

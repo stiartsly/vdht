@@ -110,6 +110,27 @@ int _aux_space_broadcast_cb(void* item, void* cookie)
 }
 
 static
+int _aux_space_reflect_addr_cb(void* item, void* cookie)
+{
+    struct vroute* route = (struct vroute*)cookie;
+    struct vpeer*  peer  = (struct vpeer*)item;
+    vassert(route);
+    vassert(peer);
+
+    if (peer->ntries > 0) {
+        return 0;
+    }
+    if (vtoken_equal(&peer->node.ver, &unknown_node_ver)) {
+        return 0;
+    }
+    if (!(peer->node.addr_flags & VNODEINFO_EADDR)) {
+        return 0;
+    }
+    route->dht_ops->reflect(route, &peer->node);
+    return 0;
+}
+
+static
 int _aux_space_tick_cb(void* item, void* cookie)
 {
     struct vpeer*  peer  = (struct vpeer*)item;
@@ -410,6 +431,19 @@ int _vroute_node_space_broadcast(struct vroute_node_space* space, void* svci)
     return 0;
 }
 
+static
+int _vroute_node_reflect_address(struct vroute_node_space* space)
+{
+    struct vroute* route = space->route;
+    int i = 0;
+    vassert(space);
+
+    for (i = 0; i < NBUCKETS; i++) {
+        varray_iterate(&space->bucket[i].peers, _aux_space_reflect_addr_cb, route);
+    }
+    return 0;
+}
+
 /*
  * the routine to activate dynamicness of node routing table. the actions
  * includes send dht @ping msg to all nodes if possible and send @find_closest_nodes
@@ -563,6 +597,7 @@ struct vroute_node_space_ops route_space_ops = {
     .get_node      = _vroute_node_space_get_node,
     .get_neighbors = _vroute_node_space_get_neighbors,
     .broadcast     = _vroute_node_space_broadcast,
+    .reflect_addr  = _vroute_node_reflect_address,
     .tick          = _vroute_node_space_tick,
     .load          = _vroute_node_space_load,
     .store         = _vroute_node_space_store,
