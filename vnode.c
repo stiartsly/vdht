@@ -125,18 +125,15 @@ void _aux_node_get_eaddrs(struct vnode* node)
 }
 
 static
-int _aux_node_load_boot_node_cb(struct sockaddr_in* boot_addr, void* cookie)
+int _aux_node_load_boot_cb(struct sockaddr_in* boot_addr, void* cookie)
 {
     struct vnode*  node  = (struct vnode*)cookie;
     struct vroute* route = node->route;
     int ret = 0;
+
     vassert(boot_addr);
+    retS((node->ops->is_self(node, boot_addr)));
 
-    if (node->ops->is_self(node, boot_addr)) {
-        return 0;
-    }
-
-    vsockaddr_dump(boot_addr);
     ret = route->ops->join_node(route, boot_addr);
     retE((ret < 0));
     return 0;
@@ -161,7 +158,7 @@ int _aux_node_tick_cb(void* cookie)
     case VDHT_UP: {
         (void)_aux_node_get_uaddrs(node);
         (void)route->ops->load(route);
-        (void)cfg->ext_ops->get_boot_nodes(cfg, _aux_node_load_boot_node_cb, node);
+        (void)cfg->ext_ops->get_boot_nodes(cfg, _aux_node_load_boot_cb, node);
 
         node->ts   = now;
         node->mode = VDHT_RUN;

@@ -96,6 +96,54 @@ int vhostaddr_get_next(char* host, int sz)
     return 1;
 }
 
+int vsockaddr_get_by_hostname(const char* ip, const char* port, const char* proto, struct sockaddr_in* addr)
+{
+    int ipproto = 0;
+    int scktype = 0;
+    int ret = 0;
+
+    vassert(ip);
+    vassert(port);
+    vassert(proto);
+    vassert(addr);
+
+    if (!strcmp(proto, "udp") || !strcmp(proto, "UDP")) {
+        ipproto = IPPROTO_UDP;
+        scktype = SOCK_DGRAM;
+    } else if (!strcmp(proto, "tcp") || !strcmp(proto, "TCP")) {
+        ipproto = IPPROTO_TCP;
+        scktype = SOCK_STREAM;
+    } else {
+        retE((1));
+    }
+
+    {
+        struct addrinfo hints;
+        struct addrinfo* res = NULL;
+        struct addrinfo* aip = NULL;
+
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_flags = 0;
+        hints.ai_protocol = ipproto;
+        hints.ai_socktype = scktype;
+        hints.ai_family = AF_UNSPEC;
+
+        errno = 0;
+        ret = getaddrinfo(ip, port, &hints, &res);
+        vlog(((ret < 0) && (!errno)), printf("error:%s\n", gai_strerror(errno)));
+        retE((ret < 0));
+        for (aip = res; aip ; aip = aip->ai_next) {
+            if (!aip->ai_addr) {
+                continue;
+            }
+            vsockaddr_copy(addr, (struct sockaddr_in*)aip->ai_addr);
+            break;
+        }
+        freeaddrinfo(res);
+    }
+    return 0;
+}
+
 void vsockaddr_copy(struct sockaddr_in* dst, struct sockaddr_in* src)
 {
     vassert(dst);

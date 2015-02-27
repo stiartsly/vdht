@@ -903,9 +903,7 @@ int _aux_tuple_addr_2_sin_addr(struct varray* tuple_addr, struct sockaddr_in* si
     struct vcfg_item* item = NULL;
     char ip[64] = {'\0'};
     char* port_str = NULL;
-    int scktype = 0;
-    int proto = 0;
-    int port = 0;
+    char* proto_str = NULL;
     int ret = 0;
 
     vassert(tuple_addr);
@@ -920,47 +918,15 @@ int _aux_tuple_addr_2_sin_addr(struct varray* tuple_addr, struct sockaddr_in* si
     item = (struct vcfg_item*)varray_get(tuple_addr, 1);
     retE((!item));
     retE((CFG_STR != item->type));
-    errno = 0;
-    port = strtol(item->val.s, NULL, 10);
-    retE((errno));
     port_str = item->val.s;
 
     item = (struct vcfg_item*)varray_get(tuple_addr, 2);
     retE((!item));
     retE((CFG_STR != item->type));
-    if (!strcmp(item->val.s, "udp") || !strcmp(item->val.s, "UDP")) {
-        proto   = IPPROTO_UDP;
-        scktype = SOCK_DGRAM;
-    } else if (!strcmp(item->val.s, "tcp") || !strcmp(item->val.s, "TCP")) {
-        proto   = IPPROTO_TCP;
-        scktype = SOCK_STREAM;
-    } else {
-        retE((1));
-    }
-    {
-        struct addrinfo hints;
-        struct addrinfo* res = NULL;
-        struct addrinfo* aip = NULL;
+    proto_str = item->val.s;
 
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = 0;
-        hints.ai_protocol = proto;
-        hints.ai_socktype = scktype;
-        hints.ai_family = AF_UNSPEC;
-
-        errno = 0;
-        ret = getaddrinfo(ip, port_str, &hints, &res);
-        vlog((ret < 0), printf("error:%s\n", gai_strerror(errno)));
-        retE((ret < 0));
-        for (aip = res; aip ; aip = aip->ai_next) {
-            if (!aip->ai_addr) {
-                continue;
-            }
-            vsockaddr_copy(sin_addr, (struct sockaddr_in*)aip->ai_addr);
-        }
-        freeaddrinfo(res);
-    }
-    sin_addr->sin_port = htons(port);
+    ret = vsockaddr_get_by_hostname(ip, port_str, proto_str, sin_addr);
+    retE((ret < 0));
     return 0;
 }
 

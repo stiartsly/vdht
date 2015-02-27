@@ -12,6 +12,7 @@ int vhostaddr_get_next (char*, int);
  * for sockaddr
  */
 
+int  vsockaddr_get_by_hostname(const char*, const char*, const char*, struct sockaddr_in*);
 void vsockaddr_copy      (struct sockaddr_in*, struct sockaddr_in*);
 int  vsockaddr_equal     (struct sockaddr_in*, struct sockaddr_in*);
 int  vsockaddr_convert   (const char*, uint16_t, struct sockaddr_in*);
