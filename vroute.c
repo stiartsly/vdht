@@ -43,7 +43,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
  * @addr : [out] address of service
  */
 static
-int _vroute_get_service(struct vroute* route, vtoken* svc_hash, struct sockaddr_in* addr)
+int _vroute_get_service(struct vroute* route, vsrvcId* svcId, struct sockaddr_in* addr)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
     vsrvcInfo svc;
@@ -51,10 +51,10 @@ int _vroute_get_service(struct vroute* route, vtoken* svc_hash, struct sockaddr_
 
     vassert(route);
     vassert(addr);
-    vassert(svc_hash);
+    vassert(svcId);
 
     vlock_enter(&route->lock);
-    found = srvc_space->ops->get_srvc_node(srvc_space, svc_hash, &svc);
+    found = srvc_space->ops->get_srvc_node(srvc_space, svcId, &svc);
     vlock_leave(&route->lock);
     if (found) {
         vsockaddr_copy(addr, &svc.addr);
@@ -146,7 +146,7 @@ int _vroute_tick(struct vroute* route)
     vlock_enter(&route->lock);
     node_space->ops->tick(node_space);
     vlock_leave(&route->lock);
-    record_space->ops->reap(record_space);// reap all timeout records.
+    record_space->ops->timed_reap(record_space);// reap all timeout records.
     return 0;
 }
 

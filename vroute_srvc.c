@@ -140,7 +140,7 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
  * @svci : service infos
  */
 static
-int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vtoken* svc_hash, vsrvcInfo* svc)
+int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vsrvcId* svcId, vsrvcInfo* svc)
 {
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
@@ -149,13 +149,13 @@ int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vtoken* svc_h
 
     vassert(space);
     vassert(svc);
-    vassert(svc_hash);
+    vassert(svcId);
 
-    svcs = &space->bucket[vsrvcId_bucket(svc_hash)].srvcs;
+    svcs = &space->bucket[vsrvcId_bucket(svcId)].srvcs;
     {
         void* argv[] = {
             &to,
-            svc_hash,
+            svcId,
             &min_nice
         };
         varray_iterate(svcs, _aux_srvc_get_service_cb, argv);

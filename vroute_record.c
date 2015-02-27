@@ -83,7 +83,7 @@ int _vroute_record_space_make_record(struct vroute_record_space* space, vtoken* 
  * @token:
  */
 static
-int _vroute_record_space_check_exist(struct vroute_record_space* space, vtoken* token)
+int _vroute_record_space_check(struct vroute_record_space* space, vtoken* token)
 {
     struct vrecord* record = NULL;
     struct vlist* node = NULL;
@@ -113,7 +113,7 @@ int _vroute_record_space_check_exist(struct vroute_record_space* space, vtoken* 
  * @space:
  */
 static
-void _vroute_record_space_reap(struct vroute_record_space* space)
+void _vroute_record_space_timed_reap(struct vroute_record_space* space)
 {
     struct vrecord* record = NULL;
     struct vlist* node = NULL;
@@ -177,8 +177,8 @@ void _vroute_record_space_dump(struct vroute_record_space* space)
 static
 struct vroute_record_space_ops route_record_space_ops = {
     .make        = _vroute_record_space_make_record,
-    .check_exist = _vroute_record_space_check_exist,
-    .reap        = _vroute_record_space_reap,
+    .check_exist = _vroute_record_space_check,
+    .timed_reap  = _vroute_record_space_timed_reap,
     .clear       = _vroute_record_space_clear,
     .dump        = _vroute_record_space_dump
 };

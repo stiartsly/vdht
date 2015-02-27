@@ -37,7 +37,7 @@ struct vroute_record_space;
 struct vroute_record_space_ops {
     int  (*make)         (struct vroute_record_space*, vtoken*);
     int  (*check_exist)  (struct vroute_record_space*, vtoken*);
-    void (*reap)         (struct vroute_record_space*);
+    void (*timed_reap)   (struct vroute_record_space*);
     void (*clear)        (struct vroute_record_space*);
     void (*dump)         (struct vroute_record_space*);
 };
@@ -95,7 +95,7 @@ void vroute_node_space_deinit(struct vroute_node_space*);
 struct vroute_srvc_space;
 struct vroute_srvc_space_ops {
     int  (*add_srvc_node)(struct vroute_srvc_space*, vsrvcInfo*);
-    int  (*get_srvc_node)(struct vroute_srvc_space*, vtoken*, vsrvcInfo*);
+    int  (*get_srvc_node)(struct vroute_srvc_space*, vsrvcId*, vsrvcInfo*);
     void (*clear)        (struct vroute_srvc_space*);
     void (*dump)         (struct vroute_srvc_space*);
 };
@@ -116,7 +116,7 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space*);
  */
 struct vroute_ops {
     int  (*join_node)    (struct vroute*, struct sockaddr_in*);
-    int  (*get_service)  (struct vroute*, vtoken*, struct sockaddr_in*);
+    int  (*get_service)  (struct vroute*, vsrvcId*, struct sockaddr_in*);
     int  (*post_service) (struct vroute*, vsrvcInfo*);
     int  (*reflect)      (struct vroute*);
     int  (*load)         (struct vroute*);

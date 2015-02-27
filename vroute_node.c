@@ -302,8 +302,10 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
         };
         varray_iterate(peers, _aux_space_add_node_cb, argv);
         if (found) { //found
-            vpeer_init(to, info, to->snd_ts, now);
-            updt = 1;
+            if (!vtoken_equal(&info->ver, &unknown_node_ver)) {
+                vpeer_init(to, info, to->snd_ts, now);
+                updt = 1;
+            }
         } else if (to && (varray_size(peers) >= space->bucket_sz)) { //replace worst one.
             vpeer_init(to, info, 0, now);
             updt = 1;
@@ -472,10 +474,8 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
         peers = &space->bucket[i].peers;
         varray_iterate(peers, _aux_space_tick_cb, argv);
 
-        if (varray_size(peers) <= 0) {
-            continue;
-        }
-        if ((space->bucket[i].ts + space->max_rcv_tmo) >= now) {
+        if ((varray_size(peers) <= 0)
+           || ((space->bucket[i].ts + space->max_rcv_tmo) >= now)) {
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
@@ -534,7 +534,7 @@ int _vroute_node_space_store(struct vroute_node_space* space)
     vlog((ret), elog_sqlite3_open);
     retE((ret));
 
-    for (; i < NBUCKETS; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         varray_iterate(peers, _aux_space_store_cb, db);
     }
@@ -554,7 +554,7 @@ void _vroute_node_space_clear(struct vroute_node_space* space)
     int i  = 0;
     vassert(space);
 
-    for (; i < NBUCKETS; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         while(varray_size(peers) > 0) {
             vpeer_free((struct vpeer*)varray_pop_tail(peers));
@@ -658,7 +658,7 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     ret = _aux_space_prepare_db(space);
     retE((ret < 0));
 
-    for (; i < NBUCKETS; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         varray_init(&space->bucket[i].peers, 8);
         space->bucket[i].ts = 0;
     }
@@ -677,7 +677,7 @@ void vroute_node_space_deinit(struct vroute_node_space* space)
     vassert(space);
 
     space->ops->clear(space);
-    for (; i < NBUCKETS; i++) {
+    for (i = 0; i < NBUCKETS; i++) {
         varray_deinit(&space->bucket[i].peers);
     }
     return ;
