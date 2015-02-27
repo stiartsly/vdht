@@ -309,13 +309,16 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
         } else if (to && (varray_size(peers) >= space->bucket_sz)) { //replace worst one.
             vpeer_init(to, info, 0, now);
             updt = 1;
-        } else { // insert new one.
+        } else if (varray_size(peers) < space->bucket_sz) {
+            // insert new one.
             to = vpeer_alloc();
             vlog((!to), elog_vpeer_alloc);
             retE((!to));
             vpeer_init(to, info, 0, now);
             varray_add_tail(peers, to);
             updt = 1;
+        } else {
+            //bucket is full, discard new 
         }
         if (updt) {
             space->bucket[idx].ts = now;

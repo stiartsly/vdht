@@ -121,11 +121,13 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
             to->rcv_ts = now;
         } else if (to && varray_size(svcs) >= space->bucket_sz) {
             vservice_init(to, svc, now);
-        } else {
+        } else if (varray_size(svcs) < space->bucket_sz) {
             to = vservice_alloc();
             retE((!to));
             vservice_init(to, svc, now);
             varray_add_tail(svcs, to);
+        } else {
+            // bucket is full, discard it.
         };
     }
     return 0;
