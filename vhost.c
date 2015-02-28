@@ -266,16 +266,16 @@ int _vhost_cancel_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_i
 }
 
 static
-int _vhost_get_service_metainfo(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
+int _vhost_get_service(struct vhost* host, vsrvcId* srvcId, vsrvcInfo_iterate_addr_t cb, void* cookie)
 {
     struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
-    vassert(addr);
     vassert(srvcId);
+    vassert(cb);
 
-    ret = route->ops->get_service(route, srvcId, addr);
+    ret = route->ops->get_service(route, srvcId, cb, cookie);
     retE((ret < 0));
     return 0;
 }
@@ -283,7 +283,7 @@ int _vhost_get_service_metainfo(struct vhost* host, vsrvcId* srvcId, struct sock
 struct vhost_svc_ops host_svc_ops = {
     .publish = _vhost_publish_service,
     .cancel  = _vhost_cancel_service,
-    .get     = _vhost_get_service_metainfo
+    .get     = _vhost_get_service
 };
 
 /*

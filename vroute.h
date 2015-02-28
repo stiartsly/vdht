@@ -11,17 +11,19 @@
 #define NBUCKETS    (VTOKEN_BITLEN)
 
 enum {
-    PROP_UNREACHABLE          = 0x00000000,
-    PROP_PING                 = 0x00000001,
-    PROP_PING_R               = 0x00000002,
-    PROP_FIND_NODE            = 0x00000004,
-    PROP_FIND_NODE_R          = 0x00000008,
-    PROP_FIND_CLOSEST_NODES   = 0x00000010,
-    PROP_FIND_CLOSEST_NODES_R = 0x00000020,
-    PROP_POST_SERVICE         = 0x00000040,
-    PROP_POST_HASH            = 0x00000080,
-    PROP_GET_PEERS            = 0x00000100,
-    PROP_GET_PEERS_R          = 0x00000200
+    PROP_UNREACHABLE          = 0x0,
+    PROP_PING                 = (uint32_t)(1 << VDHT_PING),
+    PROP_PING_R               = (uint32_t)(1 << VDHT_PING_R),
+    PROP_FIND_NODE            = (uint32_t)(1 << VDHT_FIND_NODE),
+    PROP_FIND_NODE_R          = (uint32_t)(1 << VDHT_FIND_NODE_R),
+    PROP_FIND_CLOSEST_NODES   = (uint32_t)(1 << VDHT_FIND_CLOSEST_NODES),
+    PROP_FIND_CLOSEST_NODES_R = (uint32_t)(1 << VDHT_FIND_CLOSEST_NODES_R),
+    PROP_REFLECT              = (uint32_t)(1 << VDHT_REFLECT),
+    PROP_REFLECT_R            = (uint32_t)(1 << VDHT_REFLECT_R),
+    PROP_POST_SERVICE         = (uint32_t)(1 << VDHT_POST_SERVICE),
+    PROP_POST_HASH            = (uint32_t)(1 << VDHT_POST_HASH),
+    PROP_GET_PEERS            = (uint32_t)(1 << VDHT_GET_PEERS),
+    PROP_GET_PEERS_R          = (uint32_t)(1 << VDHT_GET_PEERS_R)
 };
 
 #define PROP_DHT_MASK  ((uint32_t)0x000003ff)
@@ -95,7 +97,7 @@ void vroute_node_space_deinit(struct vroute_node_space*);
 struct vroute_srvc_space;
 struct vroute_srvc_space_ops {
     int  (*add_srvc_node)(struct vroute_srvc_space*, vsrvcInfo*);
-    int  (*get_srvc_node)(struct vroute_srvc_space*, vsrvcId*, vsrvcInfo*);
+    int  (*get_srvc_node)(struct vroute_srvc_space*, vsrvcId*, vsrvcInfo**);
     void (*clear)        (struct vroute_srvc_space*);
     void (*dump)         (struct vroute_srvc_space*);
 };
@@ -116,7 +118,7 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space*);
  */
 struct vroute_ops {
     int  (*join_node)    (struct vroute*, struct sockaddr_in*);
-    int  (*get_service)  (struct vroute*, vsrvcId*, struct sockaddr_in*);
+    int  (*get_service)  (struct vroute*, vsrvcId*, vsrvcInfo_iterate_addr_t, void*);
     int  (*post_service) (struct vroute*, vsrvcInfo*);
     int  (*reflect)      (struct vroute*);
     int  (*load)         (struct vroute*);

@@ -136,6 +136,8 @@ struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* info)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
+    struct be_node* addr = NULL;
+    int i = 0;
     vassert(info);
 
     dict = be_create_dict();
@@ -143,7 +145,12 @@ struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* info)
 
     node = be_create_vtoken(&info->id);
     be_add_keypair(dict, "id", node);
-    node = be_create_addr(&info->addr);
+
+    node = be_create_list();
+    for (i = 0; i < info->naddrs; i++) {
+        addr = be_create_addr(&info->addr[i]);
+        be_add_list(node, addr);
+    }
     be_add_keypair(dict, "m", node);
     node = be_create_int(info->nice);
     be_add_keypair(dict, "n", node);
@@ -622,19 +629,21 @@ int _vdht_enc_reflect_rsp(
  * @buf:
  * @len:
  *
- * Query = {"t":"b6e0855abbf93b8e6754",",
+ * Query = {"t":"7cf80a63748208c08ba5b97401d52fb3baf45cbe",",
  *          "y":"q",
  *          "q":"post_service",
- *          "a": {"id":"7ba29c1b9215a2e7621e",
- *                "service" :{"id": "e532d7c80cf02e8652d3"
- *                            "m" : "192.168.4.46:14444",
- *                            "f" : "0"
+ *          "a": {"id":"b790b74d9726c859c64cd54835d693b6019bcc73",
+ *                "service" :{"id": "84d26f1cbea5d67d731a67c1b7ec427e40e948f9"
+ *                            "m" : ["192.168.4.46:13500", "10.0.0.12:13500"]
+ *                            "n" : "5"
  *                           }
  *               }
  *         }
- * bencoded = d1:t20:b6e0855abbf93b8e67541:y1:q1:q12:post_service1:ad2:id20:
- *            7ba29c1b9215a2e7621e7:serviced2:id20:e532d7c80cf02e8652d31:m17:
- *            192.168.4.46:144441:fi0eeee
+ * encoded = d1:t40:7cf80a63748208c08ba5b97401d52fb3baf45cbe1:y1:q1:q12:post_service
+ *           1:ad2:id40:b790b74d9726c859c64cd54835d693b6019bcc737:serviced2:id40:
+ *           84d26f1cbea5d67d731a67c1b7ec427e40e948f91:ml18:192.168.4.46:1350015:
+ *           10.0.0.12:13500e1:ni5eeee
+ *
  */
 static
 int _vdht_enc_post_service(
@@ -852,28 +861,38 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
 }
 
 static
-int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* info)
+int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo** info)
 {
+    struct vsrvcInfo* svc = NULL;
     struct be_node* node = NULL;
-    int ret = 0;
+    vtoken id;
+    int nice = 0;
+    int i = 0;
 
     vassert(dict);
     vassert(info);
     retE((BE_DICT != dict->type));
 
-    ret = be_node_by_key(dict, "id", &node);
-    retE((ret < 0));
-    ret = be_unpack_token(node, &info->id);
-    retE((ret < 0));
-    ret = be_node_by_key(dict, "m", &node);
-    retE((ret < 0));
-    ret = be_unpack_addr(node, &info->addr);
-    retE((ret < 0));
-    ret = be_node_by_key(dict, "n", &node);
-    retE((ret < 0));
-    ret = be_unpack_int(node, (int*)&info->nice);
-    retE((ret < 0));
+    svc = vsrvcInfo_alloc();
+    vlog((!svc), elog_vsrvcInfo_alloc);
+    retE((!svc));
 
+    be_node_by_key(dict, "id", &node);
+    be_unpack_token(node, &id);
+    be_node_by_key(dict, "n", &node);
+    be_unpack_int(node, &nice);
+    vsrvcInfo_init(svc, &id, nice);
+
+    be_node_by_key(dict, "m", &node);
+    vassert(node->type == BE_LIST);
+    for (i = 0; node->val.l[i]; i++) {
+        struct sockaddr_in addr;
+        struct be_node* addr_node = node->val.l[i];
+        be_unpack_addr(addr_node, &addr);
+        vsrvcInfo_add_addr(svc, &addr);
+    }
+
+    *info = svc;
     return 0;
 }
 
@@ -1179,7 +1198,7 @@ int _vdht_dec_reflect_rsp(void* ctxt, struct sockaddr_in* reflective_addr)
  *          "q":"post_service",
  *          "a": {"id":"7ba29c1b9215a2e7621e",
  *                "service" :{"id": "e532d7c80cf02e8652d3"
- *                            "m" : "192.168.4.46:14444",
+ *                            "m" : ["192.168.4.46:14444", "27.115.62.114:15300"]
  *                            "f" : "0"
  *                           }
  *               }
@@ -1189,7 +1208,7 @@ int _vdht_dec_reflect_rsp(void* ctxt, struct sockaddr_in* reflective_addr)
  *            192.168.4.46:144441:fi0eeee
  */
 static
-int _vdht_dec_post_service(void* ctxt, vsrvcInfo* service)
+int _vdht_dec_post_service(void* ctxt, vsrvcInfo** service)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;

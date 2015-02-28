@@ -5,7 +5,8 @@
  * service node structure and it follows it's correspondent help APIs.
  */
 struct vservice {
-    vsrvcInfo svc;
+    vsrvcId*   id;
+    vsrvcInfo* svc;
     time_t rcv_ts;
 };
 
@@ -26,26 +27,41 @@ static
 void vservice_free(struct vservice* item)
 {
     vassert(item);
+
+    if (item->svc) {
+        vsrvcInfo_free(item->svc);
+    }
     vmem_aux_free(&service_cache, item);
     return ;
 }
 
 static
-void vservice_init(struct vservice* item, vsrvcInfo* svci, time_t ts)
+int vservice_init(struct vservice* item, vsrvcInfo* svc, time_t ts)
 {
+    vsrvcInfo* svc_old = item->svc;
+    vsrvcInfo* svc_dup = NULL;
     vassert(item);
-    vassert(svci);
+    vassert(svc);
 
-    vsrvcInfo_copy(&item->svc, svci);
+    svc_dup = vsrvcInfo_dup(svc);
+    retE((!svc_dup));
+
+    item->id  = &svc_dup->id;
+    item->svc = svc_dup;
     item->rcv_ts = ts;
-    return ;
+
+    if (svc_old) {
+        vsrvcInfo_free(svc_old);
+    }
+    return 0;
 }
 
 static
 void vservice_dump(struct vservice* item)
 {
     vassert(item);
-    vsrvcInfo_dump(&item->svc);
+
+    vsrvcInfo_dump(item->svc);
     printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts));
     return;
 }
@@ -60,10 +76,10 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
     varg_decl(cookie, 3, int*, max_period);
     varg_decl(cookie, 4, int*, found);
 
-    if (vsrvcInfo_equal(&svc_item->svc, svc)) {
+    if (vtoken_equal(svc_item->id, &svc->id)) {
         *to = svc_item;
         *found = 1;
-        return 1;
+        return 0;
     }
     if ((int)(*now - svc_item->rcv_ts) > *max_period) {
         *to = svc_item;
@@ -80,10 +96,10 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
     varg_decl(cookie, 1, vtoken*, svc_hash);
     varg_decl(cookie, 2, int*, min_nice);
 
-    if (vtoken_equal(&svc_item->svc.id, svc_hash) &&
-        (svc_item->svc.nice < *min_nice)) {
+    if (vtoken_equal(svc_item->id, svc_hash) &&
+        (svc_item->svc->nice < *min_nice)) {
         *to = svc_item;
-        *min_nice = svc_item->svc.nice;
+        *min_nice = svc_item->svc->nice;
     }
     return 0;
 }
@@ -118,7 +134,7 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
         };
         varray_iterate(svcs, _aux_srvc_add_service_cb, argv);
         if (found) {
-            to->rcv_ts = now;
+            vservice_init(to, svc, now);
         } else if (to && varray_size(svcs) >= space->bucket_sz) {
             vservice_init(to, svc, now);
         } else if (varray_size(svcs) < space->bucket_sz) {
@@ -127,8 +143,8 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
             vservice_init(to, svc, now);
             varray_add_tail(svcs, to);
         } else {
-            // bucket is full, discard it.
-        };
+            //bucket is full, discard it.
+        }
     }
     return 0;
 }
@@ -142,12 +158,11 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
  * @svci : service infos
  */
 static
-int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vsrvcId* svcId, vsrvcInfo* svc)
+int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vsrvcId* svcId, vsrvcInfo** svc)
 {
     struct varray* svcs = NULL;
     struct vservice* to = NULL;
     int min_nice = 100;
-    int found = 0;
 
     vassert(space);
     vassert(svc);
@@ -162,11 +177,10 @@ int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vsrvcId* svcI
         };
         varray_iterate(svcs, _aux_srvc_get_service_cb, argv);
         if (to) {
-            vsrvcInfo_copy(svc, &to->svc);
-            found = 1;
+            *svc = vsrvcInfo_dup(to->svc);
         }
     }
-    return found;
+    return 0;
 }
 
 /*

@@ -261,6 +261,14 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
     return sz;
 }
 
+void _vcmd_srvc_iterate_addr_cb(struct sockaddr_in* addr, void* cookie)
+{
+    vassert(addr);
+
+    printf(" ");
+    vsockaddr_dump(addr);
+    return ;
+}
 /*
  * forward the request to get the best service option for special kind.
  */
@@ -295,7 +303,7 @@ int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
         break;
     }
 
-    ret = host->svc_ops->get(host, &srvcId, &addr);
+    ret = host->svc_ops->get(host, &srvcId, _vcmd_srvc_iterate_addr_cb, NULL);
     retE((ret < 0));
     vsockaddr_dump(&addr);
     return sz;

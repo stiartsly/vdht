@@ -87,20 +87,26 @@ int vsrvcId_bucket(vsrvcId*);
 /*
  * for vsrvcInfo
  */
- struct vsrvcInfo {
-    vsrvcId id;
-    int32_t nice;
-    struct sockaddr_in addr;
- };
+struct vsrvcInfo {
+   vsrvcId id;
+   int32_t nice;
 
- typedef struct vsrvcInfo vsrvcInfo;
+   int32_t naddrs;
+   int32_t capc;
+   struct sockaddr_in addr[2];
+};
+typedef struct vsrvcInfo vsrvcInfo;
+typedef void (*vsrvcInfo_iterate_addr_t)(struct sockaddr_in*, void*);
 
- vsrvcInfo* vsrvcInfo_alloc(void);
- void vsrvcInfo_free (vsrvcInfo*);
- int  vsrvcInfo_init (vsrvcInfo*, vtoken*, int32_t, struct sockaddr_in*);
- void vsrvcInfo_copy (vsrvcInfo*, vsrvcInfo*);
- int  vsrvcInfo_equal(vsrvcInfo*, vsrvcInfo*);
- void vsrvcInfo_dump (vsrvcInfo*);
+vsrvcInfo* vsrvcInfo_alloc(void);
+vsrvcInfo* vsrvcInfo_dup  (vsrvcInfo*);
+void vsrvcInfo_free (vsrvcInfo*);
+int  vsrvcInfo_init (vsrvcInfo*, vsrvcId*, int32_t);
+int  vsrvcInfo_add_addr(vsrvcInfo*, struct sockaddr_in*);
+void vsrvcInfo_del_addr(vsrvcInfo*, struct sockaddr_in*);
+int  vsrvcInfo_is_empty(vsrvcInfo*);
+int  vsrvcInfo_equal(vsrvcInfo*, vsrvcInfo*);
+void vsrvcInfo_dump (vsrvcInfo*);
 
 #endif
 

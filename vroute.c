@@ -43,23 +43,29 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
  * @addr : [out] address of service
  */
 static
-int _vroute_get_service(struct vroute* route, vsrvcId* svcId, struct sockaddr_in* addr)
+int _vroute_get_service(struct vroute* route, vsrvcId* svcId, vsrvcInfo_iterate_addr_t cb, void* cookie)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
-    vsrvcInfo svc;
-    int found = 0;
+    vsrvcInfo* srvc = NULL;
+    int ret = 0;
+    int i = 0;
 
     vassert(route);
-    vassert(addr);
+    vassert(svcId);
+    vassert(cb);
     vassert(svcId);
 
     vlock_enter(&route->lock);
-    found = srvc_space->ops->get_srvc_node(srvc_space, svcId, &svc);
+    ret = srvc_space->ops->get_srvc_node(srvc_space, svcId, &srvc);
     vlock_leave(&route->lock);
-    if (found) {
-        vsockaddr_copy(addr, &svc.addr);
+    retE((ret < 0));
+    retE((ret == 0) && (!srvc));
+
+    for (i = 0; i < srvc->naddrs; i++) {
+        cb(&srvc->addr[i], cookie);
     }
-    return found;
+    vsrvcInfo_free(srvc);
+    return 0;
 }
 
 static
@@ -923,10 +929,9 @@ int _vroute_cb_reflect_rsp(struct vroute* route, vnodeInfo* from, vtoken* token,
 static
 int _vroute_cb_post_service(struct vroute* route, vnodeInfo* from, vtoken* token, void* ctxt)
 {
-    struct vroute_node_space* node_space = &route->node_space;
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
-    vsrvcInfo svc;
+    vsrvcInfo* svc = NULL;
     int ret = 0;
 
     vassert(route);
@@ -936,10 +941,9 @@ int _vroute_cb_post_service(struct vroute* route, vnodeInfo* from, vtoken* token
 
     ret = dec_ops->post_service(ctxt, &svc);
     retE((ret < 0));
-    ret = node_space->ops->add_node(node_space, from);
-    retE((ret < 0));
 
-    ret = srvc_space->ops->add_srvc_node(srvc_space, &svc);
+    ret = srvc_space->ops->add_srvc_node(srvc_space, svc);
+    vsrvcInfo_free(svc);
     retE((ret < 0));
     return 0;
 }

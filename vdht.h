@@ -165,7 +165,7 @@ struct vdht_dec_ops {
 
     int (*post_service) (
             void* ctxt,
-            vsrvcInfo* service
+            vsrvcInfo** service
         );
 
     int (*post_hash)(

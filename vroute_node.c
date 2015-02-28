@@ -60,7 +60,7 @@ void vpeer_dump(struct vpeer* peer)
     vassert(peer);
 
     vnodeInfo_dump(&peer->node);
-    printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet");
+    printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet ");
     printf("timestamp[rcv]: %s",  ctime(&peer->rcv_ts));
     printf("tried send times:%d", peer->ntries);
     return ;

@@ -362,8 +362,8 @@ int _vnode_reg_service(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* 
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++){
         svc = (vsrvcInfo*)varray_get(&node->services, i);
-        if (vtoken_equal(&svc->id, srvcId) &&
-            vsockaddr_equal(&svc->addr, addr)) {
+        if (vtoken_equal(&svc->id, srvcId)) {
+            vsrvcInfo_add_addr(svc, addr);
             found = 1;
             break;
         }
@@ -372,7 +372,8 @@ int _vnode_reg_service(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* 
         svc = vsrvcInfo_alloc();
         vlog((!svc), elog_vsrvcInfo_alloc);
         ret1E((!svc), vlock_leave(&node->lock));
-        vsrvcInfo_init(svc, srvcId, node->nice, addr);
+        vsrvcInfo_init(svc, srvcId, node->nice);
+        vsrvcInfo_add_addr(svc, addr);
         varray_add_tail(&node->services, svc);
         //node->own_node.weight++;
     }
@@ -402,13 +403,13 @@ void _vnode_unreg_service(struct vnode* node, vtoken* srvcId, struct sockaddr_in
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++) {
         svc = (vsrvcInfo*)varray_get(&node->services, i);
-        if (vtoken_equal(&svc->id, srvcId) &&
-            vsockaddr_equal(&svc->addr, addr)) {
+        if (vtoken_equal(&svc->id, srvcId)) {
+            vsrvcInfo_del_addr(svc, addr);
             found = 1;
             break;
         }
     }
-    if (found) {
+    if ((found) && (vsrvcInfo_is_empty(svc))) {
         svc = (vsrvcInfo*)varray_del(&node->services, i);
         vsrvcInfo_free(svc);
         //node->own_node.weight--;

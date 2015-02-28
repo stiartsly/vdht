@@ -453,45 +453,109 @@ int vsrvcId_bucket(vsrvcId* id)
 /*
  * for vsrvcInfo funcs
  */
-static MEM_AUX_INIT(srvc_info_cache, sizeof(vsrvcInfo), 0);
 vsrvcInfo* vsrvcInfo_alloc(void)
 {
     vsrvcInfo* info = NULL;
 
-    info = (vsrvcInfo*)vmem_aux_alloc(&srvc_info_cache);
-    vlog((!info), elog_vmem_aux_alloc);
+    info = (vsrvcInfo*)malloc(sizeof(vsrvcInfo));
+    vlog((!info), elog_malloc);
     retE_p((!info));
+
     memset(info, 0, sizeof(*info));
+    info->naddrs = 0;
+    info->capc   = 2;
     return info;
+}
+
+vsrvcInfo* vsrvcInfo_dup(vsrvcInfo* svc_info)
+{
+    vsrvcInfo* svc_dup = NULL;
+    int i = 0;
+    vassert(svc_info);
+
+    svc_dup = vsrvcInfo_alloc();
+    vlog((!svc_dup), elog_vsrvcInfo_alloc);
+    retE_p((!svc_dup));
+
+    vsrvcInfo_init(svc_dup, &svc_info->id, svc_info->nice);
+    for (i = 0; i < svc_info->naddrs; i++) {
+        vsrvcInfo_add_addr(svc_dup, &svc_info->addr[i]);
+    }
+    return svc_dup;
 }
 
 void vsrvcInfo_free(vsrvcInfo* svc_info)
 {
-    vmem_aux_free(&srvc_info_cache, svc_info);
+    vassert(svc_info);
+    free(svc_info);
     return ;
 }
 
-int vsrvcInfo_init(vsrvcInfo* svc_info, vtoken* svc_id, int32_t nice, struct sockaddr_in* addr)
+int vsrvcInfo_init(vsrvcInfo* svc_info, vsrvcId* srvcId, int32_t nice)
 {
     vassert(svc_info);
-    vassert(addr);
+    vassert(srvcId);
+    vassert(nice >= 0);
 
-    vtoken_copy(&svc_info->id, svc_id);
+    vtoken_copy(&svc_info->id, srvcId);
     svc_info->nice = nice;
-    vsockaddr_copy(&svc_info->addr, addr);
     return 0;
 }
 
-void vsrvcInfo_copy (vsrvcInfo* dest, vsrvcInfo* src)
+int vsrvcInfo_add_addr(vsrvcInfo* svc_info, struct sockaddr_in* addr)
 {
-    vassert(dest);
-    vassert(src);
+    vsrvcInfo* info = NULL;
+    int capc = svc_info->capc << 1;
+    int found = 0;
+    int i = 0;
+    vassert(svc_info);
+    vassert(addr);
 
-    vtoken_copy(&dest->id,  &src->id);
-    vsockaddr_copy(&dest->addr, &src->addr);
-    dest->nice = src->nice;
+    if (svc_info->naddrs >= svc_info->capc) {
+        info = (vsrvcInfo*)realloc(svc_info, sizeof(vsrvcInfo) + capc);
+        vlog((!info), elog_realloc);
+        retE((!info));
 
+        svc_info = info;
+        svc_info->capc = capc;
+    }
+    for (i = 0; i < svc_info->naddrs; i++) {
+        if (vsockaddr_equal(addr, &svc_info->addr[i])) {
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        vsockaddr_copy(&svc_info->addr[svc_info->naddrs++], addr);
+    }
+    return 0;
+}
+
+void vsrvcInfo_del_addr(vsrvcInfo* svc_info, struct sockaddr_in* addr)
+{
+    int found = 0;
+    int i = 0;
+    vassert(svc_info);
+    vassert(addr);
+
+    for (i = 0; i < svc_info->naddrs; i++) {
+        if (vsockaddr_equal(addr, &svc_info->addr[i])) {
+            found = 1;
+            break;
+        }
+    }
+    if (found) {
+        for (; i < svc_info->naddrs; i++) {
+            vsockaddr_copy(&svc_info->addr[i], &svc_info->addr[i+1]);
+        }
+    }
     return ;
+}
+
+int vsrvcInfo_is_empty(vsrvcInfo* svc_info)
+{
+    vassert(svc_info);
+    return !(svc_info->naddrs);
 }
 
 int vsrvcInfo_equal(vsrvcInfo* a, vsrvcInfo* b)
@@ -499,18 +563,23 @@ int vsrvcInfo_equal(vsrvcInfo* a, vsrvcInfo* b)
     vassert(a);
     vassert(b);
 
-    return (vtoken_equal(&a->id, &b->id) && vsockaddr_equal(&a->addr,&b->addr));
+    return vtoken_equal(&a->id, &b->id);
 }
 
 void vsrvcInfo_dump(vsrvcInfo* svc_info)
 {
+    int i = 0;
     vassert(svc_info);
-    vtoken_dump(&svc_info->id);
-    printf(", address:");
-    vsockaddr_dump(&svc_info->addr);
-    printf(", ");
-    printf("nice:%d", svc_info->nice);
 
+    vtoken_dump(&svc_info->id);
+    printf(", nice: %d", svc_info->nice);
+    printf(", addrs: ");
+    vsockaddr_dump(&svc_info->addr[0]);
+    for (i = 1; i < svc_info->naddrs; i++) {
+        printf(", ");
+        vsockaddr_dump(&svc_info->addr[i]);
+
+    }
     return ;
 }
 
