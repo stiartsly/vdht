@@ -763,6 +763,10 @@ int _vroute_cb_find_node(struct vroute* route, vnodeInfo* from, vtoken* token, v
     varray_init(&closest, MAX_CAPC);
     ret = space->ops->get_neighbors(space, &target, &closest, MAX_CAPC);
     ret1E((ret < 0), varray_deinit(&closest));
+    if (ret == 0) {
+        varray_deinit(&closest);
+        return 0;
+    }
     ret = route->dht_ops->find_closest_nodes_rsp(route, from, token, &closest);
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
     varray_deinit(&closest);

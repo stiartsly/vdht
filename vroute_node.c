@@ -387,7 +387,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
             if (vtoken_equal(&peer->node.ver, &unknown_node_ver)) {
                 continue;
             }
-            if (&peer->ntries >= space->max_snd_tms) {
+            if (peer->ntries >= space->max_snd_tms) {
                 continue;
             }
             vsorted_array_add(&sarray, peer);
