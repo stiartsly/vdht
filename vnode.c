@@ -33,7 +33,6 @@ int _vnode_start(struct vnode* node)
 
     ret = upnpc->ops->setup(upnpc);
     vlog((ret < 0), vlogI(printf("upnpc setup error")));
-    retE((ret < 0));
 
     vlock_enter(&node->lock);
     if (node->mode != VDHT_OFF) {
