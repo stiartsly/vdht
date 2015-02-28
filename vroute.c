@@ -28,7 +28,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
         vnodeInfo_set_eaddr(&ni, addr);
     }
     vlock_enter(&route->lock);
-    ret = space->ops->add_node(space, &ni);
+    ret = space->ops->add_node(space, &ni, 0);
     vlock_leave(&route->lock);
     retE((ret < 0));
     return 0;
@@ -688,7 +688,7 @@ int _vroute_cb_ping(struct vroute* route, vnodeInfo* from, vtoken* token, void* 
 
     ret = dec_ops->ping(ctxt);
     retE((ret < 0));
-    ret = node_space->ops->add_node(node_space, from);
+    ret = node_space->ops->add_node(node_space, from, 1);
     retE((ret < 0));
 
     (void)node->ops->self(node, &self_info);
@@ -721,7 +721,7 @@ int _vroute_cb_ping_rsp(struct vroute* route, vnodeInfo* from, vtoken* token, vo
 
     ret = dec_ops->ping_rsp(ctxt, &source_info);
     retE((ret < 0));
-    ret = node_space->ops->add_node(node_space, &source_info);
+    ret = node_space->ops->add_node(node_space, &source_info, 1);
     retE((ret < 0));
     return 0;
 }
@@ -750,7 +750,7 @@ int _vroute_cb_find_node(struct vroute* route, vnodeInfo* from, vtoken* token, v
 
     ret = dec_ops->find_node(ctxt, &target);
     retE((ret < 0));
-    ret = space->ops->add_node(space, from);
+    ret = space->ops->add_node(space, from, 1);
     retE((ret < 0));
 
     ret = space->ops->get_node(space, &target, &target_info);
@@ -794,7 +794,7 @@ int _vroute_cb_find_node_rsp(struct vroute* route, vnodeInfo* from, vtoken* toke
 
     ret = dec_ops->find_node_rsp(ctxt, &target_info);
     retE((ret < 0));
-    ret = node_space->ops->add_node(node_space, &target_info);
+    ret = node_space->ops->add_node(node_space, &target_info, 0);
     retE((ret < 0));
     return 0;
 }
@@ -822,7 +822,7 @@ int _vroute_cb_find_closest_nodes(struct vroute* route, vnodeInfo* from, vtoken*
 
     ret = dec_ops->find_closest_nodes(ctxt, &target);
     retE((ret < 0));
-    ret = space->ops->add_node(space, from);
+    ret = space->ops->add_node(space, from, 1);
     retE((ret < 0));
 
     varray_init(&closest, MAX_CAPC);
@@ -865,7 +865,7 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, vnodeInfo* from, vto
     retE((ret < 0));
 
     for (; i < varray_size(&closest); i++) {
-        node_space->ops->add_node(node_space, (vnodeInfo*)varray_get(&closest, i));
+        node_space->ops->add_node(node_space, (vnodeInfo*)varray_get(&closest, i), 0);
     }
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
     varray_deinit(&closest);
@@ -887,7 +887,7 @@ int _vroute_cb_reflect(struct vroute* route, vnodeInfo* from, vtoken* token, voi
 
     ret = dec_ops->reflect(ctxt);
     retE((ret < 0));
-    ret = space->ops->add_node(space, from);
+    ret = space->ops->add_node(space, from, 1);
     retE((ret < 0));
 
     retS((!(from->addr_flags & VNODEINFO_EADDR)));

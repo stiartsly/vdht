@@ -60,7 +60,7 @@ void vroute_record_space_deinit(struct vroute_record_space*);
  */
 struct vroute_node_space;
 struct vroute_node_space_ops {
-    int  (*add_node)     (struct vroute_node_space*, vnodeInfo*);
+    int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
     int  (*get_node)     (struct vroute_node_space*, vnodeId*, vnodeInfo*);
     int  (*get_neighbors)(struct vroute_node_space*, vnodeId*, struct varray*, int);
     int  (*broadcast)    (struct vroute_node_space*, void*);

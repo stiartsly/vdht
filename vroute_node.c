@@ -269,7 +269,7 @@ int _aux_space_weight_cmp_cb(void* item, void* new, void* cookie)
  * @flags: properties that node has.
  */
 static
-int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info)
+int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info, int direct)
 {
     struct varray* peers = NULL;
     struct vpeer*  to    = NULL;
@@ -302,23 +302,23 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* info
         };
         varray_iterate(peers, _aux_space_add_node_cb, argv);
         if (found) { //found
-            if (!vtoken_equal(&info->ver, &unknown_node_ver)) {
+            if (!vtoken_equal(&info->ver, &unknown_node_ver) && direct) {
                 vpeer_init(to, info, to->snd_ts, now);
                 updt = 1;
             }
         } else if (to && (varray_size(peers) >= space->bucket_sz)) { //replace worst one.
-            vpeer_init(to, info, 0, now);
+            vpeer_init(to, info, 0, direct ? now : 0);
             updt = 1;
         } else if (varray_size(peers) < space->bucket_sz) {
             // insert new one.
             to = vpeer_alloc();
             vlog((!to), elog_vpeer_alloc);
             retE((!to));
-            vpeer_init(to, info, 0, now);
+            vpeer_init(to, info, 0, direct ? now: 0);
             varray_add_tail(peers, to);
             updt = 1;
         } else {
-            //bucket is full, discard new 
+            //bucket is full, discard new
         }
         if (updt) {
             space->bucket[idx].ts = now;
