@@ -322,12 +322,7 @@ int _aux_vhost_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys* s
         return 0;
     }
 
-    if (VSTUN_MSG(um->msgId)) {
-        vmsg_sys_init(sm, um->addr, um->len, um->data);
-        return 0;
-    }
-
-    //todo;
+    //todo: if needed, add other message type processing routine here.
     return -1;
 }
 
@@ -360,10 +355,9 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
     if (IS_DHT_MSG(magic)) {
         vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
         return 0;
-    } else {
-        vmsg_usr_init(um, VMSG_STUN, &sm->addr, sm->len, sm->data);
-        return 0;
     }
+
+    //todo: if needed, add other message type processing routine here.
     return 0;
 }
 
