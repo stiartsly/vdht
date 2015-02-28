@@ -464,9 +464,6 @@ int _vdht_enc_find_closest_nodes(
  *                           ...
  *                 }
  *            }
- * bencoded = d1:t20:30c6443e29cc307571e31:y1:r1:rd2:id20:ce3dbcf618862baf69e8
- *            5:nodesld2:id20:5a7f5578eace259994771:m18:192.168.4.46:123001:v
- *            9:0.0.0.0.01:fi1417421748eeeee
  */
 static
 int _vdht_enc_find_closest_nodes_rsp(
@@ -855,7 +852,7 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
     if (ret >= 0) {
         ret = be_unpack_addr(node, &eaddr);
         retE((ret < 0));
-        vnodeInfo_set_eaddr(info, &uaddr);
+        vnodeInfo_set_eaddr(info, &eaddr);
     }
     return 0;
 }
