@@ -151,29 +151,6 @@ int _vcmd_join_node(struct vlsctl* lsctl, void* data, int offset)
 }
 
 /*
- * forward the reqeust to remove wellknown node or node with given address
- * from dht routing table.
- */
-static
-int _vcmd_drop_node(struct vlsctl* lsctl, void* data, int offset)
-{
-    struct sockaddr_in sin;
-    int ret  = 0;
-    int sz   = 0;
-
-    vassert(lsctl);
-    vassert(data);
-    vassert(offset > 0);
-
-    ret = _aux_lsctl_get_addr(data, offset, &sin);
-    retE((ret < 0));
-    sz += ret;
-
-    vlogI(printf("[vlsctl] deprecated"));
-    return sz;
-}
-
-/*
  *  forward to announcemaent about service information after service has been
  *  established and therefor can be provided for other nodes. The service can
  *  relay, stun, ddns, ...
@@ -330,7 +307,6 @@ static vlsctl_cmd_t lsctl_cmds[] = {
     _vcmd_dump_host,
     _vcmd_bogus_query,
     _vcmd_join_node,
-    _vcmd_drop_node,
     _vcmd_svc_post,
     _vcmd_svc_unpost,
     _vcmd_svc_probe,

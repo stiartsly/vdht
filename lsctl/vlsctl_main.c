@@ -26,7 +26,6 @@ enum {
     VLSCTL_DHT_QUERY,
 
     VLSCTL_NODE_JOIN,
-    VLSCTL_NODE_DROP,
 
     VLSCTL_PLUG,
     VLSCTL_UNPLUG,
@@ -77,10 +76,8 @@ struct option long_options[] = {
     {"dump-host",           no_argument,       0,        's'},
     {"dump-config",         no_argument,       0,        'c'},
     {"add-node",            no_argument,       0,        'a'},
-    {"del-node",            no_argument,       0,        'e'},
     {"relay",               no_argument,       0,        'R'},
     {"stun",                no_argument,       0,        'T'},
-    //{"vpn",                 no_argument,       0,        'P'},
     {"up",                  no_argument,       0,        'u'},
     {"down",                no_argument,       0,        'w'},
     {"addr",                required_argument, 0,        'm'},
@@ -110,18 +107,14 @@ void show_usage(void)
     printf("\n");
     printf(" About other dht nodes options:\n");
     printf("  -a, --add-node           --addr=IP:PORT   request to join node\n");
-    printf("  -e, --del-node           --addr=IP:PORT   request to drop node\n");
     printf("\n");
     printf(" About plugin options:\n");
     printf("  -p  --relay    --up      --addr=IP:PORT   request to post a relay service\n");
     printf("  -p  --relay    --down    --addr=IP:PORT   request to nulify a relay service\n");
     printf("  -p  --stun     --up      --addr=IP:PORT   request to post a stun  service\n");
     printf("  -p  --stun     --down    --addr=IP:PORT   request to nulify a stun service\n");
-   // printf("  -p  --vpn      --up      --addr=IP:PORT   request to post a vpn service\n");
-   // printf("  -p  --vpn      --down    --addr=IP:PORT   request to nulify a vpn service\n");
     printf("  -q  --relay                               request to acquire relay service\n");
     printf("  -q  --stun                                request to acquire stun service\n");
-   // printf("  -q  --vpn                                 request to actuire vpn service\n");
     printf("\n");
     printf(" About bogus dht options:\n");
     printf("  -t  --ping               --addr=IP:PORT   request to send ping query\n");
@@ -525,7 +518,6 @@ static int node_sort_cmd_param(int opt)
     return 0;
 }
 static int has_join_node_cmd = 0;
-static int has_drop_node_cmd = 0;
 static int node_sort_cmd_check(void)
 {
     if (has_join_node_param) {
@@ -534,13 +526,6 @@ static int node_sort_cmd_check(void)
             return -1;
         }
         has_join_node_cmd = 1;
-    }
-    if (has_drop_node_param) {
-        if (!has_addr_param) {
-            printf("Few arguments\n");
-            return -1;
-        }
-        has_drop_node_cmd = 1;
     }
     return 0;
 }
@@ -551,8 +536,6 @@ static int node_sort_cmd_pack(char* data)
 
     if (has_join_node_cmd) {
         *(int32_t*)data = VLSCTL_NODE_JOIN;
-    } else if (has_drop_node_cmd) {
-        *(int32_t*)data = VLSCTL_NODE_DROP;
     } else {
         return -1;
     }
