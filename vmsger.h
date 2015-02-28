@@ -28,11 +28,11 @@ struct vsockaddr {
 #define vsun_addr u_addr.s_un
 };
 
-#define to_sockaddr_sin(addr)   ((struct sockaddr_in*)(&addr->vsin_addr))
-#define to_sockaddr_sun(addr)   ((struct sockaddr_un*)(&addr->vsun_addr))
+#define to_sockaddr_sin(addr)   ((struct sockaddr_in*)(&(addr)->vsin_addr))
+#define to_sockaddr_sun(addr)   ((struct sockaddr_un*)(&(addr)->vsun_addr))
 
-#define to_vsockaddr_from_sin(sin_addr) ((struct vsockaddr*)sin_addr)
-#define to_vsockaddr_from_sun(sun_addr) ((struct vsockaddr*)sun_addr)
+#define to_vsockaddr_from_sin(sin_addr) ((struct vsockaddr*)(sin_addr))
+#define to_vsockaddr_from_sun(sun_addr) ((struct vsockaddr*)(sun_addr))
 
 struct vmsg_usr {
     struct vsockaddr* addr;

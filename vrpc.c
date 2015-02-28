@@ -217,14 +217,14 @@ int _vrpc_udp_sndto(void* impl, struct vmsg_sys* msg)
 
     vassert(udp);
     vassert(msg);
-
     ret = sendto(udp->sock_fd,
                  msg->data,
                  msg->len,
                  0,
-                (struct sockaddr*)&msg->addr.vsin_addr,
+                (struct sockaddr*)to_sockaddr_sin(&msg->addr),
                 sizeof(struct sockaddr_in));
     vlog((ret < 0), elog_sendto);
+    vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
     retE((ret < 0));
     return ret;
 }
@@ -248,9 +248,10 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
                 msg->data,
                 msg->len,
                 0,
-               (struct sockaddr*)&msg->addr.vsin_addr,
+               (struct sockaddr*)to_sockaddr_sin(&msg->addr),
                (socklen_t*)&len);
     vlog((ret < 0), elog_recvfrom);
+    vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
     retE((ret < 0));
     msg->len = ret;
     return ret;
@@ -596,6 +597,8 @@ int _vwaiter_laundry(struct vwaiter* wt)
         sigset_t origmask;
         int ret = 0;
 
+        sigemptyset(&sigmask);
+        sigemptyset(&origmask);
         pthread_sigmask(SIG_SETMASK, &sigmask, &origmask);
         ret = pselect(wt->maxfd, &wt->rfds, &wt->wfds, &wt->efds, &tmo, &sigmask);
         vlog((ret < 0), elog_pselect);

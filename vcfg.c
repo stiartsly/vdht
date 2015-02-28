@@ -293,13 +293,14 @@ char* _aux_create_key(char** cur)
 {
     char seps[] = ";:\n{}[]()";
     char* key = NULL;
-    int blanked = 0;
+    int blank = 0;
     int sz = 0;
 
     vassert(cur && *cur);
 
     key = (char*)malloc(32);
     vlog((!key), elog_malloc);
+    memset(key, 0, 32);
     retE_p((!key));
 
     while (!strchr(seps, **cur)) {
@@ -307,25 +308,24 @@ char* _aux_create_key(char** cur)
         case 'a' ... 'z':
         case 'A' ... 'Z':
         case '0' ... '9':
-            if (key[0] && blanked) {
+            if (key[0] && blank) {
                 key[sz++] = '_';
-                blanked = 0;
+                blank = 0;
             }
             key[sz++] = **cur;
             break;
         case ' ':
         case '\t':
-            if (key[0] && !blanked) {
-                blanked = 1;
+            if (key[0] && !blank) {
+                blank = 1;
             }
             break;
         default:
-            free(key);
-            retE_p((1));
+            ret1E_p((1), free(key));
             break;
         }
         (*cur)++;
-        retE_p((sz >= 30));
+        ret1E_p((sz >= 30), free(key));
     }
     key[sz] = '\0';
     return key;
@@ -337,7 +337,7 @@ char* _aux_create_val(char** cur)
     char seps[] = ";:\n}])";
     char* pos = *cur;
     char* val = NULL;
-    int blanked = 0;
+    int blank = 0;
     int sz = 0;
 
     vassert(cur && *cur);
@@ -354,8 +354,8 @@ char* _aux_create_val(char** cur)
             break;
         case ' ':
         case '\t':
-            if ((sz > 0) && !blanked) {
-                blanked = 1;
+            if ((sz > 0) && !blank) {
+                blank = 1;
             }
             break;
         default:
@@ -370,7 +370,7 @@ char* _aux_create_val(char** cur)
     retE_p((!val));
     memset(val, 0, sz + 1);
 
-    blanked = 0;
+    blank = 0;
     sz = 0;
     while(!strchr(seps, **cur)) {
         switch(**cur) {
@@ -380,21 +380,20 @@ char* _aux_create_val(char** cur)
         case '/':
         case '.':
         case '_':
-            if (blanked) {
+            if (blank) {
                 val[sz++] = '_';
-                blanked = 0;
+                blank = 0;
             }
             val[sz++] = **cur;
             break;
         case ' ':
         case '\t':
-            if (val[0] && !blanked) {
-                blanked = 1;
+            if (val[0] && !blank) {
+                blank = 1;
             }
             break;
         default:
-            free(val);
-            retE_p((1));
+            ret1E_p((1), free(val));
             break;
         }
         (*cur)++;
@@ -459,7 +458,7 @@ int _aux_parse_tuple(struct vcfg_item* tuple, char** cur)
             _aux_eat_newline(cur);
             break;
         default:
-            vassert(0);
+            retE((1));
             break;
         }
     }
@@ -534,8 +533,7 @@ int _aux_parse_list(struct vcfg_item* list, char** cur)
             if (!list->val.l.key) {
                 list->val.l.key = key;
             }else {
-                retE((strcmp(key, list->val.l.key)));
-                free(key);
+                ret1E((strcmp(key, list->val.l.key)), free(key));
             }
             break;
         case ' ':
@@ -560,7 +558,6 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
     char seps[] = "\0";
     struct vcfg_item* item = NULL;
     char* key = NULL;
-    int val_come = 0;
     int ret = 0;
 
     vassert(dict);
@@ -577,7 +574,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
             (*cur)++;
             ret = _aux_eat_separator(cur);
             retE((ret < 0));
-            val_come = 1;
+            retE((!key));
             break;
         case '{':
             (*cur)++;
@@ -588,10 +585,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
             ret = _aux_parse_dict(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
 
-            val_come = 0;
-            if (!key) {
-                key = strdup(def_cfg_key);
-            }
+            retE((!key));
             vdict_add(&dict->val.d, key, item);
             free(key);
             key = NULL;
@@ -605,10 +599,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
             ret = _aux_parse_list(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
 
-            val_come = 0;
-            if (!key) {
-                key = strdup(def_cfg_key);
-            }
+            retE((!key));
             vdict_add(&dict->val.d, key, item);
             free(key);
             key  = NULL;
@@ -621,10 +612,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
             ret = _aux_parse_tuple(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
 
-            val_come = 0;
-            if (!key) {
-                key = strdup(def_cfg_key);
-            }
+            retE((!key));
             vdict_add(&dict->val.d, key, item);
             free(key);
             key = NULL;
@@ -638,7 +626,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
         case 'A' ... 'Z':
         case '0' ... '9':
         case '/':
-            if (val_come) {
+            if (key) {
                 item = vcfg_item_alloc(CFG_STR);
                 retE((!item));
                 vcfg_item_init(item, dict->depth + 1);
@@ -646,10 +634,6 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
                 ret = _aux_parse_str(item, cur);
                 ret1E((ret < 0), vcfg_item_free(item));
 
-                val_come = 0;
-                if (!key) {
-                    key = strdup(def_cfg_key);
-                }
                 vdict_add(&dict->val.d, key, item);
                 free(key);
                 key = NULL;
