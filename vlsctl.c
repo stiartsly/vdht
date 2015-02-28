@@ -179,7 +179,7 @@ int _vcmd_drop_node(struct vlsctl* lsctl, void* data, int offset)
  *  relay, stun, ddns, ...
  */
 static
-int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_svc_post(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost*    host    = lsctl->host;
     struct sockaddr_in sin;
@@ -213,7 +213,7 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
         break;
     }
     retE((ret < 0));
-    ret = host->svc_ops->publish(host, &srvcId, &sin);
+    ret = host->svc_ops->post(host, &srvcId, &sin);
     retE((ret < 0));
     return sz;
 }
@@ -222,7 +222,7 @@ int _vcmd_srvc_pub(struct vlsctl* lsctl, void* data, int offset)
  * forward to the declaration of service for being unavaiable.
  */
 static
-int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_svc_unpost(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -256,7 +256,7 @@ int _vcmd_srvc_unavai(struct vlsctl* lsctl, void* data, int offset)
         break;
     }
     retE((ret < 0));
-    ret = host->svc_ops->cancel(host, &srvcId, &sin);
+    ret = host->svc_ops->unpost(host, &srvcId, &sin);
     retE((ret < 0));
     return sz;
 }
@@ -273,7 +273,7 @@ void _vcmd_srvc_iterate_addr_cb(struct sockaddr_in* addr, void* cookie)
  * forward the request to get the best service option for special kind.
  */
 static
-int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
+int _vcmd_svc_probe(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in addr;
@@ -302,8 +302,7 @@ int _vcmd_srvc_prefer(struct vlsctl* lsctl, void* data, int offset)
         retE((1));
         break;
     }
-
-    ret = host->svc_ops->get(host, &srvcId, _vcmd_srvc_iterate_addr_cb, NULL);
+    ret = host->svc_ops->probe(host, &srvcId, _vcmd_srvc_iterate_addr_cb, NULL);
     retE((ret < 0));
     vsockaddr_dump(&addr);
     return sz;
@@ -332,9 +331,9 @@ static vlsctl_cmd_t lsctl_cmds[] = {
     _vcmd_bogus_query,
     _vcmd_join_node,
     _vcmd_drop_node,
-    _vcmd_srvc_pub,
-    _vcmd_srvc_unavai,
-    _vcmd_srvc_prefer,
+    _vcmd_svc_post,
+    _vcmd_svc_unpost,
+    _vcmd_svc_probe,
     _vcmd_dump_cfg,
     NULL
 };

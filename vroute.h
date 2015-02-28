@@ -118,8 +118,8 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space*);
  */
 struct vroute_ops {
     int  (*join_node)    (struct vroute*, struct sockaddr_in*);
-    int  (*get_service)  (struct vroute*, vsrvcId*, vsrvcInfo_iterate_addr_t, void*);
-    int  (*post_service) (struct vroute*, vsrvcInfo*);
+    int  (*probe_service)(struct vroute*, vsrvcId*, vsrvcInfo_iterate_addr_t, void*);
+    int  (*broadcast)    (struct vroute*, vsrvcInfo*);
     int  (*reflect)      (struct vroute*);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);

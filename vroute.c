@@ -35,7 +35,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
 }
 
 /*
- * the routine to find best suitable service node from service routing table
+ * the routine to probe best suitable service node from service routing table
  * so that local app can meet its needs with that service.
  *
  * @route:
@@ -43,7 +43,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
  * @addr : [out] address of service
  */
 static
-int _vroute_get_service(struct vroute* route, vsrvcId* svcId, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vroute_probe_service(struct vroute* route, vsrvcId* svcId, vsrvcInfo_iterate_addr_t cb, void* cookie)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
     vsrvcInfo* srvc = NULL;
@@ -69,7 +69,7 @@ int _vroute_get_service(struct vroute* route, vsrvcId* svcId, vsrvcInfo_iterate_
 }
 
 static
-int _vroute_post_service(struct vroute* route, vsrvcInfo* srvc)
+int _vroute_broadcast_service(struct vroute* route, vsrvcInfo* srvc)
 {
     struct vroute_node_space* node_space = &route->node_space;
     int ret = 0;
@@ -200,15 +200,15 @@ void _vroute_dump(struct vroute* route)
 
 static
 struct vroute_ops route_ops = {
-    .join_node    = _vroute_join_node,
-    .get_service  = _vroute_get_service,
-    .post_service = _vroute_post_service,
-    .reflect      = _vroute_reflect,
-    .load         = _vroute_load,
-    .store        = _vroute_store,
-    .tick         = _vroute_tick,
-    .clear        = _vroute_clear,
-    .dump         = _vroute_dump
+    .join_node     = _vroute_join_node,
+    .probe_service = _vroute_probe_service,
+    .broadcast     = _vroute_broadcast_service,
+    .reflect       = _vroute_reflect,
+    .load          = _vroute_load,
+    .store         = _vroute_store,
+    .tick          = _vroute_tick,
+    .clear         = _vroute_clear,
+    .dump          = _vroute_dump
 };
 
 static

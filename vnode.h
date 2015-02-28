@@ -49,8 +49,8 @@ struct vnode_ops {
     void (*tick)      (struct vnode*);
     int  (*self)      (struct vnode*, vnodeInfo*);
     int  (*is_self)   (struct vnode*, struct sockaddr_in*);
-    int  (*reg_service)  (struct vnode*, vsrvcId*, struct sockaddr_in*);
-    void (*unreg_service)(struct vnode*, vsrvcId*, struct sockaddr_in*);
+    int  (*post)      (struct vnode*, vsrvcId*, struct sockaddr_in*);
+    void (*unpost)    (struct vnode*, vsrvcId*, struct sockaddr_in*);
 
     struct sockaddr_in* (*get_best_usable_addr)(struct vnode*, vnodeInfo*);
 };

@@ -339,8 +339,8 @@ int _vnode_is_self(struct vnode* node, struct sockaddr_in* addr)
 }
 
 /*
- * the routine to register a service info (only contain meta info) as local
- * service, and the service will be published to all nodes in routing table.
+ * the routine to post a service info (only contain meta info) as local
+ * service, and this service will be broadcasted to all nodes in routing table.
  *
  * @node:
  * @srvcId: service Id.
@@ -348,7 +348,7 @@ int _vnode_is_self(struct vnode* node, struct sockaddr_in* addr)
  *
  */
 static
-int _vnode_reg_service(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* addr)
+int _vnode_post(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* addr)
 {
     vsrvcInfo* svc = NULL;
     int found = 0;
@@ -381,7 +381,7 @@ int _vnode_reg_service(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* 
 }
 
 /*
- * the routine to unregister or nulify a service info, which registered before.
+ * the routine to unpost a posted service info;
  *
  * @node:
  * @srvcId: service hash Id.
@@ -389,7 +389,7 @@ int _vnode_reg_service(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* 
  *
  */
 static
-void _vnode_unreg_service(struct vnode* node, vtoken* srvcId, struct sockaddr_in* addr)
+void _vnode_unpost(struct vnode* node, vtoken* srvcId, struct sockaddr_in* addr)
 {
     vsrvcInfo* svc = NULL;
     int found = 0;
@@ -457,7 +457,7 @@ void _vnode_tick(struct vnode* node)
     vlock_enter(&node->lock);
     for (i= 0; i < varray_size(&node->services); i++) {
         svc = (vsrvcInfo*)varray_get(&node->services, i);
-        route->ops->post_service(route, svc);
+        route->ops->broadcast(route, svc);
     }
     vlock_leave(&node->lock);
     return ;
@@ -472,8 +472,8 @@ struct vnode_ops node_ops = {
     .set_eaddr            = _vnode_set_eaddr,
     .dump                 = _vnode_dump,
     .clear                = _vnode_clear,
-    .reg_service          = _vnode_reg_service,
-    .unreg_service        = _vnode_unreg_service,
+    .post                 = _vnode_post,
+    .unpost               = _vnode_unpost,
     .renice               = _vnode_renice,
     .tick                 = _vnode_tick,
     .get_best_usable_addr = _vnode_get_best_usable_addr,

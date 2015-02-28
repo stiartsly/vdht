@@ -234,7 +234,7 @@ struct vhost_ops host_ops = {
  * @waht: plugin ID.
  */
 static
-int _vhost_publish_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
+int _vhost_post_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
 {
     struct vnode* node = &host->node;
     int ret = 0;
@@ -243,7 +243,7 @@ int _vhost_publish_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_
     vassert(addr);
     vassert(srvcId);
 
-    ret = node->ops->reg_service(node, srvcId, addr);
+    ret = node->ops->post(node, srvcId, addr);
     retE((ret < 0));
     return 0;
 }
@@ -254,19 +254,19 @@ int _vhost_publish_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_
  * @waht: plugin ID.
  */
 static
-int _vhost_cancel_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
+int _vhost_unpost_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
 {
     struct vnode* node = &host->node;
     vassert(host);
     vassert(addr);
     vassert(srvcId);
 
-    node->ops->unreg_service(node, srvcId, addr);
+    node->ops->unpost(node, srvcId, addr);
     return 0;
 }
 
 static
-int _vhost_get_service(struct vhost* host, vsrvcId* srvcId, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vhost_probe_service(struct vhost* host, vsrvcId* srvcId, vsrvcInfo_iterate_addr_t cb, void* cookie)
 {
     struct vroute* route = &host->route;
     int ret = 0;
@@ -275,15 +275,15 @@ int _vhost_get_service(struct vhost* host, vsrvcId* srvcId, vsrvcInfo_iterate_ad
     vassert(srvcId);
     vassert(cb);
 
-    ret = route->ops->get_service(route, srvcId, cb, cookie);
+    ret = route->ops->probe_service(route, srvcId, cb, cookie);
     retE((ret < 0));
     return 0;
 }
 
 struct vhost_svc_ops host_svc_ops = {
-    .publish = _vhost_publish_service,
-    .cancel  = _vhost_cancel_service,
-    .get     = _vhost_get_service
+    .post   = _vhost_post_service,
+    .unpost = _vhost_unpost_service,
+    .probe  = _vhost_probe_service
 };
 
 /*

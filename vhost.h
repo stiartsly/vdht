@@ -21,9 +21,9 @@ struct vhost_ops {
 };
 
 struct vhost_svc_ops {
-    int (*publish)(struct vhost*, vsrvcId*, struct sockaddr_in*);
-    int (*cancel) (struct vhost*, vsrvcId*, struct sockaddr_in*);
-    int (*get)    (struct vhost*, vsrvcId*, vsrvcInfo_iterate_addr_t, void*);
+    int (*post)  (struct vhost*, vsrvcId*, struct sockaddr_in*);
+    int (*unpost)(struct vhost*, vsrvcId*, struct sockaddr_in*);
+    int (*probe) (struct vhost*, vsrvcId*, vsrvcInfo_iterate_addr_t, void*);
 };
 
 struct vhost {
