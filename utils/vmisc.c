@@ -144,6 +144,18 @@ int vsockaddr_get_by_hostname(const char* ip, const char* port, const char* prot
     return 0;
 }
 
+int vsockaddr_within_same_network(struct sockaddr_in* a, struct sockaddr_in* b)
+{
+    vassert(a);
+    vassert(b);
+
+    if ((a->sin_family != b->sin_family)
+        || ((uint32_t)a->sin_addr.s_addr != (uint32_t)b->sin_addr.s_addr)) {
+        return 0;
+    }
+    return 1;
+}
+
 void vsockaddr_copy(struct sockaddr_in* dst, struct sockaddr_in* src)
 {
     vassert(dst);

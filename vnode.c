@@ -282,7 +282,7 @@ struct sockaddr_in* _vnode_get_best_usable_addr(struct vnode* node, vnodeInfo* d
     vlock_enter(&node->lock);
     if ((!addr) && (dest->addr_flags & VNODEINFO_EADDR)) {
         if (node->main_node_info->addr_flags & VNODEINFO_EADDR) {
-            if (!vsockaddr_equal(&node->main_node_info->eaddr, &dest->eaddr)) {
+            if (!vsockaddr_within_same_network(&node->main_node_info->eaddr, &dest->eaddr)) {
                 addr = &dest->eaddr;
             }
         } else {
@@ -292,7 +292,7 @@ struct sockaddr_in* _vnode_get_best_usable_addr(struct vnode* node, vnodeInfo* d
 
     if ((!addr) && (dest->addr_flags & VNODEINFO_UADDR)) {
         if (node->main_node_info->addr_flags & VNODEINFO_UADDR) {
-            if (!vsockaddr_equal(&node->main_node_info->uaddr, &dest->uaddr)) {
+            if (!vsockaddr_within_same_network(&node->main_node_info->uaddr, &dest->uaddr)) {
                 addr = &dest->uaddr;
             }
         } else {
