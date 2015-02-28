@@ -158,6 +158,8 @@ struct vrpc_base_ops unix_base_ops = {
  */
 struct vudp {
     struct sockaddr_in addr;
+    uint16_t port;
+    uint16_t pad;
     int sock_fd;
     int ttl;
 };
@@ -169,12 +171,13 @@ struct vudp {
 static
 void* _vrpc_udp_open(struct vsockaddr* addr)
 {
-    struct sockaddr_in* saddr = (struct sockaddr_in*)&addr->vsin_addr;
+    struct sockaddr_in* saddr = (struct sockaddr_in*)to_sockaddr_sin(addr);
     struct vudp* udp = NULL;
     int flags = 0;
     int fd  = 0;
-    int ret = 0;
     int ttl = 64;
+    int on  = 1;
+    int ret = 0;
     vassert(addr);
 
     udp = (struct vudp*)malloc(sizeof(*udp));
@@ -187,18 +190,29 @@ void* _vrpc_udp_open(struct vsockaddr* addr)
     vlog((fd < 0), elog_socket);
     ret1E_p((fd < 0), free(udp));
 
-    ret += bind(fd, (struct sockaddr*)saddr, sizeof(*saddr));
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    setsockopt(fd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+    setsockopt(fd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
+
+    errno = 0;
+    ret = bind(fd, (struct sockaddr*)saddr, sizeof(*saddr));
     vlog((ret < 0), elog_bind);
-    flags = fcntl(fd, F_GETFL, 0);
-    ret += fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-    vlog((ret < 0), elog_fcntl);
-    ret = setsockopt(fd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
-    vlog((ret < 0), elog_setsockopt);
     if (ret < 0) {
-        free(udp);
         close(fd);
+        free(udp);
         return NULL;
     }
+
+    flags = fcntl(fd, F_GETFL, 0);
+    ret = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    vlog((ret < 0), elog_fcntl);
+    if (ret < 0) {
+        close(fd);
+        free(udp);
+        return NULL;
+    }
+
+    udp->port = saddr->sin_port;
     udp->sock_fd = fd;
     return udp;
 }
@@ -213,19 +227,44 @@ static
 int _vrpc_udp_sndto(void* impl, struct vmsg_sys* msg)
 {
     struct vudp* udp = (struct vudp*)impl;
+    struct sockaddr_in* spec_addr = to_sockaddr_sin(&msg->specific);
+    struct in_pktinfo* pi = NULL;
+    struct cmsghdr*  cmsg = NULL;
+    char msg_control[BUF_SZ];
+    struct iovec iovec[1];
+    struct msghdr mhdr;
     int ret = 0;
 
     vassert(udp);
     vassert(msg);
-    ret = sendto(udp->sock_fd,
-                 msg->data,
-                 msg->len,
-                 0,
-                (struct sockaddr*)to_sockaddr_sin(&msg->addr),
-                sizeof(struct sockaddr_in));
-    vlog((ret < 0), elog_sendto);
+
+    memset(msg_control, 0, BUF_SZ);
+    memset(iovec, 0, sizeof(iovec));
+    memset(&mhdr, 0, sizeof(mhdr));
+
+    iovec[0].iov_base = msg->data;
+    iovec[0].iov_len  = msg->len;
+    mhdr.msg_name     = to_sockaddr_sin(&msg->addr);
+    mhdr.msg_namelen  = sizeof(struct sockaddr_in);
+    mhdr.msg_iov      = iovec;
+    mhdr.msg_iovlen   = sizeof(iovec)/sizeof(struct iovec);
+    mhdr.msg_control  = msg_control;
+    mhdr.msg_controllen = BUF_SZ;
+    mhdr.msg_flags    = 0;
+
+    cmsg = CMSG_FIRSTHDR(&mhdr);
+    cmsg->cmsg_level = IPPROTO_IP;
+    cmsg->cmsg_type  = IP_PKTINFO;
+    cmsg->cmsg_len   = CMSG_LEN(sizeof(*pi));
+    pi = (struct in_pktinfo*)CMSG_DATA(cmsg);
+    pi->ipi_spec_dst = (struct in_addr)spec_addr->sin_addr;
+    mhdr.msg_controllen = CMSG_SPACE(sizeof(*pi));
+
+    ret = sendmsg(udp->sock_fd, &mhdr, 0);
+    vlog((ret < 0), elog_sendmsg);
     vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
     retE((ret < 0));
+
     return ret;
 }
 
@@ -238,23 +277,48 @@ static
 int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
 {
     struct vudp* udp = (struct vudp*)impl;
-    int len = sizeof(struct sockaddr_in);
+    struct sockaddr_in* spec_addr = to_sockaddr_sin(&msg->specific);
+    struct cmsghdr* cmsg = NULL;
+    char msg_control[BUF_SZ];
+    struct iovec iovec[1];
+    struct msghdr mhdr;
     int ret = 0;
 
     vassert(udp);
     vassert(msg);
 
-    ret = recvfrom(udp->sock_fd,
-                msg->data,
-                msg->len,
-                0,
-               (struct sockaddr*)to_sockaddr_sin(&msg->addr),
-               (socklen_t*)&len);
-    vlog((ret < 0), elog_recvfrom);
+    memset(msg_control, 0, BUF_SZ);
+    memset(iovec, 0, sizeof(iovec));
+
+    iovec[0].iov_base = msg->data;
+    iovec[0].iov_len  = msg->len;
+    mhdr.msg_name     = to_sockaddr_sin(&msg->addr);
+    mhdr.msg_namelen  = sizeof(struct sockaddr_in);
+    mhdr.msg_iov      = iovec;
+    mhdr.msg_iovlen   = sizeof(iovec)/sizeof(struct iovec);
+    mhdr.msg_control  = msg_control;
+    mhdr.msg_controllen = BUF_SZ;
+    mhdr.msg_flags    = 0;
+
+    ret = recvmsg(udp->sock_fd, &mhdr, 0);
+    vlog((ret < 0), elog_recvmsg);
     vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
     retE((ret < 0));
+
+    for (cmsg = CMSG_FIRSTHDR(&mhdr); cmsg != NULL; cmsg = CMSG_NXTHDR(&mhdr, cmsg)) {
+        struct in_pktinfo* pi = NULL;
+
+        if ((cmsg->cmsg_level != IPPROTO_IP)
+            || (cmsg->cmsg_type != IP_PKTINFO)) {
+            continue;
+        }
+        pi = (struct in_pktinfo*)CMSG_DATA(cmsg);
+        spec_addr->sin_family = AF_INET;
+        spec_addr->sin_port   = udp->port;
+        spec_addr->sin_addr   = pi->ipi_spec_dst;
+    }
     msg->len = ret;
-    return ret;
+    return 0;
 }
 
 /*

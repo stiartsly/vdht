@@ -32,6 +32,7 @@ struct vsockaddr {
 
 struct vmsg_usr {
     struct vsockaddr* addr;
+    struct vsockaddr* specific;
     int   msgId;
     int   len;
     void* data;
@@ -45,6 +46,7 @@ void vmsg_usr_init(struct vmsg_usr*, int, struct vsockaddr*, int, void*);
 struct vmsg_sys {
     struct vlist list;
     struct vsockaddr addr;
+    struct vsockaddr specific;
     int   len;
     void* data;
 };

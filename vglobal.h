@@ -91,7 +91,9 @@
 #define ioctl
 #define setsockopt
 #define sendto
+#define sendmsg
 #define recvfrom
+#define recvmsg
 #define gethostname
 #define gethostbyname
 #define pselect
