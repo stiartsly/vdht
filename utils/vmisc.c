@@ -286,21 +286,6 @@ int vsockaddr_unstrlize(const char* ip_addr, struct sockaddr_in* addr)
     return 0;
 }
 
-int vsockaddr_combine(struct sockaddr_in* ip_part, struct sockaddr_in* port_part, struct sockaddr_in* addr)
-{
-    vassert(ip_part);
-    vassert(port_part);
-    vassert(addr);
-
-    memset(addr, 0, sizeof(*addr));
-
-    addr->sin_family = AF_INET;
-    addr->sin_port = port_part->sin_port;
-    addr->sin_addr = ip_part->sin_addr;
-
-    return 0;
-}
-
 static
 int _aux_sockaddr_class(uint32_t haddr) //host byte order
 {
