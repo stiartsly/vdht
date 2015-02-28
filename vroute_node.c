@@ -178,7 +178,7 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
         vnodeVer_unstrlize(ver, &node_info.ver);
     }
 
-    space->ops->add_node(space, &node_info);
+    space->ops->add_node(space, &node_info, 0);
     return 0;
 }
 
