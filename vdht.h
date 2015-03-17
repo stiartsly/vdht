@@ -14,12 +14,9 @@ enum {
     VDHT_FIND_NODE_R,
     VDHT_FIND_CLOSEST_NODES,
     VDHT_FIND_CLOSEST_NODES_R,
-    VDHT_REFLECT,
-    VDHT_REFLECT_R,
+    VDHT_REFLEX,
+    VDHT_REFLEX_R,
     VDHT_POST_SERVICE,
-    VDHT_POST_HASH,
-    VDHT_GET_PEERS,
-    VDHT_GET_PEERS_R,
     VDHT_UNKNOWN
 };
 
@@ -66,46 +63,26 @@ struct vdht_enc_ops {
             void* buf,
             int   sz);
 
-    int (*reflect)(
+    int (*reflex)(
             vtoken* token,
             vnodeId* srcId,
             void* buf,
             int sz);
 
-    int (*reflect_rsp)(
+    int (*reflex_rsp)(
             vtoken* token,
             vnodeId* srcId,
-            struct sockaddr_in* reflective_addr,
+            struct sockaddr_in* reflexive_addr,
             void* buf,
             int sz);
 
     int (*post_service)(
             vtoken* token,
             vnodeId* srcId,
-            vsrvcInfo* service,
+            vsrvcInfo* srvc,
             void* buf,
             int   sz);
 
-    int (*post_hash)(
-            vtoken* token,
-            vnodeId* srcId,
-            vnodeHash* hash,
-            void* buf,
-            int   sz);
-
-    int (*get_peers)(
-            vtoken* token,
-            vnodeId* srcId,
-            vnodeHash* hash,
-            void* buf,
-            int   sz);
-
-    int (*get_peers_rsp)(
-            vtoken* token,
-            vnodeId* srcId,
-            struct varray* result,
-            void* buf,
-            int   sz);
 };
 
 /*
@@ -154,33 +131,18 @@ struct vdht_dec_ops {
             struct varray* result
         );
 
-    int (*reflect)(
+    int (*reflex)(
             void* ctxt
         );
 
-    int (*reflect_rsp)(
+    int (*reflex_rsp)(
             void* ctxt,
-            struct sockaddr_in* reflective_addr
+            struct sockaddr_in* reflexive_addr
         );
 
     int (*post_service) (
             void* ctxt,
             vsrvcInfo** service
-        );
-
-    int (*post_hash)(
-            void* ctxt,
-            vnodeHash* hash
-        );
-
-    int (*get_peers)(
-            void* ctxt,
-            vnodeHash* hash
-        );
-
-    int (*get_peers_rsp)(
-            void* ctxt,
-            struct varray* result
         );
 };
 

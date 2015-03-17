@@ -119,7 +119,7 @@ void _aux_node_get_eaddrs(struct vnode* node)
     if (node->main_node_info->addr_flags & VNODEINFO_EADDR) {
         return;
     }
-    route->ops->reflect(route);
+    route->ops->reflex(route);
     return;
 }
 

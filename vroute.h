@@ -18,12 +18,9 @@ enum {
     PROP_FIND_NODE_R          = (uint32_t)(1 << VDHT_FIND_NODE_R),
     PROP_FIND_CLOSEST_NODES   = (uint32_t)(1 << VDHT_FIND_CLOSEST_NODES),
     PROP_FIND_CLOSEST_NODES_R = (uint32_t)(1 << VDHT_FIND_CLOSEST_NODES_R),
-    PROP_REFLECT              = (uint32_t)(1 << VDHT_REFLECT),
-    PROP_REFLECT_R            = (uint32_t)(1 << VDHT_REFLECT_R),
-    PROP_POST_SERVICE         = (uint32_t)(1 << VDHT_POST_SERVICE),
-    PROP_POST_HASH            = (uint32_t)(1 << VDHT_POST_HASH),
-    PROP_GET_PEERS            = (uint32_t)(1 << VDHT_GET_PEERS),
-    PROP_GET_PEERS_R          = (uint32_t)(1 << VDHT_GET_PEERS_R)
+    PROP_REFLEX               = (uint32_t)(1 << VDHT_REFLEX),
+    PROP_REFLEX_R             = (uint32_t)(1 << VDHT_REFLEX_R),
+    PROP_POST_SERVICE         = (uint32_t)(1 << VDHT_POST_SERVICE)
 };
 
 #define PROP_DHT_MASK  ((uint32_t)0x000003ff)
@@ -120,7 +117,7 @@ struct vroute_ops {
     int  (*join_node)    (struct vroute*, struct sockaddr_in*);
     int  (*probe_service)(struct vroute*, vsrvcId*, vsrvcInfo_iterate_addr_t, void*);
     int  (*broadcast)    (struct vroute*, vsrvcInfo*);
-    int  (*reflect)      (struct vroute*);
+    int  (*reflex)       (struct vroute*);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
@@ -135,12 +132,9 @@ struct vroute_dht_ops {
     int (*find_node_rsp) (struct vroute*, vnodeInfo*, vtoken*, vnodeInfo*);
     int (*find_closest_nodes)    (struct vroute*, vnodeInfo*, vnodeId*);
     int (*find_closest_nodes_rsp)(struct vroute*, vnodeInfo*, vtoken*, struct varray*);
-    int (*reflect)       (struct vroute*, vnodeInfo*);
-    int (*reflect_rsp)   (struct vroute*, vnodeInfo*, vtoken*, struct sockaddr_in*);
+    int (*reflex)        (struct vroute*, vnodeInfo*);
+    int (*reflex_rsp)    (struct vroute*, vnodeInfo*, vtoken*, struct sockaddr_in*);
     int (*post_service)  (struct vroute*, vnodeInfo*, vsrvcInfo*);
-    int (*post_hash)     (struct vroute*, vnodeInfo*, vtoken*);
-    int (*get_peers)     (struct vroute*, vnodeInfo*, vtoken*);
-    int (*get_peers_rsp) (struct vroute*, vnodeInfo*, vtoken*, struct varray*);
 };
 
 typedef int (*vroute_dht_cb_t)(struct vroute*, vnodeInfo*, vtoken*, void*);

@@ -205,8 +205,6 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest_ad
         break;
 
     case VDHT_POST_SERVICE:
-    case VDHT_POST_HASH:
-    case VDHT_GET_PEERS:
     default:
         retE((1));
         break;

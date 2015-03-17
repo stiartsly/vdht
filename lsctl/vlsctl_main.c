@@ -53,16 +53,9 @@ enum {
     VDHT_FIND_NODE_R,
     VDHT_FIND_CLOSEST_NODES,
     VDHT_FIND_CLOSEST_NODES_R,
+    VDHT_REFLEX,
+    VDHT_REFLEX_R,
     VDHT_POST_SERVICE,
-    VDHT_POST_SERVICE_R,
-    VDHT_REFLECT,
-    VDHT_REFLECT_R,
-    VDHT_POST_HASH,
-    VDHT_POST_HASH_R,
-    VDHT_GET_PEERS,
-    VDHT_GET_PEERS_R,
-    VDHT_GET_PLUGIN,
-    VDHT_GET_PLUGIN_R,
     VDHT_UNKNOWN
 };
 
@@ -644,10 +637,6 @@ static int dht_sort_cmd_pack(char* data)
         *(int32_t*)data = VDHT_FIND_NODE;
     }else if (has_dht_find_closest_nodes_param) {
         *(int32_t*)data = VDHT_FIND_CLOSEST_NODES;
-    }else if (has_dht_post_hash_param) {
-        *(int32_t*)data = VDHT_POST_HASH;
-    }else if (has_dht_get_peers_param) {
-        *(int32_t*)data = VDHT_GET_PEERS;
     }else {
         return -1;
     }

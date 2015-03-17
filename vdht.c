@@ -14,12 +14,9 @@ struct vdhtId_desc dhtId_desc[] = {
     {VDHT_FIND_NODE_R,          "find_node_rsp"         },
     {VDHT_FIND_CLOSEST_NODES,   "find_closest_nodes"    },
     {VDHT_FIND_CLOSEST_NODES_R, "find_closest_nodes_rsp"},
-    {VDHT_REFLECT,              "reflect"               },
-    {VDHT_REFLECT_R,            "reflect_rsp"           },
+    {VDHT_REFLEX,               "reflex"                },
+    {VDHT_REFLEX_R,             "reflex_rsp"            },
     {VDHT_POST_SERVICE,         "post_service"          },
-    {VDHT_POST_HASH,            "post_hash"             },
-    {VDHT_GET_PEERS,            "get_peers"             },
-    {VDHT_GET_PEERS_R,          "get_peers_rsp"         },
     {VDHT_UNKNOWN, NULL}
 };
 
@@ -529,7 +526,7 @@ int _vdht_enc_find_closest_nodes_rsp(
  *           1:ad2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
  */
 static
-int _vdht_enc_reflect(vtoken* token, vnodeId* srcId, void* buf, int sz)
+int _vdht_enc_reflex(vtoken* token, vnodeId* srcId, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -550,7 +547,7 @@ int _vdht_enc_reflect(vtoken* token, vnodeId* srcId, void* buf, int sz)
     node = be_create_str("q");
     be_add_keypair(dict, "y", node);
 
-    node = be_create_str("reflect");
+    node = be_create_str("reflex");
     be_add_keypair(dict, "q", node);
 
     node = be_create_dict();
@@ -579,7 +576,7 @@ int _vdht_enc_reflect(vtoken* token, vnodeId* srcId, void* buf, int sz)
  *            }
  */
 static
-int _vdht_enc_reflect_rsp(
+int _vdht_enc_reflex_rsp(
         vtoken* token,
         vnodeId* srcId,
         struct sockaddr_in* reflective_addr,
@@ -686,73 +683,6 @@ int _vdht_enc_post_service(
     return ret;
 }
 
-static
-int _vdht_enc_post_hash(
-        vtoken* token,
-        vnodeId* srcId,
-        vnodeHash* hash,
-        void* buf,
-        int sz)
-{
-    vassert(token);
-    vassert(srcId);
-    vassert(hash);
-    vassert(buf);
-    vassert(sz > 0);
-
-    //todo;
-    return 0;
-}
-
-/*
- * @token :
- * @src : id of source node that send ping query.
- * @hash:
- * @buf:
- * @len:
- */
-static
-int _vdht_enc_get_peers(
-        vtoken* token,
-        vnodeId* srcId,
-        vnodeHash* hash,
-        void* buf,
-        int sz)
-{
-    vassert(token);
-    vassert(srcId);
-    vassert(hash);
-    vassert(buf);
-    vassert(sz> 0);
-
-    //todo;
-    return 0;
-}
-
-/*
- * @token :
- * @srcId :
- * @result:
- * @buf:
- * @sz:
- */
-static
-int _vdht_enc_get_peers_rsp(
-        vtoken* token,
-        vnodeId* srcId,
-        struct varray* result,
-        void* buf,
-        int sz)
-{
-    vassert(token);
-    vassert(srcId);
-    vassert(result);
-    vassert(buf);
-    vassert(sz > 0);
-    //todo;
-    return 0;
-}
-
 struct vdht_enc_ops dht_enc_ops = {
     .ping                   = _vdht_enc_ping,
     .ping_rsp               = _vdht_enc_ping_rsp,
@@ -760,12 +690,9 @@ struct vdht_enc_ops dht_enc_ops = {
     .find_node_rsp          = _vdht_enc_find_node_rsp,
     .find_closest_nodes     = _vdht_enc_find_closest_nodes,
     .find_closest_nodes_rsp = _vdht_enc_find_closest_nodes_rsp,
-    .reflect                = _vdht_enc_reflect,
-    .reflect_rsp            = _vdht_enc_reflect_rsp,
-    .post_service           = _vdht_enc_post_service,
-    .post_hash              = _vdht_enc_post_hash,
-    .get_peers              = _vdht_enc_get_peers,
-    .get_peers_rsp          = _vdht_enc_get_peers_rsp
+    .reflex                 = _vdht_enc_reflex,
+    .reflex_rsp             = _vdht_enc_reflex_rsp,
+    .post_service           = _vdht_enc_post_service
 };
 
 static
@@ -922,13 +849,9 @@ int _aux_unpack_dhtId(struct be_node* dict, vnodeId* srcId)
             if (!ret) {
                 return VDHT_FIND_CLOSEST_NODES_R;
             }
-            ret = be_node_by_2keys(dict, "r", "hash", &node);
-            if (!ret) {
-                return VDHT_GET_PEERS_R;
-            }
             ret = be_node_by_2keys(dict, "r", "me", &node);
             if (!ret) {
-                return VDHT_REFLECT_R;
+                return VDHT_REFLEX_R;
             }
             ret = be_node_by_2keys(dict, "r", "node", &node);
             if (!ret) {
@@ -1158,7 +1081,7 @@ int _vdht_dec_find_closest_nodes_rsp(void* ctxt, struct varray* closest)
 }
 
 static
-int _vdht_dec_reflect(void* ctxt)
+int _vdht_dec_reflex(void* ctxt)
 {
     //do nothing;
     vassert(ctxt);
@@ -1168,18 +1091,18 @@ int _vdht_dec_reflect(void* ctxt)
 }
 
 static
-int _vdht_dec_reflect_rsp(void* ctxt, struct sockaddr_in* reflective_addr)
+int _vdht_dec_reflex_rsp(void* ctxt, struct sockaddr_in* reflextive_addr)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
     int ret = 0;
 
     vassert(dict);
-    vassert(reflective_addr);
+    vassert(reflextive_addr);
 
     ret = be_node_by_2keys(dict, "r", "me", &node);
     retE((ret < 0));
-    ret = be_unpack_addr(node, reflective_addr);
+    ret = be_unpack_addr(node, reflextive_addr);
     retE((ret < 0));
 
     return 0;
@@ -1219,50 +1142,6 @@ int _vdht_dec_post_service(void* ctxt, vsrvcInfo** service)
     ret = _aux_unpack_vsrvcInfo(node, service);
     retE((ret < 0));
 
-    return 0;
-}
-
-static
-int _vdht_dec_post_hash(void* ctxt, vnodeHash* hash)
-{
-    vassert(ctxt);
-    vassert(hash);
-
-    //todo;
-    return 0;
-}
-
-/*
- * @buf:
- * @sz:
- * @token:
- * @srcId:
- * @hash:
- */
-static
-int _vdht_dec_get_peers(void* ctxt, vnodeHash* hash)
-{
-    vassert(ctxt);
-    vassert(hash);
-
-    //todo;
-    return 0;
-}
-
-/*
- * @buf:
- * @sz:
- * @token:
- * @srcId:
- * @result:
- */
-static
-int _vdht_dec_get_peers_rsp(void* ctxt, struct varray* result)
-{
-    vassert(ctxt);
-    vassert(result);
-
-    //todo;
     return 0;
 }
 
@@ -1308,11 +1187,8 @@ struct vdht_dec_ops dht_dec_ops = {
     .find_node_rsp          = _vdht_dec_find_node_rsp,
     .find_closest_nodes     = _vdht_dec_find_closest_nodes,
     .find_closest_nodes_rsp = _vdht_dec_find_closest_nodes_rsp,
-    .reflect                = _vdht_dec_reflect,
-    .reflect_rsp            = _vdht_dec_reflect_rsp,
-    .post_service           = _vdht_dec_post_service,
-    .post_hash              = _vdht_dec_post_hash,
-    .get_peers              = _vdht_dec_get_peers,
-    .get_peers_rsp          = _vdht_dec_get_peers_rsp
+    .reflex                 = _vdht_dec_reflex,
+    .reflex_rsp             = _vdht_dec_reflex_rsp,
+    .post_service           = _vdht_dec_post_service
 };
 

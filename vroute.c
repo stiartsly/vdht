@@ -84,7 +84,7 @@ int _vroute_broadcast_service(struct vroute* route, vsrvcInfo* srvc)
 }
 
 static
-int _vroute_reflect(struct vroute* route)
+int _vroute_reflex(struct vroute* route)
 {
     struct vroute_node_space* node_space = &route->node_space;
     int ret = 0;
@@ -203,7 +203,7 @@ struct vroute_ops route_ops = {
     .join_node     = _vroute_join_node,
     .probe_service = _vroute_probe_service,
     .broadcast     = _vroute_broadcast_service,
-    .reflect       = _vroute_reflect,
+    .reflex        = _vroute_reflex,
     .load          = _vroute_load,
     .store         = _vroute_store,
     .tick          = _vroute_tick,
@@ -450,7 +450,7 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeInfo* dest, vt
 }
 
 static
-int _vroute_dht_reflect(struct vroute* route, vnodeInfo* dest)
+int _vroute_dht_reflex(struct vroute* route, vnodeInfo* dest)
 {
     struct vroute_record_space* record_space = &route->record_space;
     struct vdht_enc_ops* enc_ops = &dht_enc_ops;
@@ -465,7 +465,7 @@ int _vroute_dht_reflect(struct vroute* route, vnodeInfo* dest)
     retE((!buf));
 
     vtoken_make(&token);
-    ret = enc_ops->reflect(&token, &route->node_id, buf, vdht_buf_len());
+    ret = enc_ops->reflex(&token, &route->node_id, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     ret1E((!(dest->addr_flags & VNODEINFO_EADDR)), vdht_buf_free(buf));
     {
@@ -484,7 +484,7 @@ int _vroute_dht_reflect(struct vroute* route, vnodeInfo* dest)
 }
 
 static
-int _vroute_dht_reflect_rsp(struct vroute* route, vnodeInfo* dest, vtoken* token, struct sockaddr_in* reflective_addr)
+int _vroute_dht_reflex_rsp(struct vroute* route, vnodeInfo* dest, vtoken* token, struct sockaddr_in* reflective_addr)
 {
     struct vdht_enc_ops* enc_ops = &dht_enc_ops;
     void*  buf = NULL;
@@ -497,7 +497,7 @@ int _vroute_dht_reflect_rsp(struct vroute* route, vnodeInfo* dest, vtoken* token
     buf = vdht_buf_alloc();
     retE((!buf));
 
-    ret = enc_ops->reflect_rsp(token, &route->node_id, reflective_addr, buf, vdht_buf_len());
+    ret = enc_ops->reflex_rsp(token, &route->node_id, reflective_addr, buf, vdht_buf_len());
     ret1E((ret < 0), vdht_buf_free(buf));
     ret1E((!(dest->addr_flags & VNODEINFO_EADDR)), vdht_buf_free(buf));
     {
@@ -547,101 +547,6 @@ int _vroute_dht_post_service(struct vroute* route, vnodeInfo* dest, vsrvcInfo* s
     return 0;
 }
 
-/*
- * @route:
- * @dest :
- * @hash :
- */
-static
-int _vroute_dht_post_hash(struct vroute* route, vnodeInfo* dest, vtoken* hash)
-{
-    vassert(route);
-    vassert(dest);
-    vassert(hash);
-    retS((!(route->props & PROP_POST_HASH)));
-
-    //todo;
-    return 0;
-}
-
-/*
- * @route:
- * @dest :
- * @hash :
- */
-static
-int _vroute_dht_get_peers(struct vroute* route, vnodeInfo* dest, vtoken* hash)
-{
-    struct vroute_record_space* record_space = &route->record_space;
-    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
-    void* buf = NULL;
-    vtoken token;
-    int ret = 0;
-
-    vassert(route);
-    vassert(dest);
-    vassert(hash);
-    retS((!(route->props & PROP_GET_PEERS)));
-
-    buf = vdht_buf_alloc();
-    retE((!buf));
-
-    vtoken_make(&token);
-    ret = enc_ops->get_peers(&token, &route->node_id, hash, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(most_efficient_addr(route, dest)),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
-    record_space->ops->make(record_space, &token);
-    vlogI(printf("send @get_peers"));
-    return 0;
-}
-
-/*
- * @route:
- * @dest:
- * @token:
- * @peers:
- */
-static
-int _vroute_dht_get_peers_rsp(struct vroute* route, vnodeInfo* dest, vtoken* token, struct varray* peers)
-{
-    struct vdht_enc_ops* enc_ops = &dht_enc_ops;
-    void* buf = NULL;
-    int ret = 0;
-
-    vassert(route);
-    vassert(dest);
-    vassert(token);
-    vassert(peers);
-    retS((!(route->props & PROP_GET_PEERS_R)));
-
-    buf = vdht_buf_alloc();
-    retE((!buf));
-
-    ret = enc_ops->get_peers_rsp(token, &route->node_id, peers, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(most_efficient_addr(route, dest)),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
-    vlogI(printf("send @get_peers_rsp"));
-    return 0;
-}
-
 static
 struct vroute_dht_ops route_dht_ops = {
     .ping                   = _vroute_dht_ping,
@@ -650,12 +555,9 @@ struct vroute_dht_ops route_dht_ops = {
     .find_node_rsp          = _vroute_dht_find_node_rsp,
     .find_closest_nodes     = _vroute_dht_find_closest_nodes,
     .find_closest_nodes_rsp = _vroute_dht_find_closest_nodes_rsp,
-    .reflect                = _vroute_dht_reflect,
-    .reflect_rsp            = _vroute_dht_reflect_rsp,
-    .post_service           = _vroute_dht_post_service,
-    .post_hash              = _vroute_dht_post_hash,
-    .get_peers              = _vroute_dht_get_peers,
-    .get_peers_rsp          = _vroute_dht_get_peers_rsp
+    .reflex                 = _vroute_dht_reflex,
+    .reflex_rsp             = _vroute_dht_reflex_rsp,
+    .post_service           = _vroute_dht_post_service
 };
 
 static
@@ -878,7 +780,7 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, vnodeInfo* from, vto
 }
 
 static
-int _vroute_cb_reflect(struct vroute* route, vnodeInfo* from, vtoken* token, void* ctxt)
+int _vroute_cb_reflex(struct vroute* route, vnodeInfo* from, vtoken* token, void* ctxt)
 {
     struct vroute_node_space* space = &route->node_space;
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
@@ -889,19 +791,19 @@ int _vroute_cb_reflect(struct vroute* route, vnodeInfo* from, vtoken* token, voi
     vassert(token);
     vassert(ctxt);
 
-    ret = dec_ops->reflect(ctxt);
+    ret = dec_ops->reflex(ctxt);
     retE((ret < 0));
     ret = space->ops->add_node(space, from, 1);
     retE((ret < 0));
 
     retS((!(from->addr_flags & VNODEINFO_EADDR)));
-    ret = route->dht_ops->reflect_rsp(route, from, token, &from->eaddr);
+    ret = route->dht_ops->reflex_rsp(route, from, token, &from->eaddr);
     retE((ret < 0));
     return 0;
 }
 
 static
-int _vroute_cb_reflect_rsp(struct vroute* route, vnodeInfo* from, vtoken* token, void* ctxt)
+int _vroute_cb_reflex_rsp(struct vroute* route, vnodeInfo* from, vtoken* token, void* ctxt)
 {
     struct vroute_record_space* record_space = &route->record_space;
     struct vdht_dec_ops* dec_ops = &dht_dec_ops;
@@ -915,7 +817,7 @@ int _vroute_cb_reflect_rsp(struct vroute* route, vnodeInfo* from, vtoken* token,
     vassert(ctxt);
     retE((!record_space->ops->check_exist(record_space, token)));
 
-    ret = dec_ops->reflect_rsp(ctxt, &eaddr);
+    ret = dec_ops->reflex_rsp(ctxt, &eaddr);
     retE((ret < 0));
 
     ret = node->ops->set_eaddr(node, &eaddr);
@@ -952,62 +854,6 @@ int _vroute_cb_post_service(struct vroute* route, vnodeInfo* from, vtoken* token
     return 0;
 }
 
-/*
- * the routine to call when receving a post-hash dht msg.
- *
- * @route:
- * @from:
- * @ctxt:
- */
-static
-int _vroute_cb_post_hash(struct vroute* route, vnodeInfo* from, vtoken* token, void* ctxt)
-{
-    vassert(route);
-    vassert(from);
-    vassert(token);
-    vassert(ctxt);
-
-    //TODO;
-    return 0;
-}
-
-/*
- * the routine to call when receving a get_peers dht msg.
- *
- * @route:
- * @from:
- * @ctxt:
- */
-static
-int _vroute_cb_get_peers(struct vroute* route, vnodeInfo* from, vtoken* token, void* ctxt)
-{
-    vassert(route);
-    vassert(from);
-    vassert(token);
-    vassert(ctxt);
-
-    //todo;
-    return 0;
-}
-/*
- * the routine to call when receving a get_peers_rsp dht msg.
- *
- * @route:
- * @from:
- * @ctxt:
- */
-static
-int _vroute_cb_get_peers_rsp(struct vroute* route, vnodeInfo* from, vtoken* token, void* ctxt)
-{
-    vassert(route);
-    vassert(from);
-    vassert(token);
-    vassert(ctxt);
-
-    //TODO;
-    return 0;
-}
-
 static
 vroute_dht_cb_t route_cb_ops[] = {
     _vroute_cb_ping,
@@ -1016,12 +862,9 @@ vroute_dht_cb_t route_cb_ops[] = {
     _vroute_cb_find_node_rsp,
     _vroute_cb_find_closest_nodes,
     _vroute_cb_find_closest_nodes_rsp,
-    _vroute_cb_reflect,
-    _vroute_cb_reflect_rsp,
+    _vroute_cb_reflex,
+    _vroute_cb_reflex_rsp,
     _vroute_cb_post_service,
-    _vroute_cb_post_hash,
-    _vroute_cb_get_peers,
-    _vroute_cb_get_peers_rsp,
     NULL
 };
 

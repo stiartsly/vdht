@@ -126,7 +126,7 @@ int _aux_space_reflect_addr_cb(void* item, void* cookie)
     if (!(peer->node.addr_flags & VNODEINFO_EADDR)) {
         return 0;
     }
-    route->dht_ops->reflect(route, &peer->node);
+    route->dht_ops->reflex(route, &peer->node);
     return 0;
 }
 
