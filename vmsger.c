@@ -15,11 +15,13 @@ struct vmsg_sys* vmsg_sys_alloc(int sz)
     ms = (struct vmsg_sys*)vmem_aux_alloc(&ms_cache);
     vlog((!ms), elog_vmem_aux_alloc);
     retE_p((!ms));
+    memset(ms, 0, sizeof(*ms));
 
     if (sz > 0) {
         buf = malloc(sz);
         vlog((!buf), elog_malloc);
         ret1E_p((!buf), vmem_aux_free(&ms_cache, ms));
+        memset(buf, 0, sz);
     }
     ms->data = buf;
     ms->len  = sz;
@@ -39,7 +41,7 @@ void vmsg_sys_free(struct vmsg_sys* ms)
     return ;
 }
 
-void vmsg_sys_init(struct vmsg_sys* ms, struct vsockaddr* addr, int len, void* data)
+void vmsg_sys_init(struct vmsg_sys* ms, struct vsockaddr* addr, struct vsockaddr* spec, int len, void* data)
 {
     vassert(ms);
     vassert(addr || !addr);
@@ -49,6 +51,9 @@ void vmsg_sys_init(struct vmsg_sys* ms, struct vsockaddr* addr, int len, void* d
     vlist_init(&ms->list);
     if (addr) {
         memcpy(&ms->addr, addr, sizeof(*addr));
+    }
+    if (spec) {
+        memcpy(&ms->spec, spec, sizeof(*spec));
     }
     ms->len  = len;
     ms->data = data;
@@ -74,7 +79,7 @@ void vmsg_sys_refresh(struct vmsg_sys* ms, int buf_len)
 /*
  * auxiliary func for vmsg_usr.
  */
-void vmsg_usr_init(struct vmsg_usr* mu, int msgId, struct vsockaddr* addr, int len, void* data)
+void vmsg_usr_init(struct vmsg_usr* mu, int msgId, struct vsockaddr* addr, struct vsockaddr* spec, int len, void* data)
 {
     vassert(mu);
     vassert(msgId >= 0);
@@ -84,6 +89,7 @@ void vmsg_usr_init(struct vmsg_usr* mu, int msgId, struct vsockaddr* addr, int l
 
     mu->msgId = msgId;
     mu->addr  = addr;
+    mu->spec  = spec;
     mu->len   = len;
     mu->data  = data;
     return ;

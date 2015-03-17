@@ -32,13 +32,13 @@ struct vsockaddr {
 
 struct vmsg_usr {
     struct vsockaddr* addr;
-    struct vsockaddr* specific;
+    struct vsockaddr* spec;
     int   msgId;
     int   len;
     void* data;
 };
 
-void vmsg_usr_init(struct vmsg_usr*, int, struct vsockaddr*, int, void*);
+void vmsg_usr_init(struct vmsg_usr*, int, struct vsockaddr*, struct vsockaddr*, int, void*);
 
 /*
  * vmsg_sys
@@ -46,14 +46,14 @@ void vmsg_usr_init(struct vmsg_usr*, int, struct vsockaddr*, int, void*);
 struct vmsg_sys {
     struct vlist list;
     struct vsockaddr addr;
-    struct vsockaddr specific;
+    struct vsockaddr spec;
     int   len;
     void* data;
 };
 
 struct vmsg_sys* vmsg_sys_alloc(int);
 void vmsg_sys_free   (struct vmsg_sys*);
-void vmsg_sys_init   (struct vmsg_sys*, struct vsockaddr*, int, void*);
+void vmsg_sys_init   (struct vmsg_sys*, struct vsockaddr*, struct vsockaddr*, int, void*);
 void vmsg_sys_refresh(struct vmsg_sys*, int);
 
 /*

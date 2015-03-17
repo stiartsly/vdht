@@ -318,7 +318,7 @@ int _aux_vhost_pack_msg_cb(void* cookie, struct vmsg_usr* um, struct vmsg_sys* s
         data = unoff_addr(um->data, sz);
         set_uint32(data, DHT_MAGIC);
 
-        vmsg_sys_init(sm, um->addr, um->len + sz, data);
+        vmsg_sys_init(sm, um->addr, um->spec, um->len + sz, data);
         return 0;
     }
 
@@ -353,7 +353,7 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
 
     data = offset_addr(sm->data, sz);
     if (IS_DHT_MSG(magic)) {
-        vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, data);
+        vmsg_usr_init(um, msgId, &sm->addr, &sm->spec, sm->len -sz, data);
         return 0;
     }
 

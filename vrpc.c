@@ -227,7 +227,7 @@ static
 int _vrpc_udp_sndto(void* impl, struct vmsg_sys* msg)
 {
     struct vudp* udp = (struct vudp*)impl;
-    struct sockaddr_in* spec_addr = to_sockaddr_sin(&msg->specific);
+    struct sockaddr_in* spec_addr = to_sockaddr_sin(&msg->spec);
     struct in_pktinfo* pi = NULL;
     struct cmsghdr*  cmsg = NULL;
     char msg_control[BUF_SZ];
@@ -277,7 +277,7 @@ static
 int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
 {
     struct vudp* udp = (struct vudp*)impl;
-    struct sockaddr_in* spec_addr = to_sockaddr_sin(&msg->specific);
+    struct sockaddr_in* spec_addr = to_sockaddr_sin(&msg->spec);
     struct cmsghdr* cmsg = NULL;
     char msg_control[BUF_SZ];
     struct iovec iovec[1];
@@ -295,7 +295,7 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
     mhdr.msg_name     = to_sockaddr_sin(&msg->addr);
     mhdr.msg_namelen  = sizeof(struct sockaddr_in);
     mhdr.msg_iov      = iovec;
-    mhdr.msg_iovlen   = sizeof(iovec)/sizeof(struct iovec);
+    mhdr.msg_iovlen   = sizeof(iovec)/sizeof(*iovec);
     mhdr.msg_control  = msg_control;
     mhdr.msg_controllen = BUF_SZ;
     mhdr.msg_flags    = 0;

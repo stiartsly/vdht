@@ -375,7 +375,7 @@ int _aux_lsctl_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
     retE((msgId != VMSG_LSCTL));
     sz += sizeof(int32_t);
 
-    vmsg_usr_init(um, msgId, &sm->addr, sm->len-sz, offset_addr(sm->data, sz));
+    vmsg_usr_init(um, msgId, &sm->addr, NULL, sm->len-sz, offset_addr(sm->data, sz));
     return 0;
 }
 
