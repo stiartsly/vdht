@@ -56,7 +56,7 @@ void vrecord_dump(struct vrecord* record)
  * @token:
  */
 static
-int _vroute_record_space_make_record(struct vroute_record_space* space, vtoken* token)
+int _vroute_recr_space_make(struct vroute_recr_space* space, vtoken* token)
 {
     struct vrecord* record = NULL;
 
@@ -83,7 +83,7 @@ int _vroute_record_space_make_record(struct vroute_record_space* space, vtoken* 
  * @token:
  */
 static
-int _vroute_record_space_check(struct vroute_record_space* space, vtoken* token)
+int _vroute_recr_space_check(struct vroute_recr_space* space, vtoken* token)
 {
     struct vrecord* record = NULL;
     struct vlist* node = NULL;
@@ -113,7 +113,7 @@ int _vroute_record_space_check(struct vroute_record_space* space, vtoken* token)
  * @space:
  */
 static
-void _vroute_record_space_timed_reap(struct vroute_record_space* space)
+void _vroute_recr_space_timed_reap(struct vroute_recr_space* space)
 {
     struct vrecord* record = NULL;
     struct vlist* node = NULL;
@@ -123,7 +123,7 @@ void _vroute_record_space_timed_reap(struct vroute_record_space* space)
     vlock_enter(&space->lock);
     __vlist_for_each(node, &space->records) {
         record = vlist_entry(node, struct vrecord, list);
-        if ((now - record->snd_ts) > space->max_record_period) {
+        if ((now - record->snd_ts) > space->max_recr_period) {
             vlist_del(&record->list);
             vrecord_free(record);
         }
@@ -137,7 +137,7 @@ void _vroute_record_space_timed_reap(struct vroute_record_space* space)
  * @space:
  */
 static
-void _vroute_record_space_clear(struct vroute_record_space* space)
+void _vroute_recr_space_clear(struct vroute_recr_space* space)
 {
     struct vrecord* record = NULL;
     struct vlist* node = NULL;
@@ -159,7 +159,7 @@ void _vroute_record_space_clear(struct vroute_record_space* space)
  * @space:
  */
 static
-void _vroute_record_space_dump(struct vroute_record_space* space)
+void _vroute_recr_space_dump(struct vroute_recr_space* space)
 {
     struct vrecord* record = NULL;
     struct vlist* node = NULL;
@@ -175,19 +175,19 @@ void _vroute_record_space_dump(struct vroute_record_space* space)
 }
 
 static
-struct vroute_record_space_ops route_record_space_ops = {
-    .make        = _vroute_record_space_make_record,
-    .check_exist = _vroute_record_space_check,
-    .timed_reap  = _vroute_record_space_timed_reap,
-    .clear       = _vroute_record_space_clear,
-    .dump        = _vroute_record_space_dump
+struct vroute_recr_space_ops route_record_space_ops = {
+    .make        = _vroute_recr_space_make,
+    .check       = _vroute_recr_space_check,
+    .timed_reap  = _vroute_recr_space_timed_reap,
+    .clear       = _vroute_recr_space_clear,
+    .dump        = _vroute_recr_space_dump
 };
 
-int vroute_record_space_init(struct vroute_record_space* space)
+int vroute_recr_space_init(struct vroute_recr_space* space)
 {
     vassert(space);
 
-    space->max_record_period = 5; //5s;
+    space->max_recr_period = 5; //5s;
     vlist_init(&space->records);
     vlock_init(&space->lock);
 
@@ -195,7 +195,7 @@ int vroute_record_space_init(struct vroute_record_space* space)
     return 0;
 }
 
-void vroute_record_space_deinit(struct vroute_record_space* space)
+void vroute_recr_space_deinit(struct vroute_recr_space* space)
 {
     vassert(space);
 

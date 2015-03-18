@@ -236,10 +236,10 @@ void _vroute_srvc_dump(struct vroute_srvc_space* space)
 
 static
 struct vroute_srvc_space_ops route_srvc_space_ops = {
-    .add_srvc_node = _vroute_srvc_add_service_node,
-    .get_srvc_node = _vroute_srvc_get_service_node,
-    .clear         = _vroute_srvc_clear,
-    .dump          = _vroute_srvc_dump
+    .add_service = _vroute_srvc_add_service_node,
+    .get_service = _vroute_srvc_get_service_node,
+    .clear       = _vroute_srvc_clear,
+    .dump        = _vroute_srvc_dump
 };
 
 int vroute_srvc_space_init(struct vroute_srvc_space* space, struct vconfig* cfg)

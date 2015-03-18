@@ -32,25 +32,25 @@ char* vroute_srvc_get_desc(int);
  */
 struct vhost;
 struct vroute;
-struct vroute_record_space;
-struct vroute_record_space_ops {
-    int  (*make)         (struct vroute_record_space*, vtoken*);
-    int  (*check_exist)  (struct vroute_record_space*, vtoken*);
-    void (*timed_reap)   (struct vroute_record_space*);
-    void (*clear)        (struct vroute_record_space*);
-    void (*dump)         (struct vroute_record_space*);
+struct vroute_recr_space;
+struct vroute_recr_space_ops {
+    int  (*make)         (struct vroute_recr_space*, vtoken*);
+    int  (*check)        (struct vroute_recr_space*, vtoken*);
+    void (*timed_reap)   (struct vroute_recr_space*);
+    void (*clear)        (struct vroute_recr_space*);
+    void (*dump)         (struct vroute_recr_space*);
 };
 
-struct vroute_record_space {
-    int max_record_period;
+struct vroute_recr_space {
+    int max_recr_period;
     struct vlist records; //has all dht query(but not received rsp yet) records;
     struct vlock lock;
 
-    struct vroute_record_space_ops* ops;
+    struct vroute_recr_space_ops* ops;
 };
 
-int  vroute_record_space_init  (struct vroute_record_space*);
-void vroute_record_space_deinit(struct vroute_record_space*);
+int  vroute_recr_space_init  (struct vroute_recr_space*);
+void vroute_recr_space_deinit(struct vroute_recr_space*);
 
 /*
  * for node space
@@ -70,8 +70,8 @@ struct vroute_node_space_ops {
 };
 
 struct vroute_node_space {
-    vnodeId  node_id;
-    vnodeVer node_ver;
+    vnodeId  myid;
+    vnodeVer myver;
     char db[BUF_SZ];
     int  bucket_sz;
     int  max_snd_tms;
@@ -93,8 +93,8 @@ void vroute_node_space_deinit(struct vroute_node_space*);
  */
 struct vroute_srvc_space;
 struct vroute_srvc_space_ops {
-    int  (*add_srvc_node)(struct vroute_srvc_space*, vsrvcInfo*);
-    int  (*get_srvc_node)(struct vroute_srvc_space*, vsrvcId*, vsrvcInfo**);
+    int  (*add_service)  (struct vroute_srvc_space*, vsrvcInfo*);
+    int  (*get_service)  (struct vroute_srvc_space*, vsrvcId*, vsrvcInfo**);
     void (*clear)        (struct vroute_srvc_space*);
     void (*dump)         (struct vroute_srvc_space*);
 };
@@ -139,19 +139,20 @@ struct vroute_dht_ops {
 
 typedef int (*vroute_dht_cb_t)(struct vroute*, vnodeInfo*, vtoken*, void*);
 struct vroute {
-    vnodeId  node_id;
+    vnodeId  myid;
     uint32_t props;
 
-    struct vroute_node_space   node_space;
-    struct vroute_srvc_space   srvc_space;
-    struct vroute_record_space record_space;
+    struct vroute_node_space node_space;
+    struct vroute_srvc_space srvc_space;
+    struct vroute_recr_space recr_space;
 
     struct vlock lock;
-
 
     struct vroute_ops*     ops;
     struct vroute_dht_ops* dht_ops;
     vroute_dht_cb_t*       cb_ops;
+    struct vdht_enc_ops*   enc_ops;
+    struct vdht_dec_ops*   dec_ops;
 
     struct vconfig* cfg;
     struct vmsger*  msger;

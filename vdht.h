@@ -25,13 +25,14 @@ enum {
  */
 struct vdht_enc_ops {
     int (*ping)(
-            vtoken* token,   // transaction Id.
+            vtoken* token,  // transaction Id.
             vnodeId* srcId, // node Id querying
             void* buf,
             int   sz);
 
     int (*ping_rsp)(
             vtoken* token,  // trans Id.
+            vnodeId* srcId,
             vnodeInfo* result, // query result. nomally info of current dht node
             void* buf,
             int   sz);

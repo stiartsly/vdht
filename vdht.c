@@ -250,7 +250,8 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
  * response = {"t":"06d5613f3f43631c539db6f10fbd04b651a21844",
  *             "y":"r",
  *             "r":"ping",
- *             "a":{"node" :{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *             "a": {"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *                   node" :{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
  *                            "v": "0.0.0.1.0",
  *                            "ml": "192.168.4.125:12300",
  *                            "w": "0"
@@ -263,7 +264,7 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
  *
  */
 static
-int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result, void* buf, int sz)
+int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -288,6 +289,8 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result, void* buf, int sz)
     be_add_keypair(dict, "r", node);
 
     node = be_create_dict();
+    temp = be_create_vtoken(srcId);
+    be_add_keypair(node, "id", temp);
     temp = _aux_create_vnodeInfo(result);
     be_add_keypair(node, "node", temp);
     be_add_keypair(dict, "a", node);
@@ -933,7 +936,9 @@ int _vdht_dec_ping(void* ctxt)
  *
  * response = {"t":"06d5613f3f43631c539db6f10fbd04b651a21844",
  *             "y":"r",
- *             "r":{"node" :{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *             "r":"ping",
+ *             "a":{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *                  "node" :{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
  *                            "v": "0.0.0.1.0",
  *                            "ml": "192.168.4.125:12300",
  *                            "w": "0"
