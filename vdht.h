@@ -67,14 +67,14 @@ struct vdht_enc_ops {
             vtoken* token,
             vnodeId* srcId,
             void* buf,
-            int sz);
+            int   sz);
 
     int (*reflex_rsp)(
             vtoken* token,
             vnodeId* srcId,
             struct sockaddr_in* reflexive_addr,
             void* buf,
-            int sz);
+            int   sz);
 
     int (*post_service)(
             vtoken* token,

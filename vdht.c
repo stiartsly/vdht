@@ -7,7 +7,7 @@ struct vdhtId_desc {
 };
 
 static
-struct vdhtId_desc dhtId_desc[] = {
+struct vdhtId_desc dhtId_global_desc[] = {
     {VDHT_PING,                 "ping"                  },
     {VDHT_PING_R,               "ping_rsp"              },
     {VDHT_FIND_NODE,            "find_node"             },
@@ -20,9 +20,28 @@ struct vdhtId_desc dhtId_desc[] = {
     {VDHT_UNKNOWN, NULL}
 };
 
+static
+struct vdhtId_desc dhtId_query_desc[] = {
+    {VDHT_PING,                 "ping"                  },
+    {VDHT_FIND_NODE,            "find_node"             },
+    {VDHT_FIND_CLOSEST_NODES,   "find_closest_nodes"    },
+    {VDHT_REFLEX,               "reflex"                },
+    {VDHT_POST_SERVICE,         "post_service"          },
+    {VDHT_UNKNOWN, NULL }
+};
+
+static
+struct vdhtId_desc dhtId_rsp_desc[] = {
+    {VDHT_PING_R,               "ping"                  },
+    {VDHT_FIND_NODE_R,          "find_node"             },
+    {VDHT_FIND_CLOSEST_NODES_R, "find_closest_nodes"    },
+    {VDHT_REFLEX_R,             "reflex"                },
+    {VDHT_UNKNOWN, NULL }
+};
+
 char* vdht_get_desc(int dhtId)
 {
-    struct vdhtId_desc* desc = dhtId_desc;
+    struct vdhtId_desc* desc = dhtId_global_desc;
     int i = 0;
 
     if ((dhtId < 0) || (dhtId >= VDHT_UNKNOWN)) {
@@ -40,7 +59,7 @@ char* vdht_get_desc(int dhtId)
 
 int vdht_get_dhtId_by_desc(const char* dht_str)
 {
-    struct vdhtId_desc* desc = dhtId_desc;
+    struct vdhtId_desc* desc = dhtId_global_desc;
     int dhtId = -1;
 
     vassert(dht_str);
@@ -55,9 +74,9 @@ int vdht_get_dhtId_by_desc(const char* dht_str)
 }
 
 static
-int  vdht_get_queryId(char* desc)
+int vdht_get_queryId(char* desc)
 {
-    struct vdhtId_desc* id_desc = dhtId_desc;
+    struct vdhtId_desc* id_desc = dhtId_query_desc;
     int qId = VDHT_UNKNOWN;
     vassert(desc);
 
@@ -69,6 +88,23 @@ int  vdht_get_queryId(char* desc)
         id_desc++;
     }
     return qId;
+}
+
+static
+int vdht_get_rspId(char* desc)
+{
+    struct vdhtId_desc* id_desc = dhtId_rsp_desc;
+    int rspId = VDHT_UNKNOWN;
+    vassert(desc);
+
+    for (; id_desc->desc;) {
+        if (!strcmp(id_desc->desc, desc)) {
+            rspId = id_desc->id;
+            break;
+        }
+        id_desc++;
+    }
+    return rspId;
 }
 
 void* vdht_buf_alloc(void)
@@ -213,7 +249,8 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
  * @len:
  * response = {"t":"06d5613f3f43631c539db6f10fbd04b651a21844",
  *             "y":"r",
- *             "r":{"node" :{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *             "r":"ping",
+ *             "a":{"node" :{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
  *                            "v": "0.0.0.1.0",
  *                            "ml": "192.168.4.125:12300",
  *                            "w": "0"
@@ -230,7 +267,7 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* rslt = NULL;
+    struct be_node* temp = NULL;
     int ret = 0;
 
     vassert(token);
@@ -247,10 +284,13 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeInfo* result, void* buf, int sz)
     node = be_create_str("r");
     be_add_keypair(dict, "y", node);
 
-    rslt = be_create_dict();
-    node = _aux_create_vnodeInfo(result);
-    be_add_keypair(rslt, "node", node);
-    be_add_keypair(dict, "r", rslt);
+    node = be_create_str("ping");
+    be_add_keypair(dict, "r", node);
+
+    node = be_create_dict();
+    temp = _aux_create_vnodeInfo(result);
+    be_add_keypair(node, "node", temp);
+    be_add_keypair(dict, "a", node);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -328,7 +368,8 @@ int _vdht_enc_find_node(
  *
  *  response = {"t":"9948eb5973da8f3c3c0a",
  *              "y":"r",
- *              "r":{"id":"ce3dbcf618862baf69e8",
+ *              "r":"find_node",
+ *              "a":{"id":"ce3dbcf618862baf69e8",
  *                  "node" :{"id": "7ba29c1b9215a2e7621e",
  *                            "m": "192.168.4.46:12300",
  *                            "v": "0.0.0.1.0",
@@ -350,7 +391,7 @@ int _vdht_enc_find_node_rsp(
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* rslt = NULL;
+    struct be_node* temp = NULL;
     int ret = 0;
 
     vassert(token);
@@ -368,13 +409,15 @@ int _vdht_enc_find_node_rsp(
     node = be_create_str("r");
     be_add_keypair(dict, "y", node);
 
-    rslt = be_create_dict();
-    node = be_create_vtoken(srcId);
-    be_add_keypair(rslt, "id", node);
+    node = be_create_str("find_node");
+    be_add_keypair(dict, "r", node);
 
-    node = _aux_create_vnodeInfo(result);
-    be_add_keypair(rslt, "node", node);
-    be_add_keypair(dict, "r", rslt);
+    node = be_create_dict();
+    temp = be_create_vtoken(srcId);
+    be_add_keypair(node, "id", temp);
+    temp = _aux_create_vnodeInfo(result);
+    be_add_keypair(node, "node", temp);
+    be_add_keypair(dict, "a", node);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -452,7 +495,8 @@ int _vdht_enc_find_closest_nodes(
  *
  *  response = {"t":"30c6443e29cc307571e3",
  *              "y":"r",
- *              "r":{"id":"ce3dbcf618862baf69e8",
+ *              "r":"find_closest_nodes",
+ *              "a":{"id":"ce3dbcf618862baf69e8",
  *                  "nodes" :["id": "5a7f5578eace25999477",
  *                            "m":  "192.168.4.46:12300",
  *                            "v":  "0.0.0.0.01",
@@ -491,6 +535,8 @@ int _vdht_enc_find_closest_nodes_rsp(
 
     node = be_create_str("r");
     be_add_keypair(dict, "y", node);
+    node = be_create_str("find_closest_nodes");
+    be_add_keypair(dict, "r", node);
 
     rslt = be_create_dict();
     node = be_create_vtoken(srcId);
@@ -504,7 +550,7 @@ int _vdht_enc_find_closest_nodes_rsp(
         be_add_list(list, node);
     }
     be_add_keypair(rslt, "nodes", list);
-    be_add_keypair(dict, "r", rslt);
+    be_add_keypair(dict, "a", rslt);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -519,7 +565,7 @@ int _vdht_enc_find_closest_nodes_rsp(
  * @len:
  * reflect Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
  *                  "y":"q",
- *                  "q":"reflect",
+ *                  "q":"reflex",
  *                  "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
  *              }
  * encoded = d1:t40:deafc137da918b8cd9b95e72fef379a5b54c3f361:y1:q1:q4:reflect
@@ -568,10 +614,11 @@ int _vdht_enc_reflex(vtoken* token, vnodeId* srcId, void* buf, int sz)
  * @buf:
  * @sz:
  *
- *  response = {"t":"9948eb5973da8f3c3c0a",
+ *  response = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
  *              "y":"r",
- *              "r":{"id":"ce3dbcf618862baf69e8",
- *                   "me" :"10.3.2.45:12300",
+ *              "r":"reflex",
+ *              "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *                   "me" :"10.34.2.45:12300",
  *                 }
  *            }
  */
@@ -602,13 +649,15 @@ int _vdht_enc_reflex_rsp(
 
     node = be_create_str("r");
     be_add_keypair(dict, "y", node);
+    node = be_create_str("reflex");
+    be_add_keypair(dict, "r", node);
 
     rslt = be_create_dict();
     node = be_create_vtoken(srcId);
     be_add_keypair(rslt, "id", node);
     node = be_create_addr(reflective_addr);
     be_add_keypair(rslt, "me", node);
-    be_add_keypair(dict, "r", rslt);
+    be_add_keypair(dict, "a", rslt);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -843,27 +892,12 @@ int _aux_unpack_dhtId(struct be_node* dict, vnodeId* srcId)
         return vdht_get_queryId(node->val.s);
     }
     if (!strcmp(node->val.s, "r")) { //response
-        ret = _aux_unpack_vnodeId(dict, "r", "id", srcId);
+        ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
         if (ret >= 0) {
-            ret = be_node_by_2keys(dict, "r", "nodes", &node);
-            if (!ret) {
-                return VDHT_FIND_CLOSEST_NODES_R;
-            }
-            ret = be_node_by_2keys(dict, "r", "me", &node);
-            if (!ret) {
-                return VDHT_REFLEX_R;
-            }
-            ret = be_node_by_2keys(dict, "r", "node", &node);
-            if (!ret) {
-                return VDHT_FIND_NODE_R;
-            }
-            return VDHT_UNKNOWN;
-        } else {
-            ret = be_node_by_2keys(dict, "r", "node", &node);
-            if (!ret) {
-                return VDHT_PING_R;
-            }
-            return VDHT_UNKNOWN;
+            ret = be_node_by_key(dict, "r", &node);
+            retE((ret < 0));
+            retE((BE_STR != node->type));
+            return vdht_get_rspId(node->val.s);
         }
     }
     return VDHT_UNKNOWN;
@@ -920,7 +954,7 @@ int _vdht_dec_ping_rsp(void* ctxt, vnodeInfo* result)
     vassert(ctxt);
     vassert(result);
 
-    ret = be_node_by_2keys(dict, "r", "node", &node);
+    ret = be_node_by_2keys(dict, "a", "node", &node);
     retE((ret < 0));
     ret = _aux_unpack_vnodeInfo(node, result);
     retE((ret < 0));
@@ -966,7 +1000,8 @@ int _vdht_dec_find_node(void* ctxt, vnodeId* targetId)
  *
   *  response = {"t":"9948eb5973da8f3c3c0a",
  *              "y":"r",
- *              "r":{"id":"ce3dbcf618862baf69e8",
+ *              "r":"find_node",
+ *              "a":{"id":"ce3dbcf618862baf69e8",
  *                  "node" :{"id": "7ba29c1b9215a2e7621e",
  *                            "m": "192.168.4.46:12300",
  *                            "v": "0.0.0.1.0",
@@ -988,7 +1023,7 @@ int _vdht_dec_find_node_rsp(void* ctxt, vnodeInfo* result)
     vassert(dict);
     vassert(result);
 
-    ret = be_node_by_2keys(dict, "r", "node", &node);
+    ret = be_node_by_2keys(dict, "a", "node", &node);
     retE((ret < 0));
     ret = _aux_unpack_vnodeInfo(node, result);
     retE((ret < 0));
@@ -1032,9 +1067,10 @@ int _vdht_dec_find_closest_nodes(void* ctxt, vnodeId* targetId)
  * @srcId: source vnodeId
  * @closest: array of nodes that close to current node.
  *
- *  response = {"t":"30c6443e29cc307571e3",
+ * response = {"t":"30c6443e29cc307571e3",
  *              "y":"r",
- *              "r":{"id":"ce3dbcf618862baf69e8",
+ *              "r":"find_closest_nodes",
+ *              "a":{"id":"ce3dbcf618862baf69e8",
  *                  "nodes" :["id": "5a7f5578eace25999477",
  *                            "m":  "192.168.4.46:12300",
  *                            "v":  "0.0.0.0.01",
@@ -1059,7 +1095,7 @@ int _vdht_dec_find_closest_nodes_rsp(void* ctxt, struct varray* closest)
     vassert(dict);
     vassert(closest);
 
-    ret = be_node_by_2keys(dict, "r", "nodes", &list);
+    ret = be_node_by_2keys(dict, "a", "nodes", &list);
     retE((ret < 0));
     retE((BE_LIST != list->type));
 
@@ -1100,7 +1136,7 @@ int _vdht_dec_reflex_rsp(void* ctxt, struct sockaddr_in* reflextive_addr)
     vassert(dict);
     vassert(reflextive_addr);
 
-    ret = be_node_by_2keys(dict, "r", "me", &node);
+    ret = be_node_by_2keys(dict, "a", "me", &node);
     retE((ret < 0));
     ret = be_unpack_addr(node, reflextive_addr);
     retE((ret < 0));
