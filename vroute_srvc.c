@@ -5,8 +5,8 @@
  * service node structure and it follows it's correspondent help APIs.
  */
 struct vservice {
-    vsrvcId*   id;
-    vsrvcInfo* svc;
+    vsrvcId*   srvcId;
+    vsrvcInfo* srvc;
     time_t rcv_ts;
 };
 
@@ -28,30 +28,30 @@ void vservice_free(struct vservice* item)
 {
     vassert(item);
 
-    if (item->svc) {
-        vsrvcInfo_free(item->svc);
+    if (item->srvc) {
+        vsrvcInfo_free(item->srvc);
     }
     vmem_aux_free(&service_cache, item);
     return ;
 }
 
 static
-int vservice_init(struct vservice* item, vsrvcInfo* svc, time_t ts)
+int vservice_init(struct vservice* item, vsrvcInfo* srvc, time_t ts)
 {
-    vsrvcInfo* svc_old = item->svc;
-    vsrvcInfo* svc_dup = NULL;
+    vsrvcInfo* srvc_old = item->srvc;
+    vsrvcInfo* srvc_dup = NULL;
     vassert(item);
-    vassert(svc);
+    vassert(srvc);
 
-    svc_dup = vsrvcInfo_dup(svc);
-    retE((!svc_dup));
+    srvc_dup = vsrvcInfo_dup(srvc);
+    retE((!srvc_dup));
 
-    item->id  = &svc_dup->id;
-    item->svc = svc_dup;
+    item->srvcId = &srvc_dup->id;
+    item->srvc   = srvc_dup;
     item->rcv_ts = ts;
 
-    if (svc_old) {
-        vsrvcInfo_free(svc_old);
+    if (srvc_old) {
+        vsrvcInfo_free(srvc_old);
     }
     return 0;
 }
@@ -61,7 +61,7 @@ void vservice_dump(struct vservice* item)
 {
     vassert(item);
 
-    vsrvcInfo_dump(item->svc);
+    vsrvcInfo_dump(item->srvc);
     printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts));
     return;
 }
@@ -71,15 +71,15 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
 {
     struct vservice* svc_item = (struct vservice*)item;
     varg_decl(cookie, 0, struct vservice**, to);
-    varg_decl(cookie, 1, vsrvcInfo*, svc);
+    varg_decl(cookie, 1, vsrvcInfo*, srvc);
     varg_decl(cookie, 2, time_t*, now);
     varg_decl(cookie, 3, int*, max_period);
     varg_decl(cookie, 4, int*, found);
 
-    if (vtoken_equal(svc_item->id, &svc->id)) {
+    if (vtoken_equal(svc_item->srvcId, &srvc->id)){
         *to = svc_item;
         *found = 1;
-        return 0;
+        return 1;
     }
     if ((int)(*now - svc_item->rcv_ts) > *max_period) {
         *to = svc_item;
@@ -91,15 +91,15 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
 static
 int _aux_srvc_get_service_cb(void* item, void* cookie)
 {
-    struct vservice* svc_item = (struct vservice*)item;
+    struct vservice* srvc_item = (struct vservice*)item;
     varg_decl(cookie, 0, struct vservice**, to);
-    varg_decl(cookie, 1, vtoken*, svc_hash);
+    varg_decl(cookie, 1, vtoken*, srvcId);
     varg_decl(cookie, 2, int*, min_nice);
 
-    if (vtoken_equal(svc_item->id, svc_hash) &&
-        (svc_item->svc->nice < *min_nice)) {
-        *to = svc_item;
-        *min_nice = svc_item->svc->nice;
+    if (vtoken_equal(srvc_item->srvcId, srvcId) &&
+        (srvc_item->srvc->nice < *min_nice)) {
+        *to = srvc_item;
+        *min_nice = srvc_item->srvc->nice;
     }
     return 0;
 }
@@ -112,38 +112,38 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
  *
  */
 static
-int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* svc)
+int _vroute_srvc_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvc)
 {
-    struct varray* svcs = NULL;
-    struct vservice* to = NULL;
+    struct varray* srvcs = NULL;
+    struct vservice*  to = NULL;
     time_t now = time(NULL);
     int max_period = 0;
     int found = 0;
 
     vassert(space);
-    vassert(svc);
+    vassert(srvc);
 
-    svcs = &space->bucket[vsrvcId_bucket(&svc->id)].srvcs;
+    srvcs = &space->bucket[vsrvcId_bucket(&srvc->id)].srvcs;
     {
         void* argv[] = {
             &to,
-            svc,
+            srvc,
             &now,
             &max_period,
             &found
         };
-        varray_iterate(svcs, _aux_srvc_add_service_cb, argv);
+        varray_iterate(srvcs, _aux_srvc_add_service_cb, argv);
         if (found) {
-            vservice_init(to, svc, now);
-        } else if (to && varray_size(svcs) >= space->bucket_sz) {
-            vservice_init(to, svc, now);
-        } else if (varray_size(svcs) < space->bucket_sz) {
+            vservice_init(to, srvc, now);
+        } else if (to && varray_size(srvcs) >= space->bucket_sz) {
+            vservice_init(to, srvc, now);
+        } else if (varray_size(srvcs) < space->bucket_sz) {
             to = vservice_alloc();
             retE((!to));
-            vservice_init(to, svc, now);
-            varray_add_tail(svcs, to);
+            vservice_init(to, srvc, now);
+            varray_add_tail(srvcs, to);
         } else {
-            //bucket is full, discard it.
+            //bucket is full, discard it (worst one).
         }
     }
     return 0;
@@ -158,29 +158,34 @@ int _vroute_srvc_add_service_node(struct vroute_srvc_space* space, vsrvcInfo* sv
  * @svci : service infos
  */
 static
-int _vroute_srvc_get_service_node(struct vroute_srvc_space* space, vsrvcId* svcId, vsrvcInfo** svc)
+int _vroute_srvc_get_service(struct vroute_srvc_space* space, vsrvcId* srvcId, vsrvcInfo** srvc)
 {
-    struct varray* svcs = NULL;
-    struct vservice* to = NULL;
+    struct varray* srvcs = NULL;
+    struct vservice*  to = NULL;
     int min_nice = 100;
+    int found = 0;
 
     vassert(space);
-    vassert(svc);
-    vassert(svcId);
+    vassert(srvcId);
+    vassert(srvc);
 
-    svcs = &space->bucket[vsrvcId_bucket(svcId)].srvcs;
+
+    srvcs = &space->bucket[vsrvcId_bucket(srvcId)].srvcs;
     {
         void* argv[] = {
             &to,
-            svcId,
+            srvcId,
             &min_nice
         };
-        varray_iterate(svcs, _aux_srvc_get_service_cb, argv);
+        varray_iterate(srvcs, _aux_srvc_get_service_cb, argv);
         if (to) {
-            *svc = vsrvcInfo_dup(to->svc);
+            *srvc = vsrvcInfo_dup(to->srvc);
+            if (*srvc) {
+                found = 1;
+            }
         }
     }
-    return 0;
+    return found;
 }
 
 /*
@@ -236,8 +241,8 @@ void _vroute_srvc_dump(struct vroute_srvc_space* space)
 
 static
 struct vroute_srvc_space_ops route_srvc_space_ops = {
-    .add_service = _vroute_srvc_add_service_node,
-    .get_service = _vroute_srvc_get_service_node,
+    .add_service = _vroute_srvc_add_service,
+    .get_service = _vroute_srvc_get_service,
     .clear       = _vroute_srvc_clear,
     .dump        = _vroute_srvc_dump
 };
