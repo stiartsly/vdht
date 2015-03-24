@@ -94,57 +94,62 @@ struct vdht_dec_ops {
     int (*dec_begin) (
             void* buf,
             int sz,
-            vtoken* token,
-            vnodeId* srcId,
-            void** ctxt
-        );
+            void** ctxt);
 
     int (*dec_done)(
-            void* ctxt
-        );
+            void* ctxt);
 
     int (*ping)(
-            void* ctxt
-        );
+            void* ctxt,
+            vtoken* token,
+            vnodeId* srcId);
 
     int (*ping_rsp)(
             void* ctxt,
-            vnodeInfo* result
-        );
+            vtoken* token,
+            vnodeInfo* result);
 
     int (*find_node)(
             void* ctxt,
-            vnodeId* targetId // queried vnode Id.
-        );
+            vtoken* token,
+            vnodeId* srcId,
+            vnodeId* targetId); // queried vnode Id.
 
     int (*find_node_rsp)(
             void* ctxt,
-            vnodeInfo* result
-        );
+            vtoken* token,
+            vnodeId* srcId,
+            vnodeInfo* result);
 
     int (*find_closest_nodes)(
             void* ctxt,
-            vnodeId* targetId
-        );
+            vtoken* token,
+            vnodeId* srcId,
+            vnodeId* targetId);
 
     int (*find_closest_nodes_rsp)(
             void* ctxt,
-            struct varray* result
-        );
+            vtoken* token,
+            vnodeId* srcId,
+            struct varray* result);
 
     int (*reflex)(
-            void* ctxt
-        );
+            void* ctxt,
+            vtoken* token,
+            vnodeId* srcId);
 
     int (*reflex_rsp)(
             void* ctxt,
-            struct sockaddr_in* reflexive_addr
-        );
+            vtoken* token,
+            vnodeId* srcId,
+            struct sockaddr_in* reflexive_addr);
 
     int (*post_service) (
             void* ctxt,
-            vsrvcInfo** service
-        );
+            vtoken* token,
+            vnodeId* srcId,
+            vsrvcInfo** srvc);
+
 };
 
 char* vdht_get_desc(int);

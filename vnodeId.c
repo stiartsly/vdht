@@ -305,134 +305,222 @@ void vnodeVer_dump(vnodeVer* ver)
     return;
 }
 
-/*
- * for vnodeInfo funcs
- */
-static MEM_AUX_INIT(node_info_cache, sizeof(vnodeInfo), 0);
-vnodeInfo* vnodeInfo_alloc(void)
+static MEM_AUX_INIT(nodeinfo_relax_cache, sizeof(vnodeInfo_relax), 0);
+vnodeInfo_relax* vnodeInfo_relax_alloc(void)
 {
-    vnodeInfo* info = NULL;
-
-    info = (vnodeInfo*)vmem_aux_alloc(&node_info_cache);
-    vlog((!info), elog_vmem_aux_alloc);
-    retE_p((!info));
-    memset(info, 0, sizeof(*info));
-    return info;
+    vnodeInfo_relax* nodei = NULL;
+    nodei = (vnodeInfo_relax*)vmem_aux_alloc(&nodeinfo_relax_cache);
+    retE_p((!nodei));
+    memset(nodei, 0, sizeof(*nodei));
+    return nodei;
 }
 
-void vnodeInfo_free(vnodeInfo* info)
+void vnodeInfo_relax_free(vnodeInfo_relax* nodei)
 {
-    vmem_aux_free(&node_info_cache, info);
+    vassert(nodei);
+
+    vmem_aux_free(&nodeinfo_relax_cache, nodei);
     return ;
 }
 
-int vnodeInfo_equal(vnodeInfo* a, vnodeInfo* b)
+int vnodeInfo_relax_init(vnodeInfo_relax* nodei, vnodeId* id, vnodeVer* ver, int weight)
 {
-    vassert(a);
-    vassert(b);
-
-    return (vtoken_equal(&a->id, &b->id)
-         && vsockaddr_equal(&a->laddr, &b->laddr)
-         && vsockaddr_equal(&a->uaddr, &b->uaddr)
-         && vsockaddr_equal(&a->eaddr, &b->eaddr));
-}
-
-void vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
-{
-    vassert(dest);
-    vassert(src);
-
-    vtoken_copy(&dest->id,  &src->id);
-    vtoken_copy(&dest->ver, &src->ver);
-    vsockaddr_copy(&dest->laddr, &src->laddr);
-    vsockaddr_copy(&dest->uaddr, &src->uaddr);
-    vsockaddr_copy(&dest->eaddr, &src->eaddr);
-    vsockaddr_copy(&dest->raddr, &src->raddr);
-    dest->weight = src->weight;
-    dest->addr_flags = src->addr_flags;
-    return ;
-}
-
-int vnodeInfo_init(vnodeInfo* info, vnodeId* id, vnodeVer* ver, int32_t weight)
-{
-    vassert(info);
+    vassert(nodei);
     vassert(id);
     vassert(ver);
     vassert(weight >= 0);
 
-    memset(info, 0, sizeof(*info));
-    vtoken_copy(&info->id,  id );
-    vtoken_copy(&info->ver, ver);
-    info->weight = weight;
+    vtoken_copy(&nodei->id,  id );
+    vtoken_copy(&nodei->ver, ver);
+    nodei->weight = (int32_t)weight;
+    nodei->naddrs = 0;
+    nodei->capc   = 12;
+
     return 0;
 }
 
-void vnodeInfo_set_laddr(vnodeInfo* info, struct sockaddr_in* laddr)
+vnodeInfo_compact* vnodeInfo_compact_alloc(void)
 {
-    vassert(info);
-    vassert(laddr);
+    vnodeInfo_compact* nodei = NULL;
+    nodei = (vnodeInfo_compact*)malloc(sizeof(*nodei));
+    retE_p((!nodei));
+    memset(nodei, 0, sizeof(*nodei));
+    return nodei;
+}
 
-    vsockaddr_copy(&info->laddr, laddr);
-    info->addr_flags |= VNODEINFO_LADDR;
+void vnodeInfo_compact_free(vnodeInfo_compact* nodei)
+{
+    vassert(nodei);
+
+    free(nodei);
     return ;
 }
 
-void vnodeInfo_set_uaddr(vnodeInfo* info, struct sockaddr_in* uaddr)
+int vnodeInfo_compact_init(vnodeInfo_compact* nodei, vnodeId* id, vnodeVer* ver, int weight)
 {
-    vassert(info);
-    vassert(uaddr);
+    vassert(nodei);
+    vassert(id);
+    vassert(ver);
+    vassert(weight >= 0);
 
-    vsockaddr_copy(&info->uaddr, uaddr);
-    info->addr_flags |= VNODEINFO_UADDR;
-    return ;
+    vtoken_copy(&nodei->id,  id );
+    vtoken_copy(&nodei->ver, ver);
+    nodei->weight = (int32_t)weight;
+    nodei->naddrs = 0;
+    nodei->capc   = 4;
+
+    return 0;
 }
 
-void vnodeInfo_set_eaddr(vnodeInfo* info, struct sockaddr_in* eaddr)
+int vnodeInfo_add_addr(vnodeInfo* nodei, struct sockaddr_in* addr)
 {
-    vassert(info);
-    vassert(eaddr);
+    int found = 0;
+    int i = 0;
 
-    vsockaddr_copy(&info->eaddr, eaddr);
-    info->addr_flags |= VNODEINFO_EADDR;
-    return ;
-}
-
-void vnodeInfo_dump(vnodeInfo* info)
-{
-    vassert(info);
-
-    vtoken_dump(&info->id);
-    printf(", ");
-    vnodeVer_dump(&info->ver);
-    printf(", ");
-    printf("weight: %d, ", info->weight);
-
-    if (info->addr_flags & VNODEINFO_LADDR) {
-        printf(" laddr:");
-        vsockaddr_dump(&info->laddr);
-    }
-    if (info->addr_flags & VNODEINFO_UADDR) {
-        printf(", uaddr:");
-        vsockaddr_dump(&info->uaddr);
-    }
-    if (info->addr_flags & VNODEINFO_EADDR) {
-        printf(", eaddr:");
-        vsockaddr_dump(&info->eaddr);
-    }
-    return ;
-}
-
-int vnodeInfo_has_addr(vnodeInfo* info, struct sockaddr_in* addr)
-{
-    vassert(info);
+    vassert(nodei);
     vassert(addr);
 
-    return (((info->addr_flags & VNODEINFO_LADDR)
-            && vsockaddr_equal(&info->laddr, addr))
-        || ((info->addr_flags & VNODEINFO_UADDR)
-            && vsockaddr_equal(&info->uaddr, addr))
-        || ((info->addr_flags & VNODEINFO_EADDR)
-            && vsockaddr_equal(&info->eaddr, addr)));
+    retE((nodei->naddrs >= VNODEINFO_MAX_ADDRS));
+
+    if (nodei->naddrs >= nodei->capc) {
+        vnodeInfo* new_nodei = NULL;
+        int extra_sz = sizeof(*addr) * nodei->capc;
+
+        new_nodei = (vnodeInfo*)realloc(nodei, sizeof(vnodeInfo_compact) + extra_sz);
+        vlog((!new_nodei), elog_realloc);
+        retE((!new_nodei));
+
+        nodei = new_nodei;
+        nodei->capc += VNODEINFO_MIN_ADDRS;
+    }
+    for (i = 0; i < nodei->naddrs; i++) {
+        if (vsockaddr_equal(&nodei->addrs[i], addr)) {
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        vsockaddr_copy(&nodei->addrs[nodei->naddrs++], addr);
+    }
+    return (!found);
+}
+
+int vnodeInfo_has_addr(vnodeInfo* nodei, struct sockaddr_in* addr)
+{
+    int found = 0;
+    int i = 0;
+
+    vassert(nodei);
+    vassert(addr);
+
+    for (i = 0; i < nodei->naddrs; i++) {
+        if (vsockaddr_equal(&nodei->addrs[i], addr)) {
+            found = 1;
+            break;
+        }
+    }
+    return found;
+}
+
+int vnodeInfo_update(vnodeInfo* dest_nodei, vnodeInfo* src_nodei)
+{
+    int nupdts = 0;
+    int naddrs = 0;
+    int ret = 0;
+    int i = 0;
+
+    vassert(dest_nodei);
+    vassert(src_nodei);
+
+    if (vtoken_equal(&dest_nodei->ver, &unknown_node_ver)) {
+        for (i = 0; i < src_nodei->naddrs; i++) {
+            ret = vnodeInfo_add_addr(dest_nodei, &src_nodei->addrs[i]);
+            retE((ret < 0));
+            if (ret > 0) {
+                nupdts++;
+            }
+        }
+        return nupdts;
+    }
+
+    dest_nodei->weight = src_nodei->weight;
+    if (dest_nodei->naddrs > src_nodei->naddrs) {
+        naddrs = src_nodei->naddrs;
+    } else {
+        naddrs = dest_nodei->naddrs;
+    }
+    for (i = 0; i < naddrs; i++) {
+        if (!vsockaddr_equal(&dest_nodei->addrs[i], &src_nodei->addrs[i])) {
+            vsockaddr_copy(&dest_nodei->addrs[i], &src_nodei->addrs[i]);
+            nupdts++;
+        }
+    }
+    if (dest_nodei->naddrs > src_nodei->naddrs) {
+        dest_nodei->naddrs = src_nodei->naddrs;
+    } else {
+        for (i = dest_nodei->naddrs; i < src_nodei->naddrs; i++) {
+            ret = vnodeInfo_add_addr(dest_nodei, &src_nodei->addrs[i]);
+            if (ret > 0) {
+                nupdts++;
+            }
+        }
+    }
+    return nupdts;
+}
+
+int vnodeInfo_copy(vnodeInfo* dest_nodei, vnodeInfo* src_nodei)
+{
+    int i = 0;
+
+    vassert(dest_nodei);
+    vassert(src_nodei);
+
+    vtoken_copy(&dest_nodei->id,  &src_nodei->id);
+    vtoken_copy(&dest_nodei->ver, &src_nodei->ver);
+    dest_nodei->weight = src_nodei->weight;
+    dest_nodei->naddrs = 0;
+
+    for (i = 0; i < src_nodei->naddrs; i++) {
+        vnodeInfo_add_addr(dest_nodei, &src_nodei->addrs[i]);
+    }
+    return 0;
+}
+
+void vnodeInfo_dump(vnodeInfo* nodei)
+{
+    int i = 0;
+    vassert(nodei);
+
+    vtoken_dump(&nodei->id);
+    printf(", ");
+    vnodeVer_dump(&nodei->ver);
+    printf(", ");
+    printf("weight: %d,", nodei->weight);
+    vsockaddr_dump(&nodei->addrs[0]);
+    for (i = 1; i < nodei->naddrs; i++) {
+        printf(", ");
+        vsockaddr_dump(&nodei->addrs[i]);
+    }
+    return ;
+}
+
+/*
+ * for vnodeConn
+ */
+int vnodeConn_set(vnodeConn* conn, struct sockaddr_in* local, struct sockaddr_in* remote)
+{
+    vassert(conn);
+    vassert(local);
+    vassert(remote);
+
+    memset(conn, 0, sizeof(*conn));
+    vsockaddr_copy(&conn->local,  local);
+    vsockaddr_copy(&conn->remote, remote);
+
+    if (vsockaddr_is_private(remote)) {
+        conn->weight = VNODECONN_WEIGHT_HIGHT;
+    }
+    return 0;
 }
 
 /*

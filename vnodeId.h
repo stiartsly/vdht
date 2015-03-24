@@ -47,36 +47,72 @@ extern vnodeVer unknown_node_ver;
 /*
  * for vnodeInfo
  */
-enum {
-    VNODEINFO_LADDR = (uint32_t)(1 << 0),
-    VNODEINFO_UADDR = (uint32_t)(1 << 1),
-    VNODEINFO_EADDR = (uint32_t)(1 << 2),
-    VNODEINFO_RADDR = (uint32_t)(1 << 3)
-};
-
-struct vnodeInfo  {
+#define VNODEINFO_MAX_ADDRS ((int32_t)12)
+#define VNODEINFO_MIN_ADDRS ((int32_t)4)
+struct vnodeInfo_relax {
     vnodeId  id;
     vnodeVer ver;
-    int32_t weight;
+    int32_t  weight;
 
-    struct sockaddr_in laddr; // local address
-    struct sockaddr_in uaddr; // upnp  address
-    struct sockaddr_in eaddr; // external address.
-    struct sockaddr_in raddr; // relay address
-    uint32_t addr_flags;
+    int naddrs;
+    int capc;
+    struct sockaddr_in addrs[VNODEINFO_MAX_ADDRS];
+};
+typedef struct vnodeInfo_relax vnodeInfo_relax;
+
+vnodeInfo_relax* vnodeInfo_relax_alloc(void);
+void vnodeInfo_relax_free(vnodeInfo_relax*);
+int  vnodeInfo_relax_init(vnodeInfo_relax*, vnodeId*, vnodeVer*, int);
+
+struct vnodeInfo_compact {
+    vnodeId  id;
+    vnodeVer ver;
+    int32_t  weight;
+
+    int naddrs;
+    int capc;
+    struct sockaddr_in addrs[VNODEINFO_MIN_ADDRS];
+};
+typedef struct vnodeInfo_compact vnodeInfo_compact;
+
+vnodeInfo_compact* vnodeInfo_compact_alloc(void);
+void vnodeInfo_compact_free(vnodeInfo_compact*);
+int  vnodeInfo_compact_init(vnodeInfo_compact*, vnodeId*, vnodeVer*, int);
+
+struct vnodeInfo {
+    vnodeId  id;
+    vnodeVer ver;
+    int32_t  weight;
+
+    int naddrs;
+    int capc;
+    struct sockaddr_in addrs[1];
 };
 typedef struct vnodeInfo vnodeInfo;
 
-vnodeInfo* vnodeInfo_alloc(void);
-void vnodeInfo_free (vnodeInfo*);
-int  vnodeInfo_equal(vnodeInfo*, vnodeInfo*);
-void vnodeInfo_copy (vnodeInfo*, vnodeInfo*);
-int  vnodeInfo_init (vnodeInfo*, vnodeId*, vnodeVer*, int32_t);
-void vnodeInfo_set_laddr(vnodeInfo*, struct sockaddr_in*);
-void vnodeInfo_set_uaddr(vnodeInfo*, struct sockaddr_in*);
-void vnodeInfo_set_eaddr(vnodeInfo*, struct sockaddr_in*);
-void vnodeInfo_dump (vnodeInfo*);
-int  vnodeInfo_has_addr(vnodeInfo*, struct sockaddr_in*);
+int  vnodeInfo_add_addr (vnodeInfo*, struct sockaddr_in*);
+int  vnodeInfo_has_addr (vnodeInfo*, struct sockaddr_in*);
+int  vnodeInfo_cat_addr (vnodeInfo*, vnodeInfo*);
+int  vnodeInfo_update   (vnodeInfo*, vnodeInfo*);
+int  vnodeInfo_copy     (vnodeInfo*, vnodeInfo*);
+void vnodeInfo_dump     (vnodeInfo*);
+
+/*
+ * for vnodeConn
+ */
+enum {
+    VNODECONN_WEIGHT_LOW   = ((int32_t)0),
+    VNODECONN_WEIGHT_HIGHT = ((int32_t)10)
+};
+
+struct vnodeConn {
+    int32_t weight;
+    struct sockaddr_in local;
+    struct sockaddr_in remote;
+};
+typedef struct vnodeConn vnodeConn;
+
+int vnodeConn_set(vnodeConn*, struct sockaddr_in*, struct sockaddr_in*);
 
 /*
  * for vsrvcId

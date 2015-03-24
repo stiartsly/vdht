@@ -33,26 +33,35 @@ struct vnode_nice {
 int  vnode_nice_init  (struct vnode_nice*, struct vconfig*);
 void vnode_nice_deinit(struct vnode_nice*);
 
+/*
+ * for vnode_addr_family
+ */
+struct vnode_addr_helper {
+    int32_t  naddrs;
+    uint32_t mask;  //private address(local address) is unreflexed yet.
+    struct sockaddr_in addrs[12];
+};
 
+#define unreflexive_mask_check(mask, i)   (mask & (1 << i))
+#define reflexive_mask_check(mask, i)     (!unreflexive_mask_check(mask, i))
+#define unreflexive_mask_set(mask, i)     (mask |= (1 << i))
+#define reflexive_mask_set(mask, i)       (mask &= ~(1 << i))
 /*
  * for vnode
  */
 struct vnode_ops {
-    int  (*start)     (struct vnode*);
-    int  (*stop)      (struct vnode*);
+    int  (*start)      (struct vnode*);
+    int  (*stop)       (struct vnode*);
     int  (*wait_for_stop)(struct vnode*);
-    int  (*stabilize) (struct vnode*);
-    int  (*set_eaddr) (struct vnode*, struct sockaddr_in*);
-    void (*dump)      (struct vnode*);
-    void (*clear)     (struct vnode*);
-    int  (*renice)    (struct vnode*);
-    void (*tick)      (struct vnode*);
-    int  (*self)      (struct vnode*, vnodeInfo*);
-    int  (*is_self)   (struct vnode*, struct sockaddr_in*);
-    int  (*post)      (struct vnode*, vsrvcId*, struct sockaddr_in*);
-    void (*unpost)    (struct vnode*, vsrvcId*, struct sockaddr_in*);
-
-    struct sockaddr_in* (*get_best_usable_addr)(struct vnode*, vnodeInfo*);
+    int  (*stabilize)  (struct vnode*);
+    int  (*reflex_addr)(struct vnode*, struct sockaddr_in*, struct sockaddr_in*);
+    void (*dump)       (struct vnode*);
+    void (*clear)      (struct vnode*);
+    int  (*renice)     (struct vnode*);
+    void (*tick)       (struct vnode*);
+    int  (*is_self)    (struct vnode*, struct sockaddr_in*);
+    int  (*post)       (struct vnode*, vsrvcId*, struct sockaddr_in*);
+    void (*unpost)     (struct vnode*, vsrvcId*, struct sockaddr_in*);
 };
 
 struct vnode {
@@ -62,10 +71,9 @@ struct vnode {
     struct vlock lock;  // for mode.
 
     int nice;
-    struct varray nodeinfos;
     struct varray services;
-    vnodeInfo* main_node_info;
-
+    struct vnode_addr_helper addr_helper;
+    vnodeInfo_relax nodei;
 
     struct vnode_nice node_nice;
     struct vupnpc upnpc;

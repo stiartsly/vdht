@@ -174,34 +174,30 @@ char* _vhost_version(struct vhost* host)
  * @host:
  * @what: what dht query;
  * @dest: dest address of dht query.
- *
  */
 static
-int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* dest_addr)
+int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* remote_addr)
 {
     struct vroute* route = &host->route;
-    vnodeInfo dest;
-    vnodeId id;
+    vnodeConn conn;
     int ret = 0;
 
     vassert(host);
-    vassert(dest_addr);
+    vassert(remote_addr);
 
-    vtoken_make(&id);
-    vnodeInfo_init(&dest, &id, &unknown_node_ver, 0);
-    vnodeInfo_set_eaddr(&dest, dest_addr);
+    vnodeConn_set(&conn, &host->zaddr, remote_addr);
 
     switch(what) {
     case VDHT_PING:
-        ret = route->dht_ops->ping(route, &dest);
+        ret = route->dht_ops->ping(route, &conn);
         break;
 
     case VDHT_FIND_NODE:
-        ret = route->dht_ops->find_node(route, &dest, &host->myid);
+        ret = route->dht_ops->find_node(route, &conn, &host->myid);
         break;
 
     case VDHT_FIND_CLOSEST_NODES:
-        ret = route->dht_ops->find_closest_nodes(route, &dest, &host->myid);
+        ret = route->dht_ops->find_closest_nodes(route, &conn, &host->myid);
         break;
 
     case VDHT_POST_SERVICE:
@@ -362,7 +358,6 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
 struct vhost* vhost_create(struct vconfig* cfg)
 {
     struct vhost* host = NULL;
-    struct sockaddr_in zaddr;
     int ret = 0;
     vassert(cfg);
 
@@ -377,14 +372,14 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->ops      = &host_ops;
     host->svc_ops  = &host_svc_ops;
 
-    vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &zaddr);
+    vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &host->zaddr);
     vtoken_make(&host->myid);
 
     ret += vticker_init(&host->ticker);
     ret += vwaiter_init(&host->waiter);
     ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vmsger_init (&host->msger);
-    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&zaddr));
+    ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&host->zaddr));
     ret += vroute_init (&host->route, cfg, host, &host->myid);
     ret += vnode_init  (&host->node,  cfg, host, &host->myid);
     if (ret < 0) {

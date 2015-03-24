@@ -133,60 +133,56 @@ void vdht_buf_free(void* buf)
 }
 
 static
-struct be_node* _aux_create_vnodeInfo(vnodeInfo* info)
-{
-    struct be_node* dict = NULL;
-    struct be_node* node = NULL;
-    vassert(info);
-
-    dict = be_create_dict();
-    retE_p((!dict));
-
-    node = be_create_vtoken(&info->id);
-    be_add_keypair(dict, "id", node);
-    node = be_create_ver(&info->ver);
-    be_add_keypair(dict, "v", node);
-    if (info->addr_flags & VNODEINFO_LADDR) {
-        node = be_create_addr(&info->laddr);
-        be_add_keypair(dict, "ml", node);
-    }
-    if (info->addr_flags & VNODEINFO_UADDR) {
-        node = be_create_addr(&info->uaddr);
-        be_add_keypair(dict, "mu", node);
-    }
-    if (info->addr_flags & VNODEINFO_EADDR) {
-        node = be_create_addr(&info->eaddr);
-        be_add_keypair(dict, "me", node);
-    }
-    node = be_create_int(info->weight);
-    be_add_keypair(dict, "w", node);
-
-    return dict;
-}
-
-static
-struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* info)
+struct be_node* _aux_create_vnodeInfo(vnodeInfo* nodei)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
     struct be_node* addr = NULL;
     int i = 0;
-    vassert(info);
+    vassert(nodei);
 
     dict = be_create_dict();
     retE_p((!dict));
 
-    node = be_create_vtoken(&info->id);
+    node = be_create_vtoken(&nodei->id);
     be_add_keypair(dict, "id", node);
+    node = be_create_ver(&nodei->ver);
+    be_add_keypair(dict, "v", node);
+    node = be_create_int(nodei->weight);
+    be_add_keypair(dict, "w", node);
 
     node = be_create_list();
-    for (i = 0; i < info->naddrs; i++) {
-        addr = be_create_addr(&info->addr[i]);
+    for (i = 0; i < nodei->naddrs; i++) {
+        addr = be_create_addr(&nodei->addrs[i]);
         be_add_list(node, addr);
     }
     be_add_keypair(dict, "m", node);
-    node = be_create_int(info->nice);
+    return dict;
+}
+
+static
+struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* srvci)
+{
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* addr = NULL;
+    int i = 0;
+    vassert(srvci);
+
+    dict = be_create_dict();
+    retE_p((!dict));
+
+    node = be_create_vtoken(&srvci->id);
+    be_add_keypair(dict, "id", node);
+    node = be_create_int(srvci->nice);
     be_add_keypair(dict, "n", node);
+
+    node = be_create_list();
+    for (i = 0; i < srvci->naddrs; i++) {
+        addr = be_create_addr(&srvci->addr[i]);
+        be_add_list(node, addr);
+    }
+    be_add_keypair(dict, "m", node);
 
     return dict;
 }
@@ -786,94 +782,75 @@ int _aux_unpack_vnodeId(struct be_node* dict, char* key1, char* key2, vnodeId* i
 }
 
 static
-int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* info)
+int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* nodei)
 {
     struct be_node* node = NULL;
-    struct sockaddr_in laddr, uaddr, eaddr;
     vnodeId  id;
     vnodeVer ver;
     int weight = 0;
-    int ret = 0;
+    int i = 0;
 
     vassert(dict);
-    vassert(info);
+    vassert(nodei);
     retE((BE_DICT != dict->type));
 
-    ret = be_node_by_key(dict, "id", &node);
-    retE((ret < 0));
-    ret = be_unpack_token(node, &id);
-    retE((ret < 0));
+    be_node_by_key(dict, "id", &node);
+    be_unpack_token(node, &id);
+    be_node_by_key(dict, "v", &node);
+    be_unpack_ver(node, &ver);
+    be_node_by_key(dict, "w", &node);
+    be_unpack_int(node, &weight);
+    be_node_by_key(dict, "m", &node);
+    vassert(node->type == BE_LIST);
 
-    ret = be_node_by_key(dict, "v", &node);
-    retE((ret < 0));
-    ret = be_unpack_ver(node, &ver);
-    retE((ret < 0));
-
-    ret = be_node_by_key(dict, "w", &node);
-    retE((ret < 0));
-    ret = be_unpack_int(node, &weight);
-    retE((ret < 0));
-
-    vnodeInfo_init(info, &id, &ver, weight);
-    ret = be_node_by_key(dict, "ml", &node);
-    if (ret >= 0) {
-        ret = be_unpack_addr(node, &laddr);
-        retE((ret < 0));
-        vnodeInfo_set_laddr(info, &laddr);
-    }
-    ret = be_node_by_key(dict, "mu", &node);
-    if (ret >= 0) {
-        ret = be_unpack_addr(node, &uaddr);
-        retE((ret < 0));
-        vnodeInfo_set_uaddr(info, &uaddr);
-    }
-    ret = be_node_by_key(dict, "me", &node);
-    if (ret >= 0) {
-        ret = be_unpack_addr(node, &eaddr);
-        retE((ret < 0));
-        vnodeInfo_set_eaddr(info, &eaddr);
+    vnodeInfo_relax_init((vnodeInfo_relax*)nodei, &id, &ver, weight);
+    for (i = 0; node->val.l[i]; i++) {
+        struct sockaddr_in addr;
+        struct be_node* an = node->val.l[i];
+        be_unpack_addr(an, &addr);
+        vnodeInfo_add_addr(nodei, &addr);
     }
     return 0;
 }
 
 static
-int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo** info)
+int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo** ppsrvci)
 {
-    struct vsrvcInfo* svc = NULL;
+    struct vsrvcInfo* srvci = NULL;
     struct be_node* node = NULL;
     vtoken id;
     int nice = 0;
     int i = 0;
 
     vassert(dict);
-    vassert(info);
+    vassert(ppsrvci);
     retE((BE_DICT != dict->type));
 
-    svc = vsrvcInfo_alloc();
-    vlog((!svc), elog_vsrvcInfo_alloc);
-    retE((!svc));
+    srvci = vsrvcInfo_alloc();
+    vlog((!srvci), elog_vsrvcInfo_alloc);
+    retE((!srvci));
 
     be_node_by_key(dict, "id", &node);
     be_unpack_token(node, &id);
     be_node_by_key(dict, "n", &node);
     be_unpack_int(node, &nice);
-    vsrvcInfo_init(svc, &id, nice);
-
     be_node_by_key(dict, "m", &node);
     vassert(node->type == BE_LIST);
+
+    vsrvcInfo_init(srvci, &id, nice);
     for (i = 0; node->val.l[i]; i++) {
         struct sockaddr_in addr;
         struct be_node* addr_node = node->val.l[i];
         be_unpack_addr(addr_node, &addr);
-        vsrvcInfo_add_addr(svc, &addr);
+        vsrvcInfo_add_addr(srvci, &addr);
     }
 
-    *info = svc;
+    *ppsrvci = srvci;
     return 0;
 }
 
 static
-int _aux_unpack_dhtId(struct be_node* dict, vnodeId* srcId)
+int _aux_unpack_dhtId(struct be_node* dict)
 {
     struct be_node* node = NULL;
     int ret = 0;
@@ -885,23 +862,17 @@ int _aux_unpack_dhtId(struct be_node* dict, vnodeId* srcId)
     retE((ret < 0));
     retE((BE_STR != node->type));
 
-    if (!strcmp(node->val.s, "q")) { //query.
-        ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-        retE((ret < 0));
-
+    if (!strcmp(node->val.s, "q")) {
         ret = be_node_by_key(dict, "q", &node);
         retE((ret < 0));
         retE((BE_STR != node->type));
         return vdht_get_queryId(node->val.s);
     }
-    if (!strcmp(node->val.s, "r")) { //response
-        ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-        if (ret >= 0) {
-            ret = be_node_by_key(dict, "r", &node);
-            retE((ret < 0));
-            retE((BE_STR != node->type));
-            return vdht_get_rspId(node->val.s);
-        }
+    if (!strcmp(node->val.s, "r")) {
+        ret = be_node_by_key(dict, "r", &node);
+        retE((ret < 0));
+        retE((BE_STR != node->type));
+        return vdht_get_rspId(node->val.s);
     }
     return VDHT_UNKNOWN;
 }
@@ -920,12 +891,20 @@ int _aux_unpack_dhtId(struct be_node* dict, vnodeId* srcId)
  *           d2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
  */
 static
-int _vdht_dec_ping(void* ctxt)
+int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
 {
-    //do nothing;
-    vassert(ctxt);
-    (void)ctxt;
+    struct be_node* dict = (struct be_node*)ctxt;
+    int ret = 0;
 
+    vassert(dict);
+    vassert(token);
+    vassert(srcId);
+
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
     return 0;
 }
 
@@ -950,14 +929,21 @@ int _vdht_dec_ping(void* ctxt)
  *           2:ml19:192.168.4.125:123001:wi0eeee
  */
 static
-int _vdht_dec_ping_rsp(void* ctxt, vnodeInfo* result)
+int _vdht_dec_ping_rsp(
+        void* ctxt,
+        vtoken* token,
+        vnodeInfo* result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
     int ret = 0;
 
-    vassert(ctxt);
+    vassert(dict);
+    vassert(token);
     vassert(result);
+
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
 
     ret = be_node_by_2keys(dict, "a", "node", &node);
     retE((ret < 0));
@@ -984,16 +970,28 @@ int _vdht_dec_ping_rsp(void* ctxt, vnodeInfo* result)
  *             1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
-int _vdht_dec_find_node(void* ctxt, vnodeId* targetId)
+int _vdht_dec_find_node(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId,
+        vnodeId* targetId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
 
     vassert(dict);
+    vassert(token);
+    vassert(srcId);
     vassert(targetId);
 
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
     ret = _aux_unpack_vnodeId(dict, "a", "target", targetId);
     retE((ret < 0));
+
     return 0;
 }
 
@@ -1019,18 +1017,29 @@ int _vdht_dec_find_node(void* ctxt, vnodeId* targetId)
  *            .0.0.01:fi0eeee
  */
 static
-int _vdht_dec_find_node_rsp(void* ctxt, vnodeInfo* result)
+int _vdht_dec_find_node_rsp(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId,
+        vnodeInfo* result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
     int ret = 0;
 
     vassert(dict);
+    vassert(token);
+    vassert(srcId);
     vassert(result);
 
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
     ret = be_node_by_2keys(dict, "a", "node", &node);
     retE((ret < 0));
-    ret = _aux_unpack_vnodeInfo(node, result);
+    ret = _aux_unpack_vnodeInfo(dict, result);
     retE((ret < 0));
 
     return 0;
@@ -1053,16 +1062,28 @@ int _vdht_dec_find_node_rsp(void* ctxt, vnodeInfo* result)
  *            d20:7ba29c1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
-int _vdht_dec_find_closest_nodes(void* ctxt, vnodeId* targetId)
+int _vdht_dec_find_closest_nodes(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId,
+        vnodeId* targetId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
 
     vassert(dict);
+    vassert(token);
+    vassert(srcId);
     vassert(targetId);
 
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
     ret = _aux_unpack_vnodeId(dict, "a", "target", targetId);
     retE((ret < 0));
+
     return 0;
 }
 
@@ -1089,7 +1110,11 @@ int _vdht_dec_find_closest_nodes(void* ctxt, vnodeId* targetId)
  *            9:0.0.0.0.01:fi1417421748eeeee
  */
 static
-int _vdht_dec_find_closest_nodes_rsp(void* ctxt, struct varray* closest)
+int _vdht_dec_find_closest_nodes_rsp(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId,
+        struct varray* closest)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* list = NULL;
@@ -1098,60 +1123,103 @@ int _vdht_dec_find_closest_nodes_rsp(void* ctxt, struct varray* closest)
     int i = 0;
 
     vassert(dict);
+    vassert(token);
+    vassert(srcId);
     vassert(closest);
 
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
     ret = be_node_by_2keys(dict, "a", "nodes", &list);
     retE((ret < 0));
     retE((BE_LIST != list->type));
 
-    for (; list->val.l[i]; i++) {
-        vnodeInfo* info = NULL;
-
+    for (i = 0; list->val.l[i]; i++) {
+        vnodeInfo* nodei = NULL;
         node = list->val.l[i];
         retE((BE_DICT != node->type));
-        info = vnodeInfo_alloc();
-        vlog((!info), elog_vnodeInfo_alloc);
-        retE((!info));
 
-        ret = _aux_unpack_vnodeInfo(node, info);
-        ret1E((ret < 0), vnodeInfo_free(info));
-        varray_add_tail(closest, info);
+        nodei = (vnodeInfo*)vnodeInfo_relax_alloc();
+        if (!nodei) {
+            break;
+        }
+        _aux_unpack_vnodeInfo(node, nodei);
+        varray_add_tail(closest, nodei);
     }
 
     return 0;
 }
 
+/*
+ * the routine to decode @reflex query.
+ * @ctxt:  deocde context.
+ * @token: transaction token
+ * @srcId: id of query node.
+ * @addr : local address to get it's reflexive address.
+ */
 static
-int _vdht_dec_reflex(void* ctxt)
+int _vdht_dec_reflex(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId)
 {
-    //do nothing;
-    vassert(ctxt);
-    (void)ctxt;
+    struct be_node* dict = (struct be_node*)ctxt;
+    int ret = 0;
 
+    vassert(ctxt);
+    vassert(token);
+    vassert(srcId);
+
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
     return 0;
 }
 
+/*
+ * the routine to decode response msg to @reflex query.
+ * @ctxt:  deocde context.
+ * @token: transaction token
+ * @srcId: id of node where response came from.
+ * @reflexive_addr: reflexive address to query node.
+ */
 static
-int _vdht_dec_reflex_rsp(void* ctxt, struct sockaddr_in* reflextive_addr)
+int _vdht_dec_reflex_rsp(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId,
+        struct sockaddr_in* reflexive_addr)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
     int ret = 0;
 
     vassert(dict);
-    vassert(reflextive_addr);
+    vassert(token);
+    vassert(srcId);
+    vassert(reflexive_addr);
 
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
     ret = be_node_by_2keys(dict, "a", "me", &node);
     retE((ret < 0));
-    ret = be_unpack_addr(node, reflextive_addr);
+    ret = be_unpack_addr(node, reflexive_addr);
     retE((ret < 0));
 
     return 0;
 }
 
-/* @ctxt:
- * @token:
- * @srcId:
+/* the routine to decode @post_service indication.
+ * @ctxt: decode context
+ * @token: trans token
+ * @srcId: Id of source node where the indcation was from.
  * @service:
  *
  * Query = {"t":"b6e0855abbf93b8e6754",",
@@ -1159,7 +1227,9 @@ int _vdht_dec_reflex_rsp(void* ctxt, struct sockaddr_in* reflextive_addr)
  *          "q":"post_service",
  *          "a": {"id":"7ba29c1b9215a2e7621e",
  *                "service" :{"id": "e532d7c80cf02e8652d3"
- *                            "m" : ["192.168.4.46:14444", "27.115.62.114:15300"]
+ *                            "m" : ["192.168.4.46:14444",
+ *                                   "27.115.62.114:15300"
+ *                                  ]
  *                            "f" : "0"
  *                           }
  *               }
@@ -1169,42 +1239,52 @@ int _vdht_dec_reflex_rsp(void* ctxt, struct sockaddr_in* reflextive_addr)
  *            192.168.4.46:144441:fi0eeee
  */
 static
-int _vdht_dec_post_service(void* ctxt, vsrvcInfo** service)
+int _vdht_dec_post_service(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId,
+        vsrvcInfo** result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
     int ret = 0;
 
     vassert(dict);
-    vassert(service);
+    vassert(token);
+    vassert(srcId);
+    vassert(result);
 
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
     ret = be_node_by_2keys(dict, "a", "service", &node);
     retE((ret < 0));
-    ret = _aux_unpack_vsrvcInfo(node, service);
+    ret = _aux_unpack_vsrvcInfo(node, result);
     retE((ret < 0));
 
     return 0;
 }
 
 static
-int _vdht_dec_begin(void* buf, int len, vtoken* token, vnodeId* srcId, void** ctxt)
+int _vdht_dec_begin(void* buf, int len, void** ctxt)
 {
     struct be_node* dict = NULL;
     int ret = 0;
 
     vassert(buf);
     vassert(len);
+    vassert(ctxt);
 
     vlogI(printf("[dht msg]->%s", (char*)buf));
     dict = be_decode(buf, len);
     vlog((!dict), elog_be_decode);
     retE((!dict));
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_dhtId(dict);
     ret1E((ret < 0), be_free(dict));
-
-    ret = _aux_unpack_dhtId(dict, srcId);
-    ret1E((ret < 0), be_free(dict));
+    ret1E((ret >= VDHT_UNKNOWN), be_free(dict));
 
     *ctxt = (void*)dict;
     return ret;

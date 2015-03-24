@@ -30,6 +30,7 @@ struct vhost {
     int  to_quit;
     int  tick_tmo;
     vnodeId myid;
+    struct sockaddr_in zaddr;
 
     struct vthread  thread;
     struct vmsger   msger;
