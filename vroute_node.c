@@ -50,13 +50,6 @@ void vpeer_free(struct vpeer* peer)
     return ;
 }
 
-/*
- * @peer:
- * @addr:
- * @snd_ts:
- * @rcv_ts:
- * @flags:
- */
 static
 int vpeer_init(struct vpeer* peer, struct sockaddr_in* local, vnodeInfo* nodei, time_t rcv_ts, int direct)
 {

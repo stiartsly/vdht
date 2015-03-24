@@ -943,7 +943,7 @@ int _aux_route_load_proto_caps(struct vconfig* cfg, uint32_t* props)
     }
     for (i = 0; i < varray_size(tuple); i++) {
         struct vcfg_item* item = NULL;
-        int   dht_id  = -1;
+        int dht_id = -1;
 
         item = (struct vcfg_item*)varray_get(tuple, i);
         retE((item->type != CFG_STR));

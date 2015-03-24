@@ -20,7 +20,11 @@ enum {
     PROP_FIND_CLOSEST_NODES_R = (uint32_t)(1 << VDHT_FIND_CLOSEST_NODES_R),
     PROP_REFLEX               = (uint32_t)(1 << VDHT_REFLEX),
     PROP_REFLEX_R             = (uint32_t)(1 << VDHT_REFLEX_R),
-    PROP_POST_SERVICE         = (uint32_t)(1 << VDHT_POST_SERVICE)
+    PROP_PROBE_CONNECTIVITY   = (uint32_t)(1 << VDHT_PROBE),
+    PROP_PROBE_CONNECTIVITY_R = (uint32_t)(1 << VDHT_PROBE_R),
+    PROP_POST_SERVICE         = (uint32_t)(1 << VDHT_POST_SERVICE),
+    PROP_FIND_SERVICE         = (uint32_t)(1 << VDHT_FIND_SERVICE),
+    PROP_FIND_SERVICE_R       = (uint32_t)(1 << VDHT_FIND_SERVICE_R)
 };
 
 #define PROP_DHT_MASK  ((uint32_t)0x000003ff)

@@ -16,7 +16,11 @@ struct vdhtId_desc dhtId_global_desc[] = {
     {VDHT_FIND_CLOSEST_NODES_R, "find_closest_nodes_rsp"},
     {VDHT_REFLEX,               "reflex"                },
     {VDHT_REFLEX_R,             "reflex_rsp"            },
+    {VDHT_PROBE,                "probe"                 },
+    {VDHT_PROBE_R,              "probe_rsp"             },
     {VDHT_POST_SERVICE,         "post_service"          },
+    {VDHT_FIND_SERVICE,         "find_service"          },
+    {VDHT_FIND_SERVICE_R,       "find_service_rsp"      },
     {VDHT_UNKNOWN, NULL}
 };
 
