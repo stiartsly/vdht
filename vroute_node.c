@@ -523,6 +523,30 @@ int _vroute_node_space_reflex_addr(struct vroute_node_space* space, struct socka
 }
 
 static
+int _vroute_node_space_adjust_connectivity(struct vroute_node_space* space, vnodeId* targetId, vnodeConn* conn)
+{
+    struct varray* peers = NULL;
+    struct vpeer*  peer  = NULL;
+    int idx = 0;
+    int i = 0;
+
+    vassert(space);
+    vassert(conn);
+
+    idx = vnodeId_bucket(&space->myid, targetId);
+    peers = &space->bucket[idx].peers;
+
+    for (i = 0; i < varray_size(peers); i++) {
+        peer = (struct vpeer*)varray_get(peers, i);
+        if (vtoken_equal(&peer->nodei->id, targetId)) {
+            vnodeConn_adjust(&peer->conn, conn);
+            break;
+        }
+    }
+    return 0;
+}
+
+static
 int _vroute_node_space_probe_connectivity(struct vroute_node_space* space, struct sockaddr_in* laddr)
 {
     struct varray* peers = NULL;
@@ -696,7 +720,8 @@ struct vroute_node_space_ops route_space_ops = {
     .get_neighbors = _vroute_node_space_get_neighbors,
     .air_service   = _vroute_node_space_air_service,
     .reflex_addr   = _vroute_node_space_reflex_addr,
-    .probe_connectivity = _vroute_node_space_probe_connectivity,
+    .adjust_connectivity = _vroute_node_space_adjust_connectivity,
+    .probe_connectivity  = _vroute_node_space_probe_connectivity,
     .tick          = _vroute_node_space_tick,
     .load          = _vroute_node_space_load,
     .store         = _vroute_node_space_store,

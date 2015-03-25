@@ -963,11 +963,21 @@ int _vroute_cb_reflex_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 static
 int _vroute_cb_probe(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
+    vnodeId targetId;
+    vnodeId fromId;
+    vtoken  token;
+    int ret = 0;
+
     vassert(route);
     vassert(conn);
     vassert(ctxt);
 
-    //todo;
+    ret = route->dec_ops->probe(ctxt, &token, &fromId, &targetId);
+    retE((ret < 0));
+    retE((!vtoken_equal(&targetId, &route->myid)));
+
+    ret = route->dht_ops->probe_rsp(route, conn, &token);
+    retE((ret < 0));
     return 0;
 }
 
@@ -980,11 +990,22 @@ int _vroute_cb_probe(struct vroute* route, vnodeConn* conn, void* ctxt)
 static
 int _vroute_cb_probe_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
+    struct vroute_recr_space* recr_space = &route->recr_space;
+    struct vroute_node_space* node_space = &route->node_space;
+    vnodeId fromId;
+    vtoken  token;
+    int ret = 0;
+
     vassert(route);
     vassert(conn);
     vassert(ctxt);
 
-    //todo;
+    ret = route->dec_ops->probe_rsp(ctxt, &token, &fromId);
+    retE((ret < 0));
+    retE((!recr_space->ops->check(recr_space, &token)));
+
+    ret = node_space->ops->adjust_connectivity(node_space, &fromId, conn);
+    retE((ret < 0));
     return 0;
 }
 

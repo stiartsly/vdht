@@ -525,6 +525,21 @@ int vnodeConn_set(vnodeConn* conn, struct sockaddr_in* local, struct sockaddr_in
     return 0;
 }
 
+int vnodeConn_adjust(vnodeConn* old, vnodeConn* new)
+{
+    vassert(old);
+    vassert(new);
+
+    if (old->weight >= new->weight) {
+        return 0;
+    }
+    old->weight = new->weight;
+    vsockaddr_copy(&old->local,  &new->local);
+    vsockaddr_copy(&new->remote, &new->remote);
+
+    return 0;
+}
+
 /*
  * for vsrvcId
  */

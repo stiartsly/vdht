@@ -66,6 +66,8 @@ struct vroute_node_space_ops {
     int  (*get_neighbors)(struct vroute_node_space*, vnodeId*, struct varray*, int);
     int  (*air_service)  (struct vroute_node_space*, void*);
     int  (*reflex_addr)  (struct vroute_node_space*, struct sockaddr_in*);
+    int  (*adjust_connectivity)
+                         (struct vroute_node_space*, vnodeId*, vnodeConn*);
     int  (*probe_connectivity)
                          (struct vroute_node_space*, struct sockaddr_in*);
     int  (*tick)         (struct vroute_node_space*);

@@ -112,7 +112,8 @@ struct vnodeConn {
 };
 typedef struct vnodeConn vnodeConn;
 
-int vnodeConn_set(vnodeConn*, struct sockaddr_in*, struct sockaddr_in*);
+int vnodeConn_set   (vnodeConn*, struct sockaddr_in*, struct sockaddr_in*);
+int vnodeConn_adjust(vnodeConn*, vnodeConn*);
 
 /*
  * for vsrvcId
