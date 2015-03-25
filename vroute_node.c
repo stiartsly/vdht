@@ -90,7 +90,8 @@ void vpeer_dump(struct vpeer* peer)
     vnodeInfo_dump(peer->nodei);
     printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet ");
     printf("timestamp[rcv]: %s",  ctime(&peer->rcv_ts));
-    printf("tried send times:%d", peer->ntries);
+    printf("tried send times:%d ", peer->ntries);
+    printf("probed times:%d", peer->nprobes);
     return ;
 }
 
@@ -171,23 +172,21 @@ static
 int _aux_space_probe_connectivity_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute*, route);
-    varg_decl(cookie, 1, vnodeInfo*, nodei);
+    varg_decl(cookie, 1, struct sockaddr_in*, laddr);
     struct vpeer* peer = (struct vpeer*)item;
     int i = 0;
     int j = 0;
 
     vassert(peer);
     vassert(route);
-    vassert(nodei);
+    vassert(laddr);
 
     retS((peer->nprobes >= 3)); // already probed enough;
 
-    for (i = 0; i < nodei->naddrs; i++) {
-        for (j = 0; j < peer->nodei->naddrs; j++) {
-            vnodeConn conn;
-            vnodeConn_set(&conn, &nodei->addrs[i], &peer->nodei->addrs[j]);
-            route->dht_ops->probe(route, &conn, &peer->nodei->id);
-        }
+    for (j = 0; j < peer->nodei->naddrs; j++) {
+        vnodeConn conn;
+        vnodeConn_set(&conn, laddr, &peer->nodei->addrs[i]);
+        route->dht_ops->probe(route, &conn, &peer->nodei->id);
     }
     peer->nprobes++;
     return 0;
@@ -524,18 +523,18 @@ int _vroute_node_space_reflex_addr(struct vroute_node_space* space, struct socka
 }
 
 static
-int _vroute_node_space_probe_connectivity(struct vroute_node_space* space, vnodeInfo* nodei)
+int _vroute_node_space_probe_connectivity(struct vroute_node_space* space, struct sockaddr_in* laddr)
 {
     struct varray* peers = NULL;
     int i = 0;
 
     vassert(space);
-    vassert(nodei);
+    vassert(laddr);
 
     for (i = 0; i < NBUCKETS; i++) {
         void* argv[] = {
             space->route,
-            nodei
+            laddr
         };
         peers = &space->bucket[i].peers;
         varray_iterate(peers, _aux_space_probe_connectivity_cb, argv);

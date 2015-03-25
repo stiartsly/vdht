@@ -97,16 +97,16 @@ int _vroute_reflex_addr(struct vroute* route, struct sockaddr_in* addr)
     return 0;
 }
 
-int _vroute_probe_connectivity(struct vroute* route, vnodeInfo* nodei)
+int _vroute_probe_connectivity(struct vroute* route, struct sockaddr_in* laddr)
 {
     struct vroute_node_space* node_space = &route->node_space;
     int ret = 0;
 
     vassert(route);
-    vassert(nodei);
+    vassert(laddr);
 
     vlock_enter(&route->lock);
-    ret = node_space->ops->probe_connectivity(node_space, nodei);
+    ret = node_space->ops->probe_connectivity(node_space, laddr);
     vlock_leave(&route->lock);
     retE((ret < 0));
     return 0;

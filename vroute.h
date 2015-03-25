@@ -67,7 +67,7 @@ struct vroute_node_space_ops {
     int  (*air_service)  (struct vroute_node_space*, void*);
     int  (*reflex_addr)  (struct vroute_node_space*, struct sockaddr_in*);
     int  (*probe_connectivity)
-                         (struct vroute_node_space*, vnodeInfo*);
+                         (struct vroute_node_space*, struct sockaddr_in*);
     int  (*tick)         (struct vroute_node_space*);
     int  (*load)         (struct vroute_node_space*);
     int  (*store)        (struct vroute_node_space*);
@@ -126,7 +126,7 @@ struct vroute_ops {
     int  (*air_service)  (struct vroute*, vsrvcInfo*);
     int  (*reflex)       (struct vroute*, struct sockaddr_in*);
     int  (*probe_connectivity)
-                         (struct vroute*, vnodeInfo*);
+                         (struct vroute*, struct sockaddr_in*);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);

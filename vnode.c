@@ -108,14 +108,26 @@ void _aux_node_get_eaddrs(struct vnode* node)
     int i = 0;
     vassert(node);
 
-    vlock_enter(&node->lock);
     for (i = 0; i < helper->naddrs; i++) {
         if (reflexive_mask_check(helper->mask, i)) {
             continue;
         }
         node->route->ops->reflex(node->route, &helper->addrs[i]);
     }
-    vlock_leave(&node->lock);
+    return;
+}
+
+static
+void _aux_node_probe_connectivity(struct vnode* node)
+{
+    struct vnode_addr_helper* helper = &node->addr_helper;
+    int i = 0;
+
+    vassert(node);
+
+    for (i = 0; i < helper->naddrs; i++) {
+        node->route->ops->probe_connectivity(node->route, &helper->addrs[i]);
+    }
     return;
 }
 
@@ -152,8 +164,8 @@ int _aux_node_tick_cb(void* cookie)
     case VDHT_UP: {
         (void)node->route->ops->load(node->route);
         (void)cfg->ext_ops->get_boot_nodes(cfg, _aux_node_load_boot_cb, node);
-        (void)_aux_node_get_uaddrs(node);
-        (void)_aux_node_get_eaddrs(node);
+        _aux_node_get_uaddrs(node);
+        _aux_node_get_eaddrs(node);
 
         node->ts   = now;
         node->mode = VDHT_RUN;
@@ -161,7 +173,6 @@ int _aux_node_tick_cb(void* cookie)
         break;
     }
     case VDHT_RUN: {
-        (void)_aux_node_get_eaddrs(node);
         if (now - node->ts > node->tick_tmo) {
             node->route->ops->tick(node->route);
             node->ops->tick(node);
@@ -405,7 +416,9 @@ void _vnode_tick(struct vnode* node)
     vassert(node);
 
     vlock_enter(&node->lock);
-    for (i= 0; i < varray_size(&node->services); i++) {
+    _aux_node_get_eaddrs(node);
+    _aux_node_probe_connectivity(node);
+    for (i = 0; i < varray_size(&node->services); i++) {
         svc = (vsrvcInfo*)varray_get(&node->services, i);
         route->ops->air_service(route, svc);
     }
