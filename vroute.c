@@ -558,11 +558,33 @@ int _vroute_dht_reflex_rsp(struct vroute* route, vnodeConn* conn, vtoken* token,
 static
 int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
 {
+    void* buf = NULL;
+    vtoken token;
+    int ret = 0;
+
     vassert(route);
     vassert(conn);
     vassert(targetId);
 
-    //todo;
+    buf = vdht_buf_alloc();
+    retE((!buf));
+
+    vtoken_make(&token);
+    ret = route->enc_ops->probe(&token, &route->myid, targetId, buf, vdht_buf_len());
+    ret1E((ret < 0), vdht_buf_free(buf));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&conn->remote),
+            .spec  = to_vsockaddr_from_sin(&conn->local),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
+    route->recr_space.ops->make(&route->recr_space, &token);
+    vlogI(printf("send @probe"));
     return 0;
 }
 
@@ -575,11 +597,30 @@ int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
 static
 int _vroute_dht_probe_rsp(struct vroute* route, vnodeConn* conn, vtoken* token)
 {
+    void* buf = NULL;
+    int ret = 0;
+
     vassert(route);
     vassert(conn);
     vassert(token);
 
-    //todo;
+    buf = vdht_buf_alloc();
+    retE((!buf));
+
+    ret = route->enc_ops->probe_rsp(token, &route->myid, buf, vdht_buf_len());
+    ret1E((ret < 0), vdht_buf_free(buf));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&conn->remote),
+            .spec  = to_vsockaddr_from_sin(&conn->local),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
+    vlogI(printf("send @probe_rsp"));
     return 0;
 }
 
@@ -914,6 +955,40 @@ int _vroute_cb_reflex_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 }
 
 /*
+ * the routine to call when receiving a @probe query.
+ * @route:
+ * @conn:
+ * @ctxt:
+ */
+static
+int _vroute_cb_probe(struct vroute* route, vnodeConn* conn, void* ctxt)
+{
+    vassert(route);
+    vassert(conn);
+    vassert(ctxt);
+
+    //todo;
+    return 0;
+}
+
+/*
+ * the routine to call when receiving a response to @probe query.
+ * @route:
+ * @conn:
+ * @ctxt:
+ */
+static
+int _vroute_cb_probe_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
+{
+    vassert(route);
+    vassert(conn);
+    vassert(ctxt);
+
+    //todo;
+    return 0;
+}
+
+/*
  * the routine to call when receiving a @post_service indication.
  *
  * @route:
@@ -951,6 +1026,8 @@ vroute_dht_cb_t route_cb_ops[] = {
     _vroute_cb_find_closest_nodes_rsp,
     _vroute_cb_reflex,
     _vroute_cb_reflex_rsp,
+    _vroute_cb_probe,
+    _vroute_cb_probe_rsp,
     _vroute_cb_post_service,
     NULL
 };

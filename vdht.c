@@ -30,7 +30,9 @@ struct vdhtId_desc dhtId_query_desc[] = {
     {VDHT_FIND_NODE,            "find_node"             },
     {VDHT_FIND_CLOSEST_NODES,   "find_closest_nodes"    },
     {VDHT_REFLEX,               "reflex"                },
+    {VDHT_PROBE,                "probe"                 },
     {VDHT_POST_SERVICE,         "post_service"          },
+    {VDHT_FIND_SERVICE,         "find_service"          },
     {VDHT_UNKNOWN, NULL }
 };
 
@@ -40,6 +42,8 @@ struct vdhtId_desc dhtId_rsp_desc[] = {
     {VDHT_FIND_NODE_R,          "find_node"             },
     {VDHT_FIND_CLOSEST_NODES_R, "find_closest_nodes"    },
     {VDHT_REFLEX_R,             "reflex"                },
+    {VDHT_PROBE_R,              "probe"                 },
+    {VDHT_FIND_SERVICE_R,       "find_service"          },
     {VDHT_UNKNOWN, NULL }
 };
 
@@ -669,6 +673,104 @@ int _vdht_enc_reflex_rsp(
 }
 
 /*
+ *
+ * reflect Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
+ *                  "y":"q",
+ *                  "q":"probe",
+ *                  "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *                       "target": }
+ *              }
+ */
+static
+int _vdht_enc_probe(
+        vtoken* token,
+        vnodeId* srcId,
+        vnodeId* destId,
+        void* buf,
+        int sz)
+{
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* temp = NULL;
+    int ret = 0;
+
+    vassert(token);
+    vassert(srcId);
+    vassert(destId);
+    vassert(buf);
+    vassert(sz > 0);
+
+    dict = be_create_dict();
+    retE((!dict));
+
+    node = be_create_vtoken(token);
+    be_add_keypair(dict, "t", node);
+    node = be_create_str("q");
+    be_add_keypair(dict, "y", node);
+
+    node = be_create_str("probe");
+    be_add_keypair(dict, "q", node);
+
+    node = be_create_dict();
+    temp = be_create_vtoken(srcId);
+    be_add_keypair(node, "id", temp);
+    temp = be_create_vtoken(destId);
+    be_add_keypair(node, "target", temp);
+    be_add_keypair(dict, "a", node);
+
+    ret = be_encode(dict, buf, sz);
+    be_free(dict);
+    retE((ret < 0));
+    return ret;
+}
+
+/*
+ *  response = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
+ *              "y":"r",
+ *              "r":"probe",
+ *              "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
+ *            }
+ */
+static
+int _vdht_enc_probe_rsp(
+        vtoken* token,
+        vnodeId* srcId,
+        void* buf,
+        int sz)
+{
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* temp = NULL;
+    int ret = 0;
+
+    vassert(token);
+    vassert(srcId);
+    vassert(buf);
+    vassert(sz > 0);
+
+    dict = be_create_dict();
+    retE((!dict));
+
+    node = be_create_vtoken(token);
+    be_add_keypair(dict, "t", node);
+
+    node = be_create_str("r");
+    be_add_keypair(dict, "y", node);
+    node = be_create_str("probe");
+    be_add_keypair(dict, "r", node);
+
+    node = be_create_dict();
+    temp = be_create_vtoken(srcId);
+    be_add_keypair(node, "id", temp);
+    be_add_keypair(dict, "a", node);
+
+    ret = be_encode(dict, buf, sz);
+    be_free(dict);
+    retE((ret < 0));
+    return ret;
+}
+
+/*
  * @token:
  * @srcId: Id of node sending query.
  * @target: Id of queried node.
@@ -744,6 +846,8 @@ struct vdht_enc_ops dht_enc_ops = {
     .find_closest_nodes_rsp = _vdht_enc_find_closest_nodes_rsp,
     .reflex                 = _vdht_enc_reflex,
     .reflex_rsp             = _vdht_enc_reflex_rsp,
+    .probe                  = _vdht_enc_probe,
+    .probe_rsp              = _vdht_enc_probe_rsp,
     .post_service           = _vdht_enc_post_service
 };
 
@@ -1220,6 +1324,66 @@ int _vdht_dec_reflex_rsp(
     return 0;
 }
 
+/*
+ * the routine to decode @probe query.
+ * @ctxt:  deocde context.
+ * @token: transaction token
+ * @srcId: id of query node.
+ * @destId: id of destination node.
+ */
+static
+int _vdht_dec_probe(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId,
+        vnodeId* destId)
+{
+    struct be_node* dict = (struct be_node*)ctxt;
+    int ret = 0;
+
+    vassert(ctxt);
+    vassert(token);
+    vassert(srcId);
+    vassert(destId);
+
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
+    ret = _aux_unpack_vnodeId(dict, "a", "target", destId);
+    retE((ret < 0));
+
+    return 0;
+}
+
+/*
+ * the routine to decode response msg to @probe query.
+ * @ctxt:  deocde context.
+ * @token: transaction token
+ * @srcId: id of node where response came from.
+ */
+static
+int _vdht_dec_probe_rsp(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId)
+{
+    struct be_node* dict = (struct be_node*)ctxt;
+    int ret = 0;
+
+    vassert(ctxt);
+    vassert(token);
+    vassert(srcId);
+
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
+    return 0;
+}
+
 /* the routine to decode @post_service indication.
  * @ctxt: decode context
  * @token: trans token
@@ -1314,6 +1478,8 @@ struct vdht_dec_ops dht_dec_ops = {
     .find_closest_nodes_rsp = _vdht_dec_find_closest_nodes_rsp,
     .reflex                 = _vdht_dec_reflex,
     .reflex_rsp             = _vdht_dec_reflex_rsp,
+    .probe                  = _vdht_dec_probe,
+    .probe_rsp              = _vdht_dec_probe_rsp,
     .post_service           = _vdht_dec_post_service
 };
 
