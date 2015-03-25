@@ -92,14 +92,11 @@ int _aux_node_get_uaddrs(struct vnode* node)
 
     vassert(node);
     for (i = 0; i < helper->naddrs; i++) {
-        if (reflexive_mask_check(helper->mask, i)) {
-            continue;
-        }
         ret = upnpc->ops->map(upnpc, &helper->addrs[i], UPNP_PROTO_UDP, &uaddr);
         if (ret < 0) {
             continue;
         }
-        vsockaddr_copy(&helper->addrs[helper->naddrs++], &uaddr);
+        vnodeInfo_add_addr((vnodeInfo*)&node->nodei, &uaddr);
     }
     return 0;
 }
@@ -205,7 +202,7 @@ int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct soc
         if (reflexive_mask_check(helper->mask, i)) {
             break;
         }
-        vsockaddr_copy(&helper->addrs[helper->naddrs++], eaddr);
+        vnodeInfo_add_addr((vnodeInfo*)&node->nodei, eaddr);
         reflexive_mask_set(helper->mask, i);
         break;
     }
@@ -457,7 +454,7 @@ int _aux_node_get_local_addrs(struct vnode_addr_helper* helper, struct vconfig* 
     }
     helper->naddrs++;
 
-    while( helper->naddrs <= 3) {
+    while (helper->naddrs <= VNODE_MAX_LOCAL_ADDRS) {
         memset(ip, 0, 64);
         ret = vhostaddr_get_next(ip, 64);
         if (ret <= 0) {

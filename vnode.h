@@ -36,10 +36,11 @@ void vnode_nice_deinit(struct vnode_nice*);
 /*
  * for vnode_addr_family
  */
+#define VNODE_MAX_LOCAL_ADDRS ((int)3)
 struct vnode_addr_helper {
     int32_t  naddrs;
     uint32_t mask;  //private address(local address) is unreflexed yet.
-    struct sockaddr_in addrs[12];
+    struct sockaddr_in addrs[VNODE_MAX_LOCAL_ADDRS];
 };
 
 #define unreflexive_mask_check(mask, i)   (mask & (1 << i))
