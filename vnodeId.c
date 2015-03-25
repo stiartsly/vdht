@@ -519,6 +519,8 @@ int vnodeConn_set(vnodeConn* conn, struct sockaddr_in* local, struct sockaddr_in
 
     if (vsockaddr_is_private(remote)) {
         conn->weight = VNODECONN_WEIGHT_HIGHT;
+    } else {
+        conn->weight = VNODECONN_WEIGHT_LOW;
     }
     return 0;
 }

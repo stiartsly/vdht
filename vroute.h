@@ -66,6 +66,8 @@ struct vroute_node_space_ops {
     int  (*get_neighbors)(struct vroute_node_space*, vnodeId*, struct varray*, int);
     int  (*air_service)  (struct vroute_node_space*, void*);
     int  (*reflex_addr)  (struct vroute_node_space*, struct sockaddr_in*);
+    int  (*probe_connectivity)
+                         (struct vroute_node_space*, vnodeInfo*);
     int  (*tick)         (struct vroute_node_space*);
     int  (*load)         (struct vroute_node_space*);
     int  (*store)        (struct vroute_node_space*);
@@ -123,6 +125,8 @@ struct vroute_ops {
     int  (*probe_service)(struct vroute*, vsrvcId*, vsrvcInfo_iterate_addr_t, void*);
     int  (*air_service)  (struct vroute*, vsrvcInfo*);
     int  (*reflex)       (struct vroute*, struct sockaddr_in*);
+    int  (*probe_connectivity)
+                         (struct vroute*, vnodeInfo*);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
@@ -141,6 +145,8 @@ struct vroute_dht_ops {
                          (struct vroute*, vnodeConn*, vtoken*, struct varray*);
     int (*reflex)        (struct vroute*, vnodeConn*);
     int (*reflex_rsp)    (struct vroute*, vnodeConn*, vtoken*, struct sockaddr_in*);
+    int (*probe)         (struct vroute*, vnodeConn*, vnodeId*);
+    int (*probe_rsp)     (struct vroute*, vnodeConn*, vtoken*);
     int (*post_service)  (struct vroute*, vnodeConn*, vsrvcInfo*);
 };
 

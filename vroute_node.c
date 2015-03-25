@@ -11,7 +11,7 @@ struct vpeer {
     time_t snd_ts;
     time_t rcv_ts;
     int ntries;
-    int need_probe;
+    int nprobes;
 };
 
 static MEM_AUX_INIT(peer_cache, sizeof(struct vpeer), 0);
@@ -59,8 +59,8 @@ int vpeer_init(struct vpeer* peer, struct sockaddr_in* local, vnodeInfo* nodei, 
     vnodeConn_set(&peer->conn, local, &nodei->addrs[nodei->naddrs-1]);
     vnodeInfo_copy(peer->nodei, nodei);
     peer->rcv_ts = direct ? rcv_ts : 0;
-    peer->need_probe = 1;
-    peer->ntries = 0;
+    peer->nprobes = 0;
+    peer->ntries  = 0;
     return 0;
 }
 
@@ -76,10 +76,9 @@ int vpeer_update(struct vpeer* peer, vnodeInfo* nodei, time_t rcv_ts, int direct
     }
     ret = vnodeInfo_update(peer->nodei, nodei);
     retE((ret < 0));
-    if (ret > 0) {
-        peer->need_probe = 1;
-    }
-    peer->ntries = 0;
+
+    peer->nprobes = (ret > 0) ? 0 : peer->nprobes;
+    peer->ntries  = 0;
     return 0;
 }
 
@@ -165,6 +164,32 @@ int _aux_space_reflex_addr_cb(void* item, void* cookie)
     vnodeConn_set(&conn, addr, &peer->conn.remote);
     ret = route->dht_ops->reflex(route, &conn);
     retE((ret < 0));
+    return 0;
+}
+
+static
+int _aux_space_probe_connectivity_cb(void* item, void* cookie)
+{
+    varg_decl(cookie, 0, struct vroute*, route);
+    varg_decl(cookie, 1, vnodeInfo*, nodei);
+    struct vpeer* peer = (struct vpeer*)item;
+    int i = 0;
+    int j = 0;
+
+    vassert(peer);
+    vassert(route);
+    vassert(nodei);
+
+    retS((peer->nprobes >= 3)); // already probed enough;
+
+    for (i = 0; i < nodei->naddrs; i++) {
+        for (j = 0; j < peer->nodei->naddrs; j++) {
+            vnodeConn conn;
+            vnodeConn_set(&conn, &nodei->addrs[i], &peer->nodei->addrs[j]);
+            route->dht_ops->probe(route, &conn, &peer->nodei->id);
+        }
+    }
+    peer->nprobes++;
     return 0;
 }
 
@@ -498,6 +523,26 @@ int _vroute_node_space_reflex_addr(struct vroute_node_space* space, struct socka
     return 0;
 }
 
+static
+int _vroute_node_space_probe_connectivity(struct vroute_node_space* space, vnodeInfo* nodei)
+{
+    struct varray* peers = NULL;
+    int i = 0;
+
+    vassert(space);
+    vassert(nodei);
+
+    for (i = 0; i < NBUCKETS; i++) {
+        void* argv[] = {
+            space->route,
+            nodei
+        };
+        peers = &space->bucket[i].peers;
+        varray_iterate(peers, _aux_space_probe_connectivity_cb, argv);
+    }
+    return 0;
+}
+
 /*
  * the routine to activate dynamicness of node routing table. the actions
  * includes send dht @ping msg to all nodes if possible and send @find_closest_nodes
@@ -652,6 +697,7 @@ struct vroute_node_space_ops route_space_ops = {
     .get_neighbors = _vroute_node_space_get_neighbors,
     .air_service   = _vroute_node_space_air_service,
     .reflex_addr   = _vroute_node_space_reflex_addr,
+    .probe_connectivity = _vroute_node_space_probe_connectivity,
     .tick          = _vroute_node_space_tick,
     .load          = _vroute_node_space_load,
     .store         = _vroute_node_space_store,

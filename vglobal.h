@@ -71,6 +71,7 @@
 #define strlen
 #define strcpy
 #define strncpy
+#define sprintf
 #define snprintf
 #define sscanf
 #define strcmp
@@ -109,6 +110,7 @@
 #define optind
 #define exit
 #define open
+#define stat
 #define fstat
 #define read
 #define getpid

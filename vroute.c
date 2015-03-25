@@ -97,6 +97,21 @@ int _vroute_reflex_addr(struct vroute* route, struct sockaddr_in* addr)
     return 0;
 }
 
+int _vroute_probe_connectivity(struct vroute* route, vnodeInfo* nodei)
+{
+    struct vroute_node_space* node_space = &route->node_space;
+    int ret = 0;
+
+    vassert(route);
+    vassert(nodei);
+
+    vlock_enter(&route->lock);
+    ret = node_space->ops->probe_connectivity(node_space, nodei);
+    vlock_leave(&route->lock);
+    retE((ret < 0));
+    return 0;
+}
+
 /*
  * the routine to load routing table infos from route database when host
  * starts at first.
@@ -204,6 +219,7 @@ struct vroute_ops route_ops = {
     .probe_service = _vroute_probe_service,
     .air_service   = _vroute_air_service,
     .reflex        = _vroute_reflex_addr,
+    .probe_connectivity = _vroute_probe_connectivity,
     .load          = _vroute_load,
     .store         = _vroute_store,
     .tick          = _vroute_tick,
@@ -534,6 +550,40 @@ int _vroute_dht_reflex_rsp(struct vroute* route, vnodeConn* conn, vtoken* token,
 }
 
 /*
+ * the routine to pack and send a @probe_connectivity query
+ * @route:
+ * @conn:
+ * @targetId:
+ */
+static
+int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
+{
+    vassert(route);
+    vassert(conn);
+    vassert(targetId);
+
+    //todo;
+    return 0;
+}
+
+/*
+ * the routine to pack and send back a response to @probe_connectivity query.
+ * @route:
+ * @conn:
+ * @token:
+ */
+static
+int _vroute_dht_probe_rsp(struct vroute* route, vnodeConn* conn, vtoken* token)
+{
+    vassert(route);
+    vassert(conn);
+    vassert(token);
+
+    //todo;
+    return 0;
+}
+
+/*
  * the routine to pack and send @post_service indication.
  * @route:
  * @conn:
@@ -582,6 +632,8 @@ struct vroute_dht_ops route_dht_ops = {
     .find_closest_nodes_rsp = _vroute_dht_find_closest_nodes_rsp,
     .reflex                 = _vroute_dht_reflex,
     .reflex_rsp             = _vroute_dht_reflex_rsp,
+    .probe                  = _vroute_dht_probe,
+    .probe_rsp              = _vroute_dht_probe_rsp,
     .post_service           = _vroute_dht_post_service
 };
 
