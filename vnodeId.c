@@ -334,21 +334,21 @@ int vnodeInfo_relax_init(vnodeInfo_relax* nodei, vnodeId* id, vnodeVer* ver, int
     vtoken_copy(&nodei->ver, ver);
     nodei->weight = (int32_t)weight;
     nodei->naddrs = 0;
-    nodei->capc   = 12;
+    nodei->capc   = VNODEINFO_MAX_ADDRS;
 
     return 0;
 }
 
-vnodeInfo_compact* vnodeInfo_compact_alloc(void)
+vnodeInfo* vnodeInfo_alloc(void)
 {
-    vnodeInfo_compact* nodei = NULL;
-    nodei = (vnodeInfo_compact*)malloc(sizeof(*nodei));
+    vnodeInfo* nodei = NULL;
+    nodei = (vnodeInfo*)malloc(sizeof(*nodei));
     retE_p((!nodei));
     memset(nodei, 0, sizeof(*nodei));
     return nodei;
 }
 
-void vnodeInfo_compact_free(vnodeInfo_compact* nodei)
+void vnodeInfo_free(vnodeInfo* nodei)
 {
     vassert(nodei);
 
@@ -356,7 +356,7 @@ void vnodeInfo_compact_free(vnodeInfo_compact* nodei)
     return ;
 }
 
-int vnodeInfo_compact_init(vnodeInfo_compact* nodei, vnodeId* id, vnodeVer* ver, int weight)
+int vnodeInfo_init(vnodeInfo* nodei, vnodeId* id, vnodeVer* ver, int weight)
 {
     vassert(nodei);
     vassert(id);
@@ -367,17 +367,18 @@ int vnodeInfo_compact_init(vnodeInfo_compact* nodei, vnodeId* id, vnodeVer* ver,
     vtoken_copy(&nodei->ver, ver);
     nodei->weight = (int32_t)weight;
     nodei->naddrs = 0;
-    nodei->capc   = 4;
+    nodei->capc   = VNODEINFO_MIN_ADDRS;
 
     return 0;
 }
 
-int vnodeInfo_add_addr(vnodeInfo* nodei, struct sockaddr_in* addr)
+int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr)
 {
+    vnodeInfo* nodei = *ppnodei;
     int found = 0;
     int i = 0;
 
-    vassert(nodei);
+    vassert(*ppnodei);
     vassert(addr);
 
     retE((nodei->naddrs >= VNODEINFO_MAX_ADDRS));
@@ -386,11 +387,11 @@ int vnodeInfo_add_addr(vnodeInfo* nodei, struct sockaddr_in* addr)
         vnodeInfo* new_nodei = NULL;
         int extra_sz = sizeof(*addr) * nodei->capc;
 
-        new_nodei = (vnodeInfo*)realloc(nodei, sizeof(vnodeInfo_compact) + extra_sz);
+        new_nodei = (vnodeInfo*)realloc(nodei, sizeof(vnodeInfo) + extra_sz);
         vlog((!new_nodei), elog_realloc);
         retE((!new_nodei));
 
-        nodei = new_nodei;
+        nodei = *ppnodei =  new_nodei;
         nodei->capc += VNODEINFO_MIN_ADDRS;
     }
     for (i = 0; i < nodei->naddrs; i++) {
@@ -434,7 +435,7 @@ int vnodeInfo_update(vnodeInfo* dest_nodei, vnodeInfo* src_nodei)
 
     if (vtoken_equal(&dest_nodei->ver, &unknown_node_ver)) {
         for (i = 0; i < src_nodei->naddrs; i++) {
-            ret = vnodeInfo_add_addr(dest_nodei, &src_nodei->addrs[i]);
+            ret = vnodeInfo_add_addr(&dest_nodei, &src_nodei->addrs[i]);
             retE((ret < 0));
             if (ret > 0) {
                 nupdts++;
@@ -459,7 +460,7 @@ int vnodeInfo_update(vnodeInfo* dest_nodei, vnodeInfo* src_nodei)
         dest_nodei->naddrs = src_nodei->naddrs;
     } else {
         for (i = dest_nodei->naddrs; i < src_nodei->naddrs; i++) {
-            ret = vnodeInfo_add_addr(dest_nodei, &src_nodei->addrs[i]);
+            ret = vnodeInfo_add_addr(&dest_nodei, &src_nodei->addrs[i]);
             if (ret > 0) {
                 nupdts++;
             }
@@ -481,7 +482,7 @@ int vnodeInfo_copy(vnodeInfo* dest_nodei, vnodeInfo* src_nodei)
     dest_nodei->naddrs = 0;
 
     for (i = 0; i < src_nodei->naddrs; i++) {
-        vnodeInfo_add_addr(dest_nodei, &src_nodei->addrs[i]);
+        vnodeInfo_add_addr(&dest_nodei, &src_nodei->addrs[i]);
     }
     return 0;
 }
@@ -622,6 +623,8 @@ int vsrvcInfo_add_addr(vsrvcInfo** ppsrvci, struct sockaddr_in* addr)
 
     vassert(*ppsrvci);
     vassert(addr);
+
+    retE((srvci->naddrs >= VSRVCINFO_MAX_ADDRS));
 
     if (srvci->naddrs >= srvci->capc) {
         vsrvcInfo* new_srvci = NULL;

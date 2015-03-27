@@ -918,7 +918,7 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* nodei)
         struct sockaddr_in addr;
         struct be_node* an = node->val.l[i];
         be_unpack_addr(an, &addr);
-        vnodeInfo_add_addr(nodei, &addr);
+        vnodeInfo_add_addr(&nodei, &addr);
     }
     return 0;
 }

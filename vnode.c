@@ -86,6 +86,7 @@ int _aux_node_get_uaddrs(struct vnode* node)
 {
     struct vnode_addr_helper* helper = &node->addr_helper;
     struct vupnpc* upnpc = &node->upnpc;
+    vnodeInfo* nodei = (vnodeInfo*)&node->nodei;
     struct sockaddr_in uaddr;
     int ret = 0;
     int i = 0;
@@ -96,7 +97,7 @@ int _aux_node_get_uaddrs(struct vnode* node)
         if (ret < 0) {
             continue;
         }
-        vnodeInfo_add_addr((vnodeInfo*)&node->nodei, &uaddr);
+        vnodeInfo_add_addr(&nodei, &uaddr);
     }
     return 0;
 }
@@ -201,6 +202,7 @@ static
 int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct sockaddr_in* eaddr)
 {
     struct vnode_addr_helper* helper = &node->addr_helper;
+    vnodeInfo* nodei = (vnodeInfo*)&node->nodei;
     int i = 0;
     vassert(node);
     vassert(eaddr);
@@ -213,7 +215,7 @@ int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct soc
         if (reflexive_mask_check(helper->mask, i)) {
             break;
         }
-        vnodeInfo_add_addr((vnodeInfo*)&node->nodei, eaddr);
+        vnodeInfo_add_addr(&nodei, eaddr);
         reflexive_mask_set(helper->mask, i);
         break;
     }
@@ -501,7 +503,7 @@ int _aux_node_get_nodeinfo(vnodeInfo_relax* nodei, vnodeId* myid, struct vnode_a
     vnodeInfo_relax_init(nodei, myid, &ver, 0);
 
     for (i = 0; i < helper->naddrs; i++) {
-        vnodeInfo_add_addr((vnodeInfo*)nodei, &helper->addrs[i]);
+        vnodeInfo_add_addr((vnodeInfo**)&nodei, &helper->addrs[i]);
     }
     return 0;
 }

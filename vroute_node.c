@@ -21,16 +21,12 @@ struct vpeer* vpeer_alloc(void)
     struct vpeer* peer = NULL;
     vnodeInfo*   nodei = NULL;
 
-    nodei = (vnodeInfo*)vnodeInfo_compact_alloc();
+    nodei = (vnodeInfo*)vnodeInfo_alloc();
     retE_p((!nodei));
-    memset(nodei, 0, sizeof(vnodeInfo_compact));
 
     peer = (struct vpeer*)vmem_aux_alloc(&peer_cache);
     vlog((!peer), elog_vmem_aux_alloc);
-    if (!peer) {
-        vnodeInfo_compact_free((vnodeInfo_compact*)nodei);
-        return NULL;
-    };
+    ret1E_p((!peer), vnodeInfo_free(nodei));
     memset(peer, 0, sizeof(*peer));
     peer->nodei = nodei;
     return peer;
@@ -44,7 +40,7 @@ void vpeer_free(struct vpeer* peer)
     vassert(peer);
 
     if (peer->nodei) {
-        vnodeInfo_compact_free((vnodeInfo_compact*)peer->nodei);
+        vnodeInfo_free(peer->nodei);
     }
     vmem_aux_free(&peer_cache, peer);
     return ;
@@ -225,7 +221,8 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
     char* sid    = (char*)((void**)value)[1];
     char* sver   = (char*)((void**)value)[2];
     char* saddrs = (char*)((void**)value)[3];
-    vnodeInfo_relax nodei;
+    vnodeInfo_relax nodei_relax;
+    vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
     struct sockaddr_in addr;
     char saddr[64];
     vnodeId  id;
@@ -235,20 +232,20 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
     {
         vtoken_unstrlize(sid, &id);
         vnodeVer_unstrlize(sver, &ver);
-        vnodeInfo_relax_init(&nodei, &id, &ver, 0);
+        vnodeInfo_relax_init(&nodei_relax, &id, &ver, 0);
         pos = strchr(saddrs, ',');
         while (pos) {
             memset(saddr, 0, 64);
             strncpy(saddr, saddrs, pos - saddrs);
             saddrs = pos + 1;
             vsockaddr_unstrlize(saddr, &addr);
-            vnodeInfo_add_addr((vnodeInfo*)&nodei, &addr);
+            vnodeInfo_add_addr(&nodei, &addr);
             pos = strchr(saddrs, ',');
         }
         vsockaddr_unstrlize(saddrs, &addr);
-        vnodeInfo_add_addr((vnodeInfo*)&nodei, &addr);
+        vnodeInfo_add_addr(&nodei, &addr);
     }
-    node_space->ops->add_node(node_space, (vnodeInfo*)&nodei, 0);
+    node_space->ops->add_node(node_space, nodei, 0);
     return 0;
 }
 

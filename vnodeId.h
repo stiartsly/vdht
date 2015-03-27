@@ -64,7 +64,7 @@ vnodeInfo_relax* vnodeInfo_relax_alloc(void);
 void vnodeInfo_relax_free(vnodeInfo_relax*);
 int  vnodeInfo_relax_init(vnodeInfo_relax*, vnodeId*, vnodeVer*, int);
 
-struct vnodeInfo_compact {
+struct vnodeInfo {
     vnodeId  id;
     vnodeVer ver;
     int32_t  weight;
@@ -73,24 +73,12 @@ struct vnodeInfo_compact {
     int capc;
     struct sockaddr_in addrs[VNODEINFO_MIN_ADDRS];
 };
-typedef struct vnodeInfo_compact vnodeInfo_compact;
-
-vnodeInfo_compact* vnodeInfo_compact_alloc(void);
-void vnodeInfo_compact_free(vnodeInfo_compact*);
-int  vnodeInfo_compact_init(vnodeInfo_compact*, vnodeId*, vnodeVer*, int);
-
-struct vnodeInfo {
-    vnodeId  id;
-    vnodeVer ver;
-    int32_t  weight;
-
-    int naddrs;
-    int capc;
-    struct sockaddr_in addrs[1];
-};
 typedef struct vnodeInfo vnodeInfo;
+vnodeInfo* vnodeInfo_alloc(void);
+void vnodeInfo_free(vnodeInfo*);
+int  vnodeInfo_init(vnodeInfo*, vnodeId*, vnodeVer*, int);
 
-int  vnodeInfo_add_addr (vnodeInfo*, struct sockaddr_in*);
+int  vnodeInfo_add_addr (vnodeInfo**, struct sockaddr_in*);
 int  vnodeInfo_has_addr (vnodeInfo*, struct sockaddr_in*);
 int  vnodeInfo_cat_addr (vnodeInfo*, vnodeInfo*);
 int  vnodeInfo_update   (vnodeInfo*, vnodeInfo*);
@@ -125,7 +113,7 @@ int vsrvcId_bucket(vsrvcId*);
 /*
  * for vsrvcInfo
  */
-#define VSRVCINFO_MAX_ADDRS ((int32_t)8)
+#define VSRVCINFO_MAX_ADDRS ((int32_t)12)
 #define VSRVCINFO_MIN_ADDRS ((int32_t)2)
 struct vsrvcInfo_relax {
     vsrvcHash hash;
