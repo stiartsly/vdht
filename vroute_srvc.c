@@ -5,8 +5,7 @@
  * service node structure and it follows it's correspondent help APIs.
  */
 struct vservice {
-    vsrvcId*   srvcId;
-    vsrvcInfo* srvc;
+    vsrvcInfo* srvci;
     time_t rcv_ts;
 };
 
@@ -15,11 +14,20 @@ static
 struct vservice* vservice_alloc(void)
 {
     struct vservice* item = NULL;
+    vsrvcInfo* srvci = NULL;
+
+    srvci = vsrvcInfo_alloc();
+    vlog((!srvci), elog_vsrvcInfo_alloc);
+    retE_p((!srvci));
 
     item = (struct vservice*)vmem_aux_alloc(&service_cache);
     vlog((!item), elog_vmem_aux_alloc);
-    retE_p((!item));
+    ret1E_p((!item), vsrvcInfo_free(srvci));
     memset(item, 0, sizeof(*item));
+
+    item->srvci  = srvci;
+    item->rcv_ts = 0;
+
     return item;
 }
 
@@ -28,31 +36,21 @@ void vservice_free(struct vservice* item)
 {
     vassert(item);
 
-    if (item->srvc) {
-        vsrvcInfo_free(item->srvc);
+    if (item->srvci) {
+        vsrvcInfo_free(item->srvci);
     }
     vmem_aux_free(&service_cache, item);
     return ;
 }
 
 static
-int vservice_init(struct vservice* item, vsrvcInfo* srvc, time_t ts)
+int vservice_init(struct vservice* item, vsrvcInfo* srvci, time_t ts)
 {
-    vsrvcInfo* srvc_old = item->srvc;
-    vsrvcInfo* srvc_dup = NULL;
     vassert(item);
-    vassert(srvc);
+    vassert(srvci);
 
-    srvc_dup = vsrvcInfo_dup(srvc);
-    retE((!srvc_dup));
-
-    item->srvcId = &srvc_dup->id;
-    item->srvc   = srvc_dup;
+    vsrvcInfo_copy(item->srvci, srvci);
     item->rcv_ts = ts;
-
-    if (srvc_old) {
-        vsrvcInfo_free(srvc_old);
-    }
     return 0;
 }
 
@@ -61,7 +59,7 @@ void vservice_dump(struct vservice* item)
 {
     vassert(item);
 
-    vsrvcInfo_dump(item->srvc);
+    vsrvcInfo_dump(item->srvci);
     printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts));
     return;
 }
@@ -69,21 +67,21 @@ void vservice_dump(struct vservice* item)
 static
 int _aux_srvc_add_service_cb(void* item, void* cookie)
 {
-    struct vservice* svc_item = (struct vservice*)item;
+    struct vservice* srvc_item = (struct vservice*)item;
     varg_decl(cookie, 0, struct vservice**, to);
-    varg_decl(cookie, 1, vsrvcInfo*, srvc);
+    varg_decl(cookie, 1, vsrvcInfo*, srvci);
     varg_decl(cookie, 2, time_t*, now);
     varg_decl(cookie, 3, int*, max_period);
     varg_decl(cookie, 4, int*, found);
 
-    if (vtoken_equal(svc_item->srvcId, &srvc->id)){
-        *to = svc_item;
+    if (vtoken_equal(&srvc_item->srvci->id, &srvci->id)) {
+        *to = srvc_item;
         *found = 1;
         return 1;
     }
-    if ((int)(*now - svc_item->rcv_ts) > *max_period) {
-        *to = svc_item;
-        *max_period = *now - svc_item->rcv_ts;
+    if ((int)(*now - srvc_item->rcv_ts) > *max_period) {
+        *to = srvc_item;
+        *max_period = *now - srvc_item->rcv_ts;
     }
     return 0;
 }
@@ -93,13 +91,14 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
 {
     struct vservice* srvc_item = (struct vservice*)item;
     varg_decl(cookie, 0, struct vservice**, to);
-    varg_decl(cookie, 1, vtoken*, srvcId);
+    varg_decl(cookie, 1, vsrvcHash*, hash);
     varg_decl(cookie, 2, int*, min_nice);
 
-    if (vtoken_equal(srvc_item->srvcId, srvcId) &&
-        (srvc_item->srvc->nice < *min_nice)) {
-        *to = srvc_item;
-        *min_nice = srvc_item->srvc->nice;
+    if (vtoken_equal(&srvc_item->srvci->hash, hash)) {
+        if (srvc_item->srvci->nice < *min_nice) {
+            *to = srvc_item;
+            *min_nice = srvc_item->srvci->nice;
+        }
     }
     return 0;
 }
@@ -112,7 +111,7 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
  *
  */
 static
-int _vroute_srvc_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvc)
+int _vroute_srvc_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvci)
 {
     struct varray* srvcs = NULL;
     struct vservice*  to = NULL;
@@ -121,26 +120,26 @@ int _vroute_srvc_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvc)
     int found = 0;
 
     vassert(space);
-    vassert(srvc);
+    vassert(srvci);
 
-    srvcs = &space->bucket[vsrvcId_bucket(&srvc->id)].srvcs;
+    srvcs = &space->bucket[vsrvcId_bucket(&srvci->id)].srvcs;
     {
         void* argv[] = {
             &to,
-            srvc,
+            srvci,
             &now,
             &max_period,
             &found
         };
         varray_iterate(srvcs, _aux_srvc_add_service_cb, argv);
         if (found) {
-            vservice_init(to, srvc, now);
+            vservice_init(to, srvci, now);
         } else if (to && varray_size(srvcs) >= space->bucket_sz) {
-            vservice_init(to, srvc, now);
+            vservice_init(to, srvci, now);
         } else if (varray_size(srvcs) < space->bucket_sz) {
             to = vservice_alloc();
             retE((!to));
-            vservice_init(to, srvc, now);
+            vservice_init(to, srvci, now);
             varray_add_tail(srvcs, to);
         } else {
             //bucket is full, discard it (worst one).
@@ -154,35 +153,34 @@ int _vroute_srvc_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvc)
  * require some kind of system service.
  *
  * @space: service routing table space;
- * @svc_hash:
+ * @srvcHash:
  * @svci : service infos
  */
 static
-int _vroute_srvc_get_service(struct vroute_srvc_space* space, vsrvcId* srvcId, vsrvcInfo** srvc)
+int _vroute_srvc_get_service(struct vroute_srvc_space* space, vsrvcHash* hash, vsrvcInfo* srvci)
 {
     struct varray* srvcs = NULL;
     struct vservice*  to = NULL;
     int min_nice = 100;
     int found = 0;
+    int i = 0;
 
     vassert(space);
-    vassert(srvcId);
-    vassert(srvc);
+    vassert(hash);
+    vassert(srvci);
 
-
-    srvcs = &space->bucket[vsrvcId_bucket(srvcId)].srvcs;
-    {
+    for (i = 0; i < NBUCKETS; i++) {
         void* argv[] = {
             &to,
-            srvcId,
+            hash,
             &min_nice
         };
+
+        srvcs = &space->bucket[i].srvcs;
         varray_iterate(srvcs, _aux_srvc_get_service_cb, argv);
         if (to) {
-            *srvc = vsrvcInfo_dup(to->srvc);
-            if (*srvc) {
-                found = 1;
-            }
+            vsrvcInfo_copy(srvci, to->srvci);
+            found = 1;
         }
     }
     return found;

@@ -176,7 +176,7 @@ struct vdht_dec_ops {
             void* ctxt,
             vtoken* token,
             vnodeId* srcId,
-            vsrvcInfo** srvc);
+            vsrvcInfo* srvci);
 
 };
 

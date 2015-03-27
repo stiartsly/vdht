@@ -501,6 +501,7 @@ void vnodeInfo_dump(vnodeInfo* nodei)
         printf(", ");
         vsockaddr_dump(&nodei->addrs[i]);
     }
+    printf("\n");
     return ;
 }
 
@@ -558,131 +559,158 @@ int vsrvcId_bucket(vsrvcId* id)
 /*
  * for vsrvcInfo funcs
  */
-vsrvcInfo* vsrvcInfo_alloc(void)
+int  vsrvcInfo_relax_init(vsrvcInfo_relax* srvci, vsrvcId* srvcId, vsrvcHash* hash, int nice)
 {
-    vsrvcInfo* info = NULL;
-
-    info = (vsrvcInfo*)malloc(sizeof(vsrvcInfo));
-    vlog((!info), elog_malloc);
-    retE_p((!info));
-
-    memset(info, 0, sizeof(*info));
-    info->naddrs = 0;
-    info->capc   = 2;
-    return info;
-}
-
-vsrvcInfo* vsrvcInfo_dup(vsrvcInfo* svc_info)
-{
-    vsrvcInfo* svc_dup = NULL;
-    int i = 0;
-    vassert(svc_info);
-
-    svc_dup = vsrvcInfo_alloc();
-    vlog((!svc_dup), elog_vsrvcInfo_alloc);
-    retE_p((!svc_dup));
-
-    vsrvcInfo_init(svc_dup, &svc_info->id, svc_info->nice);
-    for (i = 0; i < svc_info->naddrs; i++) {
-        vsrvcInfo_add_addr(svc_dup, &svc_info->addr[i]);
-    }
-    return svc_dup;
-}
-
-void vsrvcInfo_free(vsrvcInfo* svc_info)
-{
-    vassert(svc_info);
-    free(svc_info);
-    return ;
-}
-
-int vsrvcInfo_init(vsrvcInfo* svc_info, vsrvcId* srvcId, int32_t nice)
-{
-    vassert(svc_info);
+    vassert(srvci);
     vassert(srvcId);
+    vassert(hash);
     vassert(nice >= 0);
 
-    vtoken_copy(&svc_info->id, srvcId);
-    svc_info->nice = nice;
+    vtoken_copy(&srvci->id, srvcId);
+    vtoken_copy(&srvci->hash, hash);
+    srvci->nice = nice;
+    srvci->naddrs = 0;
+    srvci->capc   = VSRVCINFO_MAX_ADDRS;
+
     return 0;
 }
 
-int vsrvcInfo_add_addr(vsrvcInfo* svc_info, struct sockaddr_in* addr)
+vsrvcInfo* vsrvcInfo_alloc(void)
 {
-    vsrvcInfo* info = NULL;
-    int capc = svc_info->capc << 1;
+    vsrvcInfo* srvci = NULL;
+
+    srvci = (vsrvcInfo*)malloc(sizeof(vsrvcInfo));
+    vlog((!srvci), elog_malloc);
+    retE_p((!srvci));
+
+    memset(srvci, 0, sizeof(*srvci));
+    srvci->naddrs = 0;
+    srvci->capc   = VSRVCINFO_MIN_ADDRS;
+    return srvci;
+}
+
+void vsrvcInfo_free(vsrvcInfo* srvci)
+{
+    vassert(srvci);
+
+    free(srvci);
+    return ;
+}
+
+int vsrvcInfo_init(vsrvcInfo* srvci, vsrvcId* id, vsrvcHash* hash, int nice)
+{
+    vassert(srvci);
+    vassert(id);
+    vassert(hash);
+    vassert(nice >= 0);
+
+    vtoken_copy(&srvci->id,   id);
+    vtoken_copy(&srvci->hash, hash);
+    srvci->nice = nice;
+
+    srvci->naddrs = 0;
+    srvci->capc   = VSRVCINFO_MIN_ADDRS;
+
+    return 0;
+}
+
+int vsrvcInfo_add_addr(vsrvcInfo** ppsrvci, struct sockaddr_in* addr)
+{
+    vsrvcInfo* srvci = *ppsrvci;
     int found = 0;
     int i = 0;
-    vassert(svc_info);
+
+    vassert(*ppsrvci);
     vassert(addr);
 
-    if (svc_info->naddrs >= svc_info->capc) {
-        info = (vsrvcInfo*)realloc(svc_info, sizeof(vsrvcInfo) + capc);
-        vlog((!info), elog_realloc);
-        retE((!info));
+    if (srvci->naddrs >= srvci->capc) {
+        vsrvcInfo* new_srvci = NULL;
+        int extra_sz = sizeof(*addr) * srvci->capc;
 
-        svc_info = info;
-        svc_info->capc = capc;
+        new_srvci = (vsrvcInfo*)realloc(srvci, sizeof(vsrvcInfo) + extra_sz);
+        vlog((!new_srvci), elog_realloc);
+        retE((!new_srvci));
+
+        srvci = *ppsrvci = new_srvci;
+        srvci->capc += VSRVCINFO_MIN_ADDRS;
     }
-    for (i = 0; i < svc_info->naddrs; i++) {
-        if (vsockaddr_equal(addr, &svc_info->addr[i])) {
+
+    for (i = 0; i < srvci->naddrs; i++) {
+        if (vsockaddr_equal(&srvci->addrs[i], addr)) {
             found = 1;
             break;
         }
     }
     if (!found) {
-        vsockaddr_copy(&svc_info->addr[svc_info->naddrs++], addr);
+        vsockaddr_copy(&srvci->addrs[srvci->naddrs++], addr);
     }
     return 0;
 }
 
-void vsrvcInfo_del_addr(vsrvcInfo* svc_info, struct sockaddr_in* addr)
+void vsrvcInfo_del_addr(vsrvcInfo* srvci, struct sockaddr_in* addr)
 {
     int found = 0;
     int i = 0;
-    vassert(svc_info);
+
+    vassert(srvci);
     vassert(addr);
 
-    for (i = 0; i < svc_info->naddrs; i++) {
-        if (vsockaddr_equal(addr, &svc_info->addr[i])) {
+    for (i = 0; i < srvci->naddrs; i++) {
+        if (vsockaddr_equal(&srvci->addrs[i], addr)) {
             found = 1;
             break;
         }
     }
-    if (found) {
-        for (; i < svc_info->naddrs; i++) {
-            vsockaddr_copy(&svc_info->addr[i], &svc_info->addr[i+1]);
-        }
+    if (!found) {
+        return ;
     }
+
+    for (; i < srvci->naddrs -1; i++) {
+        vsockaddr_copy(&srvci->addrs[i], &srvci->addrs[i+1]);
+    }
+    srvci->naddrs -= 1;
     return ;
 }
 
-int vsrvcInfo_is_empty(vsrvcInfo* svc_info)
+int vsrvcInfo_is_empty(vsrvcInfo* srvci)
 {
-    vassert(svc_info);
-    return !(svc_info->naddrs);
+    vassert(srvci);
+
+    return (!(srvci->naddrs));
 }
 
-int vsrvcInfo_equal(vsrvcInfo* a, vsrvcInfo* b)
+int vsrvcInfo_copy(vsrvcInfo* dest, vsrvcInfo* src)
 {
-    vassert(a);
-    vassert(b);
+    int ret = 0;
+    int i = 0;
 
-    return vtoken_equal(&a->id, &b->id);
+    vassert(dest);
+    vassert(src);
+
+    vtoken_copy(&dest->id,   &src->id);
+    vtoken_copy(&dest->hash, &src->hash);
+    dest->nice   = src->nice;
+    dest->naddrs = 0;
+
+    for (i = 0; i < src->naddrs; i++) {
+        ret = vsrvcInfo_add_addr(&dest, &src->addrs[i]);
+        retE((ret < 0));
+    }
+    return 0;
 }
 
-void vsrvcInfo_dump(vsrvcInfo* svc_info)
+void vsrvcInfo_dump(vsrvcInfo* srvci)
 {
     int i = 0;
-    vassert(svc_info);
+    vassert(srvci);
 
-    vtoken_dump(&svc_info->id);
-    printf(", nice: %d", svc_info->nice);
+    vtoken_dump(&srvci->hash);
+    printf(", nice: %d", srvci->nice);
     printf(", addrs: ");
-    vsockaddr_dump(&svc_info->addr[0]);
-    for (i = 1; i < svc_info->naddrs; i++) {
+    vsockaddr_dump(&srvci->addrs[0]);
+    for (i = 1; i < srvci->naddrs; i++) {
         printf(", ");
-        vsockaddr_dump(&svc_info->addr[i]);
+        vsockaddr_dump(&srvci->addrs[i]);
 
     }
     return ;

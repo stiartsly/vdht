@@ -119,31 +119,47 @@ int vnodeConn_adjust(vnodeConn*, vnodeConn*);
  * for vsrvcId
  */
 typedef struct vtoken vsrvcId;
+typedef struct vtoken vsrvcHash;
 int vsrvcId_bucket(vsrvcId*);
 
 /*
  * for vsrvcInfo
  */
-struct vsrvcInfo {
-   vsrvcId id;
-   int32_t nice;
+#define VSRVCINFO_MAX_ADDRS ((int32_t)8)
+#define VSRVCINFO_MIN_ADDRS ((int32_t)2)
+struct vsrvcInfo_relax {
+    vsrvcHash hash;
+    vsrvcId id;
+    int32_t nice;
 
-   int32_t naddrs;
-   int32_t capc;
-   struct sockaddr_in addr[2];
+    int32_t naddrs;
+    int32_t capc;
+    struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+};
+typedef struct vsrvcInfo_relax vsrvcInfo_relax;
+int  vsrvcInfo_relax_init(vsrvcInfo_relax*, vsrvcId*, vsrvcHash*, int);
+
+struct vsrvcInfo {
+    vsrvcHash hash;
+    vsrvcId id;
+    int32_t nice;
+
+    int32_t naddrs;
+    int32_t capc;
+    struct sockaddr_in addrs[VSRVCINFO_MIN_ADDRS];
 };
 typedef struct vsrvcInfo vsrvcInfo;
 typedef void (*vsrvcInfo_iterate_addr_t)(struct sockaddr_in*, void*);
-
 vsrvcInfo* vsrvcInfo_alloc(void);
-vsrvcInfo* vsrvcInfo_dup  (vsrvcInfo*);
-void vsrvcInfo_free (vsrvcInfo*);
-int  vsrvcInfo_init (vsrvcInfo*, vsrvcId*, int32_t);
-int  vsrvcInfo_add_addr(vsrvcInfo*, struct sockaddr_in*);
+void vsrvcInfo_free(vsrvcInfo*);
+int  vsrvcInfo_init(vsrvcInfo*, vsrvcId*, vsrvcHash*, int);
+
+int  vsrvcInfo_add_addr(vsrvcInfo**, struct sockaddr_in*);
 void vsrvcInfo_del_addr(vsrvcInfo*, struct sockaddr_in*);
 int  vsrvcInfo_is_empty(vsrvcInfo*);
-int  vsrvcInfo_equal(vsrvcInfo*, vsrvcInfo*);
-void vsrvcInfo_dump (vsrvcInfo*);
+
+int  vsrvcInfo_copy(vsrvcInfo*, vsrvcInfo*);
+void vsrvcInfo_dump(vsrvcInfo*);
 
 #endif
 

@@ -61,8 +61,8 @@ struct vnode_ops {
     int  (*renice)     (struct vnode*);
     void (*tick)       (struct vnode*);
     int  (*is_self)    (struct vnode*, struct sockaddr_in*);
-    int  (*post)       (struct vnode*, vsrvcId*, struct sockaddr_in*);
-    void (*unpost)     (struct vnode*, vsrvcId*, struct sockaddr_in*);
+    int  (*post)       (struct vnode*, vsrvcHash*, struct sockaddr_in*);
+    void (*unpost)     (struct vnode*, vsrvcHash*, struct sockaddr_in*);
 };
 
 struct vnode {

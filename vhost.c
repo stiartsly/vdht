@@ -228,16 +228,16 @@ struct vhost_ops host_ops = {
  * @waht: plugin ID.
  */
 static
-int _vhost_post_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
+int _vhost_post_service(struct vhost* host, vsrvcHash* hash, struct sockaddr_in* addr)
 {
     struct vnode* node = &host->node;
     int ret = 0;
 
     vassert(host);
     vassert(addr);
-    vassert(srvcId);
+    vassert(hash);
 
-    ret = node->ops->post(node, srvcId, addr);
+    ret = node->ops->post(node, hash, addr);
     retE((ret < 0));
     return 0;
 }
@@ -248,33 +248,33 @@ int _vhost_post_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in*
  * @waht: plugin ID.
  */
 static
-int _vhost_unpost_service(struct vhost* host, vsrvcId* srvcId, struct sockaddr_in* addr)
+int _vhost_unpost_service(struct vhost* host, vsrvcHash* hash, struct sockaddr_in* addr)
 {
     struct vnode* node = &host->node;
     vassert(host);
     vassert(addr);
-    vassert(srvcId);
+    vassert(hash);
 
-    node->ops->unpost(node, srvcId, addr);
+    node->ops->unpost(node, hash, addr);
     return 0;
 }
 
 static
-int _vhost_probe_service(struct vhost* host, vsrvcId* srvcId, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vhost_probe_service(struct vhost* host, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
 {
     struct vroute* route = &host->route;
     int ret = 0;
 
     vassert(host);
-    vassert(srvcId);
+    vassert(hash);
     vassert(cb);
 
-    ret = route->ops->probe_service(route, srvcId, cb, cookie);
+    ret = route->ops->probe_service(route, hash, cb, cookie);
     retE((ret < 0));
     return 0;
 }
 
-struct vhost_svc_ops host_svc_ops = {
+struct vhost_srvc_ops host_srvc_ops = {
     .post   = _vhost_post_service,
     .unpost = _vhost_unpost_service,
     .probe  = _vhost_probe_service
@@ -370,7 +370,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     host->to_quit  = 0;
     host->cfg      = cfg;
     host->ops      = &host_ops;
-    host->svc_ops  = &host_svc_ops;
+    host->srvc_ops = &host_srvc_ops;
 
     vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &host->zaddr);
     vtoken_make(&host->myid);

@@ -160,7 +160,7 @@ int _vcmd_svc_post(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost*    host    = lsctl->host;
     struct sockaddr_in sin;
-    vsrvcId srvcId;
+    vsrvcHash hash;
     int what = 0;
     int ret = 0;
     int sz = 0;
@@ -180,17 +180,17 @@ int _vcmd_svc_post(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = vhashgen_get_stun_srvcId(&srvcId);
+        ret = vhashgen_get_stun_srvchash(&hash);
         break;
     case PLUGIN_RELAY:
-        ret = vhashgen_get_relay_srvcId(&srvcId);
+        ret = vhashgen_get_relay_srvchash(&hash);
         break;
     default:
         retE((1));
         break;
     }
     retE((ret < 0));
-    ret = host->svc_ops->post(host, &srvcId, &sin);
+    ret = host->srvc_ops->post(host, &hash, &sin);
     retE((ret < 0));
     return sz;
 }
@@ -203,7 +203,7 @@ int _vcmd_svc_unpost(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
-    vsrvcId srvcId;
+    vsrvcHash hash;
     int what = 0;
     int ret = 0;
     int sz  = 0;
@@ -223,17 +223,17 @@ int _vcmd_svc_unpost(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = vhashgen_get_stun_srvcId(&srvcId);
+        ret = vhashgen_get_stun_srvchash(&hash);
         break;
     case PLUGIN_RELAY:
-        ret = vhashgen_get_relay_srvcId(&srvcId);
+        ret = vhashgen_get_relay_srvchash(&hash);
         break;
     default:
         retE((1));
         break;
     }
     retE((ret < 0));
-    ret = host->svc_ops->unpost(host, &srvcId, &sin);
+    ret = host->srvc_ops->unpost(host, &hash, &sin);
     retE((ret < 0));
     return sz;
 }
@@ -254,7 +254,7 @@ int _vcmd_svc_probe(struct vlsctl* lsctl, void* data, int offset)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in addr;
-    vsrvcId srvcId;
+    vsrvcHash hash;
     int what = 0;
     int ret = 0;
     int sz  = 0;
@@ -270,16 +270,16 @@ int _vcmd_svc_probe(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = vhashgen_get_stun_srvcId(&srvcId);
+        ret = vhashgen_get_stun_srvchash(&hash);
         break;
     case PLUGIN_RELAY:
-        ret = vhashgen_get_relay_srvcId(&srvcId);
+        ret = vhashgen_get_relay_srvchash(&hash);
         break;
     default:
         retE((1));
         break;
     }
-    ret = host->svc_ops->probe(host, &srvcId, _vcmd_srvc_iterate_addr_cb, NULL);
+    ret = host->srvc_ops->probe(host, &hash, _vcmd_srvc_iterate_addr_cb, NULL);
     retE((ret < 0));
     vsockaddr_dump(&addr);
     return sz;

@@ -43,27 +43,25 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
  * @addr : [out] address of service
  */
 static
-int _vroute_probe_service(struct vroute* route, vsrvcId* srvcId, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
-    vsrvcInfo* srvci = NULL;
+    vsrvcInfo_relax srvci;
     int ret = 0;
     int i = 0;
 
     vassert(route);
-    vassert(srvcId);
+    vassert(hash);
     vassert(cb);
 
     vlock_enter(&route->lock);
-    ret = srvc_space->ops->get_service(srvc_space, srvcId, &srvci);
+    ret = srvc_space->ops->get_service(srvc_space, hash, (vsrvcInfo*)&srvci);
     vlock_leave(&route->lock);
-    retE((ret < 0));
-    retE((ret == 0) && (!srvci));
+    retE((ret <= 0));
 
-    for (i = 0; i < srvci->naddrs; i++) {
-        cb(&srvci->addr[i], cookie);
+    for (i = 0; i < srvci.naddrs; i++) {
+        cb(&srvci.addrs[i], cookie);
     }
-    vsrvcInfo_free(srvci);
     return 0;
 }
 
@@ -1020,7 +1018,7 @@ static
 int _vroute_cb_post_service(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
-    vsrvcInfo* srvc = NULL;
+    vsrvcInfo_relax srvci;
     vnodeId fromId;
     vtoken  token;
     int ret = 0;
@@ -1029,10 +1027,9 @@ int _vroute_cb_post_service(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(conn);
     vassert(ctxt);
 
-    ret = route->dec_ops->post_service(ctxt, &token, &fromId, &srvc);
+    ret = route->dec_ops->post_service(ctxt, &token, &fromId, (vsrvcInfo*)&srvci);
     retE((ret < 0));
-    ret = srvc_space->ops->add_service(srvc_space, srvc);
-    vsrvcInfo_free(srvc);
+    ret = srvc_space->ops->add_service(srvc_space, (vsrvcInfo*)&srvci);
     retE((ret < 0));
     return 0;
 }

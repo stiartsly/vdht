@@ -103,7 +103,7 @@ void vroute_node_space_deinit(struct vroute_node_space*);
 struct vroute_srvc_space;
 struct vroute_srvc_space_ops {
     int  (*add_service)  (struct vroute_srvc_space*, vsrvcInfo*);
-    int  (*get_service)  (struct vroute_srvc_space*, vsrvcId*, vsrvcInfo**);
+    int  (*get_service)  (struct vroute_srvc_space*, vsrvcHash*, vsrvcInfo*);
     void (*clear)        (struct vroute_srvc_space*);
     void (*dump)         (struct vroute_srvc_space*);
 };
@@ -124,7 +124,7 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space*);
  */
 struct vroute_ops {
     int  (*join_node)    (struct vroute*, struct sockaddr_in*);
-    int  (*probe_service)(struct vroute*, vsrvcId*, vsrvcInfo_iterate_addr_t, void*);
+    int  (*probe_service)(struct vroute*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
     int  (*air_service)  (struct vroute*, vsrvcInfo*);
     int  (*reflex)       (struct vroute*, struct sockaddr_in*);
     int  (*probe_connectivity)

@@ -250,6 +250,7 @@ void _vnode_dump(struct vnode* node)
     vdump(printf("-> NODE"));
     vlock_enter(&node->lock);
     vdump(printf("-> state:%s", node_mode_desc[node->mode]));
+    vdump(printf("-> node infos:"));
     vnodeInfo_dump((vnodeInfo*)&node->nodei);
     if (varray_size(&node->services) > 0) {
         vdump(printf("-> list of services:"));
@@ -304,37 +305,41 @@ int _vnode_is_self(struct vnode* node, struct sockaddr_in* addr)
  * service, and this service will be broadcasted to all nodes in routing table.
  *
  * @node:
- * @srvcId: service Id.
+ * @hash
  * @addr:  address of service to provide.
  *
  */
 static
-int _vnode_post(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* addr)
+int _vnode_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
 {
-    vsrvcInfo* svc = NULL;
+    vsrvcInfo* srvci = NULL;
     int found = 0;
     int i = 0;
 
     vassert(node);
+    vassert(hash);
     vassert(addr);
-    vassert(srvcId);
 
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++){
-        svc = (vsrvcInfo*)varray_get(&node->services, i);
-        if (vtoken_equal(&svc->id, srvcId)) {
-            vsrvcInfo_add_addr(svc, addr);
+        srvci = (vsrvcInfo*)varray_get(&node->services, i);
+        if (vtoken_equal(&srvci->hash, hash)) {
+            vsrvcInfo_add_addr(&srvci, addr);
             found = 1;
             break;
         }
     }
     if (!found) {
-        svc = vsrvcInfo_alloc();
-        vlog((!svc), elog_vsrvcInfo_alloc);
-        ret1E((!svc), vlock_leave(&node->lock));
-        vsrvcInfo_init(svc, srvcId, node->nice);
-        vsrvcInfo_add_addr(svc, addr);
-        varray_add_tail(&node->services, svc);
+        vsrvcId srvcId;
+
+        srvci = vsrvcInfo_alloc();
+        vlog((!srvci), elog_vsrvcInfo_alloc);
+        ret1E((!srvci), vlock_leave(&node->lock));
+
+        vtoken_make(&srvcId);
+        vsrvcInfo_init(srvci, &srvcId, hash, node->nice);
+        vsrvcInfo_add_addr(&srvci, addr);
+        varray_add_tail(&node->services, srvci);
         //node->own_node.weight++;
     }
     vlock_leave(&node->lock);
@@ -345,33 +350,33 @@ int _vnode_post(struct vnode* node, vsrvcId* srvcId, struct sockaddr_in* addr)
  * the routine to unpost a posted service info;
  *
  * @node:
- * @srvcId: service hash Id.
+ * @hash: hash of service.
  * @addr: address of service to provide.
  *
  */
 static
-void _vnode_unpost(struct vnode* node, vtoken* srvcId, struct sockaddr_in* addr)
+void _vnode_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
 {
-    vsrvcInfo* svc = NULL;
+    vsrvcInfo* srvci = NULL;
     int found = 0;
     int i = 0;
 
     vassert(node);
     vassert(addr);
-    vassert(srvcId);
+    vassert(hash);
 
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++) {
-        svc = (vsrvcInfo*)varray_get(&node->services, i);
-        if (vtoken_equal(&svc->id, srvcId)) {
-            vsrvcInfo_del_addr(svc, addr);
+        srvci = (vsrvcInfo*)varray_get(&node->services, i);
+        if (vtoken_equal(&srvci->hash, hash)) {
+            vsrvcInfo_del_addr(srvci, addr);
             found = 1;
             break;
         }
     }
-    if ((found) && (vsrvcInfo_is_empty(svc))) {
-        svc = (vsrvcInfo*)varray_del(&node->services, i);
-        vsrvcInfo_free(svc);
+    if ((found) && (vsrvcInfo_is_empty(srvci))) {
+        srvci = (vsrvcInfo*)varray_del(&node->services, i);
+        vsrvcInfo_free(srvci);
         //node->own_node.weight--;
     }
     vlock_leave(&node->lock);

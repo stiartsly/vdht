@@ -20,10 +20,10 @@ struct vhost_ops {
     int   (*bogus_query)(struct vhost*, int, struct sockaddr_in*);
 };
 
-struct vhost_svc_ops {
-    int (*post)  (struct vhost*, vsrvcId*, struct sockaddr_in*);
-    int (*unpost)(struct vhost*, vsrvcId*, struct sockaddr_in*);
-    int (*probe) (struct vhost*, vsrvcId*, vsrvcInfo_iterate_addr_t, void*);
+struct vhost_srvc_ops {
+    int (*post)  (struct vhost*, vsrvcHash*, struct sockaddr_in*);
+    int (*unpost)(struct vhost*, vsrvcHash*, struct sockaddr_in*);
+    int (*probe) (struct vhost*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
 };
 
 struct vhost {
@@ -43,7 +43,7 @@ struct vhost {
 
     struct vconfig*   cfg;
     struct vhost_ops* ops;
-    struct vhost_svc_ops* svc_ops;
+    struct vhost_srvc_ops* srvc_ops;
 };
 
 const char* vhost_get_version(void);
