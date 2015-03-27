@@ -150,6 +150,9 @@ struct vroute_dht_ops {
     int (*probe)         (struct vroute*, vnodeConn*, vnodeId*);
     int (*probe_rsp)     (struct vroute*, vnodeConn*, vtoken*);
     int (*post_service)  (struct vroute*, vnodeConn*, vsrvcInfo*);
+    int (*find_service)  (struct vroute*, vnodeConn*, vsrvcHash*);
+    int (*find_service_rsp)
+                         (struct vroute*, vnodeConn*, vtoken*, vsrvcInfo*);
 };
 
 typedef int (*vroute_dht_cb_t)(struct vroute*, vnodeConn*, void*);

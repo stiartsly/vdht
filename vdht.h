@@ -101,6 +101,19 @@ struct vdht_enc_ops {
             void* buf,
             int   sz);
 
+    int (*find_service)(
+            vtoken* token,
+            vnodeId* srcId,
+            vsrvcHash* hash,
+            void* buf,
+            int   sz);
+
+    int (*find_service_rsp)(
+            vtoken* token,
+            vnodeId* srcId,
+            vsrvcInfo* srvc,
+            void* buf,
+            int   sz);
 };
 
 /*
@@ -178,6 +191,17 @@ struct vdht_dec_ops {
             vnodeId* srcId,
             vsrvcInfo* srvci);
 
+    int (*find_service)(
+            void* ctxt,
+            vtoken* token,
+            vnodeId* srcId,
+            vsrvcHash* target_hash);
+
+    int (*find_service_rsp)(
+            void* ctxt,
+            vtoken* token,
+            vnodeId* srcId,
+            vsrvcInfo* srvci);
 };
 
 char* vdht_get_desc(int);

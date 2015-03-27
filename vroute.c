@@ -662,6 +662,85 @@ int _vroute_dht_post_service(struct vroute* route, vnodeConn* conn, vsrvcInfo* s
     return 0;
 }
 
+/*
+ * the routine to pack and send a @find_service query.
+ * @route:
+ * @conn:
+ * @srvcId:
+ */
+static
+int _vroute_dht_find_service(struct vroute* route, vnodeConn* conn, vsrvcHash* hash)
+{
+    void* buf = NULL;
+    vtoken token;
+    int ret = 0;
+
+    vassert(route);
+    vassert(conn);
+    vassert(hash);
+    retS((!(route->props & PROP_FIND_SERVICE)));
+
+    buf = vdht_buf_alloc();
+    retE((!buf));
+
+    vtoken_make(&token);
+    ret = route->enc_ops->find_service(&token, &route->myid, hash, buf, vdht_buf_len());
+    ret1E((ret < 0), vdht_buf_free(buf));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&conn->remote),
+            .spec  = to_vsockaddr_from_sin(&conn->local),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
+    route->recr_space.ops->make(&route->recr_space, &token);
+    vlogI(printf("send @find_service"));
+    return 0;
+}
+
+/*
+ * the routine to pack and send a response to @find_service query.
+ * @route:
+ * @conn:
+ * @token:
+ * @srvcs:
+ */
+static
+int _vroute_dht_find_service_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, vsrvcInfo* srvc)
+{
+    void* buf = NULL;
+    int ret = 0;
+
+    vassert(route);
+    vassert(conn);
+    vassert(token);
+    vassert(srvc);
+    retS((!(route->props & PROP_FIND_SERVICE_R)));
+
+    buf = vdht_buf_alloc();
+    retE((!buf));
+
+    ret = route->enc_ops->find_service_rsp(token, &route->myid, srvc, buf, vdht_buf_len());
+    ret1E((ret < 0), vdht_buf_free(buf));
+    {
+        struct vmsg_usr msg = {
+            .addr  = to_vsockaddr_from_sin(&conn->remote),
+            .spec  = to_vsockaddr_from_sin(&conn->local),
+            .msgId = VMSG_DHT,
+            .data  = buf,
+            .len   = ret
+        };
+        ret = route->msger->ops->push(route->msger, &msg);
+        ret1E((ret < 0), vdht_buf_free(buf));
+    }
+    vlogI(printf("send @find_service_rsp"));
+    return 0;
+}
+
 static
 struct vroute_dht_ops route_dht_ops = {
     .ping                   = _vroute_dht_ping,
@@ -674,7 +753,9 @@ struct vroute_dht_ops route_dht_ops = {
     .reflex_rsp             = _vroute_dht_reflex_rsp,
     .probe                  = _vroute_dht_probe,
     .probe_rsp              = _vroute_dht_probe_rsp,
-    .post_service           = _vroute_dht_post_service
+    .post_service           = _vroute_dht_post_service,
+    .find_service           = _vroute_dht_find_service,
+    .find_service_rsp       = _vroute_dht_find_service_rsp
 };
 
 static
@@ -1036,6 +1117,69 @@ int _vroute_cb_post_service(struct vroute* route, vnodeConn* conn, void* ctxt)
     return 0;
 }
 
+/*
+ * the routine to call when receiving a @find_service query.
+ *
+ * @route:
+ * @conn:
+ * @ctxt:
+ */
+static
+int _vroute_cb_find_service(struct vroute* route, vnodeConn* conn, void* ctxt)
+{
+    struct vroute_srvc_space* srvc_space = &route->srvc_space;
+    vsrvcInfo_relax srvci;
+    vsrvcHash srvcHash;
+    vnodeId fromId;
+    vtoken token;
+    int ret = 0;
+
+    vassert(route);
+    vassert(conn);
+    vassert(ctxt);
+
+    ret = route->dec_ops->find_service(ctxt, &token, &fromId, &srvcHash);
+    retE((ret < 0));
+    ret = srvc_space->ops->get_service(srvc_space, &srvcHash, (vsrvcInfo*)&srvci);
+    retE((ret < 0));
+    retS((ret == 0));
+    ret = route->dht_ops->find_service_rsp(route, conn, &token, (vsrvcInfo*)&srvci);
+    retE((ret < 0));
+    return 0;
+}
+
+/*
+ * the routine to call when receiving a response to @find_service.
+ *
+ * @route:
+ * @conn:
+ * @ctxt:
+ */
+static
+int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
+{
+    struct vroute_srvc_space* srvc_space = &route->srvc_space;
+    struct vroute_recr_space* recr_space = &route->recr_space;
+    vsrvcInfo_relax srvci;
+    vnodeId fromId;
+    vtoken token;
+    int ret = 0;
+
+    vassert(route);
+    vassert(ctxt);
+    vassert(conn);
+
+    ret = route->dec_ops->find_service_rsp(ctxt, &token, &fromId, (vsrvcInfo*)&srvci);
+    retE((ret < 0));
+    retE((!recr_space->ops->check(recr_space, &token)));
+
+    ret = srvc_space->ops->add_service(srvc_space, (vsrvcInfo*)&srvci);
+    retE((ret < 0));
+
+    //todo;
+    return 0;
+}
+
 static
 vroute_dht_cb_t route_cb_ops[] = {
     _vroute_cb_ping,
@@ -1049,6 +1193,8 @@ vroute_dht_cb_t route_cb_ops[] = {
     _vroute_cb_probe,
     _vroute_cb_probe_rsp,
     _vroute_cb_post_service,
+    _vroute_cb_find_service,
+    _vroute_cb_find_service_rsp,
     NULL
 };
 

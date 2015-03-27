@@ -839,6 +839,92 @@ int _vdht_enc_post_service(
     return ret;
 }
 
+static
+int _vdht_enc_find_service(
+        vtoken* token,
+        vnodeId* srcId,
+        vsrvcHash* srvcHash,
+        void* buf,
+        int sz)
+{
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* temp = NULL;
+    int ret = 0;
+
+    vassert(token);
+    vassert(srcId);
+    vassert(srvcHash);
+    vassert(buf);
+    vassert(sz > 0);
+
+    dict = be_create_dict();
+    retE((!dict));
+
+    node = be_create_vtoken(token);
+    be_add_keypair(dict, "t", node);
+
+    node = be_create_str("q");
+    be_add_keypair(dict, "y", node);
+    node = be_create_str("find_service");
+    be_add_keypair(dict, "q", node);
+
+    node = be_create_dict();
+    temp = be_create_vtoken(srcId);
+    be_add_keypair(node, "id", temp);
+    temp = be_create_vtoken(srvcHash);
+    be_add_keypair(node, "target", temp);
+    be_add_keypair(dict, "a", node);
+
+    ret = be_encode(dict, buf, sz);
+    be_free(dict);
+    retE((ret < 0));
+    return ret;
+}
+
+static
+int _vdht_enc_find_service_rsp(
+        vtoken* token,
+        vnodeId* srcId,
+        vsrvcInfo* result,
+        void* buf,
+        int sz)
+{
+    struct be_node* dict = NULL;
+    struct be_node* node = NULL;
+    struct be_node* temp = NULL;
+    int ret = 0;
+
+    vassert(token);
+    vassert(srcId);
+    vassert(result);
+    vassert(buf);
+    vassert(sz > 0);
+
+    dict = be_create_dict();
+    retE((!dict));
+
+    node = be_create_vtoken(token);
+    be_add_keypair(dict, "t", node);
+
+    node = be_create_str("r");
+    be_add_keypair(dict, "y", node);
+    node = be_create_str("find_service");
+    be_add_keypair(dict, "r", node);
+
+    node = be_create_dict();
+    temp = be_create_vtoken(srcId);
+    be_add_keypair(node, "id", temp);
+    temp = _aux_create_vsrvcInfo(result);
+    be_add_keypair(node, "service", temp);
+    be_add_keypair(dict, "a", node);
+
+    ret = be_encode(dict, buf, sz);
+    be_free(dict);
+    retE((ret < 0));
+    return ret;
+}
+
 struct vdht_enc_ops dht_enc_ops = {
     .ping                   = _vdht_enc_ping,
     .ping_rsp               = _vdht_enc_ping_rsp,
@@ -850,7 +936,9 @@ struct vdht_enc_ops dht_enc_ops = {
     .reflex_rsp             = _vdht_enc_reflex_rsp,
     .probe                  = _vdht_enc_probe,
     .probe_rsp              = _vdht_enc_probe_rsp,
-    .post_service           = _vdht_enc_post_service
+    .post_service           = _vdht_enc_post_service,
+    .find_service           = _vdht_enc_find_service,
+    .find_service_rsp       = _vdht_enc_find_service_rsp
 };
 
 static
@@ -1433,6 +1521,75 @@ int _vdht_dec_post_service(
     return 0;
 }
 
+/*
+ * the routine to decode @find_service query.
+ * @ctxt:
+ * @token:
+ * @srcId:
+ * @srvcId:
+ */
+static
+int _vdht_dec_find_service(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId,
+        vsrvcHash* srvcHash)
+{
+    struct be_node* dict = (struct be_node*)ctxt;
+    int ret = 0;
+
+    vassert(ctxt);
+    vassert(token);
+    vassert(srcId);
+    vassert(srvcHash);
+
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
+    ret = _aux_unpack_vnodeId(dict, "a", "target", srvcHash);
+    retE((ret < 0));
+
+    return 0;
+}
+
+/*
+ * the routine to decode response msg to @find_servcie query.
+ * @ctxt:
+ * @token:
+ * @srcId:
+ * @result:
+ */
+static
+int _vdht_dec_find_service_rsp(
+        void* ctxt,
+        vtoken* token,
+        vnodeId* srcId,
+        vsrvcInfo* result)
+{
+    struct be_node* dict = (struct be_node*)ctxt;
+    struct be_node* node = NULL;
+    int ret = 0;
+
+    vassert(ctxt);
+    vassert(token);
+    vassert(srcId);
+    vassert(result);
+
+    ret = _aux_unpack_vtoken(dict, token);
+    retE((ret < 0));
+
+    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
+    retE((ret < 0));
+    ret = be_node_by_2keys(dict, "a", "service", &node);
+    retE((ret < 0));
+    ret = _aux_unpack_vsrvcInfo(node, result);
+    retE((ret < 0));
+
+    return 0;
+}
+
 static
 int _vdht_dec_begin(void* buf, int len, void** ctxt)
 {
@@ -1478,6 +1635,8 @@ struct vdht_dec_ops dht_dec_ops = {
     .reflex_rsp             = _vdht_dec_reflex_rsp,
     .probe                  = _vdht_dec_probe,
     .probe_rsp              = _vdht_dec_probe_rsp,
-    .post_service           = _vdht_dec_post_service
+    .post_service           = _vdht_dec_post_service,
+    .find_service           = _vdht_dec_find_service,
+    .find_service_rsp       = _vdht_dec_find_service_rsp
 };
 
