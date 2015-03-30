@@ -17,17 +17,16 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
     struct vroute_node_space* node_space = &route->node_space;
     vnodeInfo_relax nodei_relax;
     vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
+    vtoken id;
     int ret = 0;
 
     vassert(route);
     vassert(addr);
 
-    {
-        vtoken id;
-        vtoken_make(&id);
-        vnodeInfo_relax_init(&nodei_relax, &id, &unknown_node_ver, 0);
-        vnodeInfo_add_addr(&nodei, addr);
-    }
+    vtoken_make(&id);
+    vnodeInfo_relax_init(&nodei_relax, &id, &unknown_node_ver, 0);
+    vnodeInfo_add_addr(&nodei, addr);
+
     vlock_enter(&route->lock);
     ret = node_space->ops->add_node(node_space, nodei, 0);
     vlock_leave(&route->lock);
@@ -264,7 +263,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeConn* conn)
     }
 
     // make a record according to the query, which will be used to
-    // check invality of corresponding response.
+    // check invality of response msg.
     recr_space->ops->make(recr_space, &token);
     vlogI(printf("send @ping"));
     return 0;
@@ -778,8 +777,8 @@ static
 int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_node_space* node_space = &route->node_space;
-    vnodeInfo_relax from;
-    vnodeInfo* nodei = (vnodeInfo*)&from;
+    vnodeInfo_relax nodei_relax;
+    vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
     vnodeId fromId;
     vtoken  token;
     int ret = 0;
@@ -791,9 +790,9 @@ int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret =route->dec_ops->ping(ctxt, &token, &fromId);
     retE((ret < 0));
 
-    vnodeInfo_relax_init(&from, &fromId, &unknown_node_ver, 0);
+    vnodeInfo_relax_init(&nodei_relax, &fromId, &unknown_node_ver, 0);
     vnodeInfo_add_addr(&nodei, &conn->remote);
-    ret = node_space->ops->add_node(node_space, (vnodeInfo*)&from, 1);
+    ret = node_space->ops->add_node(node_space, nodei, 1);
     retE((ret < 0));
 
     ret = route->dht_ops->ping_rsp(route, conn, &token, (vnodeInfo*)&route->node->nodei);
