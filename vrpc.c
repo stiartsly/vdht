@@ -263,6 +263,7 @@ int _vrpc_udp_sndto(void* impl, struct vmsg_sys* msg)
     ret = sendmsg(udp->sock_fd, &mhdr, 0);
     vlog((ret < 0), elog_sendmsg);
     vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
+    vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
     retE((ret < 0));
 
     return ret;
@@ -303,6 +304,7 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
     ret = recvmsg(udp->sock_fd, &mhdr, 0);
     vlog((ret < 0), elog_recvmsg);
     vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
+    vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
     retE((ret < 0));
 
     for (cmsg = CMSG_FIRSTHDR(&mhdr); cmsg != NULL; cmsg = CMSG_NXTHDR(&mhdr, cmsg)) {
