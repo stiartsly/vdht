@@ -423,68 +423,59 @@ int vnodeInfo_has_addr(vnodeInfo* nodei, struct sockaddr_in* addr)
     return found;
 }
 
-int vnodeInfo_update(vnodeInfo* dest_nodei, vnodeInfo* src_nodei)
+int vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
 {
-    int nupdts = 0;
-    int naddrs = 0;
+    int updted = 0;
     int ret = 0;
     int i = 0;
 
-    vassert(dest_nodei);
-    vassert(src_nodei);
+    vassert(dest);
+    vassert(src);
 
-    if (vtoken_equal(&dest_nodei->ver, &unknown_node_ver)) {
-        for (i = 0; i < src_nodei->naddrs; i++) {
-            ret = vnodeInfo_add_addr(&dest_nodei, &src_nodei->addrs[i]);
-            retE((ret < 0));
-            if (ret > 0) {
-                nupdts++;
-            }
-        }
-        return nupdts;
-    }
+    vtoken_copy(&dest->id,  &src->id);
+    vtoken_copy(&dest->ver, &src->ver);
+    dest->weight = src->weight;
+    dest->naddrs = 0;
 
-    dest_nodei->weight = src_nodei->weight;
-    if (dest_nodei->naddrs > src_nodei->naddrs) {
-        naddrs = src_nodei->naddrs;
-    } else {
-        naddrs = dest_nodei->naddrs;
-    }
-    for (i = 0; i < naddrs; i++) {
-        if (!vsockaddr_equal(&dest_nodei->addrs[i], &src_nodei->addrs[i])) {
-            vsockaddr_copy(&dest_nodei->addrs[i], &src_nodei->addrs[i]);
-            nupdts++;
+    for (i = 0; i < src->naddrs; i++) {
+        ret = vnodeInfo_add_addr(&dest, &src->addrs[i]);
+        retE((ret < 0));
+        if (ret > 0) {
+            updted = 1;
         }
     }
-    if (dest_nodei->naddrs > src_nodei->naddrs) {
-        dest_nodei->naddrs = src_nodei->naddrs;
-    } else {
-        for (i = dest_nodei->naddrs; i < src_nodei->naddrs; i++) {
-            ret = vnodeInfo_add_addr(&dest_nodei, &src_nodei->addrs[i]);
-            if (ret > 0) {
-                nupdts++;
-            }
-        }
-    }
-    return nupdts;
+    return ((ret > 0) ? updted : ret);
 }
 
-int vnodeInfo_copy(vnodeInfo* dest_nodei, vnodeInfo* src_nodei)
+int vnodeInfo_update(vnodeInfo* dest, vnodeInfo* src)
 {
+    int updted = 0;
+    int ret = 0;
     int i = 0;
 
-    vassert(dest_nodei);
-    vassert(src_nodei);
+    vassert(dest);
+    vassert(src);
 
-    vtoken_copy(&dest_nodei->id,  &src_nodei->id);
-    vtoken_copy(&dest_nodei->ver, &src_nodei->ver);
-    dest_nodei->weight = src_nodei->weight;
-    dest_nodei->naddrs = 0;
-
-    for (i = 0; i < src_nodei->naddrs; i++) {
-        vnodeInfo_add_addr(&dest_nodei, &src_nodei->addrs[i]);
+    if (vtoken_equal(&dest->ver, &unknown_node_ver)) {
+        // only interested in addresses
+        for (i = 0; i < src->naddrs; i++) {
+            ret = vnodeInfo_add_addr(&dest, &src->addrs[i]);
+            retE((ret < 0));
+            if (ret > 0) {
+                updted = 1;
+            }
+        }
+        return updted;
     }
-    return 0;
+
+    //node ID should be same value;
+    vassert(vtoken_equal(&dest->id, &src->id));
+    ret = vnodeInfo_copy(dest, src);
+    retE((ret < 0));
+    if (ret > 0) {
+        updted = 1;
+    }
+    return ((ret > 0) ? updted : ret);
 }
 
 void vnodeInfo_dump(vnodeInfo* nodei)
