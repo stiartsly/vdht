@@ -162,6 +162,10 @@ struct vudp {
     uint16_t pad;
     int sock_fd;
     int ttl;
+    int snt_bytes;
+    int rcv_bytes;
+    int snt_errs;
+    int rcv_errs;
 };
 
 /*
@@ -213,7 +217,11 @@ void* _vrpc_udp_open(struct vsockaddr* addr)
     }
 
     udp->port = saddr->sin_port;
-    udp->sock_fd = fd;
+    udp->sock_fd   = fd;
+    udp->snt_bytes = 0;
+    udp->rcv_bytes = 0;
+    udp->snt_errs  = 0;
+    udp->rcv_errs  = 0;
     return udp;
 }
 
@@ -264,8 +272,11 @@ int _vrpc_udp_sndto(void* impl, struct vmsg_sys* msg)
     vlog((ret < 0), elog_sendmsg);
     vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
     vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
-    retE((ret < 0));
-
+    if (ret < 0) {
+        udp->rcv_errs++;
+        return -1;
+    }
+    udp->snt_bytes += ret;
     return ret;
 }
 
@@ -305,7 +316,11 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
     vlog((ret < 0), elog_recvmsg);
     vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
     vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
-    retE((ret < 0));
+    if (ret < 0) {
+        udp->rcv_errs++;
+        return -1;
+    }
+    udp->rcv_bytes += ret;
 
     for (cmsg = CMSG_FIRSTHDR(&mhdr); cmsg != NULL; cmsg = CMSG_NXTHDR(&mhdr, cmsg)) {
         struct in_pktinfo* pi = NULL;
@@ -367,7 +382,11 @@ void _vrpc_udp_dump(void* impl)
     vsockaddr_unconvert(&udp->addr, buf, 64, (uint16_t*)&port);
     printf("udp ");
     printf("address: %s:%d ", buf, port);
-    printf("fd: %d", udp->sock_fd);
+    printf("fd:%d ", udp->sock_fd);
+    printf("snt_bytes:%d ", udp->snt_bytes);
+    printf("rcv_bytes:%d ", udp->rcv_bytes);
+    printf("snt_errs:%d ", udp->snt_errs);
+    printf("rcv_errs:%d", udp->rcv_errs);
     return ;
 }
 
