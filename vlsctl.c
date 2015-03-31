@@ -180,10 +180,10 @@ int _vcmd_svc_post(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = vhashgen_get_stun_srvchash(&hash);
+        ret = vhashhelper_get_stun_srvcHash(&hash);
         break;
     case PLUGIN_RELAY:
-        ret = vhashgen_get_relay_srvchash(&hash);
+        ret = vhashhelper_get_relay_srvcHash(&hash);
         break;
     default:
         retE((1));
@@ -223,10 +223,10 @@ int _vcmd_svc_unpost(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = vhashgen_get_stun_srvchash(&hash);
+        ret = vhashhelper_get_stun_srvcHash(&hash);
         break;
     case PLUGIN_RELAY:
-        ret = vhashgen_get_relay_srvchash(&hash);
+        ret = vhashhelper_get_relay_srvcHash(&hash);
         break;
     default:
         retE((1));
@@ -270,10 +270,10 @@ int _vcmd_svc_probe(struct vlsctl* lsctl, void* data, int offset)
 
     switch(what) {
     case PLUGIN_STUN:
-        ret = vhashgen_get_stun_srvchash(&hash);
+        ret = vhashhelper_get_stun_srvcHash(&hash);
         break;
     case PLUGIN_RELAY:
-        ret = vhashgen_get_relay_srvchash(&hash);
+        ret = vhashhelper_get_relay_srvcHash(&hash);
         break;
     default:
         retE((1));

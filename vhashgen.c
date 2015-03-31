@@ -323,36 +323,6 @@ struct vhashgen_ops hashgen_ops = {
     .hash_with_cookie = _vhashgen_hash_with_cookie
 };
 
-static
-int _vhashgen_get_stun_svc_hash(struct vhashgen* gen, vtoken* token)
-{
-    int ret = 0;
-    vassert(gen);
-    vassert(token);
-
-    ret = gen->ops->hash(gen, (uint8_t*)HASH_MAGIC_STUN, strlen(HASH_MAGIC_STUN), token);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vhashgen_get_relay_svc_hash(struct vhashgen* gen, vtoken* token)
-{
-    int ret = 0;
-    vassert(gen);
-    vassert(token);
-
-    ret = gen->ops->hash(gen, (uint8_t*)HASH_MAGIC_RELAY, strlen(HASH_MAGIC_RELAY), token);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-struct vhashgen_ext_ops hashgen_ext_ops = {
-    .get_stun_hash  = _vhashgen_get_stun_svc_hash,
-    .get_relay_hash = _vhashgen_get_relay_svc_hash
-};
-
 int vhashgen_init (struct vhashgen* gen)
 {
     void* ctxt = NULL;
@@ -366,7 +336,6 @@ int vhashgen_init (struct vhashgen* gen)
     gen->ctxt    = ctxt;
     gen->sha_ops = &hashgen_sha1_ops;
     gen->ops     = &hashgen_ops;
-    gen->ext_ops = &hashgen_ext_ops;
 
     return 0;
 }
@@ -380,29 +349,31 @@ void vhashgen_deinit(struct vhashgen* gen)
     return ;
 }
 
-int vhashgen_get_stun_srvchash(vsrvcHash* srvcHash)
+int vhashhelper_get_stun_srvcHash(vsrvcHash* srvcHash)
 {
+    const char* magic = HASH_MAGIC_STUN;
     struct vhashgen hashgen;
     int ret = 0;
     vassert(srvcHash);
 
     ret = vhashgen_init(&hashgen);
     retE((ret < 0));
-    ret = hashgen.ext_ops->get_stun_hash(&hashgen, srvcHash);
+    ret = hashgen.ops->hash(&hashgen, (uint8_t*)magic, strlen(magic), srvcHash);
     vhashgen_deinit(&hashgen);
     retE((ret < 0));
     return 0;
 }
 
-int vhashgen_get_relay_srvchash(vsrvcHash* srvcHash)
+int vhashhelper_get_relay_srvcHash(vsrvcHash* srvcHash)
 {
+    const char* magic = HASH_MAGIC_RELAY;
     struct vhashgen hashgen;
     int ret = 0;
     vassert(srvcHash);
 
     ret = vhashgen_init(&hashgen);
     retE((ret < 0));
-    ret = hashgen.ext_ops->get_relay_hash(&hashgen, srvcHash);
+    ret = hashgen.ops->hash(&hashgen, (uint8_t*)magic, strlen(magic), srvcHash);
     vhashgen_deinit(&hashgen);
     retE((ret < 0));
     return 0;
