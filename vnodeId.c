@@ -312,6 +312,8 @@ vnodeInfo_relax* vnodeInfo_relax_alloc(void)
     nodei = (vnodeInfo_relax*)vmem_aux_alloc(&nodeinfo_relax_cache);
     retE_p((!nodei));
     memset(nodei, 0, sizeof(*nodei));
+
+    nodei->capc = VNODEINFO_MAX_ADDRS;
     return nodei;
 }
 
@@ -345,6 +347,8 @@ vnodeInfo* vnodeInfo_alloc(void)
     nodei = (vnodeInfo*)malloc(sizeof(*nodei));
     retE_p((!nodei));
     memset(nodei, 0, sizeof(*nodei));
+
+    nodei->capc = VNODEINFO_MIN_ADDRS;
     return nodei;
 }
 
@@ -456,7 +460,7 @@ int vnodeInfo_update(vnodeInfo* dest, vnodeInfo* src)
     vassert(dest);
     vassert(src);
 
-    if (vtoken_equal(&dest->ver, &unknown_node_ver)) {
+    if (vtoken_equal(&src->ver, &unknown_node_ver)) {
         // only interested in addresses
         for (i = 0; i < src->naddrs; i++) {
             ret = vnodeInfo_add_addr(&dest, &src->addrs[i]);
