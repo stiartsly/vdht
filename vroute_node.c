@@ -55,8 +55,8 @@ int vpeer_init(struct vpeer* peer, struct sockaddr_in* local, vnodeInfo* nodei, 
     vnodeConn_set(&peer->conn, local, &nodei->addrs[nodei->naddrs-1]);
     vnodeInfo_copy(peer->nodei, nodei);
     peer->rcv_ts = direct ? rcv_ts : 0;
+    peer->ntries = direct ? 0 : peer->ntries;
     peer->nprobes = 0;
-    peer->ntries  = 0;
     return 0;
 }
 
@@ -74,8 +74,8 @@ int vpeer_update(struct vpeer* peer, vnodeInfo* nodei, time_t rcv_ts, int direct
     retE((ret < 0));
 
     peer->nprobes = (ret > 0) ? 0 : peer->nprobes;
-    peer->ntries  = 0;
-    return 0;
+    peer->ntries  = direct ? 0 : peer->ntries;
+    return ret;
 }
 
 static
@@ -367,10 +367,10 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* node
         varray_iterate(peers, _aux_space_add_node_cb, argv);
         if (found) { //found
             ret = vpeer_update(to, nodei, now, direct);
-            updt = (ret > 0) ? 1: 0;
+            updt = (ret > 0);
         } else if (to && (varray_size(peers) >= space->bucket_sz)) { //replace worst one.
             ret = vpeer_init(to, &space->zaddr, nodei, now, direct);
-            updt = (ret >= 0) ? 1: 0;
+            updt = (ret >= 0);
         } else if (varray_size(peers) < space->bucket_sz) {
             // insert new one.
             to = vpeer_alloc();
