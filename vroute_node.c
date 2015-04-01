@@ -167,18 +167,26 @@ int _aux_space_reflex_addr_cb(void* item, void* cookie)
 static
 int _aux_space_probe_connectivity_cb(void* item, void* cookie)
 {
-    varg_decl(cookie, 0, struct vroute*, route);
+    varg_decl(cookie, 0, struct vroute_node_space*, space);
     varg_decl(cookie, 1, struct sockaddr_in*, laddr);
-    struct vpeer* peer = (struct vpeer*)item;
+    struct vpeer*  peer  = (struct vpeer*)item;
+    struct vroute* route = space->route;
     int i = 0;
     int j = 0;
 
     vassert(peer);
-    vassert(route);
+    vassert(space);
     vassert(laddr);
 
-    retS((peer->nprobes >= 3)); // already probed enough;
-
+    if (peer->nprobes >= 3) { //already probed enough;
+        return 0;
+    }
+    if (peer->ntries >= space->max_snd_tms) {
+        return 0;
+    }
+    if (vtoken_equal(&peer->nodei->ver, &unknown_node_ver)) {
+        return 0;
+    }
     for (j = 0; j < peer->nodei->naddrs; j++) {
         vnodeConn conn;
         vnodeConn_set(&conn, laddr, &peer->nodei->addrs[i]);
@@ -554,7 +562,7 @@ int _vroute_node_space_probe_connectivity(struct vroute_node_space* space, struc
 
     for (i = 0; i < NBUCKETS; i++) {
         void* argv[] = {
-            space->route,
+            space,
             laddr
         };
         peers = &space->bucket[i].peers;
