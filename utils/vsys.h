@@ -75,5 +75,20 @@ int vsys_get_mem_ratio(int*);
 int vsys_get_io_ratio (int*);
 int vsys_get_net_ratio(int*, int*);
 
+/*
+ * vlogger
+ */
+enum {
+    VLOG_ERR    = LOG_ERR,
+    VLOG_INFO   = LOG_INFO,
+    VLOG_DEBUG  = LOG_DEBUG,
+    VLOG_BUTT
+};
+
+int  vlogger_open  (const char*);
+void vlogger_close (void);
+int  vlogger_write (int, const char*, ...);
+int  vlogger_writev(int, const char*, va_list);
+
 #endif
 

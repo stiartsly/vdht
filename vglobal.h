@@ -12,6 +12,8 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <netdb.h>
+#include <syslog.h>
+#include <stdarg.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -114,6 +116,9 @@
 #define fstat
 #define read
 #define getpid
+#define vsyslog
+#define openlog
+#define closelog
 
 #define inet_aton
 #define inet_ntoa

@@ -121,6 +121,7 @@ int main(int argc, char** argv)
         exit(0);
     }
 
+    vlogger_open("vdhtd");
     vconfig_init(&cfg);
     if (defcfgfile) {
         cfg_file = "vdht.conf";
@@ -150,6 +151,7 @@ int main(int argc, char** argv)
     }
     vhost_destroy(host);
     vconfig_deinit(&cfg);
+    vlogger_close();
     return 0;
 }
 

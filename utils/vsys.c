@@ -315,3 +315,36 @@ int vsys_get_net_ratio(int* up_ratio, int* down_ratio)
     return 0;
 }
 
+/*
+ * vlogger
+ */
+int vlogger_open(const char* ident)
+{
+    vassert(ident);
+
+    openlog(ident, LOG_CONS | LOG_PID, LOG_DAEMON);
+    return 0;
+}
+
+void vlogger_close (void)
+{
+    closelog();
+    return ;
+}
+
+int vlogger_write (int prio, const char* fmt, ...)
+{
+    vassert(fmt);
+
+    //todo;
+    return 0;
+}
+
+int vlogger_writev(int prio, const char* fmt, va_list ap)
+{
+    vassert(fmt);
+
+    vsyslog(prio, fmt, ap);
+    return 0;
+}
+
