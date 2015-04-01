@@ -4,6 +4,7 @@ LDFLAGS=-lpthread -lsqlite3 -lrt -L3rdparties/miniupnpc -lminiupnpc
 DEPS = 
 
 vdht_objs = \
+    vlog.o \
     vcfg.o  \
     vrpc.o  \
     vdht.o  \

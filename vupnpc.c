@@ -48,14 +48,14 @@ int _vupnpc_setup(struct vupnpc* upnpc)
 
     memset(cfg, 0, sizeof(*cfg));
     cfg->devlist = upnpDiscover(2000, NULL, NULL, 0, 0, NULL);
-    vlogE_cond((!cfg->devlist), printf("No IGD found"));
+    vlogEv((!cfg->devlist), "No IGD found");
     retE((!cfg->devlist));
 
     _aux_dump_IGD_devices(cfg->devlist);
 
     memset(upnpc->lan_iaddr, 0, 32);
     ret = UPNP_GetValidIGD(cfg->devlist, &cfg->urls, &cfg->data, upnpc->lan_iaddr, 32);
-    vlogE_cond((!ret), elog_UPNP_GetValidIGD);
+    vlogEv((!ret), elog_UPNP_GetValidIGD);
     ret1E((!ret), freeUPNPDevlist(cfg->devlist));
 
     upnpc->state = UPNPC_READY;
@@ -144,12 +144,12 @@ int _vupnpc_map(struct vupnpc* upnpc, struct sockaddr_in* laddr, int proto, stru
 
 
     ret = UPNP_GetExternalIPAddress(cfg->urls.controlURL, cfg->data.first.servicetype, seaddr);
-    vlogE_cond((ret < 0), elog_UPNP_GetExternalIPAddress);
+    vlogEv((ret < 0), elog_UPNP_GetExternalIPAddress);
     retE((ret < 0));
-    vlogE_cond((!seaddr[0]), printf("External address is empty"));
+    vlogEv((!seaddr[0]), "external address is empty");
     retE((!seaddr[0]));
 
-    vlogI(printf("External address: %s", seaddr));
+    vlogI("External address: %s", seaddr);
 
     memset(tmp, 0, 64);
     ret = UPNP_AddPortMapping(cfg->urls.controlURL,
@@ -158,7 +158,7 @@ int _vupnpc_map(struct vupnpc* upnpc, struct sockaddr_in* laddr, int proto, stru
                 siaddr, "aaaa",
                 sproto, 0,
                 "0");
-    vlogE_cond((ret < 0), elog_UPNP_AddPortMapping);
+    vlogEv((ret < 0), elog_UPNP_AddPortMapping);
     retE((ret < 0));
 
     ret = UPNP_GetSpecificPortMappingEntry(cfg->urls.controlURL,
@@ -166,19 +166,19 @@ int _vupnpc_map(struct vupnpc* upnpc, struct sockaddr_in* laddr, int proto, stru
                 seport, sproto, NULL,
                 siaddr_tmp, siport_tmp,
                 NULL, NULL, tmp);
-    vlogE_cond((ret < 0), elog_UPNP_GetSpecificPortMappingEntry);
+    vlogEv((ret < 0), elog_UPNP_GetSpecificPortMappingEntry);
     retE((ret < 0));
-    vlogE_cond((!siaddr_tmp[0]), printf("Local address is empty"));
+    vlogEv((!siaddr_tmp[0]), "local address is empty");
     retE((!siaddr_tmp[0]));
 
     if (strcmp(siaddr, siaddr_tmp) || strcmp(siport, siport_tmp)) {
-        vlogI(printf("Local address is not same"));
+        vlogE("Local address is not same");
         return -1;
     }
-    vlogI(printf("Local addr:%s:%s", siaddr, siport));
+    vlogI("Local addr:%s:%s", siaddr, siport);
     vsockaddr_convert(seaddr, eport, eaddr);
     upnpc->state = UPNPC_ACTIVE;
-    vlogI(printf("uPnP Forward/Mapping Succeeded"));
+    vlogI("uPnP Forward/Mapping Succeeded");
     return 0;
 }
 
@@ -212,7 +212,7 @@ int _vupnpc_unmap(struct vupnpc* upnpc, uint16_t eport, int proto)
     ret = UPNP_DeletePortMapping(cfg->urls.controlURL,
                 cfg->data.first.servicetype,
                 seport, sproto, NULL);
-    vlogE_cond((ret < 0), elog_UPNP_DeletePortMapping);
+    vlogEv((ret < 0), elog_UPNP_DeletePortMapping);
     retE((ret < 0));
 
     upnpc->state = UPNPC_READY;

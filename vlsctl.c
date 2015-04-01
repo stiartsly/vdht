@@ -114,7 +114,7 @@ int _vcmd_bogus_query(struct vlsctl* lsctl, void* data, int offset)
 
     qId = get_int32(offset_addr(data, offset + sz));
     sz += sizeof(int32_t);
-    vlogI(printf("[vlsctl] request to send query(@%s)", vdht_get_desc(qId)));
+    vlogI("[vlsctl] request to send query(@%s)", vdht_get_desc(qId));
 
     ret = _aux_lsctl_get_addr(data, offset + sz, &sin);
     retE((ret < 0));

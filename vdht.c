@@ -120,7 +120,7 @@ void* vdht_buf_alloc(void)
     void* buf = NULL;
 
     buf = malloc(8*BUF_SZ);
-    vlogE_cond((!buf), elog_malloc);
+    vlogEv((!buf), elog_malloc);
     retE_p((!buf));
     memset(buf, 0, 8*BUF_SZ);
 
@@ -1600,9 +1600,9 @@ int _vdht_dec_begin(void* buf, int len, void** ctxt)
     vassert(len);
     vassert(ctxt);
 
-    vlogI(printf("[dht msg]->%s", (char*)buf));
+    vlogI("[dht msg]->%s", (char*)buf);
     dict = be_decode(buf, len);
-    vlogE_cond((!dict), elog_be_decode);
+    vlogEv((!dict), elog_be_decode);
     retE((!dict));
 
     ret = _aux_unpack_dhtId(dict);

@@ -88,7 +88,8 @@ int _aux_extend(struct varray* array)
     }
 
     new_items = realloc(array->items, new_capc * sizeof(void*));
-    ret1E((!new_items), elog_realloc);
+    vlogEv((!new_items), elog_realloc);
+    retE((!new_items));
 
     array->capc  = new_capc;
     array->items = (void**)new_items;
@@ -140,7 +141,9 @@ int _aux_shrink(struct varray* array)
     retS((array->capc == array->first));
 
     new_items = realloc(array->items, new_capc * sizeof(void*));
-    ret1E((!new_items), elog_realloc);
+    vlogEv((!new_items), elog_realloc);
+    retE((!new_items));
+
     array->capc  = new_capc;
     array->items = (void**)new_items;
     return 0;

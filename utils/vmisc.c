@@ -30,7 +30,7 @@ int vhostaddr_get_first(char* host, int sz)
     vassert(sz > 0);
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    vlogE_cond((sockfd < 0), elog_socket);
+    vlogEv((sockfd < 0), elog_socket);
     retE((sockfd < 0));
 
     gindex = 0;
@@ -40,7 +40,7 @@ int vhostaddr_get_first(char* host, int sz)
 
     ret = ioctl(sockfd, SIOCGIFCONF, &gifc);
     close(sockfd);
-    vlogE_cond((ret < 0), elog_ioctl);
+    vlogEv((ret < 0), elog_ioctl);
     retE((ret < 0));
 
     req = &gifr[gindex];
@@ -130,7 +130,7 @@ int vsockaddr_get_by_hostname(const char* ip, const char* port, const char* prot
 
         errno = 0;
         ret = getaddrinfo(ip, port, &hints, &res);
-        vlogE_cond(((ret < 0) && (!errno)), printf("error:%s\n", gai_strerror(errno)));
+        vlogEv(((ret < 0) && (!errno)), "error:%s\n", gai_strerror(errno));
         retE((ret < 0));
         for (aip = res; aip ; aip = aip->ai_next) {
             if (!aip->ai_addr) {
@@ -190,7 +190,7 @@ int vsockaddr_convert(const char* host, uint16_t port, struct sockaddr_in* addr)
     addr->sin_port = htons(port);
 
     ret = inet_aton(host, (struct in_addr*)&addr->sin_addr);
-    vlogE_cond((!ret), elog_inet_aton);
+    vlogEv((!ret), elog_inet_aton);
     retE((!ret));
     return 0;
 }
@@ -217,7 +217,7 @@ int vsockaddr_unconvert(struct sockaddr_in* addr, char* host, int len, uint16_t*
     vassert(port);
 
     hostname = inet_ntoa((struct in_addr)addr->sin_addr);
-    vlogE_cond((!hostname), elog_inet_ntoa);
+    vlogEv((!hostname), elog_inet_ntoa);
     retE((!hostname));
     retE((strlen(hostname) >= len));
     strcpy(host, hostname);
@@ -249,11 +249,11 @@ int vsockaddr_strlize(struct sockaddr_in* addr, char* buf, int len)
     vassert(len > 0);
 
     ret = vsockaddr_unconvert(addr, buf, len, &port);
-    vlogE_cond((ret < 0), elog_vsockaddr_unconvert);
+    vlogEv((ret < 0), elog_vsockaddr_unconvert);
     retE((ret < 0));
     sz  = strlen(buf);
     ret = snprintf(buf + sz, len - sz, ":%d", port);
-    vlogE_cond((ret >= len-sz), elog_snprintf);
+    vlogEv((ret >= len-sz), elog_snprintf);
     retE((ret >= len-sz));
     return 0;
 }
@@ -277,11 +277,11 @@ int vsockaddr_unstrlize(const char* ip_addr, struct sockaddr_in* addr)
     s += 1;
     errno = 0;
     port = strtol(s, NULL, 10);
-    vlogE_cond((errno), elog_strtol);
+    vlogEv((errno), elog_strtol);
     retE((errno));
 
     ret = vsockaddr_convert(ip, port, addr);
-    vlogE_cond((ret < 0), elog_vsockaddr_convert);
+    vlogEv((ret < 0), elog_vsockaddr_convert);
     retE((ret < 0));
     return 0;
 }
@@ -356,7 +356,7 @@ int vsockaddr_dump(struct sockaddr_in* addr)
 
     memset(ip, 0, 64);
     ret = vsockaddr_unconvert(addr, ip, 64, &port);
-    vlogE_cond((ret < 0), elog_vsockaddr_unconvert);
+    vlogEv((ret < 0), elog_vsockaddr_unconvert);
     retE((ret < 0));
     printf("%s:%d", ip, port);
     return 0;
@@ -373,13 +373,13 @@ int vmacaddr_get(uint8_t* macaddr, int len)
     retE((len < ETH_ALEN)); // ETH_ALEN (6).
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
-    vlogE_cond((fd < 0), elog_socket);
+    vlogEv((fd < 0), elog_socket);
     retE((fd < 0));
 
     strcpy(req.ifr_name, "eth0");
     ret = ioctl(fd, SIOCGIFHWADDR, &req);
     close(fd);
-    vlogE_cond((ret < 0), elog_ioctl);
+    vlogEv((ret < 0), elog_ioctl);
     retE((ret < 0));
 
     memcpy(macaddr, req.ifr_hwaddr.sa_data, ETH_ALEN);

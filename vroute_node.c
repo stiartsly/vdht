@@ -25,7 +25,7 @@ struct vpeer* vpeer_alloc(void)
     retE_p((!nodei));
 
     peer = (struct vpeer*)vmem_aux_alloc(&peer_cache);
-    vlogE_cond((!peer), elog_vmem_aux_alloc);
+    vlogEv((!peer), elog_vmem_aux_alloc);
     ret1E_p((!peer), vnodeInfo_free(nodei));
     memset(peer, 0, sizeof(*peer));
     peer->nodei = nodei;
@@ -301,8 +301,8 @@ int _aux_space_store_cb(void* item, void* cookie)
     off += sprintf(sql_buf + off, " '%s')", addrs);
 
     ret = sqlite3_exec(db, sql_buf, 0, 0, &err);
-    vlogE_cond((ret && err), printf("db err:%s\n", err));
-    vlogE_cond((ret), elog_sqlite3_exec);
+    vlogEv((ret && err), "db err:%s\n", err);
+    vlogEv((ret), elog_sqlite3_exec);
     retE((ret));
     return 0;
 }
@@ -382,7 +382,7 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* node
         } else if (varray_size(peers) < space->bucket_sz) {
             // insert new one.
             to = vpeer_alloc();
-            vlogE_cond((!to), elog_vpeer_alloc);
+            vlogEv((!to), elog_vpeer_alloc);
             retE((!to));
             vpeer_init(to, &space->zaddr, nodei, now, direct);
             varray_add_tail(peers, to);
@@ -630,14 +630,14 @@ int _vroute_node_space_load(struct vroute_node_space* space)
     vassert(space);
 
     ret = sqlite3_open(space->db, &db);
-    vlogE_cond((ret), elog_sqlite3_open);
+    vlogEv((ret), elog_sqlite3_open);
     retE((ret));
 
     memset(sql_buf, 0, BUF_SZ);
     sprintf(sql_buf, "select * from %s", VPEER_TB);
     ret = sqlite3_exec(db, sql_buf, _aux_space_load_cb, space, &err);
-    vlogE_cond((ret && err), printf("db err:%s\n", err));
-    vlogE_cond((ret), elog_sqlite3_exec);
+    vlogEv((ret && err), "db err:%s\n", err);
+    vlogEv((ret), elog_sqlite3_exec);
     sqlite3_close(db);
     retE((ret));
     return 0;
@@ -658,7 +658,7 @@ int _vroute_node_space_store(struct vroute_node_space* space)
     vassert(space);
 
     ret = sqlite3_open(space->db, &db);
-    vlogE_cond((ret), elog_sqlite3_open);
+    vlogEv((ret), elog_sqlite3_open);
     retE((ret));
 
     for (i = 0; i < NBUCKETS; i++) {
@@ -666,7 +666,7 @@ int _vroute_node_space_store(struct vroute_node_space* space)
         varray_iterate(peers, _aux_space_store_cb, db);
     }
     sqlite3_close(db);
-    vlogI(printf("writeback route infos"));
+    vlogI("writeback route infos");
     return 0;
 }
 
@@ -748,7 +748,7 @@ int _aux_space_prepare_db(struct vroute_node_space* space)
     retS((ret >= 0));
 
     ret = sqlite3_open(space->db, &db);
-    vlogE_cond((ret), elog_sqlite3_open);
+    vlogEv((ret), elog_sqlite3_open);
     retE((ret));
 
     memset(sql_buf, 0, BUF_SZ);
@@ -759,8 +759,8 @@ int _aux_space_prepare_db(struct vroute_node_space* space)
     ret += sprintf(sql_buf + ret, "'addrs'  TEXT)");
 
     ret = sqlite3_exec(db, sql_buf, NULL, NULL, &err);
-    vlogE_cond((ret && err), printf("db err:%s\n", err));
-    vlogE_cond((ret), elog_sqlite3_exec);
+    vlogEv((ret && err), "db err:%s\n", err);
+    vlogEv((ret), elog_sqlite3_exec);
     sqlite3_close(db);
     return 0;
 }

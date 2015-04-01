@@ -15,7 +15,7 @@ uint32_t get_macaddr_hash(void)
     if (!got) {
         memset(macaddr, 0, sizeof(macaddr));
         ret = vmacaddr_get(macaddr, 8);
-        vlogE_cond((ret < 0), elog_vmacaddr_get);
+        vlogEv((ret < 0), elog_vmacaddr_get);
         for (i = 0; i < 6; i++) {
             hash += (uint32_t)(macaddr[i] << i);
         }
@@ -88,7 +88,7 @@ int vtoken_strlize(vtoken* token, char* buf, int len)
     for (; i < VTOKEN_LEN; i++) {
         data = token->data[i];
         ret = snprintf(buf+sz, len-sz, "%x%x", (data >> 4), (data & 0x0f));
-        vlogE_cond((ret >= len-sz), elog_snprintf);
+        vlogEv((ret >= len-sz), elog_snprintf);
         retE((ret >= len-sz));
         sz += ret;
     }
@@ -109,12 +109,12 @@ int vtoken_unstrlize(const char* id_str, vtoken* token)
     for (; i < VTOKEN_LEN; i++) {
         data[0] = *id_str++;
         ret = sscanf(data, "%x", &high);
-        vlogE_cond((!ret), elog_sscanf);
+        vlogEv((!ret), elog_sscanf);
         retE((!ret));
 
         data[0] = *id_str++;
         ret = sscanf(data, "%x", &low);
-        vlogE_cond((!ret), elog_sscanf);
+        vlogEv((!ret), elog_sscanf);
         retE((!ret));
 
         token->data[i] = ((high << 4) | (0x0f & low));
@@ -249,12 +249,12 @@ int vnodeVer_strlize(vnodeVer* ver, char* buf, int len)
 
     for (; i < VTOKEN_INTLEN; i++) {
         ret = snprintf(buf + offset, len - offset, ".");
-        vlogE_cond((ret >= len-offset), elog_snprintf);
+        vlogEv((ret >= len-offset), elog_snprintf);
         retE((ret >= len-offset));
         offset += ret;
 
         ret = snprintf(buf + offset, len - offset, "%d", ver->data[i]);
-        vlogE_cond((ret >= len-offset), elog_snprintf);
+        vlogEv((ret >= len-offset), elog_snprintf);
         retE((ret >= len-offset));
         offset += ret;
     }
@@ -271,7 +271,7 @@ int vnodeVer_unstrlize(const char* ver_str, vnodeVer* ver)
 
     errno = 0;
     ret = strtol(s, &s, 10);
-    vlogE_cond((errno), elog_strtol);
+    vlogEv((errno), elog_strtol);
     retE((errno));
     ver->data[i] = ret;
     i++;
@@ -282,7 +282,7 @@ int vnodeVer_unstrlize(const char* ver_str, vnodeVer* ver)
 
         errno = 0;
         ret = strtol(s, &s, 10);
-        vlogE_cond((errno), elog_strtol);
+        vlogEv((errno), elog_strtol);
         retE((errno));
         ver->data[i] = ret;
         i++;
@@ -392,7 +392,7 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr)
         int extra_sz = sizeof(*addr) * nodei->capc;
 
         new_nodei = (vnodeInfo*)realloc(nodei, sizeof(vnodeInfo) + extra_sz);
-        vlogE_cond((!new_nodei), elog_realloc);
+        vlogEv((!new_nodei), elog_realloc);
         retE((!new_nodei));
 
         nodei = *ppnodei =  new_nodei;
@@ -576,7 +576,7 @@ vsrvcInfo* vsrvcInfo_alloc(void)
     vsrvcInfo* srvci = NULL;
 
     srvci = (vsrvcInfo*)malloc(sizeof(vsrvcInfo));
-    vlogE_cond((!srvci), elog_malloc);
+    vlogEv((!srvci), elog_malloc);
     retE_p((!srvci));
 
     memset(srvci, 0, sizeof(*srvci));
@@ -626,7 +626,7 @@ int vsrvcInfo_add_addr(vsrvcInfo** ppsrvci, struct sockaddr_in* addr)
         int extra_sz = sizeof(*addr) * srvci->capc;
 
         new_srvci = (vsrvcInfo*)realloc(srvci, sizeof(vsrvcInfo) + extra_sz);
-        vlogE_cond((!new_srvci), elog_realloc);
+        vlogEv((!new_srvci), elog_realloc);
         retE((!new_srvci));
 
         srvci = *ppsrvci = new_srvci;

@@ -14,7 +14,7 @@ int _vhost_start(struct vhost* host)
 
     ret = node->ops->start(node);
     retE((ret < 0));
-    vlogI(printf("Host started"));
+    vlogI("host started");
     return 0;
 }
 
@@ -31,7 +31,7 @@ int _vhost_stop(struct vhost* host)
 
     ret = node->ops->stop(node);
     retE((ret < 0));
-    vlogI(printf("Host stopped"));
+    vlogI("host stopped");
     return 0;
 }
 
@@ -55,7 +55,7 @@ int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
     }
     ret = route->ops->join_node(route, wellknown_addr);
     retE((ret < 0));
-    vlogI(printf("Joined a node"));
+    vlogI("join a node");
     return 0;
 }
 
@@ -108,14 +108,14 @@ int _aux_host_loop_entry(void* argv)
 
     vassert(host);
 
-    vlogI(printf("Host laundrying"));
+    vlogI("host laundrying");
     while(!host->to_quit) {
         ret = waiter->ops->laundry(waiter);
         if (ret < 0) {
             continue;
         }
     }
-    vlogI(printf("Host quited from laundrying"));
+    vlogI("host quited from laundrying");
     return 0;
 }
 
@@ -131,7 +131,7 @@ int _vhost_daemonize(struct vhost* host)
 
     host->to_quit = 0;
     ret = vthread_init(&host->thread, _aux_host_loop_entry, host);
-    vlogE_cond((ret < 0), elog_vthread_init);
+    vlogEv((ret < 0), elog_vthread_init);
     retE((ret < 0));
 
     vthread_start(&host->thread);
@@ -152,7 +152,7 @@ int _vhost_shutdown(struct vhost* host)
     host->to_quit = 1;
     vthread_join(&host->thread, &exit_code);
 
-    vlogI(printf("Host Exited"));
+    vlogI("host exited");
     return 0;
 }
 
@@ -362,7 +362,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     vassert(cfg);
 
     host = (struct vhost*)malloc(sizeof(struct vhost));
-    vlogE_cond((!host), elog_malloc);
+    vlogEv((!host), elog_malloc);
     retE_p((!host));
     memset(host, 0, sizeof(*host));
 

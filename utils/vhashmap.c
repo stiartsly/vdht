@@ -8,7 +8,7 @@ struct vhashmap_item* vhashmap_item_alloc(void)
     struct vhashmap_item* item = NULL;
 
     item = (struct vhashmap_item*)vmem_aux_alloc(&hashmap_item_cache);
-    vlogE_cond((!item), elog_vmem_aux_alloc);
+    vlogEv((!item), elog_vmem_aux_alloc);
     retE_p((!item));
     memset(item, 0, sizeof(*item));
     return item;
@@ -111,7 +111,7 @@ int vhashmap_add(struct vhashmap* hash, void* key, void* val)
 
     if (!hash->buckets) {
         hash->buckets = (struct vhashmap_bucket**)malloc(hash->capc * sizeof(struct vhashmap_bucket));
-        vlogE_cond((!hash->buckets), elog_malloc);
+        vlogEv((!hash->buckets), elog_malloc);
         retE((!hash->buckets));
     }
 

@@ -10,7 +10,7 @@ struct vtick_cb* vtick_cb_alloc(void)
 {
     struct vtick_cb* tcb = NULL;
     tcb = vmem_aux_alloc(&tcb_cache);
-    vlogE_cond((!tcb), elog_vmem_aux_alloc);
+    vlogEv((!tcb), elog_vmem_aux_alloc);
     retE_p((!tcb));
     return tcb;
 }
@@ -46,7 +46,7 @@ int _vticker_add_cb(struct vticker* ticker, vtick_t cb, void* cookie)
     vassert(cookie);
 
     item = vtick_cb_alloc();
-    vlogE_cond((!item), elog_vtick_cb_alloc);
+    vlogEv((!item), elog_vtick_cb_alloc);
     retE((!item));
     vtick_cb_init(item, cb, cookie);
 
@@ -67,7 +67,7 @@ int _vticker_start(struct vticker* ticker, int tmo)
     vassert(ticker);
 
     ret = vtimer_start(&ticker->timer, tmo);
-    vlogE_cond((ret < 0), elog_vtimer_start);
+    vlogEv((ret < 0), elog_vtimer_start);
     retE((ret < 0));
     return 0;
 }
@@ -83,7 +83,7 @@ int _vticker_restart(struct vticker* ticker, int tmo)
     vassert(ticker);
 
     ret = vtimer_restart(&ticker->timer, tmo);
-    vlogE_cond((ret < 0), elog_vtimer_restart);
+    vlogEv((ret < 0), elog_vtimer_restart);
     retE((ret < 0));
     return 0;
 }
@@ -97,7 +97,7 @@ int _vticker_stop(struct vticker* ticker)
     int ret = 0;
     vassert(ticker);
     ret = vtimer_stop(&ticker->timer);
-    vlogE_cond((ret < 0), elog_vtimer_stop);
+    vlogEv((ret < 0), elog_vtimer_stop);
     retE((ret < 0));
     return 0;
 }
@@ -157,7 +157,7 @@ int vticker_init(struct vticker* ticker)
     ticker->ops = &ticker_ops;
 
     ret = vtimer_init(&ticker->timer, _aux_timer_cb, ticker);
-    vlogE_cond((ret < 0), elog_vtimer_init);
+    vlogEv((ret < 0), elog_vtimer_init);
     retE((ret < 0));
     return 0;
 }

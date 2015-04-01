@@ -32,7 +32,7 @@ int _vnode_start(struct vnode* node)
     vassert(node);
 
     ret = upnpc->ops->setup(upnpc);
-    vlogE_cond((ret < 0), printf("upnpc setup error"));
+    vlogEv((ret < 0), "upnpc setup error");
 
     vlock_enter(&node->lock);
     if (node->mode != VDHT_OFF) {
@@ -170,7 +170,7 @@ int _aux_node_tick_cb(void* cookie)
 
         node->ts   = now;
         node->mode = VDHT_RUN;
-        vlogI(printf("DHT start running"));
+        vlogI("DHT start running");
         break;
     }
     case VDHT_RUN: {
@@ -184,7 +184,7 @@ int _aux_node_tick_cb(void* cookie)
     case VDHT_DOWN: {
         node->route->ops->store(node->route);
         node->mode = VDHT_OFF;
-        vlogI(printf("DHT become offline"));
+        vlogI("DHT become offline");
         break;
     }
     default:
@@ -335,7 +335,7 @@ int _vnode_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
         vsrvcId srvcId;
 
         srvci = vsrvcInfo_alloc();
-        vlogE_cond((!srvci), elog_vsrvcInfo_alloc);
+        vlogEv((!srvci), elog_vsrvcInfo_alloc);
         ret1E((!srvci), vlock_leave(&node->lock));
 
         vtoken_make(&srvcId);

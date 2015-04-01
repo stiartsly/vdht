@@ -265,7 +265,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeConn* conn)
     // make a record according to the query, which will be used to
     // check invality of response msg.
     recr_space->ops->make(recr_space, &token);
-    vlogI(printf("send @ping"));
+    vlogD("send @ping");
     return 0;
 }
 
@@ -306,7 +306,7 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, v
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
-    vlogI(printf("send @ping_rsp"));
+    vlogD("send @ping_rsp");
     return 0;
 }
 
@@ -348,7 +348,7 @@ int _vroute_dht_find_node(struct vroute* route, vnodeConn* conn, vnodeId* target
         ret1E((ret < 0), vdht_buf_free(buf));
     }
     recr_space->ops->make(recr_space, &token);
-    vlogI(printf("send @find_node"));
+    vlogD("send @find_node");
     return 0;
 }
 
@@ -387,7 +387,7 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeConn* conn, vtoken* tok
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
-    vlogI(printf("send @find_node_rsp"));
+    vlogD("send @find_node_rsp");
     return 0;
 }
 
@@ -428,7 +428,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeConn* conn, vnodeI
         ret1E((ret < 0), vdht_buf_free(buf));
     }
     recr_space->ops->make(recr_space, &token);
-    vlogI(printf("send @find_closest_nodes"));
+    vlogD("send @find_closest_nodes");
     return 0;
 }
 
@@ -467,7 +467,7 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, vt
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
-    vlogI(printf("send @find_closest_nodes_rsp"));
+    vlogD("send @find_closest_nodes_rsp");
     return 0;
 }
 
@@ -505,7 +505,7 @@ int _vroute_dht_reflex(struct vroute* route, vnodeConn* conn)
         ret1E((ret < 0), vdht_buf_free(buf));
     }
     recr_space->ops->make(recr_space, &token);
-    vlogI(printf("send @reflex"));
+    vlogD("send @reflex");
     return 0;
 }
 
@@ -543,7 +543,7 @@ int _vroute_dht_reflex_rsp(struct vroute* route, vnodeConn* conn, vtoken* token,
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
-    vlogI(printf("send @reflex_rsp"));
+    vlogD("send @reflex_rsp");
     return 0;
 }
 
@@ -582,7 +582,7 @@ int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
         ret1E((ret < 0), vdht_buf_free(buf));
     }
     route->recr_space.ops->make(&route->recr_space, &token);
-    vlogI(printf("send @probe"));
+    vlogD("send @probe");
     return 0;
 }
 
@@ -618,7 +618,7 @@ int _vroute_dht_probe_rsp(struct vroute* route, vnodeConn* conn, vtoken* token)
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
-    vlogI(printf("send @probe_rsp"));
+    vlogD("send @probe_rsp");
     return 0;
 }
 
@@ -657,7 +657,7 @@ int _vroute_dht_post_service(struct vroute* route, vnodeConn* conn, vsrvcInfo* s
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
-    vlogI(printf("send @post_service"));
+    vlogD("send @post_service");
     return 0;
 }
 
@@ -697,7 +697,7 @@ int _vroute_dht_find_service(struct vroute* route, vnodeConn* conn, vsrvcHash* h
         ret1E((ret < 0), vdht_buf_free(buf));
     }
     route->recr_space.ops->make(&route->recr_space, &token);
-    vlogI(printf("send @find_service"));
+    vlogD("send @find_service");
     return 0;
 }
 
@@ -736,7 +736,7 @@ int _vroute_dht_find_service_rsp(struct vroute* route, vnodeConn* conn, vtoken* 
         ret = route->msger->ops->push(route->msger, &msg);
         ret1E((ret < 0), vdht_buf_free(buf));
     }
-    vlogI(printf("send @find_service_rsp"));
+    vlogD("send @find_service_rsp");
     return 0;
 }
 
@@ -1211,7 +1211,7 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
     ret = route->dec_ops->dec_begin(mu->data, mu->len, &ctxt);
     retE((ret >= VDHT_UNKNOWN));
     retE((ret < 0));
-    vlogI(printf("received @%s", vdht_get_desc(ret)));
+    vlogD("received @%s", vdht_get_desc(ret));
 
     vnodeConn_set(&conn, to_sockaddr_sin(mu->spec), to_sockaddr_sin(mu->addr));
     ret = route->cb_ops[ret](route, &conn, ctxt);

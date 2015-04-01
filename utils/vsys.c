@@ -103,7 +103,7 @@ int vthread_init(struct vthread* thread, vthread_entry_t entry, void* argv)
 
     pthread_mutex_lock(&thread->mutex);
     res = pthread_create(&thread->thread, 0, _aux_thread_entry, thread);
-    vlogE_cond((res), elog_pthread_create);
+    vlogEv((res), elog_pthread_create);
     if (res) {
         pthread_mutex_unlock(&thread->mutex);
         pthread_mutex_destroy(&thread->mutex);
@@ -116,7 +116,7 @@ int vthread_start(struct vthread* thread)
 {
     vassert(thread);
 
-    vlogE_cond((thread->started), printf("#!thread already started"));
+    vlogEv((thread->started), "#!thread already started");
     retE((thread->started));
     thread->started = 1;
     pthread_mutex_unlock(&thread->mutex);
@@ -139,8 +139,8 @@ void vthread_deinit(struct vthread* thread)
 {
     vassert(thread);
 
-    vlogE_cond((!thread->started),printf("#!thread not started yet"));
-    vlogE_cond((!thread->quited), printf("#!thread not quited yet"));
+    vlogEv((!thread->started),"#!thread not started yet");
+    vlogEv((!thread->quited), "#!thread not quited yet");
     pthread_mutex_destroy(&thread->mutex);
     return ;
 }
@@ -177,7 +177,7 @@ int vtimer_init(struct vtimer* timer, vtimer_cb_t cb, void* cookie)
     evp.sigev_notify_function = _aux_timer_routine;
 
     ret = timer_create(CLOCK_REALTIME, &evp, &timer->id);
-    vlogE_cond((ret < 0), elog_timer_create);
+    vlogEv((ret < 0), elog_timer_create);
     retE((ret < 0));
     return 0;
 }
@@ -197,7 +197,7 @@ int vtimer_start(struct vtimer* timer, int timeout)
     tmo.it_value.tv_nsec = 0;
 
     ret = timer_settime(timer->id, 0, &tmo, NULL);
-    vlogE_cond((ret < 0), elog_timer_settime);
+    vlogEv((ret < 0), elog_timer_settime);
     retE((ret < 0));
     return 0;
 }
@@ -217,7 +217,7 @@ int vtimer_restart(struct vtimer* timer, int timeout)
     tmo.it_value.tv_nsec = 0;
 
     ret = timer_settime(timer->id, 0, &tmo, NULL);
-    vlogE_cond((ret < 0), elog_timer_settime);
+    vlogEv((ret < 0), elog_timer_settime);
     retE((ret < 0));
     return 0;
 }
@@ -229,7 +229,7 @@ int vtimer_stop(struct vtimer* timer)
     vassert(timer->id > 0);
 
     ret = timer_delete(timer->id);
-    vlogE_cond((ret < 0), elog_timer_delete);
+    vlogEv((ret < 0), elog_timer_delete);
     retE((ret < 0));
     timer->id = (timer_t)-1;
     return 0;
@@ -261,7 +261,7 @@ int vsys_get_cpu_ratio(int* ratio)
     vassert(ratio);
 
     fd = open("/proc/stat", O_RDONLY);
-    vlogE_cond((fd < 0), elog_open);
+    vlogEv((fd < 0), elog_open);
     retE((fd < 0));
     memset(buf, 0, 128);
     ret = read(fd, buf, 128);
@@ -287,7 +287,7 @@ int vsys_get_mem_ratio(int* ratio)
     vassert(ratio);
 
     fd = open("/proc/meminfo", O_RDONLY);
-    vlogE_cond((fd < 0), elog_open);
+    vlogEv((fd < 0), elog_open);
     retE((ret < 0));
     memset(buf, 0, 128);
     ret = read(fd, buf, 128);
@@ -314,43 +314,6 @@ int vsys_get_net_ratio(int* up_ratio, int* down_ratio)
     vassert(down_ratio);
 
     //todo;
-    return 0;
-}
-
-/*
- * vlogger
- */
-int vlogger_open(const char* ident)
-{
-    vassert(ident);
-
-    openlog(ident, LOG_CONS | LOG_PID, LOG_DAEMON);
-    return 0;
-}
-
-void vlogger_close (void)
-{
-    closelog();
-    return ;
-}
-
-int vlogger_write (int prio, const char* fmt, ...)
-{
-    va_list args;
-    vassert(fmt);
-
-    va_start(args, fmt);
-    vsyslog(prio, fmt, args);
-    va_end(args);
-
-    return 0;
-}
-
-int vlogger_writev(int prio, const char* fmt, va_list ap)
-{
-    vassert(fmt);
-
-    vsyslog(prio, fmt, ap);
     return 0;
 }
 

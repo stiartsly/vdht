@@ -17,11 +17,11 @@ struct vservice* vservice_alloc(void)
     vsrvcInfo* srvci = NULL;
 
     srvci = vsrvcInfo_alloc();
-    vlogE_cond((!srvci), elog_vsrvcInfo_alloc);
+    vlogEv((!srvci), elog_vsrvcInfo_alloc);
     retE_p((!srvci));
 
     item = (struct vservice*)vmem_aux_alloc(&service_cache);
-    vlogE_cond((!item), elog_vmem_aux_alloc);
+    vlogEv((!item), elog_vmem_aux_alloc);
     ret1E_p((!item), vsrvcInfo_free(srvci));
     memset(item, 0, sizeof(*item));
 

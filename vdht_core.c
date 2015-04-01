@@ -9,7 +9,7 @@ struct be_node* be_alloc(int type)
     vassert(type <  BE_BUT);
 
     node = (struct be_node*)vmem_aux_alloc(&be_cache);
-    vlogE_cond((!node), elog_vmem_aux_alloc);
+    vlogEv((!node), elog_vmem_aux_alloc);
     retE_p((!node));
 
     memset(node, 0, sizeof(*node));
@@ -79,7 +79,7 @@ char* _be_decode_str(char** data, int* data_len)
         *data_len -= 1;
 
         s = (char*)malloc(sizeof(len) + len + 1);
-        vlogE_cond((!s), elog_malloc);
+        vlogEv((!s), elog_malloc);
         retE_p((!s));
         memset(s, 0, sizeof(len) + len + 1);
 
@@ -106,7 +106,7 @@ struct be_node *_be_decode(char **data, int *data_len)
     case 'l': { //list
         int i = 0;
         node = be_alloc(BE_LIST);
-        vlogE_cond((!node), elog_be_alloc);
+        vlogEv((!node), elog_be_alloc);
         retE_p((!node));
 
         --(*data_len);
@@ -114,7 +114,7 @@ struct be_node *_be_decode(char **data, int *data_len)
         while (**data != 'e') {
             struct be_node** l = NULL;
             l = (struct be_node**)realloc(node->val.l, (i+2)*sizeof(struct be_node**));
-            vlogE_cond((!l), elog_realloc);
+            vlogEv((!l), elog_realloc);
             ret1E_p((!l), be_free(node));
             node->val.l = l;
 
@@ -129,7 +129,7 @@ struct be_node *_be_decode(char **data, int *data_len)
         if (i == 0){
             struct be_node** l = NULL;
             l = (struct be_node**)realloc(node->val.l, sizeof(struct be_node**));
-            vlogE_cond((!l), elog_realloc);
+            vlogEv((!l), elog_realloc);
             ret1E_p((!l), be_free(node));
             node->val.l = l;
         }
@@ -139,7 +139,7 @@ struct be_node *_be_decode(char **data, int *data_len)
     case 'd': { /* dictionaries */
         int i = 0;
         node = be_alloc(BE_DICT);
-        vlogE_cond((!node), elog_be_alloc);
+        vlogEv((!node), elog_be_alloc);
         retE_p((!node));
 
         --(*data_len);
@@ -147,7 +147,7 @@ struct be_node *_be_decode(char **data, int *data_len)
         while(**data != 'e') {
             struct be_dict* d = NULL;
             d = (struct be_dict*)realloc(node->val.d, (i+2)*sizeof(struct be_dict));
-            vlogE_cond((!d), elog_realloc);
+            vlogEv((!d), elog_realloc);
             ret1E_p((!d), be_free(node));
             node->val.d = d;
 
@@ -163,7 +163,7 @@ struct be_node *_be_decode(char **data, int *data_len)
         if (i == 0) {
             struct be_dict* d = NULL;
             d = (struct be_dict*)realloc(node->val.d, sizeof(struct be_dict));
-            vlogE_cond((!d), elog_realloc);
+            vlogEv((!d), elog_realloc);
             ret1E_p((!d), be_free(node));
             node->val.d = d;
         }
@@ -173,7 +173,7 @@ struct be_node *_be_decode(char **data, int *data_len)
     case 'i': { /* integers */
         int ret = 0;
         node = be_alloc(BE_INT);
-        vlogE_cond((!node), elog_be_alloc);
+        vlogEv((!node), elog_be_alloc);
         retE_p((!node));
 
         --(*data_len);
@@ -187,7 +187,7 @@ struct be_node *_be_decode(char **data, int *data_len)
     }
     case '0'...'9': { /* byte strings */
         node = be_alloc(BE_STR);
-        vlogE_cond((!node), elog_be_alloc);
+        vlogEv((!node), elog_be_alloc);
         retE_p((!node));
 
         node->val.s = _be_decode_str(data, data_len);
@@ -228,11 +228,11 @@ struct be_node* be_create_str(char* str)
     vassert(str);
 
     node = be_alloc(BE_STR);
-    vlogE_cond((!node), elog_be_alloc);
+    vlogEv((!node), elog_be_alloc);
     retE_p((!node));
 
     s = (char*)malloc(sizeof(int32_t) + len + 1);
-    vlogE_cond((!s), elog_malloc);
+    vlogEv((!s), elog_malloc);
     ret1E_p((!s), be_free(node));
 
     set_int32(s, len);
@@ -248,7 +248,7 @@ struct be_node* be_create_int(int num)
     struct be_node* node = NULL;
 
     node = be_alloc(BE_INT);
-    vlogE_cond((!node), elog_be_alloc);
+    vlogEv((!node), elog_be_alloc);
     retE_p((!node));
 
     node->val.i = num;
@@ -306,7 +306,7 @@ int be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
     vassert(dict->type == BE_DICT);
 
     s = (char*)malloc(sizeof(int32_t) + len + 1);
-    vlogE_cond((!s), elog_malloc);
+    vlogEv((!s), elog_malloc);
     retE((!s));
 
     set_int32(s, len);
@@ -316,7 +316,7 @@ int be_add_keypair(struct be_node *dict, char *str, struct be_node *node)
 
     for (; dict->val.d[i].val; i++);
     d = (struct be_dict*)realloc(dict->val.d, (i+2)*sizeof(*d));
-    vlogE_cond((!d), elog_realloc);
+    vlogEv((!d), elog_realloc);
     ret1E((!d), free(unoff_addr(s, sizeof(int32_t))));
 
     dict->val.d = d;
@@ -338,7 +338,7 @@ int be_add_list(struct be_node *list, struct be_node *node)
 
     for (; list->val.l[i]; i++);
     l = (struct be_node**)realloc(list->val.l, (i + 2)*sizeof(struct be_node**));
-    vlogE_cond((!l), elog_realloc);
+    vlogEv((!l), elog_realloc);
     retE((!l));
     list->val.l = l;
 
@@ -361,25 +361,25 @@ int be_encode(struct be_node *node, char *buf, int len)
     case BE_STR: {
         int _len = get_int32(unoff_addr(node->val.s, sizeof(int32_t)));
         ret = snprintf(buf+off, len-off, "%i:", _len);
-        vlogE_cond((ret >= len-off), elog_snprintf);
+        vlogEv((ret >= len-off), elog_snprintf);
         retE((ret >= len-off));
         off += ret;
         ret = snprintf(buf+off, len-off, "%s", node->val.s);
-        vlogE_cond((ret >= len-off), elog_snprintf);
+        vlogEv((ret >= len-off), elog_snprintf);
         retE((ret >= len-off));
         off += ret;
         break;
     }
     case BE_INT:
         ret = snprintf(buf+off, len-off, "i%ie", node->val.i);
-        vlogE_cond((ret >= len-off), elog_snprintf);
+        vlogEv((ret >= len-off), elog_snprintf);
         retE((ret >= len-off));
         off += ret;
         break;
     case BE_LIST: {
         int i = 0;
         ret = snprintf(buf+off, len-off, "l");
-        vlogE_cond((ret >= len-off), elog_snprintf);
+        vlogEv((ret >= len-off), elog_snprintf);
         retE((ret >= len-off));
         off += ret;
         for (; node->val.l[i]; i++) {
@@ -388,7 +388,7 @@ int be_encode(struct be_node *node, char *buf, int len)
             off += ret;
         }
         ret = snprintf(buf+off, len-off, "e");
-        vlogE_cond((ret >= len-off), elog_snprintf);
+        vlogEv((ret >= len-off), elog_snprintf);
         retE((ret >= len-off));
         off += ret;
         break;
@@ -396,14 +396,14 @@ int be_encode(struct be_node *node, char *buf, int len)
     case BE_DICT: {
         int i = 0;
         ret = snprintf(buf+off, len-off, "d");
-        vlogE_cond((ret >= len-off), elog_snprintf);
+        vlogEv((ret >= len-off), elog_snprintf);
         retE((ret >= len-off));
         off += ret;
         for (i = 0; node->val.d[i].val; i++) {
             char* _key = node->val.d[i].key;
             int   _len = get_int32(unoff_addr(_key, sizeof(int32_t)));
             ret = snprintf(buf + off, len - off, "%i:%s", _len, _key);
-            vlogE_cond((ret >= len-off), elog_snprintf);
+            vlogEv((ret >= len-off), elog_snprintf);
             retE((ret >= len-off));
             off += ret;
 
@@ -412,7 +412,7 @@ int be_encode(struct be_node *node, char *buf, int len)
             off += ret;
         }
         ret = snprintf(buf+off, len-off, "e");
-        vlogE_cond((ret >= len-off), elog_snprintf);
+        vlogEv((ret >= len-off), elog_snprintf);
         retE((ret >= len-off));
         off += ret;
         break;

@@ -10,7 +10,7 @@ struct vcfg_item* vcfg_item_alloc(int type)
     struct vcfg_item* item = NULL;
 
     item = (struct vcfg_item*)vmem_aux_alloc(&cfg_item_cache);
-    vlogE_cond((!item), elog_vmem_aux_alloc);
+    vlogEv((!item), elog_vmem_aux_alloc);
     retE_p((!item));
 
     memset(item, 0, sizeof(*item));
@@ -299,7 +299,7 @@ char* _aux_create_key(char** cur)
     vassert(cur && *cur);
 
     key = (char*)malloc(32);
-    vlogE_cond((!key), elog_malloc);
+    vlogEv((!key), elog_malloc);
     memset(key, 0, 32);
     retE_p((!key));
 
@@ -366,7 +366,7 @@ char* _aux_create_val(char** cur)
     }
 
     val = (char*)malloc(sz + 1);
-    vlogE_cond((!val), elog_malloc);
+    vlogEv((!val), elog_malloc);
     retE_p((!val));
     memset(val, 0, sz + 1);
 
@@ -677,21 +677,21 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
     vassert(filename);
 
     fd = open(filename, O_RDONLY);
-    vlogE_cond((ret < 0), elog_open);
+    vlogEv((ret < 0), elog_open);
     retE((fd < 0));
 
     memset(&stat, 0, sizeof(stat));
     ret = fstat(fd, &stat);
-    vlogE_cond((ret < 0), elog_fstat);
+    vlogEv((ret < 0),elog_fstat);
     ret1E((ret < 0), close(fd));
 
     buf = malloc(stat.st_size + 1);
-    vlogE_cond((!buf), elog_malloc);
+    vlogEv((!buf), elog_malloc);
     ret1E((!buf), close(fd));
 
     ret = read(fd, buf, stat.st_size);
     close(fd);
-    vlogE_cond((!buf), elog_read);
+    vlogEv((!buf), elog_read);
     ret1E((!buf), free(buf));
 
     buf[stat.st_size] = '\0';
@@ -829,11 +829,10 @@ struct varray* _vcfg_get_list_val(struct vconfig* cfg, const char* key)
     vassert(key);
 
     item = _aux_get_cfg_item(&cfg->dict, (char*)key);
+    vlogIv((!item), "no boot nodes in config file");
     if (!item) {
-        vlogI(printf("no boot nodes in config file"));
         return NULL;
     }
-
     retE_p((CFG_LIST != item->type));
     return &item->val.l.l;
 }

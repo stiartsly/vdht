@@ -38,6 +38,7 @@
 
 #include "vdef.h"
 #include "vcfg.h"
+#include "vlog.h"
 #include "vdht.h"
 #include "vdht_core.h"
 #include "vrpc.h"
