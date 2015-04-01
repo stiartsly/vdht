@@ -336,9 +336,13 @@ void vlogger_close (void)
 
 int vlogger_write (int prio, const char* fmt, ...)
 {
+    va_list args;
     vassert(fmt);
 
-    //todo;
+    va_start(args, fmt);
+    vsyslog(prio, fmt, args);
+    va_end(args);
+
     return 0;
 }
 
