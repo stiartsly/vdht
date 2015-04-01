@@ -32,7 +32,7 @@ int _vnode_start(struct vnode* node)
     vassert(node);
 
     ret = upnpc->ops->setup(upnpc);
-    vlog((ret < 0), vlogI(printf("upnpc setup error")));
+    vlogE_cond((ret < 0), printf("upnpc setup error"));
 
     vlock_enter(&node->lock);
     if (node->mode != VDHT_OFF) {
@@ -335,7 +335,7 @@ int _vnode_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
         vsrvcId srvcId;
 
         srvci = vsrvcInfo_alloc();
-        vlog((!srvci), elog_vsrvcInfo_alloc);
+        vlogE_cond((!srvci), elog_vsrvcInfo_alloc);
         ret1E((!srvci), vlock_leave(&node->lock));
 
         vtoken_make(&srvcId);

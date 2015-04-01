@@ -14,7 +14,7 @@ struct vrecord* vrecord_alloc(void)
     struct vrecord* record = NULL;
 
     record = (struct vrecord*)vmem_aux_alloc(&record_cache);
-    vlog((!record), elog_vmem_aux_alloc);
+    vlogE_cond((!record), elog_vmem_aux_alloc);
     retE_p((!record));
     return record;
 }
@@ -64,7 +64,7 @@ int _vroute_recr_space_make(struct vroute_recr_space* space, vtoken* token)
     vassert(token);
 
     record = vrecord_alloc();
-    vlog((!record), elog_vrecord_alloc);
+    vlogE_cond((!record), elog_vrecord_alloc);
     retE((!record));
 
     vrecord_init(record, token);

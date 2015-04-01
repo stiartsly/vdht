@@ -20,18 +20,18 @@ void* _vrpc_unix_open(struct vsockaddr* addr)
     vassert(addr);
 
     unx = (struct vunix_domain*)malloc(sizeof(*unx));
-    vlog((!unx), elog_malloc);
+    vlogE_cond((!unx), elog_malloc);
     retE_p((!unx));
     memset(unx, 0, sizeof(*unx));
     memcpy(&unx->addr, saddr, sizeof(*saddr));
 
     fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-    vlog((fd < 0), elog_socket);
+    vlogE_cond((fd < 0), elog_socket);
     ret1E_p((fd < 0), free(unx));
 
     unlink(saddr->sun_path);
     ret = bind(fd, (struct sockaddr*)saddr, sizeof(*saddr));
-    vlog((ret < 0), elog_bind);
+    vlogE_cond((ret < 0), elog_bind);
     if (ret < 0) {
         free(unx);
         close(fd);
@@ -63,7 +63,7 @@ int _vrpc_unix_sndto(void* impl, struct vmsg_sys* msg)
                  0,
                 (struct sockaddr*)&msg->addr.vsun_addr,
                 sizeof(struct sockaddr_un));
-    vlog((ret < 0), elog_sendto);
+    vlogE_cond((ret < 0), elog_sendto);
     retE((ret < 0));
     return ret;
 }
@@ -89,7 +89,7 @@ int _vrpc_unix_rcvfrom(void* impl, struct vmsg_sys* msg)
                 0,
                (struct sockaddr*)&msg->addr.vsun_addr,
                (socklen_t*)&len);
-    vlog((ret < 0), elog_recvfrom);
+    vlogE_cond((ret < 0), elog_recvfrom);
     retE((ret < 0));
     msg->len = ret;
 
@@ -185,13 +185,13 @@ void* _vrpc_udp_open(struct vsockaddr* addr)
     vassert(addr);
 
     udp = (struct vudp*)malloc(sizeof(*udp));
-    vlog((!udp), elog_malloc);
+    vlogE_cond((!udp), elog_malloc);
     retE_p((!udp));
     memset(udp, 0, sizeof(*udp));
     memcpy(&udp->addr, saddr, sizeof(*saddr));
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
-    vlog((fd < 0), elog_socket);
+    vlogE_cond((fd < 0), elog_socket);
     ret1E_p((fd < 0), free(udp));
 
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -200,7 +200,7 @@ void* _vrpc_udp_open(struct vsockaddr* addr)
 
     errno = 0;
     ret = bind(fd, (struct sockaddr*)saddr, sizeof(*saddr));
-    vlog((ret < 0), elog_bind);
+    vlogE_cond((ret < 0), elog_bind);
     if (ret < 0) {
         close(fd);
         free(udp);
@@ -209,7 +209,7 @@ void* _vrpc_udp_open(struct vsockaddr* addr)
 
     flags = fcntl(fd, F_GETFL, 0);
     ret = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-    vlog((ret < 0), elog_fcntl);
+    vlogE_cond((ret < 0), elog_fcntl);
     if (ret < 0) {
         close(fd);
         free(udp);
@@ -269,9 +269,9 @@ int _vrpc_udp_sndto(void* impl, struct vmsg_sys* msg)
     mhdr.msg_controllen = CMSG_SPACE(sizeof(*pi));
 
     ret = sendmsg(udp->sock_fd, &mhdr, 0);
-    vlog((ret < 0), elog_sendmsg);
-    vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
-    vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
+    vlogE_cond((ret < 0), elog_sendmsg);
+    vlogE_cond((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
+    vlogE_cond((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
     if (ret < 0) {
         udp->rcv_errs++;
         return -1;
@@ -313,9 +313,9 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
     mhdr.msg_flags    = 0;
 
     ret = recvmsg(udp->sock_fd, &mhdr, 0);
-    vlog((ret < 0), elog_recvmsg);
-    vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
-    vlog((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
+    vlogE_cond((ret < 0), elog_recvmsg);
+    vlogE_cond((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
+    vlogE_cond((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
     if (ret < 0) {
         udp->rcv_errs++;
         return -1;
@@ -534,7 +534,7 @@ int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct vsockaddr
     rpc->base_ops = rpc_base_ops[mode];
 
     sm = vmsg_sys_alloc(8*BUF_SZ);
-    vlog((!sm), elog_vmsg_sys_alloc);
+    vlogE_cond((!sm), elog_vmsg_sys_alloc);
     retE((!sm));
     vlist_init(&sm->list);
 
@@ -686,7 +686,7 @@ int _vwaiter_laundry(struct vwaiter* wt)
         sigemptyset(&origmask);
         pthread_sigmask(SIG_SETMASK, &sigmask, &origmask);
         ret = pselect(wt->maxfd, &wt->rfds, &wt->wfds, &wt->efds, &tmo, &sigmask);
-        vlog((ret < 0), elog_pselect);
+        vlogE_cond((ret < 0), elog_pselect);
         retE((ret < 0));
         retS((!ret)); //timeout.
     }

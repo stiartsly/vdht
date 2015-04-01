@@ -131,7 +131,7 @@ int _vhost_daemonize(struct vhost* host)
 
     host->to_quit = 0;
     ret = vthread_init(&host->thread, _aux_host_loop_entry, host);
-    vlog((ret < 0), elog_vthread_init);
+    vlogE_cond((ret < 0), elog_vthread_init);
     retE((ret < 0));
 
     vthread_start(&host->thread);
@@ -362,7 +362,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
     vassert(cfg);
 
     host = (struct vhost*)malloc(sizeof(struct vhost));
-    vlog((!host), elog_malloc);
+    vlogE_cond((!host), elog_malloc);
     retE_p((!host));
     memset(host, 0, sizeof(*host));
 

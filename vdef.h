@@ -32,23 +32,22 @@
  */
 #define _DEBUG
 #ifdef _DEBUG
-#define vassert(cond)   do { \
+#define vassert(cond) do { \
             if (!(cond)) { \
                 printf("{assert}[%s:%d]\n", __FUNCTION__,__LINE__); \
                 *((int*)0) = 0; \
             } \
         } while(0)
 
-#define vwhere()        do { \
+#define vwhere() do { \
             printf("$${where}[%s:%d]\n", __FUNCTION__,__LINE__); \
         } while(0)
 
-#define vlog(cond,s) do {  \
-            if ((cond)) {\
-                s; \
-                vwhere(); \
-            } \
-        }while(0)
+#define vlogD(s) do { \
+            printf("[D]"); \
+            (s); \
+            printf("\n");  \
+        }
 
 #define vlogI(s) do { \
             printf("[I]"); \
@@ -57,11 +56,20 @@
         }while(0)
 
 #define vlogE(s) { \
-            printf("["); \
+            printf("[E]"); \
             (s); \
-            printf("] error "); \
             vwhere(); \
+            printf("\n"); \
         }
+
+#define vlogE_cond(cond, s) do {\
+            if ((cond)) { \
+                printf("[E]"); \
+                (s); \
+                vwhere(); \
+                printf("\n"); \
+            } \
+        }while(0)
 
 #define vdump(s) do { \
             printf("##"); \
@@ -72,19 +80,25 @@
 #else
 #define vassert()
 #define vwhere()
-#define vlog(cond,s) do {  \
-            if ((cond)) {\
-                s; \
-            } \
-        }while(0)
+
+#define vlogD(s)
 
 #define vlogI(s)
 
 #define vlogE(s) { \
-            printf("["); \
+            printf("[E]"); \
             (s); \
-            printf("] error"); \
+            printf("\n"); \
         }
+
+#define vlogE_cond(cond, s) do {\
+            if ((cond)) { \
+                printf("[E]"); \
+                (s); \
+                printf("\n"); \
+            } \
+        }while(0)
+
 #define vdump(s)
 #endif
 

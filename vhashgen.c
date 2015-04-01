@@ -329,7 +329,7 @@ int vhashgen_init (struct vhashgen* gen)
     vassert(gen);
 
     ctxt = malloc(sizeof(struct vhashgen_ctxt_sha1));
-    vlog((!ctxt), elog_malloc);
+    vlogE_cond((!ctxt), elog_malloc);
     retE((!ctxt));
     memset(ctxt, 0, sizeof(struct vhashgen_ctxt_sha1));
 

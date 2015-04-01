@@ -16,11 +16,11 @@ struct vdict_item* vdict_item_alloc(char* key)
     vassert(key);
 
     dup_key = strdup(key);
-    vlog((!dup_key), elog_strdup);
+    vlogE_cond((!dup_key), elog_strdup);
     retE_p((!dup_key));
 
     item = (struct vdict_item*)vmem_aux_alloc(&dict_item_cache);
-    vlog((!item), elog_vmem_aux_alloc);
+    vlogE_cond((!item), elog_vmem_aux_alloc);
     ret1E_p((!item), free(dup_key));
 
     memset(item, 0, sizeof(*item));
