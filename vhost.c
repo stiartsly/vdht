@@ -99,52 +99,13 @@ void _vhost_dump(struct vhost* host)
     return;
 }
 
-static
-int _aux_host_loop_entry(void* argv)
-{
-    struct vhost*   host   = (struct vhost*)argv;
-    struct vwaiter* waiter = &host->waiter;
-    int ret = 0;
-
-    vassert(host);
-
-    vlogI("host laundrying");
-    while(!host->to_quit) {
-        ret = waiter->ops->laundry(waiter);
-        if (ret < 0) {
-            continue;
-        }
-    }
-    vlogI("host quited from laundrying");
-    return 0;
-}
-
-/*
- * todo:
- * @host:
- */
-static
-int _vhost_daemonize(struct vhost* host)
-{
-    int ret = 0;
-    vassert(host);
-
-    host->to_quit = 0;
-    ret = vthread_init(&host->thread, _aux_host_loop_entry, host);
-    vlogEv((ret < 0), elog_vthread_init);
-    retE((ret < 0));
-
-    vthread_start(&host->thread);
-    return 0;
-}
-
 /*
  * the routine to reqeust to quit from laundry loop and wait for
  * thread to quit.
  * @host:
  */
 static
-int _vhost_shutdown(struct vhost* host)
+int _vhost_exit(struct vhost* host)
 {
     int exit_code = 0;
     vassert(host);
@@ -153,6 +114,30 @@ int _vhost_shutdown(struct vhost* host)
     vthread_join(&host->thread, &exit_code);
 
     vlogI("host exited");
+    return 0;
+}
+
+/*
+ * todo:
+ * @host:
+ */
+static
+int _vhost_run(struct vhost* host)
+{
+    struct vwaiter* wt = &host->waiter;
+    int ret = 0;
+    vassert(host);
+
+    host->to_quit = 0;
+
+    vlogI("host laundrying");
+    while(!host->to_quit) {
+        ret = wt->ops->laundry(wt);
+        if (ret < 0) {
+            continue;
+        }
+    }
+    vlogI("host quited from laundrying");
     return 0;
 }
 
@@ -211,15 +196,15 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* remote_
 
 static
 struct vhost_ops host_ops = {
-    .start       = _vhost_start,
-    .stop        = _vhost_stop,
-    .join        = _vhost_join,
-    .stabilize   = _vhost_stabilize,
-    .daemonize   = _vhost_daemonize,
-    .shutdown    = _vhost_shutdown,
-    .dump        = _vhost_dump,
-    .version     = _vhost_version,
-    .bogus_query = _vhost_bogus_query
+    .start         = _vhost_start,
+    .stop          = _vhost_stop,
+    .join          = _vhost_join,
+    .stabilize     = _vhost_stabilize,
+    .exit          = _vhost_exit,
+    .run           = _vhost_run,
+    .dump          = _vhost_dump,
+    .version       = _vhost_version,
+    .bogus_query   = _vhost_bogus_query
 };
 
 /* the routine to plug a plugin server, which will be added into route
@@ -355,15 +340,12 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
     return 0;
 }
 
-struct vhost* vhost_create(struct vconfig* cfg)
+int vhost_init(struct vhost* host, struct vconfig* cfg)
 {
-    struct vhost* host = NULL;
     int ret = 0;
-    vassert(cfg);
 
-    host = (struct vhost*)malloc(sizeof(struct vhost));
-    vlogEv((!host), elog_malloc);
-    retE_p((!host));
+    vassert(host);
+    vassert(cfg);
     memset(host, 0, sizeof(*host));
 
     host->tick_tmo = cfg->ext_ops->get_host_tick_tmo(cfg);
@@ -390,8 +372,7 @@ struct vhost* vhost_create(struct vconfig* cfg)
         vlsctl_deinit  (&host->lsctl);
         vwaiter_deinit (&host->waiter);
         vticker_deinit (&host->ticker);
-        free(host);
-        return NULL;
+        return -1;
     }
 
     host->waiter.ops->add(&host->waiter, &host->rpc);
@@ -399,17 +380,12 @@ struct vhost* vhost_create(struct vconfig* cfg)
     vmsger_reg_pack_cb  (&host->msger, _aux_vhost_pack_msg_cb  , host);
     vmsger_reg_unpack_cb(&host->msger, _aux_vhost_unpack_msg_cb, host);
 
-    return host;
+    return 0;
 }
 
-void vhost_destroy(struct vhost* host)
+void vhost_deinit(struct vhost* host)
 {
     vassert(host);
-
-    {
-        int exit_code = 0;
-        vthread_join(&host->thread, &exit_code);
-    }
 
     host->waiter.ops->remove(&host->waiter, &host->lsctl.rpc);
     host->waiter.ops->remove(&host->waiter, &host->rpc);
@@ -422,8 +398,7 @@ void vhost_destroy(struct vhost* host)
     vticker_deinit(&host->ticker);
     vmsger_deinit (&host->msger);
 
-    free(host);
-    return ;
+    return;
 }
 
 const char* vhost_get_version(void)

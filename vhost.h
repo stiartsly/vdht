@@ -12,9 +12,9 @@ struct vhost_ops {
     int   (*start)      (struct vhost*);
     int   (*stop)       (struct vhost*);
     int   (*join)       (struct vhost*, struct sockaddr_in*);
+    int   (*exit)       (struct vhost*);
+    int   (*run)        (struct vhost*);
     int   (*stabilize)  (struct vhost*);
-    int   (*daemonize)  (struct vhost*);
-    int   (*shutdown)   (struct vhost*);
     void  (*dump)       (struct vhost*);
     char* (*version)    (struct vhost*);
     int   (*bogus_query)(struct vhost*, int, struct sockaddr_in*);
@@ -47,7 +47,8 @@ struct vhost {
 };
 
 const char* vhost_get_version(void);
-struct vhost* vhost_create(struct vconfig*);
-void vhost_destroy(struct vhost*);
+int  vhost_init  (struct vhost*, struct vconfig*);
+void vhost_deinit(struct vhost*);
 
 #endif
+

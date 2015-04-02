@@ -159,6 +159,24 @@ int vlog_open(int syslog, const char* ident)
     return 0;
 }
 
+int vlog_open_with_cfg(struct vconfig* cfg)
+{
+    int syslog = 0;
+    char ident[32];
+    int ret = 0;
+
+    vassert(cfg);
+
+    syslog = cfg->ext_ops->get_syslog_switch(cfg);
+    memset(ident, 0, 32);
+    ret = cfg->ext_ops->get_syslog_ident(cfg, ident, 32);
+    retE((ret < 0));
+
+ //   vlog_open(syslog, (const char*)ident);
+    vlog_open(syslog, "vdhtd");
+    return 0;
+}
+
 void vlog_close (void)
 {
     if(g_need_syslog) {

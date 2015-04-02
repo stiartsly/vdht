@@ -6,6 +6,7 @@ DEPS =
 vdht_objs = \
     vlog.o \
     vcfg.o  \
+    vapp.o \
     vrpc.o  \
     vdht.o  \
     vdht_core.o \

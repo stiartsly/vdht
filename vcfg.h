@@ -50,6 +50,9 @@ struct vconfig_ext_ops {
     int (*get_route_max_rcv_tmo) (struct vconfig*);
 
     int (*get_dht_port)          (struct vconfig*);
+
+    int (*get_syslog_switch)     (struct vconfig*);
+    int (*get_syslog_ident)      (struct vconfig*, char*, int);
 };
 
 struct vconfig {

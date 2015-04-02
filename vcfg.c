@@ -862,6 +862,31 @@ struct vconfig_ops cfg_ops = {
     .get_tuple_val = _vcfg_get_tuple_val
 };
 
+
+static
+int _vcfg_get_syslog_switch(struct vconfig* cfg)
+{
+    int on = 1;
+    vassert(cfg);
+
+    //todo;
+    return on;
+}
+
+static
+int _vcfg_get_syslog_ident(struct vconfig* cfg, char* ident, int len)
+{
+    vassert(cfg);
+    vassert(ident);
+    vassert(len);
+
+    //todo;
+
+    memset(ident, 0, len);
+    strcpy(ident, "vdhtd");
+    return 0;
+}
+
 static
 int _vcfg_get_lsctl_unix_path(struct vconfig* cfg, char* path, int len)
 {
@@ -1097,6 +1122,9 @@ int _vcfg_get_dht_port(struct vconfig* cfg)
 
 static
 struct vconfig_ext_ops cfg_ext_ops = {
+    .get_syslog_switch      = _vcfg_get_syslog_switch,
+    .get_syslog_ident       = _vcfg_get_syslog_ident,
+
     .get_lsctl_unix_path    = _vcfg_get_lsctl_unix_path,
     .get_boot_nodes         = _vcfg_load_boot_nodes,
     .get_host_tick_tmo      = _vcfg_get_host_tick_tmo,
@@ -1105,7 +1133,7 @@ struct vconfig_ext_ops cfg_ext_ops = {
     .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
     .get_route_max_snd_tms  = _vcfg_get_route_max_snd_tms,
     .get_route_max_rcv_tmo  = _vcfg_get_route_max_rcv_tmo,
-    .get_dht_port           = _vcfg_get_dht_port,
+    .get_dht_port           = _vcfg_get_dht_port
 };
 
 int vconfig_init(struct vconfig* cfg)

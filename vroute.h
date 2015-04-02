@@ -7,6 +7,7 @@
 #include "vcfg.h"
 #include "vsys.h"
 #include "vdef.h"
+#include "vdht.h"
 
 #define NBUCKETS    (VTOKEN_BITLEN)
 

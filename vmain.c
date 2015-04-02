@@ -3,8 +3,6 @@
 
 static int daemonize  = 1;
 static int logstdout  = 0;
-static int logoutfile = 0;
-static char logfile[1024];
 static int defcfgfile = 1;
 static char cfgfile[1024];
 
@@ -18,7 +16,6 @@ struct option long_options[] = {
     {"help",        no_argument,        &show_help, 1},
     {"version",     no_argument,        &show_ver,  1},
     {"log-out",     no_argument,        &logstdout, 1},
-    {"log-file",    required_argument,  0,        's'},
     {"conf-file",   required_argument,  0,        'f'},
     {0, 0, 0, 0}
 };
@@ -29,7 +26,6 @@ void show_usage(void)
     printf("  -D, --daemon                  Become a daemon (default)\n");
     printf("  -i, --interactive             Run iteractive (not a daemon)\n");
     printf("  -S, --log-stdout              Log out stdout.\n");
-    printf("  -s  --log-file=LOGFILE        Log out to logfile.\n");
     printf("  -f  --conf-file=CONFIGFILE    Use alternate configuration file.\n");
     printf("\n");
     printf("Help options\n");
@@ -47,8 +43,6 @@ void show_version(void)
 
 int main(int argc, char** argv)
 {
-    struct vhost*  host = NULL;
-    struct vconfig cfg;
     char* cfg_file = NULL;
     int opt_idx = 0;
     int ret = 0;
@@ -77,14 +71,6 @@ int main(int argc, char** argv)
             break;
         case 'S':
             logstdout = 1;
-            break;
-        case 's':
-            logoutfile = 1;
-            if (strlen(optarg) + 1 >= 1024) {
-                printf("Too long path for logout file (less than 1K).\n");
-                exit(-1);
-            }
-            strcpy(logfile, optarg);
             break;
         case 'f':
             defcfgfile = 0;
@@ -121,38 +107,30 @@ int main(int argc, char** argv)
         exit(0);
     }
 
-    vlog_open(1, "vdhtd");
-    vlog_enable_console_output();
-    vconfig_init(&cfg);
-    if (defcfgfile) {
-        cfg_file = "vdht.conf";
-    } else {
-        cfg_file = cfgfile;
-    }
-    ret = cfg.ops->parse(&cfg, cfg_file);
-    if (ret < 0) {
-        printf("config file not exist or containing wrong format\n");
-        vconfig_deinit(&cfg);
-        exit(-1);
-    }
+    {
+        struct vappmain app;
 
-    host = vhost_create(&cfg);
-    if (!host) {
-        printf("failed to create vhost\n");
-        vconfig_deinit(&cfg);
-        exit(-1);
-    }
+        if (defcfgfile) {
+            cfg_file = "vdht.conf";
+        } else {
+            cfg_file = cfgfile;
+        }
 
-    host->ops->stabilize(host);
-    host->ops->start(host);
-    host->ops->daemonize(host);
+        vappmain_init(&app);
+        if(logstdout) {
+            app.ops->need_log_stdout(&app);
+        }
+        if (daemonize) {
+            app.ops->need_daemonize(&app);
+        }
 
-    while(1) {
-        sleep(60);
+        ret = app.ops->run(&app, cfg_file);
+        if (ret < 0) {
+            printf("failed to start running appmain\n");
+            exit(-1);
+        }
+        vappmain_deinit(&app);
     }
-    vhost_destroy(host);
-    vconfig_deinit(&cfg);
-    vlog_close();
     return 0;
 }
 
