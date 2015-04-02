@@ -153,6 +153,7 @@ int vlog_open(int syslog, const char* ident)
         g_need_syslog = 1;
         openlog(ident, LOG_CONS | LOG_PID, LOG_DAEMON);
     } else {
+        g_need_syslog = 0;
         // log to customed log file.
         //todo;
     }
@@ -168,11 +169,13 @@ int vlog_open_with_cfg(struct vconfig* cfg)
     vassert(cfg);
 
     syslog = cfg->ext_ops->get_syslog_switch(cfg);
-    memset(ident, 0, 32);
-    ret = cfg->ext_ops->get_syslog_ident(cfg, ident, 32);
-    retE((ret < 0));
-
- //   vlog_open(syslog, (const char*)ident);
+    if (syslog) {
+         memset(ident, 0, 32);
+         ret = cfg->ext_ops->get_syslog_ident(cfg, ident, 32);
+         retE((ret < 0));
+    }
+    vlog_close();
+    //vlog_open(syslog, (const char*)ident);
     vlog_open(syslog, "vdhtd");
     return 0;
 }

@@ -869,21 +869,28 @@ int _vcfg_get_syslog_switch(struct vconfig* cfg)
     int on = 1;
     vassert(cfg);
 
-    //todo;
+    on = cfg->ops->get_int_val(cfg, "global.syslog");
+    if (on < 0) {
+        on = 1;
+    }
     return on;
 }
 
 static
 int _vcfg_get_syslog_ident(struct vconfig* cfg, char* ident, int len)
 {
+    const char* ident_n = NULL;
+
     vassert(cfg);
     vassert(ident);
-    vassert(len);
+    vassert(len > 0);
 
-    //todo;
-
-    memset(ident, 0, len);
-    strcpy(ident, "vdhtd");
+    ident_n = cfg->ops->get_str_val(cfg, "global.syslog_ident");
+    if (!ident_n) {
+        ident_n = "vdhtd";
+    }
+    retE((strlen(ident_n) + 1 > len));
+    strcpy(ident, ident_n);
     return 0;
 }
 
