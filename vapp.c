@@ -70,7 +70,7 @@ int vappmain_init(struct vappmain* app)
 {
     vassert(app);
 
-    app->need_stdout = 1;
+    app->need_stdout = 0;
     app->daemonized  = 0;
 
     app->ops = &appmain_ops;
