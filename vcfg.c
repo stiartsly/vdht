@@ -895,21 +895,16 @@ int _vcfg_get_syslog_ident(struct vconfig* cfg, char* ident, int len)
 }
 
 static
-int _vcfg_get_lsctl_unix_path(struct vconfig* cfg, char* path, int len)
+const char* _vcfg_get_lsctl_unix_path(struct vconfig* cfg)
 {
     const char* unix_path = NULL;
-
     vassert(cfg);
-    vassert(path);
-    vassert(len > 0);
 
     unix_path = cfg->ops->get_str_val(cfg, "lsctl.unix_path");
     if (!unix_path) {
         unix_path = "/var/run/vdht/lsctl_socket";
     }
-    retE((strlen(unix_path) + 1 > len));
-    strcpy(path, unix_path);
-    return 0;
+    return unix_path;
 }
 
 static

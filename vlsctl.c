@@ -388,8 +388,7 @@ int vlsctl_init(struct vlsctl* lsctl, struct vhost* host, struct vconfig* cfg)
     vassert(host);
 
     sun->sun_family = AF_UNIX;
-    ret = cfg->ext_ops->get_lsctl_unix_path(cfg, sun->sun_path, 105);
-    retE((ret < 0));
+    strncpy(sun->sun_path, cfg->ext_ops->get_lsctl_unix_path(cfg), 105);
 
     lsctl->host    = host;
     lsctl->ops     = &lsctl_ops;
