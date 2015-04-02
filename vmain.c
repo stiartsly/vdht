@@ -121,7 +121,7 @@ int main(int argc, char** argv)
         exit(0);
     }
 
-    vlog_open("vdhtd");
+    vlog_open(1, "vdhtd");
     vlog_enable_console_output();
     vconfig_init(&cfg);
     if (defcfgfile) {

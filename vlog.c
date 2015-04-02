@@ -1,8 +1,8 @@
 #include "vglobal.h"
 #include "vlog.h"
 
-static int g_syslog_already_opened  = 0;
-static int g_console_output_enabled = 0;
+static int g_need_syslog = 0;
+static int g_need_print  = 0;
 
 enum {
     VLOG_ERR    = LOG_ERR,
@@ -16,13 +16,13 @@ int vlogD(const char* fmt, ...)
     va_list args;
     vassert(fmt);
 
-    if (g_syslog_already_opened) {
+    if (g_need_syslog) {
         va_start(args, fmt);
         vsyslog(VLOG_DEBUG, fmt, args);
         va_end(args);
     }
 #ifdef _DEBUG
-    if (g_console_output_enabled) {
+    if (g_need_print) {
         va_start(args, fmt);
         printf("[D]");
         vprintf(fmt, args);
@@ -41,14 +41,13 @@ int vlogDv(int cond, const char* fmt, ...)
     if (!cond) {
         return 0;
     }
-
-    if (g_syslog_already_opened) {
+    if (g_need_syslog) {
         va_start(args, fmt);
         vsyslog(VLOG_DEBUG, fmt, args);
         va_end(args);
     }
 #ifdef _DEBUG
-    if (g_console_output_enabled) {
+    if (g_need_print) {
         va_start(args, fmt);
         printf("[D]");
         vprintf(fmt, args);
@@ -64,12 +63,12 @@ int vlogI(const char* fmt, ...)
     va_list args;
     vassert(fmt);
 
-    if (g_syslog_already_opened) {
+    if (g_need_syslog) {
         va_start(args, fmt);
         vsyslog(VLOG_INFO, fmt, args);
         va_end(args);
     }
-    if (g_console_output_enabled) {
+    if (g_need_print) {
         va_start(args, fmt);
         printf("[I]");
         vprintf(fmt, args);
@@ -88,12 +87,12 @@ int vlogIv(int cond, const char* fmt, ...)
         return 0;
     }
 
-    if (g_syslog_already_opened) {
+    if (g_need_syslog) {
         va_start(args,fmt);
         vsyslog(VLOG_INFO, fmt, args);
         va_end(args);
     }
-    if (g_console_output_enabled) {
+    if (g_need_print) {
         va_start(args, fmt);
         printf("[I]");
         vprintf(fmt, args);
@@ -108,7 +107,7 @@ int vlogE(const char* fmt, ...)
     va_list(args);
     vassert(fmt);
 
-    if (g_syslog_already_opened) {
+    if (g_need_syslog) {
         va_start(args, fmt);
         vsyslog(VLOG_ERR, fmt, args);
         va_end(args);
@@ -131,7 +130,7 @@ int vlogEv(int cond, const char* fmt, ...)
     if (!cond) {
         return 0;
     }
-    if (g_syslog_already_opened) {
+    if (g_need_syslog) {
         va_start(args, fmt);
         vsyslog(VLOG_ERR, fmt, args);
         va_end(args);
@@ -146,31 +145,40 @@ int vlogEv(int cond, const char* fmt, ...)
     return 0;
 }
 
-int vlog_open(const char* ident)
+int vlog_open(int syslog, const char* ident)
 {
     vassert(ident);
 
-    openlog(ident, LOG_CONS | LOG_PID, LOG_DAEMON);
-    g_syslog_already_opened = 1;
+    if (syslog) {
+        g_need_syslog = 1;
+        openlog(ident, LOG_CONS | LOG_PID, LOG_DAEMON);
+    } else {
+        // log to customed log file.
+        //todo;
+    }
     return 0;
 }
 
 void vlog_close (void)
 {
-    g_syslog_already_opened = 0;
-    closelog();
+    if(g_need_syslog) {
+        closelog();
+        g_need_syslog = 0;
+    } else {
+        //todo;
+    }
     return ;
 }
 
 void vlog_enable_console_output(void)
 {
-    g_console_output_enabled = 1;
+    g_need_print = 1;
     return;
 }
 
 void vlog_disable_console_output(void)
 {
-    g_console_output_enabled = 0;
+    g_need_print = 0;
     return ;
 }
 
