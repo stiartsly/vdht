@@ -775,8 +775,7 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     vassert(cfg);
     vassert(myid);
 
-    ret = cfg->ext_ops->get_route_db_file(cfg, space->db, BUF_SZ);
-    retE((ret < 0));
+    strncpy(space->db, cfg->ext_ops->get_route_db_file(cfg), BUF_SZ);
     vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &space->zaddr);
 
     space->bucket_sz   = cfg->ext_ops->get_route_bucket_sz(cfg);

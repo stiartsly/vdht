@@ -47,7 +47,7 @@ struct vconfig_ext_ops {
     int (*get_boot_nodes)          (struct vconfig*, vcfg_load_boot_node_t, void*);
     int (*get_host_tick_tmo)       (struct vconfig*);
 
-    int (*get_route_db_file)       (struct vconfig*, char*, int);
+    const char* (*get_route_db_file)(struct vconfig*);
     int (*get_route_bucket_sz)     (struct vconfig*);
     int (*get_route_max_snd_tms)   (struct vconfig*);
     int (*get_route_max_rcv_tmo)   (struct vconfig*);

@@ -1000,21 +1000,16 @@ error_exit:
 }
 
 static
-int _vcfg_get_route_db_file(struct vconfig* cfg, char* db, int len)
+const char* _vcfg_get_route_db_file(struct vconfig* cfg)
 {
     const char* file = NULL;
-
     vassert(cfg);
-    vassert(db);
-    vassert(len > 0);
 
     file = cfg->ops->get_str_val(cfg, "route.db_file");
     if (!file) {
         file = "route.db";
     }
-    retE((strlen(file) + 1 > len));
-    strcpy(db, file);
-    return 0;
+    return file;
 }
 
 static
