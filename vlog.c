@@ -16,19 +16,20 @@ int vlogD(const char* fmt, ...)
     va_list args;
     vassert(fmt);
 
-    va_start(args, fmt);
     if (g_syslog_already_opened) {
+        va_start(args, fmt);
         vsyslog(VLOG_DEBUG, fmt, args);
+        va_end(args);
     }
 #ifdef _DEBUG
     if (g_console_output_enabled) {
+        va_start(args, fmt);
         printf("[D]");
         vprintf(fmt, args);
         printf("\n");
+        va_end(args);
     }
 #endif
-    va_end(args);
-
     return 0;
 }
 
@@ -41,18 +42,20 @@ int vlogDv(int cond, const char* fmt, ...)
         return 0;
     }
 
-    va_start(args, fmt);
     if (g_syslog_already_opened) {
+        va_start(args, fmt);
         vsyslog(VLOG_DEBUG, fmt, args);
+        va_end(args);
     }
 #ifdef _DEBUG
     if (g_console_output_enabled) {
+        va_start(args, fmt);
         printf("[D]");
         vprintf(fmt, args);
         printf("\n");
+        va_end(args);
     }
 #endif
-    va_end(args);
     return 0;
 }
 
@@ -61,16 +64,18 @@ int vlogI(const char* fmt, ...)
     va_list args;
     vassert(fmt);
 
-    va_start(args, fmt);
     if (g_syslog_already_opened) {
+        va_start(args, fmt);
         vsyslog(VLOG_INFO, fmt, args);
+        va_end(args);
     }
     if (g_console_output_enabled) {
+        va_start(args, fmt);
         printf("[I]");
         vprintf(fmt, args);
         printf("\n");
+        va_end(args);
     }
-    va_end(args);
     return 0;
 }
 
@@ -83,16 +88,18 @@ int vlogIv(int cond, const char* fmt, ...)
         return 0;
     }
 
-    va_start(args, fmt);
     if (g_syslog_already_opened) {
+        va_start(args,fmt);
         vsyslog(VLOG_INFO, fmt, args);
+        va_end(args);
     }
     if (g_console_output_enabled) {
+        va_start(args, fmt);
         printf("[I]");
         vprintf(fmt, args);
         printf("\n");
+        va_end(args);
     }
-    va_end(args);
     return 0;
 }
 
@@ -101,16 +108,18 @@ int vlogE(const char* fmt, ...)
     va_list(args);
     vassert(fmt);
 
-    va_start(args, fmt);
     if (g_syslog_already_opened) {
+        va_start(args, fmt);
         vsyslog(VLOG_ERR, fmt, args);
+        va_end(args);
     }
     if (1) {
+        va_start(args, fmt);
         printf("[E]");
         vprintf(fmt, args);
         printf("\n");
+        va_end(args);
     }
-    va_end(args);
     return 0;
 }
 
@@ -122,16 +131,18 @@ int vlogEv(int cond, const char* fmt, ...)
     if (!cond) {
         return 0;
     }
-    va_start(args, fmt);
     if (g_syslog_already_opened) {
+        va_start(args, fmt);
         vsyslog(VLOG_ERR, fmt, args);
+        va_end(args);
     }
     if (1) {
+        va_start(args, fmt);
         printf("[E]");
         vprintf(fmt, args);
         printf("\n");
+        va_end(args);
     }
-    va_end(args);
     return 0;
 }
 
@@ -140,11 +151,13 @@ int vlog_open(const char* ident)
     vassert(ident);
 
     openlog(ident, LOG_CONS | LOG_PID, LOG_DAEMON);
+    g_syslog_already_opened = 1;
     return 0;
 }
 
 void vlog_close (void)
 {
+    g_syslog_already_opened = 0;
     closelog();
     return ;
 }
