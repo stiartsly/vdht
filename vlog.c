@@ -162,21 +162,15 @@ int vlog_open(int syslog, const char* ident)
 
 int vlog_open_with_cfg(struct vconfig* cfg)
 {
-    int syslog = 0;
-    char ident[32];
-    int ret = 0;
-
     vassert(cfg);
 
-    syslog = cfg->ext_ops->get_syslog_switch(cfg);
-    if (syslog) {
-         memset(ident, 0, 32);
-         ret = cfg->ext_ops->get_syslog_ident(cfg, ident, 32);
-         retE((ret < 0));
+    if (cfg->ext_ops->get_syslog_switch(cfg)) {
+         if (g_need_syslog) {
+            closelog();
+         }
+         g_need_syslog = 1;
+         openlog(cfg->ext_ops->get_syslog_ident(cfg), LOG_CONS | LOG_PID, LOG_DAEMON);
     }
-    vlog_close();
-    //vlog_open(syslog, (const char*)ident);
-    vlog_open(syslog, "vdhtd");
     return 0;
 }
 

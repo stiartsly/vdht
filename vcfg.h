@@ -39,20 +39,22 @@ struct vconfig_ops {
 
 typedef int (*vcfg_load_boot_node_t)(struct sockaddr_in*, void*);
 struct vconfig_ext_ops {
-    const char* (*get_lsctl_unix_path)(struct vconfig*);
+    int (*get_syslog_switch)       (struct vconfig*);
+    const char* (*get_syslog_ident)(struct vconfig*);
+    const char* (*get_lsctl_unix_path)
+                                   (struct vconfig*);
 
-    int (*get_boot_nodes)        (struct vconfig*, vcfg_load_boot_node_t, void*);
-    int (*get_host_tick_tmo)     (struct vconfig*);
+    int (*get_boot_nodes)          (struct vconfig*, vcfg_load_boot_node_t, void*);
+    int (*get_host_tick_tmo)       (struct vconfig*);
 
-    int (*get_route_db_file)     (struct vconfig*, char*, int);
-    int (*get_route_bucket_sz)   (struct vconfig*);
-    int (*get_route_max_snd_tms) (struct vconfig*);
-    int (*get_route_max_rcv_tmo) (struct vconfig*);
+    int (*get_route_db_file)       (struct vconfig*, char*, int);
+    int (*get_route_bucket_sz)     (struct vconfig*);
+    int (*get_route_max_snd_tms)   (struct vconfig*);
+    int (*get_route_max_rcv_tmo)   (struct vconfig*);
 
-    int (*get_dht_port)          (struct vconfig*);
+    int (*get_dht_port)            (struct vconfig*);
 
-    int (*get_syslog_switch)     (struct vconfig*);
-    int (*get_syslog_ident)      (struct vconfig*, char*, int);
+
 };
 
 struct vconfig {

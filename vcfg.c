@@ -877,21 +877,16 @@ int _vcfg_get_syslog_switch(struct vconfig* cfg)
 }
 
 static
-int _vcfg_get_syslog_ident(struct vconfig* cfg, char* ident, int len)
+const char* _vcfg_get_syslog_ident(struct vconfig* cfg)
 {
-    const char* ident_n = NULL;
-
+    const char* ident = NULL;
     vassert(cfg);
-    vassert(ident);
-    vassert(len > 0);
 
-    ident_n = cfg->ops->get_str_val(cfg, "global.syslog_ident");
-    if (!ident_n) {
-        ident_n = "vdhtd";
+    ident = cfg->ops->get_str_val(cfg, "global.syslog_ident");
+    if (!ident) {
+        ident = "vdhtd";
     }
-    retE((strlen(ident_n) + 1 > len));
-    strcpy(ident, ident_n);
-    return 0;
+    return ident;
 }
 
 static
