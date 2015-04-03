@@ -2,7 +2,7 @@
 #include "vlog.h"
 
 static int g_need_syslog = 0;
-static int g_need_print  = 0;
+static int g_need_stdout = 0;
 
 enum {
     VLOG_ERR    = LOG_ERR,
@@ -22,7 +22,7 @@ int vlogD(const char* fmt, ...)
         va_end(args);
     }
 #ifdef _DEBUG
-    if (g_need_print) {
+    if (g_need_stdout) {
         va_start(args, fmt);
         printf("[D]");
         vprintf(fmt, args);
@@ -47,7 +47,7 @@ int vlogDv(int cond, const char* fmt, ...)
         va_end(args);
     }
 #ifdef _DEBUG
-    if (g_need_print) {
+    if (g_need_stdout) {
         va_start(args, fmt);
         printf("[D]");
         vprintf(fmt, args);
@@ -68,7 +68,7 @@ int vlogI(const char* fmt, ...)
         vsyslog(VLOG_INFO, fmt, args);
         va_end(args);
     }
-    if (g_need_print) {
+    if (g_need_stdout) {
         va_start(args, fmt);
         printf("[I]");
         vprintf(fmt, args);
@@ -92,7 +92,7 @@ int vlogIv(int cond, const char* fmt, ...)
         vsyslog(VLOG_INFO, fmt, args);
         va_end(args);
     }
-    if (g_need_print) {
+    if (g_need_stdout) {
         va_start(args, fmt);
         printf("[I]");
         vprintf(fmt, args);
@@ -191,15 +191,15 @@ void vlog_close (void)
     return ;
 }
 
-void vlog_enable_console_output(void)
+void vlog_stdout_enable (void)
 {
-    g_need_print = 1;
-    return;
+    g_need_stdout = 1;
+    return ;
 }
 
-void vlog_disable_console_output(void)
+void vlog_stdout_disable(void)
 {
-    g_need_print = 0;
+    g_need_stdout = 0;
     return ;
 }
 

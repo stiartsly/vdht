@@ -140,8 +140,10 @@ int _aux_node_load_boot_cb(struct sockaddr_in* boot_addr, void* cookie)
 
     vassert(node);
     vassert(boot_addr);
-    retS((node->ops->is_self(node, boot_addr)));
 
+    if (node->ops->has_addr(node, boot_addr)) {
+        return 0;
+    }
     ret = node->route->ops->join_node(node->route, boot_addr);
     retE((ret < 0));
     return 0;
@@ -189,35 +191,6 @@ int _aux_node_tick_cb(void* cookie)
     }
     default:
         vassert(0);
-    }
-    vlock_leave(&node->lock);
-    return 0;
-}
-
-/*
- * the routine to update reflexive address.
- * @node
- */
-static
-int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct sockaddr_in* eaddr)
-{
-    struct vnode_addr_helper* helper = &node->addr_helper;
-    vnodeInfo* nodei = (vnodeInfo*)&node->nodei;
-    int i = 0;
-    vassert(node);
-    vassert(eaddr);
-
-    vlock_enter(&node->lock);
-    for (i = 0; i < helper->naddrs; i++) {
-        if (!vsockaddr_equal(laddr, &helper->addrs[i])) {
-            continue;
-        }
-        if (reflexive_mask_check(helper->mask, i)) {
-            break;
-        }
-        vnodeInfo_add_addr(&nodei, eaddr);
-        reflexive_mask_set(helper->mask, i);
-        break;
     }
     vlock_leave(&node->lock);
     return 0;
@@ -287,8 +260,90 @@ void _vnode_clear(struct vnode* node)
     return ;
 }
 
+/*
+ * the routine to update the nice index ( the index of resource avaiblility)
+ * of local host. The higher the nice value is, the lower availability for
+ * other nodes can provide.
+ *
+ * @node:
+ * @nice : an index of resource availability.
+ *
+ */
 static
-int _vnode_is_self(struct vnode* node, struct sockaddr_in* addr)
+int _vnode_renice(struct vnode* node)
+{
+    struct vnode_nice* node_nice = &node->node_nice;
+    vsrvcInfo* svc = NULL;
+    int nice = 0;
+    int i = 0;
+
+    vassert(node);
+
+    vlock_enter(&node->lock);
+    node->nice = node_nice->ops->get_nice(node_nice);
+    for (i = 0; i < varray_size(&node->services); i++) {
+        svc = (vsrvcInfo*)varray_get(&node->services, i);
+        svc->nice = nice;
+    }
+    vlock_leave(&node->lock);
+    return 0;
+}
+
+static
+void _vnode_tick(struct vnode* node)
+{
+    struct vroute* route = node->route;
+    vsrvcInfo* svc = NULL;
+    int i = 0;
+    vassert(node);
+
+    vlock_enter(&node->lock);
+    _aux_node_get_eaddrs(node);
+    _aux_node_probe_connectivity(node);
+    for (i = 0; i < varray_size(&node->services); i++) {
+        svc = (vsrvcInfo*)varray_get(&node->services, i);
+        route->ops->air_service(route, svc);
+    }
+    vlock_leave(&node->lock);
+    return ;
+}
+
+/*
+ * the routine to update reflexive address.
+ * @node
+ */
+static
+int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct sockaddr_in* eaddr)
+{
+    struct vnode_addr_helper* helper = &node->addr_helper;
+    vnodeInfo* nodei = (vnodeInfo*)&node->nodei;
+    int i = 0;
+    vassert(node);
+    vassert(eaddr);
+
+    vlock_enter(&node->lock);
+    for (i = 0; i < helper->naddrs; i++) {
+        if (!vsockaddr_equal(laddr, &helper->addrs[i])) {
+            continue;
+        }
+        if (reflexive_mask_check(helper->mask, i)) {
+            break;
+        }
+        vnodeInfo_add_addr(&nodei, eaddr);
+        reflexive_mask_set(helper->mask, i);
+        break;
+    }
+    vlock_leave(&node->lock);
+    return 0;
+}
+
+/*
+ * the routine to check whether node contains the addr given by @addr
+ * @node:
+ * @addr:
+ */
+static
+int _vnode_has_addr(struct vnode* node, struct sockaddr_in* addr)
 {
     int found = 0;
 
@@ -385,68 +440,20 @@ void _vnode_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr
     return;
 }
 
-/*
- * the routine to update the nice index ( the index of resource avaiblility)
- * of local host. The higher the nice value is, the lower availability for
- * other nodes can provide.
- *
- * @node:
- * @nice : an index of resource availability.
- *
- */
-static
-int _vnode_renice(struct vnode* node)
-{
-    struct vnode_nice* node_nice = &node->node_nice;
-    vsrvcInfo* svc = NULL;
-    int nice = 0;
-    int i = 0;
-
-    vassert(node);
-
-    vlock_enter(&node->lock);
-    node->nice = node_nice->ops->get_nice(node_nice);
-    for (i = 0; i < varray_size(&node->services); i++) {
-        svc = (vsrvcInfo*)varray_get(&node->services, i);
-        svc->nice = nice;
-    }
-    vlock_leave(&node->lock);
-    return 0;
-}
-
-static
-void _vnode_tick(struct vnode* node)
-{
-    struct vroute* route = node->route;
-    vsrvcInfo* svc = NULL;
-    int i = 0;
-    vassert(node);
-
-    vlock_enter(&node->lock);
-    _aux_node_get_eaddrs(node);
-    _aux_node_probe_connectivity(node);
-    for (i = 0; i < varray_size(&node->services); i++) {
-        svc = (vsrvcInfo*)varray_get(&node->services, i);
-        route->ops->air_service(route, svc);
-    }
-    vlock_leave(&node->lock);
-    return ;
-}
-
 static
 struct vnode_ops node_ops = {
     .start                = _vnode_start,
     .stop                 = _vnode_stop,
     .wait_for_stop        = _vnode_wait_for_stop,
     .stabilize            = _vnode_stabilize,
-    .reflex_addr          = _vnode_reflex_addr,
     .dump                 = _vnode_dump,
     .clear                = _vnode_clear,
-    .post                 = _vnode_post,
-    .unpost               = _vnode_unpost,
     .renice               = _vnode_renice,
     .tick                 = _vnode_tick,
-    .is_self              = _vnode_is_self
+    .reflex_addr          = _vnode_reflex_addr,
+    .has_addr             = _vnode_has_addr,
+    .post                 = _vnode_post,
+    .unpost               = _vnode_unpost
 };
 
 static

@@ -50,7 +50,7 @@ int _vhost_join(struct vhost* host, struct sockaddr_in* wellknown_addr)
     vassert(host);
     vassert(wellknown_addr);
 
-    if (node->ops->is_self(node, wellknown_addr)) {
+    if (node->ops->has_addr(node, wellknown_addr)) {
         return 0;
     }
     ret = route->ops->join_node(route, wellknown_addr);

@@ -6,21 +6,21 @@
 
 struct vappmain;
 struct vappmain_ops {
-    int (*need_log_stdout)(struct vappmain*);
-    int (*need_daemonize) (struct vappmain*);
-    int (*run)            (struct vappmain*, const char*);
+    int (*need_stdout)   (struct vappmain*);
+    int (*need_daemonize)(struct vappmain*);
+    int (*run)           (struct vappmain*, const char*);
 };
 
 struct vappmain {
     int  need_stdout;
     int  daemonized;
 
-    struct vconfig cfg;
     struct vhost  host;
+    struct vconfig cfg;
     struct vappmain_ops* ops;
 };
 
-int  vappmain_init(struct vappmain*);
+int  vappmain_init  (struct vappmain*);
 void vappmain_deinit(struct vappmain*);
 
 #endif

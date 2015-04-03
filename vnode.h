@@ -55,12 +55,12 @@ struct vnode_ops {
     int  (*stop)       (struct vnode*);
     int  (*wait_for_stop)(struct vnode*);
     int  (*stabilize)  (struct vnode*);
-    int  (*reflex_addr)(struct vnode*, struct sockaddr_in*, struct sockaddr_in*);
     void (*dump)       (struct vnode*);
     void (*clear)      (struct vnode*);
     int  (*renice)     (struct vnode*);
     void (*tick)       (struct vnode*);
-    int  (*is_self)    (struct vnode*, struct sockaddr_in*);
+    int  (*reflex_addr)(struct vnode*, struct sockaddr_in*, struct sockaddr_in*);
+    int  (*has_addr)   (struct vnode*, struct sockaddr_in*);
     int  (*post)       (struct vnode*, vsrvcHash*, struct sockaddr_in*);
     void (*unpost)     (struct vnode*, vsrvcHash*, struct sockaddr_in*);
 };

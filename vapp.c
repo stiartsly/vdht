@@ -1,14 +1,23 @@
 #include "vglobal.h"
 #include "vapp.h"
 
+/*
+ *  the routine to set switch of log-stdout on.
+ *  @app: handle
+ */
 static
-int _vappmain_need_log_stdout(struct vappmain* app)
+int _vappmain_need_stdout(struct vappmain* app)
 {
     vassert(app);
     app->need_stdout = 1;
     return 0;
 }
 
+/*
+ * the routine indicate this program should be a daemon that
+ * running backgroud.
+ * @app:
+ */
 static
 int _vappmain_need_daemonize(struct vappmain* app)
 {
@@ -17,6 +26,11 @@ int _vappmain_need_daemonize(struct vappmain* app)
     return 0;
 }
 
+/*
+ * the routine to run the app
+ * @app:
+ * @cfg_file: the "conf" file.
+ */
 static
 int _vappmain_run(struct vappmain* app, const char* cfg_file)
 {
@@ -40,7 +54,7 @@ int _vappmain_run(struct vappmain* app, const char* cfg_file)
         goto error_exit;
     }
     if (app->need_stdout) {
-        vlog_enable_console_output();
+        vlog_stdout_enable();
     }
     ret = vhost_init(&app->host, &app->cfg);
     if (ret < 0) {
@@ -61,9 +75,9 @@ error_exit:
 
 static
 struct vappmain_ops appmain_ops = {
-    .need_log_stdout = _vappmain_need_log_stdout,
-    .need_daemonize  = _vappmain_need_daemonize,
-    .run             = _vappmain_run
+    .need_stdout    = _vappmain_need_stdout,
+    .need_daemonize = _vappmain_need_daemonize,
+    .run            = _vappmain_run
 };
 
 int vappmain_init(struct vappmain* app)

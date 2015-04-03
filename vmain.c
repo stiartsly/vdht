@@ -118,7 +118,7 @@ int main(int argc, char** argv)
 
         vappmain_init(&app);
         if(logstdout) {
-            app.ops->need_log_stdout(&app);
+            app.ops->need_stdout(&app);
         }
         if (daemonize) {
             app.ops->need_daemonize(&app);
