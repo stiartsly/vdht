@@ -82,7 +82,9 @@ void vcfg_item_free(struct vcfg_item* item)
         vassert(0);
         break;
     }
-    vmem_aux_free(&cfg_item_cache, item);
+    if (item->depth > 0) {
+        vmem_aux_free(&cfg_item_cache, item);
+    }
     return ;
 }
 
