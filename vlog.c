@@ -162,14 +162,20 @@ int vlog_open(int syslog, const char* ident)
 
 int vlog_open_with_cfg(struct vconfig* cfg)
 {
+    const char* ident = NULL;
+    int syslog = 0;
     vassert(cfg);
 
-    if (cfg->ext_ops->get_syslog_switch(cfg)) {
+    syslog = cfg->ext_ops->get_syslog_switch(cfg);
+    ident  = cfg->ext_ops->get_syslog_ident(cfg);
+    if (syslog) {
          if (g_need_syslog) {
             closelog();
          }
          g_need_syslog = 1;
-         openlog(cfg->ext_ops->get_syslog_ident(cfg), LOG_CONS | LOG_PID, LOG_DAEMON);
+         openlog(ident, LOG_CONS | LOG_PID, LOG_DAEMON);
+    } else {
+        //todo;
     }
     return 0;
 }
