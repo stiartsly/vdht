@@ -2,7 +2,6 @@
 #include "vroute.h"
 
 struct vrecord {
-    struct vlist list;
     vtoken token;
     time_t snd_ts;
 };
@@ -16,6 +15,7 @@ struct vrecord* vrecord_alloc(void)
     record = (struct vrecord*)vmem_aux_alloc(&record_cache);
     vlogEv((!record), elog_vmem_aux_alloc);
     retE_p((!record));
+    memset(record, 0, sizeof(*record));
     return record;
 }
 
@@ -33,7 +33,6 @@ void vrecord_init(struct vrecord* record, vtoken* token)
     vassert(record);
     vassert(token);
 
-    vlist_init(&record->list);
     vtoken_copy(&record->token, token);
     record->snd_ts = time(NULL);
     return ;
@@ -69,7 +68,7 @@ int _vroute_recr_space_make(struct vroute_recr_space* space, vtoken* token)
 
     vrecord_init(record, token);
     vlock_enter(&space->lock);
-    vlist_add_tail(&space->records, &record->list);
+    varray_add_tail(&space->records, record);
     vlock_leave(&space->lock);
 
     return 0;
@@ -86,17 +85,17 @@ static
 int _vroute_recr_space_check(struct vroute_recr_space* space, vtoken* token)
 {
     struct vrecord* record = NULL;
-    struct vlist* node = NULL;
     int found = 0;
+    int i = 0;
 
     vassert(space);
     vassert(token);
 
     vlock_enter(&space->lock);
-    __vlist_for_each(node, &space->records) {
-        record = vlist_entry(node, struct vrecord, list);
+    for (i = 0; i < varray_size(&space->records); i++) {
+        record = (struct vrecord*)varray_get(&space->records, i);
         if (vtoken_equal(&record->token, token)) {
-            vlist_del(&record->list);
+            varray_del(&space->records, i);
             vrecord_free(record);
             found = 1;
             break;
@@ -116,16 +115,18 @@ static
 void _vroute_recr_space_timed_reap(struct vroute_recr_space* space)
 {
     struct vrecord* record = NULL;
-    struct vlist* node = NULL;
     time_t now = time(NULL);
+    int i = 0;
     vassert(space);
 
     vlock_enter(&space->lock);
-    __vlist_for_each(node, &space->records) {
-        record = vlist_entry(node, struct vrecord, list);
+    for (i = 0; i < varray_size(&space->records);) {
+        record = (struct vrecord*)varray_get(&space->records, i);
         if ((now - record->snd_ts) > space->max_recr_period) {
-            vlist_del(&record->list);
+            varray_del(&space->records, i);
             vrecord_free(record);
+        } else {
+            i++;
         }
     }
     vlock_leave(&space->lock);
@@ -140,13 +141,11 @@ static
 void _vroute_recr_space_clear(struct vroute_recr_space* space)
 {
     struct vrecord* record = NULL;
-    struct vlist* node = NULL;
     vassert(space);
 
     vlock_enter(&space->lock);
-    while(!vlist_is_empty(&space->records)) {
-        node = vlist_pop_head(&space->records);
-        record = vlist_entry(node, struct vrecord, list);
+    while (varray_size(&space->records)) {
+        record = (struct vrecord*)varray_pop_tail(&space->records);
         vrecord_free(record);
     }
     vlock_leave(&space->lock);
@@ -162,12 +161,12 @@ static
 void _vroute_recr_space_dump(struct vroute_recr_space* space)
 {
     struct vrecord* record = NULL;
-    struct vlist* node = NULL;
+    int i = 0;
     vassert(space);
 
     vlock_enter(&space->lock);
-    __vlist_for_each(node, &space->records) {
-        record = vlist_entry(node, struct vrecord, list);
+    for (i = 0; i < varray_size(&space->records); i++) {
+        record = (struct vrecord*)varray_get(&space->records, i);
         vrecord_dump(record);
     }
     vlock_leave(&space->lock);
@@ -188,7 +187,7 @@ int vroute_recr_space_init(struct vroute_recr_space* space)
     vassert(space);
 
     space->max_recr_period = 5; //5s;
-    vlist_init(&space->records);
+    varray_init(&space->records, 8);
     vlock_init(&space->lock);
 
     space->ops = &route_record_space_ops;
@@ -201,6 +200,7 @@ void vroute_recr_space_deinit(struct vroute_recr_space* space)
 
     space->ops->clear(space);
     vlock_deinit(&space->lock);
+    varray_deinit(&space->records);
 
     return ;
 }
