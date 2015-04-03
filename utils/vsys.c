@@ -189,7 +189,7 @@ int vtimer_start(struct vtimer* timer, int timeout)
 
     vassert(timer);
     vassert(timeout > 0);
-    vassert(timer->id > 0);
+    vassert(timer->id != (timer_t)-1);
 
     tmo.it_interval.tv_sec = timeout;
     tmo.it_interval.tv_nsec = 0;
@@ -209,7 +209,7 @@ int vtimer_restart(struct vtimer* timer, int timeout)
 
     vassert(timer);
     vassert(timeout > 0);
-    vassert(timer->id > 0);
+    vassert(timer->id != (timer_t)-1);
 
     tmo.it_interval.tv_sec = timeout;
     tmo.it_interval.tv_nsec = 0;
@@ -226,7 +226,7 @@ int vtimer_stop(struct vtimer* timer)
 {
     int ret = 0;
     vassert(timer);
-    vassert(timer->id > 0);
+    vassert(timer->id != (timer_t)-1);
 
     ret = timer_delete(timer->id);
     vlogEv((ret < 0), elog_timer_delete);
