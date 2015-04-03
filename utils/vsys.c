@@ -240,7 +240,7 @@ void vtimer_deinit(struct vtimer* timer)
     vassert(timer);
 
     //should call "stop" before "deinit".
-    if (timer->id > 0) {
+    if (timer->id != (timer_t)-1) {
         timer_delete(timer->id);
         timer->id = (timer_t)-1;
     }
