@@ -13,16 +13,13 @@ int vmem_aux_init(struct vmem_aux* aux, int obj_sz, int first_capc)
     vassert(aux);
 
     retE((obj_sz < 0));
-    retE((first_capc <= 0));
+    retE((first_capc < 0));
 
     aux->capc   = 0;
     aux->used   = 0;
-    aux->first  = first_capc;
+    aux->first  = (first_capc > 0) ? first_capc : VMEM_FIRST_CAPC;
     aux->obj_sz = obj_sz;
-
-    if (!aux->first) {
-        aux->first = VMEM_FIRST_CAPC;
-    }
+    vlist_init(&aux->zones);
     return 0;
 }
 
@@ -32,38 +29,38 @@ int vmem_aux_init(struct vmem_aux* aux, int obj_sz, int first_capc)
 int _aux_extend(struct vmem_aux* aux)
 {
     int usz = sizeof(struct vmem_chunk) + aux->obj_sz;
+    struct vmem_zone* zone = NULL;
     void* cache  = NULL;
     void* chunks = NULL;
-    int i  = 0;
+    int i    = 0;
     vassert(aux);
     vassert(aux->used >= aux->capc);
 
-    if (!aux->capc) {
-        aux->capc = aux->first;
-    } else {
-        aux->capc <<= 1;
-    }
-
-    if (aux->mem_cache) {
-        cache  = malloc(aux->capc* usz);
-        chunks = malloc(aux->capc* sizeof(void*));
-    } else {
-        cache  = realloc(aux->mem_cache, aux->capc* usz);
-        chunks = realloc(aux->chunks, aux->capc* sizeof(void*));
-    }
-    if (!cache || !chunks) {
-        if (cache ) free(cache);
+    cache  = malloc(aux->first * usz);
+    chunks = malloc(aux->first * sizeof(void*));
+    zone = (struct vmem_zone*)malloc(sizeof(*zone));
+    if ((!cache) || (!chunks) || (!zone)) {
+        vlogEv((1), elog_malloc);
+        if (cache)  free(cache);
         if (chunks) free(chunks);
-        return -1;
+        if (zone)   free(zone);
+        retE((1));
     }
-    aux->mem_cache = cache;
-    aux->chunks    = chunks;
+    memset(cache,  0, aux->first * usz);
+    memset(chunks, 0, aux->first * sizeof(void*));
+    memset(zone,   0, sizeof(*zone));
 
-    for (; i < aux->capc; i++) {
-        aux->chunks[i] = (struct vmem_chunk*)(aux->mem_cache + usz * i);
-        aux->chunks[i]->magic = CHUNK_MAGIC;
-        aux->chunks[i]->taken = 0;
+    zone->chunks = chunks;
+    zone->mem_cache = cache;
+    vlist_init(&zone->list);
+    vlist_add_tail(&aux->zones, &zone->list);
+
+    for (i = 0; i < aux->first; i++) {
+        zone->chunks[i] = (struct vmem_chunk*)(zone->mem_cache + usz * i);
+        zone->chunks[i]->magic = CHUNK_MAGIC;
+        zone->chunks[i]->taken = 0;
     }
+    aux->capc += aux->first;
     return 0;
 }
 
@@ -72,22 +69,32 @@ int _aux_extend(struct vmem_aux* aux)
  */
 void* vmem_aux_alloc(struct vmem_aux* aux)
 {
+    struct vmem_zone* zone = NULL;
+    struct vlist* node = NULL;
+    int found = 0;
     int i = 0;
     vassert(aux);
 
     if (aux->used >= aux->capc) {
         retE_p((_aux_extend(aux) < 0));
     }
-    for (; i < aux->capc; i++) {
-        if (!aux->chunks[i]->taken) {
+
+    __vlist_for_each(node, &aux->zones) {
+        zone = vlist_entry(node, struct vmem_zone, list);
+        for (i = 0; i < aux->first; i++) {
+            if (!zone->chunks[i]->taken) {
+                zone->chunks[i]->taken = 1;
+                found = 1;
+                break;
+            }
+        }
+        if (found) {
             break;
         }
     }
-    retE_p((i >= aux->capc));
-
-    aux->chunks[i]->taken = 1;
+    vassert(found);
     aux->used++;
-    return aux->chunks[i]->obj;
+    return zone->chunks[i]->obj;
 }
 
 /*
@@ -97,11 +104,12 @@ void* vmem_aux_alloc(struct vmem_aux* aux)
 void vmem_aux_free(struct vmem_aux* aux, void* obj)
 {
     struct vmem_chunk* chunk = NULL;
+    int sz = sizeof(uint32_t) + sizeof(int32_t);
     vassert(aux);
 
     retE_v((!obj));
 
-    chunk = (struct vmem_chunk*)(obj - 8);
+    chunk = (struct vmem_chunk*)(obj - sz);
     vassert((chunk->magic == CHUNK_MAGIC));
     vassert((chunk->taken = 1));
 
@@ -115,13 +123,18 @@ void vmem_aux_free(struct vmem_aux* aux, void* obj)
  */
 void vmem_aux_deinit(struct vmem_aux* aux)
 {
+    struct vmem_zone* zone = NULL;
+    struct vlist* node = NULL;
     vassert(aux);
 
-    if (aux->mem_cache) {
-        free(aux->mem_cache);
-    }
-    if (aux->chunks) {
-        free(aux->chunks);
+    __vlist_for_each(node, &aux->zones) {
+        zone = vlist_entry(node, struct vmem_zone, list);
+        if (zone->mem_cache) {
+            free(zone->mem_cache);
+        }
+        if (zone->chunks) {
+            free(zone->chunks);
+        }
     }
     return ;
 }

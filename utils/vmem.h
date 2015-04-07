@@ -1,12 +1,18 @@
 #ifndef __VMEM_H__
 #define __VMEM_H__
 
-#define VMEM_FIRST_CAPC ((int)32)
+#define VMEM_FIRST_CAPC ((int)4)
 
 struct vmem_chunk {
     uint32_t magic;
-    int  taken;
+    int32_t  taken;
     char obj[4];
+};
+
+struct vmem_zone {
+    struct vlist list;
+    struct vmem_chunk** chunks;
+    void* mem_cache;
 };
 
 struct vmem_aux {
@@ -14,8 +20,7 @@ struct vmem_aux {
     int used;
     int capc;
     int first;
-    struct vmem_chunk** chunks;
-    void*  mem_cache;
+    struct vlist zones;
 };
 
 #define MEM_AUX_INIT(maux, obj_sz, first_capc) \
@@ -24,8 +29,7 @@ struct vmem_aux {
         0, \
         0, \
         ((!first_capc) ? VMEM_FIRST_CAPC : first_capc ), \
-        NULL, \
-        NULL  \
+        {&maux.zones, &maux.zones }\
     }
 
 int   vmem_aux_init  (struct vmem_aux*, int, int);
