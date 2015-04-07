@@ -26,6 +26,7 @@ void varray_deinit(struct varray* array)
 
     if (array->items) {
         free(array->items);
+        array->items = NULL;
     }
     return ;
 }

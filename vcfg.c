@@ -5,7 +5,7 @@ static char* def_cfg_key = "__dht_def_empty_key__";
 
 static MEM_AUX_INIT(cfg_item_cache, sizeof(struct vcfg_item), 8);
 static
-struct vcfg_item* vcfg_item_alloc(int type)
+struct vcfg_item* vcfg_item_alloc(int type, int depth)
 {
     struct vcfg_item* item = NULL;
 
@@ -15,16 +15,8 @@ struct vcfg_item* vcfg_item_alloc(int type)
 
     memset(item, 0, sizeof(*item));
     item->type  = type;
-    item->depth = 0;
-    return item;
-}
-
-static
-void vcfg_item_init(struct vcfg_item* item, int depth)
-{
-    vassert(item);
-
     item->depth = depth;
+
     switch(item->type) {
     case CFG_DICT:
         vdict_init(&item->val.d);
@@ -43,7 +35,7 @@ void vcfg_item_init(struct vcfg_item* item, int depth)
         vassert(0);
         break;
     }
-    return ;
+    return item;
 }
 
 static
@@ -265,7 +257,7 @@ void _aux_eat_comments(char** cur)
 }
 
 static
-int _aux_eat_separator(char** cur)
+int _aux_eat_delimiter(char** cur)
 {
     char seps1[] = "abcdefghijklmnopqrstuvwxyz";
     char seps2[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -436,13 +428,11 @@ int _aux_parse_tuple(struct vcfg_item* tuple, char** cur)
         case 'a' ... 'z':
         case 'A' ... 'Z':
         case '0' ... '9':
-            item = vcfg_item_alloc(CFG_STR);
+            item = vcfg_item_alloc(CFG_STR, tuple->depth+1);
             retE((!item));
-            vcfg_item_init(item, tuple->depth + 1);
 
             ret = _aux_parse_str(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
-
             varray_add_tail(&tuple->val.t, item);
             break;
         case ')':
@@ -488,38 +478,33 @@ int _aux_parse_list(struct vcfg_item* list, char** cur)
             break;
         case ':':
             (*cur)++;
-            ret = _aux_eat_separator(cur);
-            retE((ret < 0));
+            _aux_eat_delimiter(cur);
             break;
         case '{':
             (*cur)++;
-            item = vcfg_item_alloc(CFG_DICT);
+            item = vcfg_item_alloc(CFG_DICT, list->depth+1);
             retE((!item));
-            vcfg_item_init(item, list->depth + 1);
 
             ret = _aux_parse_dict(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
-
             varray_add_tail(&list->val.l.l, item);
             break;
         case '[':
             (*cur)++;
-            item = vcfg_item_alloc(CFG_LIST);
+            item = vcfg_item_alloc(CFG_LIST, list->depth+1);
             retE((!item));
-            vcfg_item_init(item, list->depth + 1);
+
             ret  = _aux_parse_list(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
-
             varray_add_tail(&list->val.l.l, item);
             break;
         case '(':
             (*cur)++;
-            item = vcfg_item_alloc(CFG_TUPLE);
+            item = vcfg_item_alloc(CFG_TUPLE, list->depth+1);
             retE((!item));
-            vcfg_item_init(item, list->depth + 1);
+
             ret = _aux_parse_tuple(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
-
             varray_add_tail(&list->val.l.l, item);
             break;
         case ']':
@@ -574,47 +559,41 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
             break;
         case ':':
             (*cur)++;
-            ret = _aux_eat_separator(cur);
-            retE((ret < 0));
             retE((!key));
+            _aux_eat_delimiter(cur);
             break;
         case '{':
             (*cur)++;
-            item = vcfg_item_alloc(CFG_DICT);
+            vassert(key);
+            item = vcfg_item_alloc(CFG_DICT, dict->depth+1);
             retE((!item));
-            vcfg_item_init(item, dict->depth + 1);
 
             ret = _aux_parse_dict(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
-
-            retE((!key));
             vdict_add(&dict->val.d, key, item);
             free(key);
             key = NULL;
             break;
         case '[':
             (*cur)++;
-            item = vcfg_item_alloc(CFG_LIST);
+            vassert(key);
+            item = vcfg_item_alloc(CFG_LIST, dict->depth+1);
             retE((!item));
-            vcfg_item_init(item, dict->depth + 1);
 
             ret = _aux_parse_list(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
-
-            retE((!key));
             vdict_add(&dict->val.d, key, item);
             free(key);
             key  = NULL;
             break;
         case '(':
             (*cur)++;
-            item = vcfg_item_alloc(CFG_TUPLE);
+            vassert(key);
+            item = vcfg_item_alloc(CFG_TUPLE, dict->depth+1);
             retE((!item));
-            vcfg_item_init(item, dict->depth + 1);
+
             ret = _aux_parse_tuple(item, cur);
             ret1E((ret < 0), vcfg_item_free(item));
-
-            retE((!key));
             vdict_add(&dict->val.d, key, item);
             free(key);
             key = NULL;
@@ -629,13 +608,11 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
         case '0' ... '9':
         case '/':
             if (key) {
-                item = vcfg_item_alloc(CFG_STR);
+                item = vcfg_item_alloc(CFG_STR, dict->depth+1);
                 retE((!item));
-                vcfg_item_init(item, dict->depth + 1);
 
                 ret = _aux_parse_str(item, cur);
                 ret1E((ret < 0), vcfg_item_free(item));
-
                 vdict_add(&dict->val.d, key, item);
                 free(key);
                 key = NULL;
@@ -1135,7 +1112,8 @@ int vconfig_init(struct vconfig* cfg)
     vassert(cfg);
 
     cfg->dict.type = CFG_DICT;
-    vcfg_item_init(&cfg->dict, 0);
+    cfg->dict.depth = 0;
+    vdict_init(&cfg->dict.val.d);
     cfg->ops     = &cfg_ops;
     cfg->ext_ops = &cfg_ext_ops;
     return 0;

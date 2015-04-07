@@ -186,6 +186,7 @@ void vdict_zero(struct vdict* dict, vdict_zero_t cb, void* cookie)
         vdict_item_free(item);
         dict->used--;
     }
+    vassert(!dict->used);
     return ;
 }
 
