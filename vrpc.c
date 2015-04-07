@@ -13,7 +13,7 @@ struct vunix_domain {
 static
 void* _vrpc_unix_open(struct vsockaddr* addr)
 {
-    struct sockaddr_un* saddr = (struct sockaddr_un*)&addr->vsun_addr;
+    struct sockaddr_un* saddr = to_sockaddr_sun(addr);
     struct vunix_domain* unx = NULL;
     int ret = 0;
     int fd  = 0;
@@ -35,7 +35,7 @@ void* _vrpc_unix_open(struct vsockaddr* addr)
     if (ret < 0) {
         free(unx);
         close(fd);
-        return NULL;
+        retE_p((1));
     }
 
     unx->sock_fd = fd;
@@ -162,10 +162,6 @@ struct vudp {
     uint16_t pad;
     int sock_fd;
     int ttl;
-    int snt_bytes;
-    int rcv_bytes;
-    int snt_errs;
-    int rcv_errs;
 };
 
 /*
@@ -175,7 +171,7 @@ struct vudp {
 static
 void* _vrpc_udp_open(struct vsockaddr* addr)
 {
-    struct sockaddr_in* saddr = (struct sockaddr_in*)to_sockaddr_sin(addr);
+    struct sockaddr_in* saddr = to_sockaddr_sin(addr);
     struct vudp* udp = NULL;
     int flags = 0;
     int fd  = 0;
@@ -204,7 +200,7 @@ void* _vrpc_udp_open(struct vsockaddr* addr)
     if (ret < 0) {
         close(fd);
         free(udp);
-        return NULL;
+        retE_p((1));
     }
 
     flags = fcntl(fd, F_GETFL, 0);
@@ -213,15 +209,11 @@ void* _vrpc_udp_open(struct vsockaddr* addr)
     if (ret < 0) {
         close(fd);
         free(udp);
-        return NULL;
+        retE_p((1));
     }
 
     udp->port = saddr->sin_port;
     udp->sock_fd   = fd;
-    udp->snt_bytes = 0;
-    udp->rcv_bytes = 0;
-    udp->snt_errs  = 0;
-    udp->rcv_errs  = 0;
     return udp;
 }
 
@@ -273,10 +265,8 @@ int _vrpc_udp_sndto(void* impl, struct vmsg_sys* msg)
     //vlogEv((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
     //vlogEv((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
     if (ret < 0) {
-        udp->rcv_errs++;
-        return -1;
+        retE((1));
     }
-    udp->snt_bytes += ret;
     return ret;
 }
 
@@ -316,11 +306,7 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
     vlogEv((ret < 0), elog_recvmsg);
     //vlogEv((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->addr)));
     //vlogEv((ret < 0), vsockaddr_dump(to_sockaddr_sin(&msg->spec)));
-    if (ret < 0) {
-        udp->rcv_errs++;
-        return -1;
-    }
-    udp->rcv_bytes += ret;
+    retE((ret < 0));
 
     for (cmsg = CMSG_FIRSTHDR(&mhdr); cmsg != NULL; cmsg = CMSG_NXTHDR(&mhdr, cmsg)) {
         struct in_pktinfo* pi = NULL;
@@ -335,7 +321,7 @@ int _vrpc_udp_rcvfrom(void* impl, struct vmsg_sys* msg)
         spec_addr->sin_addr   = pi->ipi_spec_dst;
     }
     msg->len = ret;
-    return 0;
+    return ret;
 }
 
 /*
@@ -380,13 +366,9 @@ void _vrpc_udp_dump(void* impl)
     vassert(udp);
 
     vsockaddr_unconvert(&udp->addr, buf, 64, (uint16_t*)&port);
-    printf("udp ");
-    printf("address: %s:%d ", buf, port);
+    printf("udp,");
+    printf("address: %s:%d,", buf, port);
     printf("fd:%d ", udp->sock_fd);
-    printf("snt_bytes:%d ", udp->snt_bytes);
-    printf("rcv_bytes:%d ", udp->rcv_bytes);
-    printf("snt_errs:%d ", udp->snt_errs);
-    printf("rcv_errs:%d", udp->rcv_errs);
     return ;
 }
 
@@ -434,10 +416,12 @@ int _vrpc_snd(struct vrpc* rpc)
     retE((ret < 0));
 
     ret = rpc->base_ops->sndto(rpc->impl, rpc->sndm);
-    retE((ret < 0));
-
-    rpc->snd_sz += ret;
-    rpc->nsnds++;
+    if (ret < 0) {
+        rpc->stat.nerrs++;
+        retE((1));
+    }
+    rpc->stat.snd_bytes += ret;
+    rpc->stat.nsnds++;
     return 0;
 }
 
@@ -452,9 +436,12 @@ int _vrpc_rcv(struct vrpc* rpc)
 
     vmsg_sys_refresh(rpc->rcvm, 8*BUF_SZ); //refresh the receving buf.
     ret = rpc->base_ops->rcvfrom(rpc->impl, rpc->rcvm);
-    retE((ret < 0));
-    rpc->rcv_sz += ret;
-    rpc->nrcvs++;
+    if (ret < 0) {
+        rpc->stat.nerrs++;
+        retE((1));
+    }
+    rpc->stat.rcv_bytes += ret;
+    rpc->stat.nrcvs++;
 
     ret = rpc->msger->ops->dsptch(rpc->msger, rpc->rcvm);
     retE((ret < 0));
@@ -468,7 +455,6 @@ int _vrpc_err(struct vrpc* rpc)
     vassert(rpc);
     vassert(rpc->impl);
 
-    rpc->nerrs++;
     rpc->base_ops->close(rpc->impl);
     rpc->impl = rpc->base_ops->open(&rpc->addr);
     retE((!rpc->impl));
@@ -486,10 +472,25 @@ int _vrpc_getId(struct vrpc* rpc)
 }
 
 static
+void _vrpc_stat(struct vrpc* rpc, struct vrpc_stat* buf)
+{
+    vassert(rpc);
+    vassert(buf);
+
+    memcpy(buf, &rpc->stat, sizeof(*buf));
+    return ;
+}
+
+static
 void _vrpc_dump(struct vrpc* rpc)
 {
     vassert(rpc);
     printf("{ ");
+    printf("nerrs:%d, ", rpc->stat.nerrs);
+    printf("nsnds:%d, ", rpc->stat.nsnds);
+    printf("nrcvs:%d, ", rpc->stat.nrcvs);
+    printf("send bytes:%d,", rpc->stat.snd_bytes);
+    printf("rcved bytes:%d,", rpc->stat.rcv_bytes);
     rpc->base_ops->dump(rpc->impl);
     printf(" }\n");
     return ;
@@ -505,6 +506,7 @@ struct vrpc_ops rpc_ops = {
     .rcv   = _vrpc_rcv,
     .err   = _vrpc_err,
     .getId = _vrpc_getId,
+    .stat  = _vrpc_stat,
     .dump  = _vrpc_dump
 };
 
@@ -541,11 +543,11 @@ int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct vsockaddr
     rpc->rcvm = sm;
     rpc->sndm = NULL;
 
-    rpc->nrcvs  = 0;
-    rpc->nsnds  = 0;
-    rpc->nerrs  = 0;
-    rpc->rcv_sz = 0;
-    rpc->snd_sz = 0;
+    rpc->stat.nerrs = 0;
+    rpc->stat.nsnds = 0;
+    rpc->stat.nrcvs = 0;
+    rpc->stat.snd_bytes = 0;
+    rpc->stat.rcv_bytes = 0;
 
     rpc->impl = rpc->base_ops->open(addr);
     ret1E((!rpc->impl), vmsg_sys_free(sm));

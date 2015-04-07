@@ -29,12 +29,21 @@ struct vrpc_base_ops {
     void  (*dump)   (void*);
 };
 
+struct vrpc_stat {
+    int nsnds;
+    int nrcvs;
+    int nerrs;
+    int snd_bytes;
+    int rcv_bytes;
+};
+
 struct vrpc;
 struct vrpc_ops {
     int  (*snd)  (struct vrpc*);
     int  (*rcv)  (struct vrpc*);
     int  (*err)  (struct vrpc*);
     int  (*getId)(struct vrpc*);
+    void (*stat) (struct vrpc*, struct vrpc_stat*);
     void (*dump) (struct vrpc*);
 };
 
@@ -50,11 +59,7 @@ struct vrpc {
     struct vrpc_base_ops* base_ops; //downword methods
     void* impl;
 
-    int nrcvs;
-    int nsnds;
-    int nerrs;
-    int rcv_sz;
-    int snd_sz;
+    struct vrpc_stat stat;
 };
 
 int  vrpc_init  (struct vrpc*, struct vmsger*, int, struct vsockaddr*);
