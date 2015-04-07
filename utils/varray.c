@@ -75,24 +75,24 @@ int varray_set(struct varray* array, int idx, void* item)
 static
 int _aux_extend(struct varray* array)
 {
-    void* new_items = NULL;
-    int   new_capc  = 0;
+    void* items = NULL;
+    int   capc  = 0;
 
     vassert(array);
     vassert(array->used >= array->capc);
 
     if (!array->capc) {
-        new_capc = array->first;
+        capc = array->first;
     } else {
-        new_capc = array->capc << 1;
+        capc = array->capc << 1;
     }
 
-    new_items = realloc(array->items, new_capc * sizeof(void*));
-    vlogEv((!new_items), elog_realloc);
-    retE((!new_items));
+    items = realloc(array->items, capc * sizeof(void*));
+    vlogEv((!items), elog_realloc);
+    retE((!items));
 
-    array->capc  = new_capc;
-    array->items = (void**)new_items;
+    array->capc  = capc;
+    array->items = (void**)items;
     return 0;
 }
 
