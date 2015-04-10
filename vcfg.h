@@ -41,8 +41,7 @@ typedef int (*vcfg_load_boot_node_t)(struct sockaddr_in*, void*);
 struct vconfig_ext_ops {
     int (*get_syslog_switch)       (struct vconfig*);
     const char* (*get_syslog_ident)(struct vconfig*);
-    const char* (*get_lsctl_unix_path)
-                                   (struct vconfig*);
+    const char* (*get_lsctl_socket)(struct vconfig*);
 
     int (*get_boot_nodes)          (struct vconfig*, vcfg_load_boot_node_t, void*);
     int (*get_host_tick_tmo)       (struct vconfig*);

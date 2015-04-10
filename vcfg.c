@@ -869,16 +869,17 @@ const char* _vcfg_get_syslog_ident(struct vconfig* cfg)
 }
 
 static
-const char* _vcfg_get_lsctl_unix_path(struct vconfig* cfg)
+const char* _vcfg_get_lsctl_socket(struct vconfig* cfg)
 {
-    const char* unix_path = NULL;
+    const char* unix_socket = NULL;
     vassert(cfg);
 
-    unix_path = cfg->ops->get_str_val(cfg, "lsctl.unix_path");
-    if (!unix_path) {
-        unix_path = "/var/run/vdht/lsctl_socket";
+    unix_socket = cfg->ops->get_str_val(cfg, "lsctl.unix_path");
+
+    if (!unix_socket) {
+        unix_socket = "/var/run/vdht/lsctl_socket";
     }
-    return unix_path;
+    return unix_socket;
 }
 
 static
@@ -1096,7 +1097,7 @@ struct vconfig_ext_ops cfg_ext_ops = {
     .get_syslog_switch      = _vcfg_get_syslog_switch,
     .get_syslog_ident       = _vcfg_get_syslog_ident,
 
-    .get_lsctl_unix_path    = _vcfg_get_lsctl_unix_path,
+    .get_lsctl_socket       = _vcfg_get_lsctl_socket,
     .get_boot_nodes         = _vcfg_load_boot_nodes,
     .get_host_tick_tmo      = _vcfg_get_host_tick_tmo,
 
