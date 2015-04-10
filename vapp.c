@@ -2,8 +2,8 @@
 #include "vapp.h"
 
 /*
- *  the routine to set switch of log-stdout on.
- *  @app: handle
+ *  the routine to enable log stdout.
+ *  @app: handle to app.
  */
 static
 int _vappmain_need_stdout(struct vappmain* app)
@@ -14,8 +14,7 @@ int _vappmain_need_stdout(struct vappmain* app)
 }
 
 /*
- * the routine indicate this program should be a daemon that
- * running backgroud.
+ * the routine indicate this program should be a daemon running backgroud.
  * @app:
  */
 static
@@ -95,7 +94,7 @@ void vappmain_deinit(struct vappmain* app)
 {
     vassert(app);
 
-    //todo;
+    //do nothing;
     return ;
 }
 
