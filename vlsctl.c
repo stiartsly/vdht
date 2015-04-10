@@ -24,10 +24,10 @@ int _aux_lsctl_unpack_addr(void* buf, int len, struct sockaddr_in* addr)
 }
 
 /*
- * forward the request to make host online
+ * the routine to execute command @host_up from @vlsctlc
  */
 static
-int _vlsctl_unpack_cmd_host_up(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_host_up(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     int ret = 0;
@@ -41,10 +41,10 @@ int _vlsctl_unpack_cmd_host_up(struct vlsctl* lsctl, void* buf, int len)
 }
 
 /*
- *  forward the request to make host offline.
+ *  the routine to execute command @host_down.
  */
 static
-int _vlsctl_unpack_cmd_host_down(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_host_down(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     int ret = 0;
@@ -58,10 +58,10 @@ int _vlsctl_unpack_cmd_host_down(struct vlsctl* lsctl, void* buf, int len)
 }
 
 /*
- * forward the request to make vdhtd exit.
+ * the routine to execute command @host_exit.
  */
 static
-int _vlsctl_unpack_cmd_host_exit(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_host_exit(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     int ret = 0;
@@ -76,10 +76,10 @@ int _vlsctl_unpack_cmd_host_exit(struct vlsctl* lsctl, void* buf, int len)
 }
 
 /*
- * forward the reqeust to dump all infos about host, so as to debug
+ * the routine to execute command @host_dump.
  */
 static
-int _vlsctl_unpack_cmd_host_dump(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_host_dump(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     vassert(lsctl);
@@ -94,7 +94,7 @@ int _vlsctl_unpack_cmd_host_dump(struct vlsctl* lsctl, void* buf, int len)
  * forward the reqeust to dump config
  */
 static
-int _vlsctl_unpack_cmd_cfg_dump(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_cfg_dump(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     vassert(lsctl);
@@ -106,11 +106,10 @@ int _vlsctl_unpack_cmd_cfg_dump(struct vlsctl* lsctl, void* buf, int len)
 }
 
 /*
- * forward the request to add wellknown node or node with given address
- * into dht routing table.
+ * the routine to execute command @join_node.
  */
 static
-int _vlsctl_unpack_cmd_join_node(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_join_node(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -131,11 +130,10 @@ int _vlsctl_unpack_cmd_join_node(struct vlsctl* lsctl, void* buf, int len)
 }
 
 /*
- * forward the request to send query to the node with given address.
- * this request is purely for debug.
+ * the routine to execute command @bogus_query, which only supports @ping query.
  */
 static
-int _vlsctl_unpack_cmd_bogus_query(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_bogus_query(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in sin;
@@ -161,11 +159,10 @@ int _vlsctl_unpack_cmd_bogus_query(struct vlsctl* lsctl, void* buf, int len)
 }
 
 /*
- *  command to post service information after service is ready. the service
- *  can be stun, relay, ddns, or user customized service.
+ *  the routine to exeucte command @post_service.
  */
 static
-int _vlsctl_unpack_cmd_post_service(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_post_service(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in addr;
@@ -190,10 +187,10 @@ int _vlsctl_unpack_cmd_post_service(struct vlsctl* lsctl, void* buf, int len)
 }
 
 /*
- * command to unpost (or reclaim) service.
+ * the routine to execute command @unpost_service.
  */
 static
-int _vlsctl_unpack_cmd_unpost_service(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_unpost_service(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     struct sockaddr_in addr;
@@ -228,10 +225,10 @@ void _aux_vlsctl_iterate_addr_cb(struct sockaddr_in* addr, void* cookie)
 }
 
 /*
- * command to probe best service for special term;
+ * the routine to execute command @probe service.
  */
 static
-int _vlsctl_unpack_cmd_probe_service(struct vlsctl* lsctl, void* buf, int len)
+int _vlsctl_exec_cmd_probe_service(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
     vsrvcHash hash;
@@ -251,24 +248,24 @@ int _vlsctl_unpack_cmd_probe_service(struct vlsctl* lsctl, void* buf, int len)
 }
 
 static
-struct vlsctl_unpack_cmd_desc lsctl_cmds[] = {
-    {"host up",       VLSCTL_HOST_UP,        _vlsctl_unpack_cmd_host_up       },
-    {"host down",     VLSCTL_HOST_DOWN,      _vlsctl_unpack_cmd_host_down     },
-    {"host exit",     VLSCTL_HOST_EXIT,      _vlsctl_unpack_cmd_host_exit     },
-    {"host dump",     VLSCTL_HOST_DUMP,      _vlsctl_unpack_cmd_host_dump     },
-    {"cfg dump",      VLSCTL_CFG_DUMP,       _vlsctl_unpack_cmd_cfg_dump      },
-    {"join node",     VLSCTL_JOIN_NODE,      _vlsctl_unpack_cmd_join_node     },
-    {"bogus query",   VLSCTL_BOGUS_QUERY,    _vlsctl_unpack_cmd_bogus_query   },
-    {"post service",  VLSCTL_POST_SERVICE,   _vlsctl_unpack_cmd_post_service  },
-    {"unpost service",VLSCTL_UNPOST_SERVICE, _vlsctl_unpack_cmd_unpost_service},
-    {"probe service", VLSCTL_PROBE_SERVICE,  _vlsctl_unpack_cmd_probe_service },
+struct vlsctl_exec_cmd_desc lsctl_cmds[] = {
+    {"host up",       VLSCTL_HOST_UP,        _vlsctl_exec_cmd_host_up       },
+    {"host down",     VLSCTL_HOST_DOWN,      _vlsctl_exec_cmd_host_down     },
+    {"host exit",     VLSCTL_HOST_EXIT,      _vlsctl_exec_cmd_host_exit     },
+    {"host dump",     VLSCTL_HOST_DUMP,      _vlsctl_exec_cmd_host_dump     },
+    {"cfg dump",      VLSCTL_CFG_DUMP,       _vlsctl_exec_cmd_cfg_dump      },
+    {"join node",     VLSCTL_JOIN_NODE,      _vlsctl_exec_cmd_join_node     },
+    {"bogus query",   VLSCTL_BOGUS_QUERY,    _vlsctl_exec_cmd_bogus_query   },
+    {"post service",  VLSCTL_POST_SERVICE,   _vlsctl_exec_cmd_post_service  },
+    {"unpost service",VLSCTL_UNPOST_SERVICE, _vlsctl_exec_cmd_unpost_service},
+    {"probe service", VLSCTL_PROBE_SERVICE,  _vlsctl_exec_cmd_probe_service },
     {NULL, VLSCTL_BUTT, NULL}
 };
 
 static
 int _vlsctl_unpack_cmds(struct vlsctl* lsctl, void* buf, int len)
 {
-    struct vlsctl_unpack_cmd_desc* desc = lsctl_cmds;
+    struct vlsctl_exec_cmd_desc* desc = lsctl_cmds;
     uint16_t blen  = 0;
     uint32_t magic = 0;
     int tsz = 0;

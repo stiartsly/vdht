@@ -53,11 +53,11 @@ enum {
 };
 
 struct vlsctl;
-typedef int (*vlsctl_unpack_cmd_t)(struct vlsctl*, void*, int);
-struct vlsctl_unpack_cmd_desc {
+typedef int (*vlsctl_exec_cmd_t)(struct vlsctl*, void*, int);
+struct vlsctl_exec_cmd_desc {
     const char* desc;
     uint32_t cmd_id;
-    vlsctl_unpack_cmd_t cmd;
+    vlsctl_exec_cmd_t cmd;
 };
 
 struct vlsctl_ops {
