@@ -519,7 +519,7 @@ int _vroute_node_space_reflex_addr(struct vroute_node_space* space, struct socka
 
     for (i = 0; i < NBUCKETS; i++) {
         void* argv[] = {
-            space->route,
+            space,
             addr
         };
         varray_iterate(&space->bucket[i].peers, _aux_space_reflex_addr_cb, argv);

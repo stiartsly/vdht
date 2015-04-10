@@ -533,7 +533,7 @@ int vnodeConn_adjust(vnodeConn* old, vnodeConn* new)
     }
     old->weight = new->weight;
     vsockaddr_copy(&old->local,  &new->local);
-    vsockaddr_copy(&new->remote, &new->remote);
+    vsockaddr_copy(&old->remote, &new->remote);
 
     return 0;
 }

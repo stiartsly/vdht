@@ -1025,7 +1025,7 @@ int _vroute_cb_reflex_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(conn);
     vassert(ctxt);
 
-    ret = route->dec_ops->reflex_rsp(route, &token, &fromId, &reflexive_addr);
+    ret = route->dec_ops->reflex_rsp(ctxt, &token, &fromId, &reflexive_addr);
     retE((ret < 0));
     retE((!recr_space->ops->check(recr_space, &token)));
 
