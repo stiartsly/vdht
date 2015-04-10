@@ -11,6 +11,9 @@ enum {
     VLOG_BUTT
 };
 
+/*
+ * the routine to log debug message.
+ */
 int vlogD(const char* fmt, ...)
 {
     va_list args;
@@ -33,6 +36,10 @@ int vlogD(const char* fmt, ...)
     return 0;
 }
 
+/*
+ * the routine to log debug message on given condition.
+ * @cond: condition.
+ */
 int vlogDv(int cond, const char* fmt, ...)
 {
     va_list(args);
@@ -58,6 +65,9 @@ int vlogDv(int cond, const char* fmt, ...)
     return 0;
 }
 
+/*
+ * the routine to log inform message;
+ */
 int vlogI(const char* fmt, ...)
 {
     va_list args;
@@ -78,6 +88,10 @@ int vlogI(const char* fmt, ...)
     return 0;
 }
 
+/*
+ * the routine to log inform message on given condition.
+ * @cond: condition.
+ */
 int vlogIv(int cond, const char* fmt, ...)
 {
     va_list(args);
@@ -102,6 +116,9 @@ int vlogIv(int cond, const char* fmt, ...)
     return 0;
 }
 
+/*
+ * the routine to log error message
+ */
 int vlogE(const char* fmt, ...)
 {
     va_list(args);
@@ -122,6 +139,10 @@ int vlogE(const char* fmt, ...)
     return 0;
 }
 
+/*
+ * the routine to log error message on given condition.
+ * @cond: condition.
+ */
 int vlogEv(int cond, const char* fmt, ...)
 {
     va_list(args);
@@ -145,6 +166,9 @@ int vlogEv(int cond, const char* fmt, ...)
     return 0;
 }
 
+/*
+ * the routine to open a connection to logger.
+ */
 int vlog_open(int syslog, const char* ident)
 {
     vassert(ident);
@@ -160,6 +184,9 @@ int vlog_open(int syslog, const char* ident)
     return 0;
 }
 
+/*
+ * the routine to open a connection to logger.
+ */
 int vlog_open_with_cfg(struct vconfig* cfg)
 {
     const char* ident = NULL;
@@ -180,6 +207,9 @@ int vlog_open_with_cfg(struct vconfig* cfg)
     return 0;
 }
 
+/*
+ * the routine to close the connection to logger.
+ */
 void vlog_close (void)
 {
     if(g_need_syslog) {
@@ -191,12 +221,18 @@ void vlog_close (void)
     return ;
 }
 
+/*
+ * the routine to enable log stdout.
+ */
 void vlog_stdout_enable (void)
 {
     g_need_stdout = 1;
     return ;
 }
 
+/*
+ * the routine to disable log stdout.
+ */
 void vlog_stdout_disable(void)
 {
     g_need_stdout = 0;
