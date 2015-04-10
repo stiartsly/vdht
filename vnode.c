@@ -31,14 +31,14 @@ int _vnode_start(struct vnode* node)
     int ret = 0;
     vassert(node);
 
-    ret = upnpc->ops->setup(upnpc);
-    vlogEv((ret < 0), "upnpc setup error");
-
     vlock_enter(&node->lock);
     if (node->mode != VDHT_OFF) {
         vlock_leave(&node->lock);
         return 0;
     }
+    ret = upnpc->ops->setup(upnpc);
+    vlogEv((ret < 0), "upnpc setup error");
+
     node->mode = VDHT_UP;
     vlock_leave(&node->lock);
     return 0;
@@ -58,10 +58,10 @@ int _vnode_stop(struct vnode* node)
         vlock_leave(&node->lock);
         return 0;
     }
-    node->mode = VDHT_DOWN;
-    vlock_leave(&node->lock);
 
     upnpc->ops->shutdown(upnpc);
+    node->mode = VDHT_DOWN;
+    vlock_leave(&node->lock);
     return 0;
 }
 

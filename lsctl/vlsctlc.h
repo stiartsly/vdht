@@ -1,9 +1,7 @@
-#ifndef __VLSCTL_H__
-#define __VLSCTL_H__
+#ifndef __VLSCTLC_H__
+#define __VLSCTLC_H__
 
-#include "vrpc.h"
-#include "vmsger.h"
-#include "vhost.h"
+#include "vnodeId.h"
 
 /*
  * lsctl message structure:
@@ -33,7 +31,8 @@ enum {
     vlsctl_cmd           = (uint8_t)0b00,
     vlsctl_req           = (uint8_t)0b01,
     vlsctl_rsp_succ      = (uint8_t)0b10,
-    vlsctl_rsp_err       = (uint8_t)0b11
+    vlsctl_rsp_err       = (uint8_t)0b11,
+    vlsctl_raw           = (uint8_t)0b100,
 };
 
 enum {
@@ -52,29 +51,64 @@ enum {
     VLSCTL_BUTT          = (uint16_t)0x99
 };
 
-struct vlsctl;
-typedef int (*vlsctl_unpack_cmd_t)(struct vlsctl*, void*, int);
-struct vlsctl_unpack_cmd_desc {
+struct vlsctlc;
+typedef int (*vlsctlc_pack_cmd_t)(struct vlsctlc*, void*, int);
+struct vlsctlc_pack_cmd_desc {
     const char* desc;
-    uint32_t cmd_id;
-    vlsctl_unpack_cmd_t cmd;
+    int32_t cmd_id;
+    vlsctlc_pack_cmd_t cmd;
 };
 
-struct vlsctl_ops {
-    int (*unpack_cmds)(struct vlsctl*, void*, int);
+struct vlsctlc_bind_ops {
+    int (*bind_host_up)    (struct vlsctlc*);
+    int (*bind_host_down)  (struct vlsctlc*);
+    int (*bind_host_exit)  (struct vlsctlc*);
+    int (*bind_host_dump)  (struct vlsctlc*);
+    int (*bind_cfg_dump)   (struct vlsctlc*);
+    int (*bind_join_node)  (struct vlsctlc*, struct sockaddr_in*);
+    int (*bind_bogus_query)(struct vlsctlc*, int, struct sockaddr_in*);
+    int (*bind_post_service)  (struct vlsctlc*, vsrvcHash*, struct sockaddr_in*);
+    int (*bind_unpost_service)(struct vlsctlc*, vsrvcHash*, struct sockaddr_in*);
+    int (*bind_probe_service) (struct vlsctlc*, vsrvcHash*);
 };
 
-struct vlsctl {
-    struct vrpc      rpc;
-    struct vmsger    msger;
-    struct vhost*    host;
-
-    struct vsockaddr   addr;
-    struct vlsctl_ops* ops;
+struct vlsctlc_ops {
+    int (*pack_cmds)       (struct vlsctlc*, void*, int);
 };
 
-int  vlsctl_init  (struct vlsctl*, struct vhost*, struct vconfig*);
-void vlsctl_deinit(struct vlsctl*);
+struct vlsctlc {
+    int type;
+
+    int bind_host_up;
+    int bind_host_down;
+    int bind_host_exit;
+    int bind_host_dump;
+    int bind_cfg_dump;
+
+    int bind_join_node;
+    struct sockaddr_in addr1;
+
+    int bind_bogus_query;
+    int queryId;
+    struct sockaddr_in addr2;
+
+    int bind_post_service;
+    vsrvcHash hash1;
+    struct sockaddr_in addr3;
+
+    int bind_unpost_service;
+    vsrvcHash hash2;
+    struct sockaddr_in addr4;
+
+    int bind_probe_service;
+    vsrvcHash hash3;
+
+    struct vlsctlc_ops *ops;
+    struct vlsctlc_bind_ops* bind_ops;
+};
+
+int  vlsctlc_init  (struct vlsctlc*);
+void vlsctlc_deinit(struct vlsctlc*);
 
 #endif
 

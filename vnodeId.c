@@ -492,6 +492,7 @@ void vnodeInfo_dump(vnodeInfo* nodei)
     vnodeVer_dump(&nodei->ver);
     printf(", ");
     printf("weight: %d,", nodei->weight);
+    printf("addrs:");
     vsockaddr_dump(&nodei->addrs[0]);
     for (i = 1; i < nodei->naddrs; i++) {
         printf(", ");

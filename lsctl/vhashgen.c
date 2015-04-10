@@ -1,4 +1,6 @@
-#include "vglobal.h"
+#include <stdlib.h>
+#include <string.h>
+#include "vnodeId.h"
 #include "vhashgen.h"
 
 /*  Description:
@@ -59,7 +61,7 @@ void _aux_sha1_digest_msgbuf(struct vhashgen_ctxt_sha1* ctxt)
 
 #define sha1_circular_shift(bits,word) ((((word) << (bits)) & 0xFFFFFFFF) | ((word) >> (32-(bits))))
 
-    vassert(ctxt);
+   // vassert(ctxt);
 
     for (i = 0; i < 16; i++) {
         seq[i]  = ((uint32_t)ctxt->msgbuf[i*4]) << 24;
@@ -127,7 +129,7 @@ void _aux_sha1_digest_msgbuf(struct vhashgen_ctxt_sha1* ctxt)
 static
 void _aux_sha1_padding_msgbuf(struct vhashgen_ctxt_sha1* ctxt)
 {
-    vassert(ctxt);
+   // vassert(ctxt);
     /*
      *  Check to see if the current message block is too small to hold
      *  the initial padding bits and length.  If so, we will pad the
@@ -175,7 +177,7 @@ static
 void _vhashgen_sha1_reset(struct vhashgen* gen)
 {
     struct vhashgen_ctxt_sha1* ctxt = (struct vhashgen_ctxt_sha1*)gen->ctxt;
-    vassert(gen);
+    //vassert(gen);
 
     ctxt->len_low  = 0;
     ctxt->len_high = 0;
@@ -202,11 +204,14 @@ static
 void _vhashgen_sha1_input(struct vhashgen* gen, uint8_t* msg, int len)
 {
     struct vhashgen_ctxt_sha1* ctxt = (struct vhashgen_ctxt_sha1*)gen->ctxt;
-    vassert(gen);
-    vassert(msg);
-    vassert(len >= 0);
+    //vassert(gen);
+    //vassert(msg);
+    //vassert(len >= 0);
 
-    retE_v((!len));
+    if (len <= 0) {
+        ctxt->oops = 1;
+        return ;
+    }
     if (ctxt->done || ctxt->oops) {
         ctxt->oops = 1;
         return ;
@@ -239,10 +244,12 @@ static
 int _vhashgen_sha1_result(struct vhashgen* gen, uint32_t* hash_array)
 {
     struct vhashgen_ctxt_sha1* ctxt = (struct vhashgen_ctxt_sha1*)gen->ctxt;
-    vassert(gen);
-    vassert(hash_array);
+    //vassert(gen);
+    //vassert(hash_array);
 
-    retE((ctxt->oops));
+    if (ctxt->oops) {
+        return -1;
+    }
     if ((!ctxt->done)) {
         _aux_sha1_padding_msgbuf(ctxt);
         ctxt->done = 1;
@@ -277,16 +284,15 @@ static
 int _vhashgen_hash(struct vhashgen* gen, uint8_t* msg, int len, vtoken* hash)
 {
     int ret = 0;
-    vassert(gen);
-    vassert(msg);
-    vassert(len > 0);
-    vassert(hash);
+    //vassert(gen);
+    //vassert(msg);
+    //vassert(len > 0);
+    //vassert(hash);
 
     gen->sha_ops->reset(gen);
     gen->sha_ops->input(gen, msg, len);
     ret = gen->sha_ops->result(gen, (uint32_t*)hash->data);
-    retE((ret < 0));
-    return 0;
+    return ret;
 }
 
 /*
@@ -302,19 +308,18 @@ static
 int _vhashgen_hash_with_cookie(struct vhashgen* gen, uint8_t* content, int len, uint8_t* cookie, int cookie_len, vtoken* hash)
 {
     int ret = 0;
-    vassert(gen);
-    vassert(content);
-    vassert(len > 0);
-    vassert(cookie);
-    vassert(cookie_len > 0);
-    vassert(hash);
+    //vassert(gen);
+    //vassert(content);
+    //vassert(len > 0);
+    //vassert(cookie);
+    //vassert(cookie_len > 0);
+    //vassert(hash);
 
     gen->sha_ops->reset(gen);
     gen->sha_ops->input(gen, content, len);
     gen->sha_ops->input(gen, cookie, cookie_len);
     ret = gen->sha_ops->result(gen, (uint32_t*)hash->data);
-    retE((ret < 0));
-    return 0;
+    return ret;
 }
 
 static
@@ -326,11 +331,12 @@ struct vhashgen_ops hashgen_ops = {
 int vhashgen_init (struct vhashgen* gen)
 {
     void* ctxt = NULL;
-    vassert(gen);
+    //vassert(gen);
 
     ctxt = malloc(sizeof(struct vhashgen_ctxt_sha1));
-    vlogEv((!ctxt), elog_malloc);
-    retE((!ctxt));
+    if (!ctxt) {
+        return -1;
+    }
     memset(ctxt, 0, sizeof(struct vhashgen_ctxt_sha1));
 
     gen->ctxt    = ctxt;
@@ -342,7 +348,7 @@ int vhashgen_init (struct vhashgen* gen)
 
 void vhashgen_deinit(struct vhashgen* gen)
 {
-    vassert(gen);
+    //vassert(gen);
     if (gen->ctxt) {
         free(gen->ctxt);
     }
@@ -354,14 +360,15 @@ int vhashhelper_get_stun_srvcHash(vsrvcHash* srvcHash)
     const char* magic = HASH_MAGIC_STUN;
     struct vhashgen hashgen;
     int ret = 0;
-    vassert(srvcHash);
+    //vassert(srvcHash);
 
     ret = vhashgen_init(&hashgen);
-    retE((ret < 0));
+    if (ret < 0) {
+        return -1;
+    };
     ret = hashgen.ops->hash(&hashgen, (uint8_t*)magic, strlen(magic), srvcHash);
     vhashgen_deinit(&hashgen);
-    retE((ret < 0));
-    return 0;
+    return ret;
 }
 
 int vhashhelper_get_relay_srvcHash(vsrvcHash* srvcHash)
@@ -369,13 +376,14 @@ int vhashhelper_get_relay_srvcHash(vsrvcHash* srvcHash)
     const char* magic = HASH_MAGIC_RELAY;
     struct vhashgen hashgen;
     int ret = 0;
-    vassert(srvcHash);
+    //vassert(srvcHash);
 
     ret = vhashgen_init(&hashgen);
-    retE((ret < 0));
+    if (ret < 0) {
+        return -1;
+    }
     ret = hashgen.ops->hash(&hashgen, (uint8_t*)magic, strlen(magic), srvcHash);
     vhashgen_deinit(&hashgen);
-    retE((ret < 0));
-    return 0;
+    return ret;
 }
 

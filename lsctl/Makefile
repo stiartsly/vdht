@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I. -Iutils -I/usr/local/include -g -Wall -std=gnu99 -D_STUB
+CFLAGS=-I. -I..  -Iutils -I/usr/local/include -g -Wall -std=gnu99 -D_STUB
 LDFLAGS=
 DEPS = 
 
@@ -8,7 +8,7 @@ DEPS =
 %.o: %.c 
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-vlsctlc: vlsctl_main.o 
+vlsctlc: vlsctlc_main.o vlsctlc.o vhashgen.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 clean:
