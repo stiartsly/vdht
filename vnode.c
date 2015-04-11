@@ -178,6 +178,7 @@ int _aux_node_tick_cb(void* cookie)
     case VDHT_RUN: {
         if (now - node->ts > node->tick_tmo) {
             node->route->ops->tick(node->route);
+            node->ops->renice(node);
             node->ops->tick(node);
             node->ts = now;
         }
@@ -262,8 +263,8 @@ void _vnode_clear(struct vnode* node)
 
 /*
  * the routine to update the nice index ( the index of resource avaiblility)
- * of local host. The higher the nice value is, the lower availability for
- * other nodes can provide.
+ * of local host. The higher the nice value is, the lower availability of
+ * resource of the node.
  *
  * @node:
  * @nice : an index of resource availability.
