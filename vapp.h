@@ -8,7 +8,7 @@ struct vappmain;
 struct vappmain_ops {
     int (*need_stdout)   (struct vappmain*);
     int (*need_daemonize)(struct vappmain*);
-    int (*run)           (struct vappmain*, const char*);
+    int (*run)           (struct vappmain*);
 };
 
 struct vappmain {
@@ -20,7 +20,7 @@ struct vappmain {
     struct vappmain_ops* ops;
 };
 
-int  vappmain_init  (struct vappmain*);
+int  vappmain_init  (struct vappmain*, const char*);
 void vappmain_deinit(struct vappmain*);
 
 #endif

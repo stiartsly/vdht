@@ -116,7 +116,7 @@ int main(int argc, char** argv)
             cfg_file = cfgfile;
         }
 
-        vappmain_init(&app);
+        vappmain_init(&app, cfg_file);
         if(logstdout) {
             app.ops->need_stdout(&app);
         }
@@ -124,7 +124,7 @@ int main(int argc, char** argv)
             app.ops->need_daemonize(&app);
         }
 
-        ret = app.ops->run(&app, cfg_file);
+        ret = app.ops->run(&app);
         if (ret < 0) {
             printf("failed to start running appmain\n");
             exit(-1);
