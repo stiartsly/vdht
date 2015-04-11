@@ -467,6 +467,10 @@ int vnodeInfo_update(vnodeInfo* dest, vnodeInfo* src)
     if (vtoken_equal(&src->ver, vnodeVer_unknown())) {
         // only interested in addresses
         for (i = 0; i < src->naddrs; i++) {
+            ret = vnodeInfo_has_addr(dest, &src->addrs[i]);
+            if (ret > 0) {
+                continue;
+            }
             ret = vnodeInfo_add_addr(&dest, &src->addrs[i]);
             retE((ret < 0));
             updt += 1;
