@@ -387,7 +387,7 @@ int _vnode_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
         }
     }
     if (!found) {
-        vsrvcId srvcId;
+        vtoken srvcId;
 
         srvci = vsrvcInfo_alloc();
         vlogEv((!srvci), elog_vsrvcInfo_alloc);

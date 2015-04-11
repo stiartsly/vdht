@@ -152,7 +152,7 @@ int _aux_space_reflex_addr_cb(void* item, void* cookie)
     if (peer->ntries >= space->max_snd_tms) {
         return 0;
     }
-    if (vtoken_equal(&peer->nodei->ver, &unknown_node_ver)) {
+    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
         return 0;
     }
     if (!vsockaddr_is_public(&peer->conn.remote)) {
@@ -184,7 +184,7 @@ int _aux_space_probe_connectivity_cb(void* item, void* cookie)
     if (peer->ntries >= space->max_snd_tms) {
         return 0;
     }
-    if (vtoken_equal(&peer->nodei->ver, &unknown_node_ver)) {
+    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
         return 0;
     }
     for (j = 0; j < peer->nodei->naddrs; j++) {
@@ -457,7 +457,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
             if (vtoken_equal(&peer->nodei->id, targetId)) {
                 continue;
             }
-            if (vtoken_equal(&peer->nodei->ver, &unknown_node_ver)) {
+            if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
                 continue;
             }
             if (peer->ntries >= space->max_snd_tms) {

@@ -30,32 +30,27 @@ int  vnodeId_bucket(vnodeId*, vnodeId*);
 int  vnodeMetric_cmp(vnodeMetric*, vnodeMetric*);
 
 /*
- * for vnodeHash
- */
-typedef struct vtoken vnodeHash;
-
-/*
  * for vnodeVer
  */
 typedef struct vtoken vnodeVer;
 
-void vnodeVer_dump     (vnodeVer*);
+vnodeVer* vnodeVer_unknown(void);
 int  vnodeVer_strlize  (vnodeVer*, char*, int);
 int  vnodeVer_unstrlize(const char*, vnodeVer*);
-extern vnodeVer unknown_node_ver;
+void vnodeVer_dump     (vnodeVer*);
 
 /*
  * for vnodeInfo
  */
-#define VNODEINFO_MAX_ADDRS ((int32_t)12)
-#define VNODEINFO_MIN_ADDRS ((int32_t)4)
+#define VNODEINFO_MAX_ADDRS ((int16_t)12)
+#define VNODEINFO_MIN_ADDRS ((int16_t)4)
 struct vnodeInfo_relax {
     vnodeId  id;
     vnodeVer ver;
     int32_t  weight;
 
-    int naddrs;
-    int capc;
+    int16_t  naddrs;
+    int16_t  capc;
     struct sockaddr_in addrs[VNODEINFO_MAX_ADDRS];
 };
 typedef struct vnodeInfo_relax vnodeInfo_relax;
@@ -69,8 +64,8 @@ struct vnodeInfo {
     vnodeVer ver;
     int32_t  weight;
 
-    int naddrs;
-    int capc;
+    int16_t  naddrs;
+    int16_t  capc;
     struct sockaddr_in addrs[VNODEINFO_MIN_ADDRS];
 };
 typedef struct vnodeInfo vnodeInfo;
@@ -100,47 +95,46 @@ struct vnodeConn {
 };
 typedef struct vnodeConn vnodeConn;
 
-int vnodeConn_set   (vnodeConn*, struct sockaddr_in*, struct sockaddr_in*);
-int vnodeConn_adjust(vnodeConn*, vnodeConn*);
+void vnodeConn_set   (vnodeConn*, struct sockaddr_in*, struct sockaddr_in*);
+void vnodeConn_adjust(vnodeConn*, vnodeConn*);
 
 /*
  * for vsrvcId
  */
-typedef struct vtoken vsrvcId;
 typedef struct vtoken vsrvcHash;
-int vsrvcId_bucket(vsrvcId*);
+int vsrvcId_bucket(vtoken*);
 
 /*
  * for vsrvcInfo
  */
-#define VSRVCINFO_MAX_ADDRS ((int32_t)12)
-#define VSRVCINFO_MIN_ADDRS ((int32_t)2)
+#define VSRVCINFO_MAX_ADDRS ((int16_t)12)
+#define VSRVCINFO_MIN_ADDRS ((int16_t)2)
 struct vsrvcInfo_relax {
     vsrvcHash hash;
-    vsrvcId id;
+    vtoken  id;
     int32_t nice;
 
-    int32_t naddrs;
-    int32_t capc;
+    int16_t naddrs;
+    int16_t capc;
     struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
 };
 typedef struct vsrvcInfo_relax vsrvcInfo_relax;
-int  vsrvcInfo_relax_init(vsrvcInfo_relax*, vsrvcId*, vsrvcHash*, int);
+int vsrvcInfo_relax_init(vsrvcInfo_relax*, vtoken*, vsrvcHash*, int);
 
 struct vsrvcInfo {
     vsrvcHash hash;
-    vsrvcId id;
+    vtoken  id;
     int32_t nice;
 
-    int32_t naddrs;
-    int32_t capc;
+    int16_t naddrs;
+    int16_t capc;
     struct sockaddr_in addrs[VSRVCINFO_MIN_ADDRS];
 };
 typedef struct vsrvcInfo vsrvcInfo;
 typedef void (*vsrvcInfo_iterate_addr_t)(struct sockaddr_in*, void*);
 vsrvcInfo* vsrvcInfo_alloc(void);
 void vsrvcInfo_free(vsrvcInfo*);
-int  vsrvcInfo_init(vsrvcInfo*, vsrvcId*, vsrvcHash*, int);
+int  vsrvcInfo_init(vsrvcInfo*, vtoken*, vsrvcHash*, int);
 
 int  vsrvcInfo_add_addr(vsrvcInfo**, struct sockaddr_in*);
 void vsrvcInfo_del_addr(vsrvcInfo*, struct sockaddr_in*);

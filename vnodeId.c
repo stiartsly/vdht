@@ -229,9 +229,12 @@ int vnodeMetric_cmp(vnodeMetric* a, vnodeMetric* b)
 /*
  * for vnodeVer funcs
  */
-vnodeVer unknown_node_ver = {
-    .data = {0, 0, 0, 0, 0}
-};
+
+vnodeVer* vnodeVer_unknown(void)
+{
+    static vnodeVer unknown_ver = {.data = {0, 0, 0, 0, 0}};
+    return &unknown_ver;
+}
 
 int vnodeVer_strlize(vnodeVer* ver, char* buf, int len)
 {
@@ -345,6 +348,7 @@ vnodeInfo* vnodeInfo_alloc(void)
 {
     vnodeInfo* nodei = NULL;
     nodei = (vnodeInfo*)malloc(sizeof(*nodei));
+    vlogEv((!nodei), elog_malloc);
     retE_p((!nodei));
     memset(nodei, 0, sizeof(*nodei));
 
@@ -385,7 +389,10 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr)
     vassert(*ppnodei);
     vassert(addr);
 
-    retE((nodei->naddrs >= VNODEINFO_MAX_ADDRS));
+    if (nodei->naddrs >= VNODEINFO_MAX_ADDRS) {
+        vlogE("exceed the max number of addresses.");
+        retE((1));
+    }
 
     if (nodei->naddrs >= nodei->capc) {
         vnodeInfo* new_nodei = NULL;
@@ -429,7 +436,6 @@ int vnodeInfo_has_addr(vnodeInfo* nodei, struct sockaddr_in* addr)
 
 int vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
 {
-    int updted = 0;
     int ret = 0;
     int i = 0;
 
@@ -444,42 +450,48 @@ int vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
     for (i = 0; i < src->naddrs; i++) {
         ret = vnodeInfo_add_addr(&dest, &src->addrs[i]);
         retE((ret < 0));
-        if (ret > 0) {
-            updted = 1;
-        }
     }
-    return ((ret > 0) ? updted : ret);
+    return 0;
 }
 
 int vnodeInfo_update(vnodeInfo* dest, vnodeInfo* src)
 {
-    int updted = 0;
+    int updt = 0;
     int ret = 0;
     int i = 0;
 
     vassert(dest);
     vassert(src);
+    vassert(vtoken_equal(&dest->id, &src->id));
 
-    if (vtoken_equal(&src->ver, &unknown_node_ver)) {
+    if (vtoken_equal(&src->ver, vnodeVer_unknown())) {
         // only interested in addresses
         for (i = 0; i < src->naddrs; i++) {
             ret = vnodeInfo_add_addr(&dest, &src->addrs[i]);
             retE((ret < 0));
-            if (ret > 0) {
-                updted = 1;
-            }
+            updt += 1;
         }
-        return updted;
+        return (!!updt);
     }
 
-    //node ID should be same value;
-    vassert(vtoken_equal(&dest->id, &src->id));
-    ret = vnodeInfo_copy(dest, src);
-    retE((ret < 0));
-    if (ret > 0) {
-        updted = 1;
+    // if have different number of addresses, then update it and
+    // set updated flags;
+    if (dest->naddrs != src->naddrs) {
+        ret = vnodeInfo_copy(dest, src);
+        retE((ret < 0));
+        return 1;
     }
-    return ((ret > 0) ? updted : ret);
+
+    // if have same number of addresses, then compare each address.
+    dest->weight = src->weight;
+    for (i = 0; i < src->naddrs; i++) {
+        if (vsockaddr_equal(&dest->addrs[i], &src->addrs[i])) {
+            continue;
+        }
+        vsockaddr_copy(&dest->addrs[i], &src->addrs[i]);
+        updt++;
+    }
+    return (!!updt);
 }
 
 void vnodeInfo_dump(vnodeInfo* nodei)
@@ -505,7 +517,7 @@ void vnodeInfo_dump(vnodeInfo* nodei)
 /*
  * for vnodeConn
  */
-int vnodeConn_set(vnodeConn* conn, struct sockaddr_in* local, struct sockaddr_in* remote)
+void vnodeConn_set(vnodeConn* conn, struct sockaddr_in* local, struct sockaddr_in* remote)
 {
     vassert(conn);
     vassert(local);
@@ -520,28 +532,28 @@ int vnodeConn_set(vnodeConn* conn, struct sockaddr_in* local, struct sockaddr_in
     } else {
         conn->weight = VNODECONN_WEIGHT_LOW;
     }
-    return 0;
+    return;
 }
 
-int vnodeConn_adjust(vnodeConn* old, vnodeConn* new)
+void vnodeConn_adjust(vnodeConn* old, vnodeConn* new)
 {
     vassert(old);
     vassert(new);
 
     if (old->weight >= new->weight) {
-        return 0;
+        return ;
     }
     old->weight = new->weight;
     vsockaddr_copy(&old->local,  &new->local);
     vsockaddr_copy(&old->remote, &new->remote);
 
-    return 0;
+    return ;
 }
 
 /*
  * for vsrvcId
  */
-int vsrvcId_bucket(vsrvcId* id)
+int vsrvcId_bucket(vtoken* id)
 {
     int hash = 0;
     int i = 0;
@@ -556,7 +568,7 @@ int vsrvcId_bucket(vsrvcId* id)
 /*
  * for vsrvcInfo funcs
  */
-int  vsrvcInfo_relax_init(vsrvcInfo_relax* srvci, vsrvcId* srvcId, vsrvcHash* hash, int nice)
+int  vsrvcInfo_relax_init(vsrvcInfo_relax* srvci, vtoken* srvcId, vsrvcHash* hash, int nice)
 {
     vassert(srvci);
     vassert(srvcId);
@@ -594,7 +606,7 @@ void vsrvcInfo_free(vsrvcInfo* srvci)
     return ;
 }
 
-int vsrvcInfo_init(vsrvcInfo* srvci, vsrvcId* id, vsrvcHash* hash, int nice)
+int vsrvcInfo_init(vsrvcInfo* srvci, vtoken* id, vsrvcHash* hash, int nice)
 {
     vassert(srvci);
     vassert(id);
@@ -710,7 +722,6 @@ void vsrvcInfo_dump(vsrvcInfo* srvci)
     for (i = 1; i < srvci->naddrs; i++) {
         printf(", ");
         vsockaddr_dump(&srvci->addrs[i]);
-
     }
     return ;
 }

@@ -94,6 +94,7 @@ void* vmem_aux_alloc(struct vmem_aux* aux)
     }
     vassert(found);
     aux->used++;
+    memset(zone->chunks[i]->obj, 0, aux->obj_sz);
     return zone->chunks[i]->obj;
 }
 

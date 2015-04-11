@@ -24,7 +24,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
     vassert(addr);
 
     vtoken_make(&id);
-    vnodeInfo_relax_init(&nodei_relax, &id, &unknown_node_ver, 0);
+    vnodeInfo_relax_init(&nodei_relax, &id, vnodeVer_unknown(), 0);
     vnodeInfo_add_addr(&nodei, addr);
 
     vlock_enter(&route->lock);
@@ -790,7 +790,7 @@ int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret =route->dec_ops->ping(ctxt, &token, &fromId);
     retE((ret < 0));
 
-    vnodeInfo_relax_init(&nodei_relax, &fromId, &unknown_node_ver, 0);
+    vnodeInfo_relax_init(&nodei_relax, &fromId, vnodeVer_unknown(), 0);
     vnodeInfo_add_addr(&nodei, &conn->remote);
     ret = node_space->ops->add_node(node_space, nodei, 1);
     retE((ret < 0));

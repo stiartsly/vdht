@@ -1016,7 +1016,7 @@ int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* srvci)
 {
     struct be_node* node = NULL;
     vsrvcHash hash;
-    vsrvcId id;
+    vtoken id;
     int nice = 0;
     int i = 0;
 
