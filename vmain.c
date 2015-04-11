@@ -1,7 +1,7 @@
 #include <getopt.h>
 #include "vglobal.h"
 
-static int daemonize  = 1;
+static int daemonize  = 0;
 static int logstdout  = 0;
 static int defcfgfile = 1;
 static char cfgfile[1024];
@@ -23,7 +23,7 @@ struct option long_options[] = {
 void show_usage(void)
 {
     printf("Usage: vdhtd [OPTION...]\n");
-    printf("  -D, --daemon                  Become a daemon (default)\n");
+    printf("  -D, --daemon                  Become a daemon.\n");
     printf("  -i, --interactive             Run iteractive (not a daemon)\n");
     printf("  -S, --log-stdout              Log out stdout.\n");
     printf("  -f  --conf-file=CONFIGFILE    Use alternate configuration file.\n");
@@ -107,26 +107,38 @@ int main(int argc, char** argv)
         exit(0);
     }
 
+    if (daemonize) {
+        int pid = fork();
+        if (pid < 0) {
+            perror("fork: ");
+            exit(-1);
+        }else if (pid > 0) {
+            exit(0);
+        }else {
+            setsid();
+        }
+    }
+
     {
         struct vappmain app;
-
         if (defcfgfile) {
             cfg_file = "vdht.conf";
         } else {
             cfg_file = cfgfile;
         }
 
-        vappmain_init(&app, cfg_file);
+        ret = vappmain_init(&app, cfg_file);
+        if (ret < 0) {
+            printf("failed to initialize appmain\n");
+            exit(-1);
+        }
         if(logstdout) {
             app.ops->need_stdout(&app);
         }
-        if (daemonize) {
-            app.ops->need_daemonize(&app);
-        }
-
         ret = app.ops->run(&app);
         if (ret < 0) {
             printf("failed to start running appmain\n");
+            vappmain_deinit(&app);
             exit(-1);
         }
         vappmain_deinit(&app);

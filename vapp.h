@@ -7,7 +7,6 @@
 struct vappmain;
 struct vappmain_ops {
     int (*need_stdout)   (struct vappmain*);
-    int (*need_daemonize)(struct vappmain*);
     int (*run)           (struct vappmain*);
 };
 

@@ -13,15 +13,31 @@ int _vappmain_need_stdout(struct vappmain* app)
     return 0;
 }
 
-/*
- * the routine indicate this program should be a daemon running backgroud.
- * @app:
- */
 static
-int _vappmain_need_daemonize(struct vappmain* app)
+int _aux_appmain_prepare(const char* pid_file)
 {
-    vassert(app);
-    app->daemonized = 1;
+    struct stat sbuf;
+    char buf[8];
+    int fd  = 0;
+    int ret = 0;
+
+    vassert(pid_file);
+
+    ret = stat(pid_file, &sbuf);
+    vlogEv((ret >= 0), "vdhtd is already running");
+    retE((ret >= 0));
+
+    vlogEv((errno != ENOENT), elog_stat);
+    retE((errno != ENOENT));
+
+    fd = open(pid_file, O_CLOEXEC|O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
+    vlogEv((fd < 0), elog_open);
+    retE((fd < 0));
+    memset(buf, 0, 8);
+    sprintf(buf, "%d", getpid());
+    write(fd, buf, strlen(buf));
+    close(fd);
+
     return 0;
 }
 
@@ -36,27 +52,10 @@ int _vappmain_run(struct vappmain* app)
     int ret = 0;
     vassert(app);
 
-    {
-        struct stat sbuf;
-        char buf[8];
-        int fd  = 0;
+    pid_file = app->cfg.ext_ops->get_pid_filename(&app->cfg);
+    ret = _aux_appmain_prepare(pid_file);
+    retE((ret < 0));
 
-        pid_file = app->cfg.ext_ops->get_pid_filename(&app->cfg);
-        ret = stat(pid_file, &sbuf);
-        vlogEv((ret >= 0), "vdhtd is already running");
-        retE((ret >= 0));
-
-        vlogEv((errno != ENOENT), elog_stat);
-        retE((errno != ENOENT));
-
-        fd = open(pid_file, O_CLOEXEC|O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
-        vlogEv((fd < 0), elog_open);
-        retE((fd < 0));
-        memset(buf, 0, 8);
-        sprintf(buf, "%d", getpid());
-        write(fd, buf, strlen(buf));
-        close(fd);
-    }
     ret = vlog_open_with_cfg(&app->cfg);
     if (ret < 0) {
         unlink(pid_file);
@@ -65,6 +64,7 @@ int _vappmain_run(struct vappmain* app)
     if (app->need_stdout) {
         vlog_stdout_enable();
     }
+
     app->host.ops->stabilize(&app->host);
     app->host.ops->start(&app->host);
     app->host.ops->run(&app->host);
@@ -75,29 +75,27 @@ int _vappmain_run(struct vappmain* app)
 
 static
 struct vappmain_ops appmain_ops = {
-    .need_stdout    = _vappmain_need_stdout,
-    .need_daemonize = _vappmain_need_daemonize,
-    .run            = _vappmain_run
+    .need_stdout = _vappmain_need_stdout,
+    .run         = _vappmain_run
 };
 
 int vappmain_init(struct vappmain* app, const char* cfg_file)
 {
-    const char* using_cfg = cfg_file;
     int ret = 0;
     vassert(app);
+    vassert(cfg_file);
 
     app->need_stdout = 0;
-    app->daemonized  = 0;
 
     vlog_open(1, "vdhtd_brew");
     vlog_stdout_enable();
 
-    if (!using_cfg) {
-        using_cfg = "vdht.conf";
-    }
     vconfig_init(&app->cfg);
-    ret = app->cfg.ops->parse(&app->cfg, using_cfg);
-    retE((ret < 0));
+    ret = app->cfg.ops->parse(&app->cfg, cfg_file);
+    if (ret < 0) {
+        vconfig_deinit(&app->cfg);
+        retE((1));
+    }
 
     ret = vhost_init(&app->host, &app->cfg);
     if (ret < 0) {
