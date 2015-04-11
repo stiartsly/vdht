@@ -39,6 +39,7 @@ struct vconfig_ops {
 
 typedef int (*vcfg_load_boot_node_t)(struct sockaddr_in*, void*);
 struct vconfig_ext_ops {
+    const char* (*get_pid_filename)(struct vconfig*);
     int (*get_syslog_switch)       (struct vconfig*);
     const char* (*get_syslog_ident)(struct vconfig*);
     const char* (*get_lsctl_socket)(struct vconfig*);

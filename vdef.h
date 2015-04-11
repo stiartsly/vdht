@@ -59,6 +59,7 @@
 #define type_decl(type, var, src)        type var = (type)src
 
 #define elog_open           strerror(errno)
+#define elog_stat           strerror(errno)
 #define elog_fstat          strerror(errno)
 #define elog_read           strerror(errno)
 #define elog_socket         strerror(errno)

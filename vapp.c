@@ -34,7 +34,8 @@ static
 int _vappmain_run(struct vappmain* app, const char* cfg_file)
 {
     const char* using_cfg = cfg_file;
-    int ret  = 0;
+    const char* pid_file  = NULL;
+    int ret = 0;
     vassert(app);
 
     if (!using_cfg) {
@@ -46,29 +47,59 @@ int _vappmain_run(struct vappmain* app, const char* cfg_file)
     retE((ret < 0));
     ret = app->cfg.ops->parse(&app->cfg, using_cfg);
     if (ret < 0) {
-        goto error_exit;
+        vconfig_deinit(&app->cfg);
+        retE((1));
+    }
+
+    {
+        struct stat sbuf;
+        char buf[8];
+        int fd  = 0;
+
+        pid_file = app->cfg.ext_ops->get_pid_filename(&app->cfg);
+        ret = stat(pid_file, &sbuf);
+        if (ret >= 0) {
+            vlogE("app already is running");
+            vconfig_deinit(&app->cfg);
+            retE((1));
+        }
+        vlogEv((errno != ENOENT), elog_stat);
+        retE((errno != ENOENT));
+
+        fd = open(pid_file, O_CLOEXEC | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+        vlogEv((fd < 0), elog_open);
+        if (fd < 0) {
+            vconfig_deinit(&app->cfg);
+            retE((1));
+        }
+        memset(buf, 0, 8);
+        sprintf(buf, "%d", getpid());
+        write(fd, buf, strlen(buf));
+        close(fd);
     }
     ret = vlog_open_with_cfg(&app->cfg);
     if (ret < 0) {
-        goto error_exit;
+        unlink(pid_file);
+        vconfig_deinit(&app->cfg);
+        retE((1));
     }
     if (app->need_stdout) {
         vlog_stdout_enable();
     }
     ret = vhost_init(&app->host, &app->cfg);
     if (ret < 0) {
-        goto error_exit;
+        unlink(pid_file);
+        vconfig_deinit(&app->cfg);
+        retE((1));
     }
     app->host.ops->stabilize(&app->host);
     app->host.ops->start(&app->host);
     app->host.ops->run(&app->host);
 
     vhost_deinit(&app->host);
+    unlink(pid_file);
     vconfig_deinit(&app->cfg);
     vlog_close();
-
-error_exit:
-    vconfig_deinit(&app->cfg);
     return 0;
 }
 

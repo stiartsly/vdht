@@ -113,6 +113,7 @@
 #define optind
 #define exit
 #define open
+#define write
 #define stat
 #define fstat
 #define read

@@ -841,6 +841,18 @@ struct vconfig_ops cfg_ops = {
     .get_tuple_val = _vcfg_get_tuple_val
 };
 
+static
+const char* _vcfg_get_pid_filename(struct vconfig* cfg)
+{
+    const char* filename = NULL;
+    vassert(cfg);
+
+    filename = cfg->ops->get_str_val(cfg, "global.pid_file");
+    if (!filename) {
+        filename = "/var/run/vdht/vdhtd.pid";
+    }
+    return filename;
+}
 
 static
 int _vcfg_get_syslog_switch(struct vconfig* cfg)
@@ -1094,6 +1106,7 @@ int _vcfg_get_dht_port(struct vconfig* cfg)
 
 static
 struct vconfig_ext_ops cfg_ext_ops = {
+    .get_pid_filename       = _vcfg_get_pid_filename,
     .get_syslog_switch      = _vcfg_get_syslog_switch,
     .get_syslog_ident       = _vcfg_get_syslog_ident,
 
