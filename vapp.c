@@ -1,18 +1,6 @@
 #include "vglobal.h"
 #include "vapp.h"
 
-/*
- *  the routine to enable log stdout.
- *  @app: handle to app.
- */
-static
-int _vappmain_need_stdout(struct vappmain* app)
-{
-    vassert(app);
-    app->need_stdout = 1;
-    return 0;
-}
-
 static
 int _aux_appmain_prepare(const char* pid_file)
 {
@@ -61,10 +49,6 @@ int _vappmain_run(struct vappmain* app)
         unlink(pid_file);
         retE((1));
     }
-    if (app->need_stdout) {
-        vlog_stdout_enable();
-    }
-
     app->host.ops->stabilize(&app->host);
     app->host.ops->start(&app->host);
     app->host.ops->run(&app->host);
@@ -75,20 +59,19 @@ int _vappmain_run(struct vappmain* app)
 
 static
 struct vappmain_ops appmain_ops = {
-    .need_stdout = _vappmain_need_stdout,
-    .run         = _vappmain_run
+    .run = _vappmain_run
 };
 
-int vappmain_init(struct vappmain* app, const char* cfg_file)
+int vappmain_init(struct vappmain* app, const char* cfg_file, int stdout)
 {
     int ret = 0;
     vassert(app);
     vassert(cfg_file);
 
-    app->need_stdout = 0;
-
+    if (stdout) {
+        vlog_stdout_enable();
+    }
     vlog_open(1, "vdhtd_brew");
-    vlog_stdout_enable();
 
     vconfig_init(&app->cfg);
     ret = app->cfg.ops->parse(&app->cfg, cfg_file);

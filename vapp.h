@@ -6,8 +6,7 @@
 
 struct vappmain;
 struct vappmain_ops {
-    int (*need_stdout)   (struct vappmain*);
-    int (*run)           (struct vappmain*);
+    int (*run) (struct vappmain*);
 };
 
 struct vappmain {
@@ -19,7 +18,7 @@ struct vappmain {
     struct vappmain_ops* ops;
 };
 
-int  vappmain_init  (struct vappmain*, const char*);
+int  vappmain_init  (struct vappmain*, const char*, int);
 void vappmain_deinit(struct vappmain*);
 
 #endif

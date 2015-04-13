@@ -127,13 +127,10 @@ int main(int argc, char** argv)
             cfg_file = cfgfile;
         }
 
-        ret = vappmain_init(&app, cfg_file);
+        ret = vappmain_init(&app, cfg_file, logstdout);
         if (ret < 0) {
             printf("failed to initialize appmain\n");
             exit(-1);
-        }
-        if(logstdout) {
-            app.ops->need_stdout(&app);
         }
         ret = app.ops->run(&app);
         if (ret < 0) {
