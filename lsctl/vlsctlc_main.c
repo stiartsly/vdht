@@ -402,7 +402,7 @@ int main(int argc, char** argv)
     }
 
     while(c >= 0) {
-        c = getopt_long(argc, argv, "U:S:dDxscarRpm:vh", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:S:dDxscarRptm:vh", long_options, &opt_idx);
         if (c < 0) {
             break;
         } else if (c == 0) {

@@ -7,7 +7,7 @@
 #define vassert(exp) do { \
 	if (!exp) {\
             printf("{assert} [%s:%d]\n", __FUNCTION__, __LINE__);\
-	    *(int*)0 = 0; \
+            *(int*)0 = 0; \
         } \
     } while(0)
 
@@ -160,7 +160,7 @@ static
 int _vlsctlc_bind_cmd_bogus_query(struct vlsctlc* lsctlc, int queryId, struct sockaddr_in* addr)
 {
     vassert(lsctlc);
-    vassert(queryId);
+    //vassert(queryId >= 0);
     vassert(addr);
 
     switch(lsctlc->type) {
