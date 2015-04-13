@@ -85,7 +85,6 @@ int vappmain_init(struct vappmain* app, const char* cfg_file, int stdout)
         vconfig_deinit(&app->cfg);
         retE((1));
     }
-    vlog_stdout_disable();
     app->ops = &appmain_ops;
     return 0;
 }
