@@ -14,9 +14,11 @@ int _aux_lsctl_unpack_addr(void* buf, int len, struct sockaddr_in* addr)
     vassert(addr);
 
     tsz += sizeof(uint16_t); //skip faimly value;
-    port   = *(uint16_t*)(buf + tsz);
+    port  = *(uint16_t*)(buf + tsz);
+    port  = ntohs(port);
     tsz += sizeof(uint16_t);
-    saddr  = *(uint32_t*)(buf + tsz);
+    saddr = *(uint32_t*)(buf + tsz);
+    saddr = ntohl(saddr);
 
     ret = vsockaddr_convert2(saddr, port, addr);
     retE((ret < 0));
@@ -112,7 +114,7 @@ static
 int _vlsctl_exec_cmd_join_node(struct vlsctl* lsctl, void* buf, int len)
 {
     struct vhost* host = lsctl->host;
-    struct sockaddr_in sin;
+    struct sockaddr_in addr;
     int tsz = 0;
     int ret = 0;
 
@@ -120,11 +122,12 @@ int _vlsctl_exec_cmd_join_node(struct vlsctl* lsctl, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    ret = _aux_lsctl_unpack_addr(buf, len, &sin);
+    ret = _aux_lsctl_unpack_addr(buf, len, &addr);
     retE((ret < 0));
     tsz += ret;
+    vsockaddr_dump(&addr);
 
-    ret = host->ops->join(host, &sin);
+    ret = host->ops->join(host, &addr);
     retE((ret < 0));
     return tsz;
 }
