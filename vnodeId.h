@@ -111,7 +111,7 @@ int vsrvcId_bucket(vtoken*);
 #define VSRVCINFO_MIN_ADDRS ((int16_t)2)
 struct vsrvcInfo_relax {
     vsrvcHash hash;
-    vtoken  id;
+    vnodeId hostid;
     int32_t nice;
 
     int16_t naddrs;
@@ -119,11 +119,11 @@ struct vsrvcInfo_relax {
     struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
 };
 typedef struct vsrvcInfo_relax vsrvcInfo_relax;
-int vsrvcInfo_relax_init(vsrvcInfo_relax*, vtoken*, vsrvcHash*, int);
+int vsrvcInfo_relax_init(vsrvcInfo_relax*, vsrvcHash*, vnodeId*, int);
 
 struct vsrvcInfo {
     vsrvcHash hash;
-    vtoken  id;
+    vnodeId hostid;
     int32_t nice;
 
     int16_t naddrs;

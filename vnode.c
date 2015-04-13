@@ -388,17 +388,14 @@ int _vnode_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
         }
     }
     if (!found) {
-        vtoken srvcId;
-
         srvci = vsrvcInfo_alloc();
         vlogEv((!srvci), elog_vsrvcInfo_alloc);
         ret1E((!srvci), vlock_leave(&node->lock));
 
-        vtoken_make(&srvcId);
-        vsrvcInfo_init(srvci, &srvcId, hash, node->nice);
+        vsrvcInfo_init(srvci, hash, &node->nodei.id, node->nice);
         vsrvcInfo_add_addr(&srvci, addr);
         varray_add_tail(&node->services, srvci);
-        //node->own_node.weight++;
+        node->nodei.weight++;
     }
     vlock_leave(&node->lock);
     return 0;
@@ -435,7 +432,7 @@ void _vnode_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr
     if ((found) && (vsrvcInfo_is_empty(srvci))) {
         srvci = (vsrvcInfo*)varray_del(&node->services, i);
         vsrvcInfo_free(srvci);
-        //node->own_node.weight--;
+        node->nodei.weight--;
     }
     vlock_leave(&node->lock);
     return;

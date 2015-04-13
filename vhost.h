@@ -23,6 +23,7 @@ struct vhost_ops {
 struct vhost_srvc_ops {
     int (*post)  (struct vhost*, vsrvcHash*, struct sockaddr_in*);
     int (*unpost)(struct vhost*, vsrvcHash*, struct sockaddr_in*);
+    int (*find)  (struct vhost*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
     int (*probe) (struct vhost*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
 };
 

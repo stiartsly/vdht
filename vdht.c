@@ -180,10 +180,10 @@ struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* srvci)
     dict = be_create_dict();
     retE_p((!dict));
 
-    node = be_create_vtoken(&srvci->id);
-    be_add_keypair(dict, "id", node);
     node = be_create_vtoken(&srvci->hash);
     be_add_keypair(dict, "hash", node);
+    node = be_create_vtoken(&srvci->hostid);
+    be_add_keypair(dict, "id", node);
     node = be_create_int(srvci->nice);
     be_add_keypair(dict, "n", node);
 
@@ -1016,7 +1016,7 @@ int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* srvci)
 {
     struct be_node* node = NULL;
     vsrvcHash hash;
-    vtoken id;
+    vnodeId id;
     int nice = 0;
     int i = 0;
 
@@ -1024,16 +1024,16 @@ int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* srvci)
     vassert(srvci);
     retE((BE_DICT != dict->type));
 
-    be_node_by_key(dict, "id", &node);
-    be_unpack_token(node, &id);
     be_node_by_key(dict, "hash", &node);
     be_unpack_token(node, &hash);
+    be_node_by_key(dict, "id", &node);
+    be_unpack_token(node, &id);
     be_node_by_key(dict, "n", &node);
     be_unpack_int(node, &nice);
     be_node_by_key(dict, "m", &node);
     vassert(node->type == BE_LIST);
 
-    vsrvcInfo_relax_init((vsrvcInfo_relax *)srvci, &id, &hash, nice);
+    vsrvcInfo_relax_init((vsrvcInfo_relax*)srvci, &hash, &id, nice);
     for (i = 0; node->val.l[i]; i++) {
         struct sockaddr_in addr;
         struct be_node* addr_node = node->val.l[i];

@@ -119,18 +119,73 @@ int _aux_space_add_node_cb(void* item, void* cookie)
 }
 
 static
+int _aux_space_probe_node_cb(void* item, void* cookie)
+{
+    varg_decl(cookie, 0, struct vroute_node_space*, space);
+    varg_decl(cookie, 1, vnodeId*, targetId);
+    struct vroute* route = space->route;
+    struct vpeer*  peer  = (struct vpeer*)item;
+    int ret = 0;
+
+    vassert(space);
+    vassert(targetId);
+    vassert(peer);
+
+    if (peer->ntries >=  space->max_snd_tms) {
+        return 0;
+    }
+    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+        return 0;
+    }
+    ret = route->dht_ops->find_node(route, &peer->conn, targetId);
+    retE((ret < 0));
+    return 0;
+}
+
+static
 int _aux_space_air_service_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute_node_space*, space);
-    varg_decl(cookie, 1, struct vsrvcInfo*, srvci);
+    varg_decl(cookie, 1, vsrvcInfo*, srvci);
     struct vpeer* peer = (struct vpeer*)item;
     struct vroute* route = space->route;
     int ret = 0;
 
+    vassert(space);
+    vassert(srvci);
+    vassert(peer);
+
     if (peer->ntries >= space->max_snd_tms) {
         return 0; //unreachable.
     }
+    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+        return 0;
+    }
     ret = route->dht_ops->post_service(route, &peer->conn, srvci);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _aux_space_probe_service_cb(void* item, void* cookie)
+{
+    varg_decl(cookie, 0, struct vroute_node_space*, space);
+    varg_decl(cookie, 1, vsrvcHash*, hash);
+    struct vpeer*  peer  = (struct vpeer*)item;
+    struct vroute* route = space->route;
+    int ret = 0;
+
+    vassert(space);
+    vassert(hash);
+    vassert(peer);
+
+    if (peer->ntries >= space->max_snd_tms) {
+        return 0; // unreachable.
+    }
+    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+        return 0;
+    }
+    ret = route->dht_ops->find_service(route, &peer->conn, hash);
     retE((ret < 0));
     return 0;
 }
@@ -488,6 +543,29 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
 }
 
 /*
+ * the routine to probe a node with given ID
+ * @space:
+ * @targetId:
+ */
+static
+int _vroute_node_space_probe_node(struct vroute_node_space* space, vnodeId* targetId)
+{
+    int i = 0;
+
+    vassert(space);
+    vassert(targetId);
+
+    for (i = 0; i < NBUCKETS; i++) {
+        void* argv[] = {
+            space,
+            targetId
+        };
+        varray_iterate(&space->bucket[i].peers, _aux_space_probe_node_cb, argv);
+    }
+    return 0;
+}
+
+/*
  *  the routine to broadcast the give service @svci to all nodes in routing
  *  table. which is provied by local node.
  *
@@ -507,6 +585,23 @@ int _vroute_node_space_air_service(struct vroute_node_space* space, void* srvci)
             srvci
         };
         varray_iterate(&space->bucket[i].peers, _aux_space_air_service_cb, argv);
+    }
+    return 0;
+}
+
+static
+int _vroute_node_space_probe_service(struct vroute_node_space* space, vsrvcHash* hash)
+{
+    int i = 0;
+    vassert(space);
+    vassert(hash);
+
+    for (i = 0;  i < NBUCKETS; i++) {
+        void* argv[] = {
+            space,
+            hash
+        };
+        varray_iterate(&space->bucket[i].peers, _aux_space_probe_service_cb, argv);
     }
     return 0;
 }
@@ -723,7 +818,9 @@ struct vroute_node_space_ops route_space_ops = {
     .add_node      = _vroute_node_space_add_node,
     .get_node      = _vroute_node_space_get_node,
     .get_neighbors = _vroute_node_space_get_neighbors,
+    .probe_node    = _vroute_node_space_probe_node,
     .air_service   = _vroute_node_space_air_service,
+    .probe_service = _vroute_node_space_probe_service,
     .reflex_addr   = _vroute_node_space_reflex_addr,
     .adjust_connectivity = _vroute_node_space_adjust_connectivity,
     .probe_connectivity  = _vroute_node_space_probe_connectivity,

@@ -74,7 +74,8 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
     varg_decl(cookie, 3, int*, max_period);
     varg_decl(cookie, 4, int*, found);
 
-    if (vtoken_equal(&srvc_item->srvci->id, &srvci->id)) {
+    if (vtoken_equal(&srvc_item->srvci->hostid, &srvci->hostid) &&
+        vtoken_equal(&srvc_item->srvci->hash, &srvci->hash)) {
         *to = srvc_item;
         *found = 1;
         return 1;
@@ -122,7 +123,7 @@ int _vroute_srvc_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvci)
     vassert(space);
     vassert(srvci);
 
-    srvcs = &space->bucket[vsrvcId_bucket(&srvci->id)].srvcs;
+    srvcs = &space->bucket[vsrvcId_bucket(&srvci->hostid)].srvcs;
     {
         void* argv[] = {
             &to,
