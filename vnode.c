@@ -388,14 +388,11 @@ int _vnode_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
         }
     }
     if (!found) {
-        vtoken srvcId;
-
         srvci = vsrvcInfo_alloc();
         vlogEv((!srvci), elog_vsrvcInfo_alloc);
         ret1E((!srvci), vlock_leave(&node->lock));
 
-        vtoken_make(&srvcId);
-        vsrvcInfo_init(srvci, &srvcId, hash, node->nice);
+        vsrvcInfo_init(srvci, hash, &node->nodei.id, node->nice);
         vsrvcInfo_add_addr(&srvci, addr);
         varray_add_tail(&node->services, srvci);
         node->nodei.weight++;

@@ -65,6 +65,7 @@ struct vroute_node_space_ops {
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
     int  (*get_node)     (struct vroute_node_space*, vnodeId*, vnodeInfo*);
     int  (*get_neighbors)(struct vroute_node_space*, vnodeId*, struct varray*, int);
+    int  (*probe_node)   (struct vroute_node_space*, vnodeId*);
     int  (*air_service)  (struct vroute_node_space*, void*);
     int  (*reflex_addr)  (struct vroute_node_space*, struct sockaddr_in*);
     int  (*adjust_connectivity)

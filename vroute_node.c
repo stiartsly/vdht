@@ -488,6 +488,42 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
 }
 
 /*
+ * the routine to probe a node with given ID
+ * @space:
+ * @targetId:
+ */
+static
+int _vroute_node_space_probe_node(struct vroute_node_space* space, vnodeId* targetId)
+{
+    struct varray* peers = NULL;
+    struct vpeer*  peer  = NULL;
+    struct vroute* route = space->route;
+    int i = 0;
+    int j = 0;
+
+    vassert(space);
+    vassert(targetId);
+
+    for (i = 0; i < NBUCKETS; i++) {
+        peers = &space->bucket[i].peers;
+        for (j = 0; j < varray_size(peers); j++) {
+            peer = (struct vpeer*)varray_get(peers, j);
+            if (vtoken_equal(&peer->nodei->id, targetId)) {
+                continue;
+            }
+            if (peer->ntries >= space->max_snd_tms) {
+                continue;
+            }
+            if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+                continue;
+            }
+            route->dht_ops->find_node(route, &peer->conn, targetId);
+        }
+    }
+    return 0;
+}
+
+/*
  *  the routine to broadcast the give service @svci to all nodes in routing
  *  table. which is provied by local node.
  *
@@ -723,6 +759,7 @@ struct vroute_node_space_ops route_space_ops = {
     .add_node      = _vroute_node_space_add_node,
     .get_node      = _vroute_node_space_get_node,
     .get_neighbors = _vroute_node_space_get_neighbors,
+    .probe_node    = _vroute_node_space_probe_node,
     .air_service   = _vroute_node_space_air_service,
     .reflex_addr   = _vroute_node_space_reflex_addr,
     .adjust_connectivity = _vroute_node_space_adjust_connectivity,

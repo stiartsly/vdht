@@ -1159,6 +1159,7 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
     struct vroute_recr_space* recr_space = &route->recr_space;
+    struct vroute_node_space* node_space = &route->node_space;
     vsrvcInfo_relax srvci;
     vnodeId fromId;
     vtoken token;
@@ -1172,7 +1173,10 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     retE((ret < 0));
     retE((!recr_space->ops->check(recr_space, &token)));
 
+    //try to added info of host node hosting the service to routing space.
     ret = srvc_space->ops->add_service(srvc_space, (vsrvcInfo*)&srvci);
+    retE((ret < 0));
+    ret = node_space->ops->probe_node(node_space, &srvci.hostid);
     retE((ret < 0));
 
     //todo;

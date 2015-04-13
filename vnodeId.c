@@ -571,15 +571,15 @@ int vsrvcId_bucket(vtoken* id)
 /*
  * for vsrvcInfo funcs
  */
-int  vsrvcInfo_relax_init(vsrvcInfo_relax* srvci, vtoken* srvcId, vsrvcHash* hash, int nice)
+int vsrvcInfo_relax_init(vsrvcInfo_relax* srvci, vsrvcHash* hash, vnodeId* hostid, int nice)
 {
     vassert(srvci);
-    vassert(srvcId);
     vassert(hash);
+    vassert(hostid);
     vassert(nice >= 0);
 
-    vtoken_copy(&srvci->id, srvcId);
-    vtoken_copy(&srvci->hash, hash);
+    vtoken_copy(&srvci->hash,  hash);
+    vtoken_copy(&srvci->hostid,hostid);
     srvci->nice = nice;
     srvci->naddrs = 0;
     srvci->capc   = VSRVCINFO_MAX_ADDRS;
@@ -609,15 +609,15 @@ void vsrvcInfo_free(vsrvcInfo* srvci)
     return ;
 }
 
-int vsrvcInfo_init(vsrvcInfo* srvci, vtoken* id, vsrvcHash* hash, int nice)
+int vsrvcInfo_init(vsrvcInfo* srvci, vsrvcHash* hash, vnodeId* hostid, int nice)
 {
     vassert(srvci);
-    vassert(id);
     vassert(hash);
+    vassert(hostid);
     vassert(nice >= 0);
 
-    vtoken_copy(&srvci->id,   id);
     vtoken_copy(&srvci->hash, hash);
+    vtoken_copy(&srvci->hostid, hostid);
     srvci->nice = nice;
 
     srvci->naddrs = 0;
@@ -701,8 +701,8 @@ int vsrvcInfo_copy(vsrvcInfo* dest, vsrvcInfo* src)
     vassert(dest);
     vassert(src);
 
-    vtoken_copy(&dest->id,   &src->id);
-    vtoken_copy(&dest->hash, &src->hash);
+    vtoken_copy(&dest->hash,  &src->hash);
+    vtoken_copy(&dest->hostid,&src->hostid);
     dest->nice   = src->nice;
     dest->naddrs = 0;
 
