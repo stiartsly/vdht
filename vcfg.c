@@ -727,8 +727,9 @@ struct vcfg_item* _aux_get_cfg_item(struct vcfg_item* item, const char* long_key
 
     sub_item = vcfg_item_get(item, key);
     free(key);
-    retE_p((!sub_item));
-
+    if (!sub_item) {
+        return NULL;
+    }
     return _aux_get_cfg_item(sub_item, ++comma);
 }
 
@@ -754,9 +755,14 @@ int _vcfg_get_int_val(struct vconfig* cfg, const char* key)
     vassert(key);
 
     item = _aux_get_cfg_item(&cfg->dict, (char*)key);
-    retE((!item));
-    retE((CFG_STR != item->type));
-
+    if (!item) {
+        vlogI("no config item with key:%s", key);
+        return -1;
+    }
+    if (CFG_STR != item->type) {
+        vlogE("config item (CFG_STR) has wrong type(%d)", item->type);
+        return -1;
+    }
     // check if numeric number
     cur = item->val.s;
     while (*cur != '\0') {
@@ -782,8 +788,14 @@ const char* _vcfg_get_str_val(struct vconfig* cfg, const char* key)
     vassert(key);
 
     item = _aux_get_cfg_item(&cfg->dict, (char*)key);
-    retE_p((!item));
-    retE_p((CFG_STR != item->type));
+    if (!item) {
+        vlogI("no config item with key:%s", key);
+        return NULL;
+    }
+    if (CFG_STR != item->type) {
+        vlogE("config item (CFG_STR) has wrong type(%d)", item->type);
+        return NULL;
+    }
     return item->val.s;
 }
 
@@ -795,8 +807,14 @@ struct vdict* _vcfg_get_dict_val(struct vconfig* cfg, const char* key)
     vassert(key);
 
     item = _aux_get_cfg_item(&cfg->dict, (char*)key);
-    retE_p((!item));
-    retE_p((CFG_DICT != item->type));
+    if (!item) {
+        vlogI("no dict value with key:%s", key);
+        return NULL;
+    }
+    if (CFG_DICT != item->type) {
+        vlogE("dict item has wrong type(%d)", item->type);
+        return NULL;
+    }
     return &item->val.d;
 }
 
@@ -808,11 +826,14 @@ struct varray* _vcfg_get_list_val(struct vconfig* cfg, const char* key)
     vassert(key);
 
     item = _aux_get_cfg_item(&cfg->dict, (char*)key);
-    vlogIv((!item), "no boot nodes in config file");
     if (!item) {
+        vlogI("no boot nodes in config file.");
         return NULL;
     }
-    retE_p((CFG_LIST != item->type));
+    if (CFG_LIST != item->type) {
+        vlogE("list item has wrong type(%d)", item->type);
+        return NULL;
+    }
     return &item->val.l.l;
 }
 
@@ -824,8 +845,14 @@ struct varray* _vcfg_get_tuple_val(struct vconfig* cfg, const char* key)
     vassert(key);
 
     item = _aux_get_cfg_item(&cfg->dict, (char*)key);
-    retE_p((!item));
-    retE_p((CFG_TUPLE != item->type));
+    if (!item) {
+        vlogI("no item with key %s", key);
+        return NULL;
+    }
+    if (CFG_TUPLE != item->type) {
+        vlogE("tuple item has wrong type(%d)", item->type);
+        return NULL;
+    }
     return &item->val.t;
 }
 
