@@ -38,12 +38,13 @@ int _vnode_nice_get_nice(struct vnode_nice* node_nice)
 
     nice_val = 0;
     for (; res_status_p->ratio; res_status_p++) {
-        if (*res_status_p->ratio >= *res_status_p->criteria) {
+        if (*res_status_p->ratio < *res_status_p->criteria) {
             nice_val += *res_status_p->ratio * (*res_status_p->factor);
         } else {
             nice_val += 10 * (*res_status_p->factor);
         }
     }
+    nice_val /= 10;
     node_nice->prev_nice_val = nice_val;
     return nice_val;
 }
@@ -61,15 +62,12 @@ int vnode_nice_init(struct vnode_nice* node_nice, struct vconfig* cfg)
     node_nice->cpu.criteria = 8;
     node_nice->cpu.factor   = 7;
     node_nice->cpu.ratio    = 2;
-
     node_nice->mem.criteria = 8;
     node_nice->mem.factor   = 6;
     node_nice->mem.ratio    = 2;
-
     node_nice->io.criteria  = 4;
     node_nice->io.factor    = 3;
     node_nice->io.ratio     = 2;
-
     node_nice->net_up.criteria   = 8;
     node_nice->net_up.factor     = 3;
     node_nice->net_up.ratio      = 2;
@@ -77,7 +75,7 @@ int vnode_nice_init(struct vnode_nice* node_nice, struct vconfig* cfg)
     node_nice->net_down.factor   = 2;
     node_nice->net_down.ratio    = 2;
 
-    node_nice->prev_nice_val = 8;
+    node_nice->prev_nice_val = 2;
     node_nice->ops = &node_nice_ops;
     return 0;
 }
@@ -85,7 +83,6 @@ int vnode_nice_init(struct vnode_nice* node_nice, struct vconfig* cfg)
 void vnode_nice_deinit(struct vnode_nice* node_nice)
 {
     vassert(node_nice);
-
     //do nothing;
     return ;
 }
