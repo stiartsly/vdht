@@ -34,8 +34,9 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
     return 0;
 }
 
+
 /*
- * the routine to probe best suitable service node from service routing table
+ * the routine to find best suitable service from service routing table
  * so that local app can meet its needs with that service.
  *
  * @route:
@@ -43,7 +44,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
  * @addr : [out] address of service
  */
 static
-int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
     vsrvcInfo_relax srvci;
@@ -62,6 +63,25 @@ int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_itera
     for (i = 0; i < srvci.naddrs; i++) {
         cb(&srvci.addrs[i], cookie);
     }
+    return 0;
+}
+
+static
+int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+{
+    struct vroute_node_space* node_space = &route->node_space;
+    int ret = 0;
+
+    vassert(route);
+    vassert(hash);
+    vassert(cb);
+
+    vlock_enter(&route->lock);
+    ret = node_space->ops->probe_service(node_space, hash);
+    vlock_leave(&route->lock);
+    retE((ret < 0));
+
+    //todo;
     return 0;
 }
 
@@ -214,6 +234,7 @@ void _vroute_dump(struct vroute* route)
 static
 struct vroute_ops route_ops = {
     .join_node     = _vroute_join_node,
+    .find_service  = _vroute_find_service,
     .probe_service = _vroute_probe_service,
     .air_service   = _vroute_air_service,
     .reflex        = _vroute_reflex_addr,

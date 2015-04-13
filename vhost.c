@@ -247,6 +247,21 @@ int _vhost_unpost_service(struct vhost* host, vsrvcHash* hash, struct sockaddr_i
 }
 
 static
+int _vhost_find_service(struct vhost* host, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+{
+    struct vroute* route = &host->route;
+    int ret = 0;
+
+    vassert(host);
+    vassert(hash);
+    vassert(cb);
+
+    ret = route->ops->find_service(route, hash, cb, cookie);
+    retE((ret < 0));
+    return 0;
+}
+
+static
 int _vhost_probe_service(struct vhost* host, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
 {
     struct vroute* route = &host->route;
@@ -264,6 +279,7 @@ int _vhost_probe_service(struct vhost* host, vsrvcHash* hash, vsrvcInfo_iterate_
 struct vhost_srvc_ops host_srvc_ops = {
     .post   = _vhost_post_service,
     .unpost = _vhost_unpost_service,
+    .find   = _vhost_find_service,
     .probe  = _vhost_probe_service
 };
 
