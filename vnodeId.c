@@ -389,10 +389,7 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr)
     vassert(*ppnodei);
     vassert(addr);
 
-    if (nodei->naddrs >= VNODEINFO_MAX_ADDRS) {
-        vlogE("exceed the max number of addresses.");
-        retE((1));
-    }
+    retE((nodei->naddrs >= VNODEINFO_MAX_ADDRS));
 
     if (nodei->naddrs >= nodei->capc) {
         vnodeInfo* new_nodei = NULL;
@@ -447,6 +444,7 @@ int vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
     dest->weight = src->weight;
     dest->naddrs = 0;
 
+    memset(dest->addrs, 0, sizeof(struct sockaddr_in)*dest->capc);
     for (i = 0; i < src->naddrs; i++) {
         ret = vnodeInfo_add_addr(&dest, &src->addrs[i]);
         retE((ret < 0));
@@ -487,6 +485,7 @@ int vnodeInfo_update(vnodeInfo* dest, vnodeInfo* src)
     }
 
     // if have same number of addresses, then compare each address.
+    vtoken_copy(&dest->ver, &src->ver);
     dest->weight = src->weight;
     for (i = 0; i < src->naddrs; i++) {
         if (vsockaddr_equal(&dest->addrs[i], &src->addrs[i])) {

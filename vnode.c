@@ -398,7 +398,7 @@ int _vnode_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
         vsrvcInfo_init(srvci, &srvcId, hash, node->nice);
         vsrvcInfo_add_addr(&srvci, addr);
         varray_add_tail(&node->services, srvci);
-        //node->own_node.weight++;
+        node->nodei.weight++;
     }
     vlock_leave(&node->lock);
     return 0;
@@ -435,7 +435,7 @@ void _vnode_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr
     if ((found) && (vsrvcInfo_is_empty(srvci))) {
         srvci = (vsrvcInfo*)varray_del(&node->services, i);
         vsrvcInfo_free(srvci);
-        //node->own_node.weight--;
+        node->nodei.weight--;
     }
     vlock_leave(&node->lock);
     return;
