@@ -3,6 +3,9 @@
 
 #include "vnodeId.h"
 
+int  vdhtc_init  (const char*, const char*);
+void vdhtc_deinit(void);
+
 int vdhtc_hash(uint8_t*, int, vsrvcHash*);
 int vdhtc_hash_with_cookie(uint8_t*, int, uint8_t*, int, vsrvcHash*);
 

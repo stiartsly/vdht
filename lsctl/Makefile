@@ -3,7 +3,7 @@ CFLAGS=-I. -I..  -Iutils -I/usr/local/include -g -Wall -std=gnu99 -D_STUB
 LDFLAGS=
 DEPS = 
 
-vdhtapi_objs = \
+libvdhtapi_objs = \
     vhashgen.o \
     vdhtapi.o 
 
@@ -12,7 +12,7 @@ vdhtapi_objs = \
 %.o: %.c 
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-vdhtapi.a: $(vdhtapi_objs)
+libvdhtapi.a: $(libvdhtapi_objs)
 	ar -rv $@ $^
 
 vlsctlc: vlsctlc_main.o vlsctlc.o vhashgen.o
