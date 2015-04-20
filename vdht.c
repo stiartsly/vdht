@@ -1233,7 +1233,7 @@ int _vdht_dec_find_node_rsp(
     retE((ret < 0));
     ret = be_node_by_2keys(dict, "a", "node", &node);
     retE((ret < 0));
-    ret = _aux_unpack_vnodeInfo(dict, result);
+    ret = _aux_unpack_vnodeInfo(node, result);
     retE((ret < 0));
 
     return 0;
