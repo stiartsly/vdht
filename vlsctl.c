@@ -236,6 +236,29 @@ void _aux_vlsctl_iterate_addr_cb(struct sockaddr_in* addr, void* cookie)
 }
 
 /*
+ * the routine to execute command @find service in service routing space.
+ */
+static
+int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len)
+{
+    struct vhost* host = lsctl->host;
+    vsrvcHash hash;
+    int tsz = 0;
+    int ret = 0;
+
+    vassert(lsctl);
+    vassert(buf);
+    vassert(len > 0);
+
+    memcpy(hash.data, buf + tsz, VTOKEN_LEN);
+    tsz += VTOKEN_LEN;
+
+    ret = host->srvc_ops->find(host, &hash, _aux_vlsctl_iterate_addr_cb, NULL);
+    retE((ret < 0));
+    return tsz;
+}
+
+/*
  * the routine to execute command @probe service.
  */
 static
@@ -269,6 +292,7 @@ struct vlsctl_exec_cmd_desc lsctl_cmds[] = {
     {"bogus query",   VLSCTL_BOGUS_QUERY,    _vlsctl_exec_cmd_bogus_query   },
     {"post service",  VLSCTL_POST_SERVICE,   _vlsctl_exec_cmd_post_service  },
     {"unpost service",VLSCTL_UNPOST_SERVICE, _vlsctl_exec_cmd_unpost_service},
+    {"find service",  VLSCTL_FIND_SERVICE,   _vlsctl_exec_cmd_find_service  },
     {"probe service", VLSCTL_PROBE_SERVICE,  _vlsctl_exec_cmd_probe_service },
     {NULL, VLSCTL_BUTT, NULL}
 };

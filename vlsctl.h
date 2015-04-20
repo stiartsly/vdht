@@ -45,9 +45,11 @@ enum {
 
     VLSCTL_BOGUS_QUERY   = (uint16_t)0x25,
     VLSCTL_JOIN_NODE     = (uint16_t)0x26,
+
     VLSCTL_POST_SERVICE  = (uint16_t)0x30,
     VLSCTL_UNPOST_SERVICE= (uint16_t)0x31,
-    VLSCTL_PROBE_SERVICE = (uint16_t)0x32,
+    VLSCTL_FIND_SERVICE  = (uint16_t)0x32,
+    VLSCTL_PROBE_SERVICE = (uint16_t)0x33,
 
     VLSCTL_BUTT          = (uint16_t)0x99
 };
