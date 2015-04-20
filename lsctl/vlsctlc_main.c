@@ -50,6 +50,7 @@ struct option long_options[] = {
     {"add-node",            no_argument,       0,        'a'},
     {"relay-service-up",    no_argument,       0,        'r'},
     {"relay-service-down",  no_argument,       0,        'R'},
+    {"relay-service-find",  no_argument,       0,        'f'},
     {"relay-service-probe", no_argument,       0,        'p'},
     {"ping",                no_argument,       0,        't'},
     {"addr",                required_argument, 0,        'm'},
@@ -77,7 +78,8 @@ void show_usage(void)
     printf(" About service options:\n");
     printf("  -r, --relay-service-up   --addr=IP:PORT   request to post a relay service\n");
     printf("  -R, --relay-service-down --addr=IP:PORT   request to unpost a relay service\n");
-    printf("  -p, --relay-service-probe                 request to probe relay service\n");
+    printf("  -f, --relay_service_find                  request to find relay service in vdhtd\n");
+    printf("  -p, --relay-service-probe                 request to probe relay service in neighbor nodes\n");
     printf("\n");
     printf(" About bogus query options:\n");
     printf("  -t, --ping               --addr=IP:PORT   request to send ping query\n");
@@ -272,6 +274,7 @@ int join_node_cmd_bind(struct vlsctlc* lsctlc)
 
 static int relay_service_up_opt    = 0;
 static int relay_service_down_opt  = 0;
+static int relay_service_find_opt  = 0;
 static int relay_service_probe_opt = 0;
 static
 int relay_service_param(int opt)
@@ -282,6 +285,9 @@ int relay_service_param(int opt)
         break;
     case 'R':
         relay_service_down_opt = 1;
+        break;
+    case 'f':
+        relay_service_find_opt = 1;
         break;
     case 'p':
         relay_service_probe_opt = 1;
@@ -310,11 +316,21 @@ int relay_service_cmd_bind(struct vlsctlc* lsctlc)
         if (ret < 0) return -1;
     }
     if (relay_service_up_opt && aux_addr_opt) {
-        ret = lsctlc->bind_ops->bind_post_service(lsctlc, &hash, &addr);
+        struct sockaddr_in* addrs[] = {
+            &addr
+        };
+        ret = lsctlc->bind_ops->bind_post_service(lsctlc, &hash, addrs, 1);
         if (ret < 0) return -1;
     }
     if (relay_service_down_opt && aux_addr_opt) {
-        ret = lsctlc->bind_ops->bind_unpost_service(lsctlc, &hash, &addr);
+        struct sockaddr_in* addrs[] = {
+            &addr
+        };
+        ret = lsctlc->bind_ops->bind_unpost_service(lsctlc, &hash, addrs, 1);
+        if (ret < 0) return -1;
+    }
+    if (relay_service_find_opt) {
+        ret = lsctlc->bind_ops->bind_find_service(lsctlc, &hash);
         if (ret < 0) return -1;
     }
     if (relay_service_probe_opt) {
@@ -402,7 +418,7 @@ int main(int argc, char** argv)
     }
 
     while(c >= 0) {
-        c = getopt_long(argc, argv, "U:S:dDxscarRptm:vh", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:S:dDxscarRfptm:vh", long_options, &opt_idx);
         if (c < 0) {
             break;
         } else if (c == 0) {
@@ -464,7 +480,7 @@ int main(int argc, char** argv)
         }
 
         memset(data, 0, 1024);
-        ret = lsctlc.ops->pack_cmds(&lsctlc, data, 1024);
+        ret = lsctlc.ops->pack_cmd(&lsctlc, data, 1024);
         if (ret < 0) {
             printf("error: package wrong.\n");
             exit(-1);

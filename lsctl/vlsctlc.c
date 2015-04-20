@@ -16,21 +16,13 @@ int _vlsctlc_bind_cmd_host_up(struct vlsctlc* lsctlc)
 {
     vassert(lsctlc);
 
-    switch(lsctlc->type) {
-    case vlsctl_cmd:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_cmd;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
 
-    if (lsctlc->bind_host_down ||
-        lsctlc->bind_host_exit) {
-        return -1;
-    }
-    lsctlc->bind_host_up = 1;
+    lsctlc->bound_cmd = VLSCTL_HOST_UP;
+    lsctlc->type = vlsctl_cmd;
+
     return 0;
 }
 
@@ -39,22 +31,13 @@ int _vlsctlc_bind_cmd_host_down(struct vlsctlc* lsctlc)
 {
     vassert(lsctlc);
 
-
-    switch(lsctlc->type) {
-    case vlsctl_cmd:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_cmd;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
 
-    if (lsctlc->bind_host_up ||
-        lsctlc->bind_host_exit) {
-        return -1;
-    }
-    lsctlc->bind_host_down = 1;
+    lsctlc->bound_cmd = VLSCTL_HOST_DOWN;
+    lsctlc->type = vlsctl_cmd;
+
     return 0;
 }
 
@@ -63,27 +46,13 @@ int _vlsctlc_bind_cmd_host_exit(struct vlsctlc* lsctlc)
 {
     vassert(lsctlc);
 
-    switch(lsctlc->type) {
-    case vlsctl_cmd:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_cmd;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
 
-    if (lsctlc->bind_host_up ||
-        lsctlc->bind_host_exit ||
-        lsctlc->bind_host_dump ||
-        lsctlc->bind_cfg_dump ||
-        lsctlc->bind_bogus_query ||
-        lsctlc->bind_post_service ||
-        lsctlc->bind_unpost_service) {
-        return -1;
-    }
+    lsctlc->bound_cmd = VLSCTL_HOST_EXIT;
+    lsctlc->type = vlsctl_cmd;
 
-    lsctlc->bind_host_exit = 1;
     return 0;
 }
 
@@ -92,20 +61,13 @@ int _vlsctlc_bind_cmd_host_dump(struct vlsctlc* lsctlc)
 {
     vassert(lsctlc);
 
-    switch(lsctlc->type) {
-    case vlsctl_cmd:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_cmd;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
 
-    if (lsctlc->bind_host_exit) {
-        return -1;
-    }
-    lsctlc->bind_host_dump= 1;
+    lsctlc->bound_cmd = VLSCTL_HOST_DUMP;
+    lsctlc->type = vlsctl_cmd;
+
     return 0;
 }
 
@@ -114,20 +76,13 @@ int _vlsctlc_bind_cmd_cfg_dump(struct vlsctlc* lsctlc)
 {
     vassert(lsctlc);
 
-    switch(lsctlc->type) {
-    case vlsctl_cmd:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_cmd;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
 
-    if (lsctlc->bind_host_exit) {
-        return -1;
-    }
-    lsctlc->bind_cfg_dump = 1;
+    lsctlc->bound_cmd = VLSCTL_CFG_DUMP;
+    lsctlc->type = vlsctl_cmd;
+
     return 0;
 }
 
@@ -137,22 +92,14 @@ int _vlsctlc_bind_cmd_join_node(struct vlsctlc* lsctlc, struct sockaddr_in* addr
     vassert(lsctlc);
     vassert(addr);
 
-    switch(lsctlc->type) {
-    case vlsctl_cmd:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_cmd;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
 
-    if (lsctlc->bind_host_exit ||
-        lsctlc->bind_join_node) {
-        return -1;
-    }
-    lsctlc->bind_join_node = 1;
-    memcpy(&lsctlc->addr1, addr, sizeof(*addr));
+    lsctlc->bound_cmd = VLSCTL_JOIN_NODE;
+    lsctlc->type = vlsctl_cmd;
+    memcpy(&lsctlc->args.join_node_args.addr, addr, sizeof(*addr));
+
     return 0;
 }
 
@@ -163,79 +110,77 @@ int _vlsctlc_bind_cmd_bogus_query(struct vlsctlc* lsctlc, int queryId, struct so
     //vassert(queryId >= 0);
     vassert(addr);
 
-    switch(lsctlc->type) {
-    case vlsctl_cmd:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_cmd;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
 
-    if (lsctlc->bind_host_exit ||
-        lsctlc->bind_bogus_query) {
-        return -1;
-    }
-    lsctlc->bind_bogus_query = 1;
-    lsctlc->queryId = queryId;
-    memcpy(&lsctlc->addr2, addr, sizeof(*addr));
+    lsctlc->bound_cmd = VLSCTL_BOGUS_QUERY;
+    lsctlc->type = vlsctl_cmd;
+
+    lsctlc->args.bogus_query_args.queryId = queryId;
+    memcpy(&lsctlc->args.bogus_query_args.addr, addr, sizeof(*addr));
     return 0;
 }
 
 static
-int _vlsctlc_bind_cmd_post_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct sockaddr_in* addr)
+int _vlsctlc_bind_cmd_post_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct sockaddr_in** addrs, int num)
 {
+    int i = 0;
     vassert(lsctlc);
     vassert(hash);
-    vassert(addr);
+    vassert(addrs);
+    //vassert(num > 0);
 
-    switch(lsctlc->type) {
-    case vlsctl_cmd:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_cmd;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
+    lsctlc->bound_cmd = VLSCTL_POST_SERVICE;
+    lsctlc->type = vlsctl_cmd;
 
-    if (lsctlc->bind_host_exit ||
-        lsctlc->bind_post_service ||
-        lsctlc->bind_unpost_service) {
-        return -1;
+    memcpy(&lsctlc->args.post_service_args.hash, hash, sizeof(*hash));
+    for (i = 0; i < num; i++) {
+        memcpy(&lsctlc->args.post_service_args.addrs[i], addrs[i], sizeof(struct sockaddr_in));
     }
-    lsctlc->bind_post_service = 1;
-    memcpy(lsctlc->hash1.data, hash->data, VTOKEN_LEN);
-    memcpy(&lsctlc->addr3, addr, sizeof(*addr));
+    lsctlc->args.post_service_args.naddrs = num;
     return 0;
 }
 
 static
-int _vlsctlc_bind_cmd_unpost_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct sockaddr_in* addr)
+int _vlsctlc_bind_cmd_unpost_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct sockaddr_in** addrs, int num)
+{
+    int i = 0;
+    vassert(lsctlc);
+    vassert(hash);
+    vassert(addrs);
+    //vassert(num >= 0);
+
+    if (lsctlc->bound_cmd > 0) {
+        return -1;
+    }
+    lsctlc->bound_cmd = VLSCTL_UNPOST_SERVICE;
+    lsctlc->type = vlsctl_cmd;
+
+    memcpy(&lsctlc->args.unpost_service_args.hash, hash, sizeof(*hash));
+    for (i = 0; i < num; i++) {
+        memcpy(&lsctlc->args.unpost_service_args.addrs[i], addrs[i], sizeof(struct sockaddr_in));
+    }
+    lsctlc->args.unpost_service_args.naddrs = num;
+    return 0;
+}
+
+static
+int _vlsctlc_bind_cmd_find_service(struct vlsctlc* lsctlc, vsrvcHash* hash)
 {
     vassert(lsctlc);
     vassert(hash);
-    vassert(addr);
 
-    switch(lsctlc->type) {
-    case vlsctl_cmd:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_cmd;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
+    lsctlc->bound_cmd = VLSCTL_FIND_SERVICE;
+    lsctlc->type = vlsctl_req;
 
-    if (lsctlc->bind_host_exit ||
-        lsctlc->bind_post_service ||
-        lsctlc->bind_unpost_service) {
-        return -1;
-    }
-    lsctlc->bind_unpost_service = 1;
-    memcpy(lsctlc->hash2.data, hash->data, VTOKEN_LEN);
-    memcpy(&lsctlc->addr4, addr, sizeof(*addr));
+    memcpy(&lsctlc->args.probe_service_args.hash, hash, sizeof(*hash));
     return 0;
 }
 
@@ -245,17 +190,13 @@ int _vlsctlc_bind_cmd_probe_service(struct vlsctlc* lsctlc, vsrvcHash* hash)
     vassert(lsctlc);
     vassert(hash);
 
-    switch(lsctlc->type) {
-    case vlsctl_req:
-        break;
-    case vlsctl_raw:
-        lsctlc->type = vlsctl_req;
-        break;
-    default:
+    if (lsctlc->bound_cmd > 0) {
         return -1;
     }
-    lsctlc->bind_probe_service = 1;
-    memcpy(lsctlc->hash3.data, hash->data, VTOKEN_LEN);
+    lsctlc->bound_cmd = VLSCTL_PROBE_SERVICE;
+    lsctlc->type = vlsctl_req;
+
+    memcpy(&lsctlc->args.probe_service_args.hash, hash, sizeof(*hash));
     return 0;
 }
 
@@ -270,6 +211,7 @@ struct vlsctlc_bind_ops lsctlc_bind_ops = {
     .bind_bogus_query    = _vlsctlc_bind_cmd_bogus_query,
     .bind_post_service   = _vlsctlc_bind_cmd_post_service,
     .bind_unpost_service = _vlsctlc_bind_cmd_unpost_service,
+    .bind_find_service   = _vlsctlc_bind_cmd_find_service,
     .bind_probe_service  = _vlsctlc_bind_cmd_probe_service
 };
 
@@ -300,10 +242,11 @@ int _vlsctlc_pack_cmd_host_up(struct vlsctlc* lsctlc, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_host_up) {
+    if (lsctlc->bound_cmd != VLSCTL_HOST_UP) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_HOST_UP;
+
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
     tsz += sizeof(uint16_t);
 
     *(uint16_t*)(buf + tsz) = 0;
@@ -319,12 +262,12 @@ int _vlsctlc_pack_cmd_host_down(struct vlsctlc* lsctlc, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_host_down) {
+    if (lsctlc->bound_cmd != VLSCTL_HOST_DOWN) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_HOST_DOWN;
-    tsz += sizeof(uint16_t);
 
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
+    tsz += sizeof(uint16_t);
     *(uint16_t*)(buf + tsz) = 0;
     tsz += sizeof(uint16_t);
 
@@ -338,12 +281,12 @@ int _vlsctlc_pack_cmd_host_exit(struct vlsctlc* lsctlc, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_host_exit) {
+    if (lsctlc->bound_cmd != VLSCTL_HOST_EXIT) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_HOST_EXIT;
-    tsz += sizeof(uint16_t);
 
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
+    tsz += sizeof(uint16_t);
     *(uint16_t*)(buf + tsz) = 0;
     tsz += sizeof(uint16_t);
 
@@ -357,12 +300,12 @@ int _vlsctlc_pack_cmd_host_dump(struct vlsctlc* lsctlc, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_host_dump) {
+    if (lsctlc->bound_cmd != VLSCTL_HOST_DUMP) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_HOST_DUMP;
-    tsz += sizeof(uint16_t);
 
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
+    tsz += sizeof(uint16_t);
     *(uint16_t*)(buf + tsz) = 0;
     tsz += sizeof(uint16_t);
 
@@ -376,12 +319,12 @@ int _vlsctlc_pack_cmd_cfg_dump(struct vlsctlc* lsctlc, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_cfg_dump) {
+    if (lsctlc->bound_cmd != VLSCTL_CFG_DUMP) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_CFG_DUMP;
-    tsz += sizeof(uint16_t);
 
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
+    tsz += sizeof(uint16_t);
     *(uint16_t*)(buf + tsz) = 0;
     tsz += sizeof(uint16_t);
 
@@ -391,7 +334,7 @@ int _vlsctlc_pack_cmd_cfg_dump(struct vlsctlc* lsctlc, void* buf, int len)
 static
 int _vlsctlc_pack_cmd_join_node(struct vlsctlc* lsctlc, void* buf, int len)
 {
-    struct sockaddr_in* addr = &lsctlc->addr1;
+    struct sockaddr_in* addr = &lsctlc->args.join_node_args.addr;
     void* len_addr = NULL;
     int tsz = 0;
     int bsz = 0;
@@ -400,10 +343,10 @@ int _vlsctlc_pack_cmd_join_node(struct vlsctlc* lsctlc, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_join_node) {
+    if (lsctlc->bound_cmd != VLSCTL_JOIN_NODE) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_JOIN_NODE;
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
     tsz += sizeof(uint16_t);
 
     len_addr = buf + tsz;
@@ -420,7 +363,7 @@ int _vlsctlc_pack_cmd_join_node(struct vlsctlc* lsctlc, void* buf, int len)
 static
 int _vlsctlc_pack_cmd_bogus_query(struct vlsctlc* lsctlc, void* buf, int len)
 {
-    struct sockaddr_in* addr = &lsctlc->addr2;
+    struct sockaddr_in* addr = &lsctlc->args.bogus_query_args.addr;
     void* len_addr = NULL;
     int tsz = 0;
     int bsz = 0;
@@ -430,17 +373,17 @@ int _vlsctlc_pack_cmd_bogus_query(struct vlsctlc* lsctlc, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_bogus_query) {
+    if (lsctlc->bound_cmd != VLSCTL_BOGUS_QUERY) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_BOGUS_QUERY;
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
     tsz += sizeof(uint16_t);
 
     len_addr = buf + tsz;
     *(uint16_t*)len_addr = 0;
     tsz += sizeof(uint16_t);
 
-    *(int32_t*)(buf + tsz) = (uint32_t)lsctlc->queryId;
+    *(int32_t*)(buf + tsz) = (uint32_t)lsctlc->args.bogus_query_args.queryId;
     bsz += sizeof(int32_t);
     tsz += sizeof(int32_t);
 
@@ -455,35 +398,36 @@ int _vlsctlc_pack_cmd_bogus_query(struct vlsctlc* lsctlc, void* buf, int len)
 static
 int _vlsctlc_pack_cmd_post_service(struct vlsctlc* lsctlc, void* buf, int len)
 {
-    struct sockaddr_in* addr = &lsctlc->addr3;
-    vsrvcHash* hash = &lsctlc->hash1;
+    struct sockaddr_in* addrs = lsctlc->args.post_service_args.addrs;
     void* len_addr = NULL;
     int tsz = 0;
     int bsz = 0;
     int ret = 0;
+    int i = 0;
 
     vassert(lsctlc);
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_post_service) {
+    if (lsctlc->bound_cmd != VLSCTL_POST_SERVICE) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_POST_SERVICE;
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
     tsz += sizeof(uint16_t);
 
     len_addr = buf + tsz;
     *(uint16_t*)len_addr = 0;
     tsz += sizeof(uint16_t);
 
-    memcpy(buf + tsz, &hash->data, VTOKEN_LEN);
-    bsz += VTOKEN_LEN;
-    tsz += VTOKEN_LEN;
+    memcpy(buf + tsz, &lsctlc->args.post_service_args.hash, sizeof(vsrvcHash));
+    bsz += sizeof(vsrvcHash);
+    tsz += sizeof(vsrvcHash);
 
-    ret = _aux_vlsctlc_pack_addr(buf + tsz, len - tsz, addr);
-    bsz += ret;
-    tsz += ret;
-
+    for (i = 0; i < lsctlc->args.post_service_args.naddrs; i++) {
+        ret = _aux_vlsctlc_pack_addr(buf + tsz, len - tsz, &addrs[i]);
+        bsz += ret;
+        tsz += ret;
+    }
     *(uint16_t*)len_addr = (uint16_t)bsz;
     return tsz;
 }
@@ -491,34 +435,65 @@ int _vlsctlc_pack_cmd_post_service(struct vlsctlc* lsctlc, void* buf, int len)
 static
 int _vlsctlc_pack_cmd_unpost_service(struct vlsctlc* lsctlc, void* buf, int len)
 {
-    struct sockaddr_in* addr = &lsctlc->addr4;
-    vsrvcHash* hash = &lsctlc->hash2;
+    struct sockaddr_in* addrs = lsctlc->args.unpost_service_args.addrs;
     void* len_addr = NULL;
     int tsz = 0;
     int bsz = 0;
     int ret = 0;
+    int i = 0;
 
     vassert(lsctlc);
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_unpost_service) {
+    if (lsctlc->bound_cmd != VLSCTL_UNPOST_SERVICE) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_UNPOST_SERVICE;
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
     tsz += sizeof(uint16_t);
 
     len_addr = buf + tsz;
     *(uint16_t*)len_addr = 0;
     tsz += sizeof(uint16_t);
 
-    memcpy(buf + tsz, &hash->data, VTOKEN_LEN);
-    bsz += VTOKEN_LEN;
-    tsz += VTOKEN_LEN;
+    memcpy(buf + tsz, &lsctlc->args.unpost_service_args.hash, sizeof(vsrvcHash));
+    bsz += sizeof(vsrvcHash);
+    tsz += sizeof(vsrvcHash);
 
-    ret = _aux_vlsctlc_pack_addr(buf + tsz, len - tsz, addr);
-    bsz += ret;
-    tsz += ret;
+    for (i = 0; i < lsctlc->args.unpost_service_args.naddrs; i++) {
+        ret = _aux_vlsctlc_pack_addr(buf + tsz, len - tsz, &addrs[i]);
+        bsz += ret;
+        tsz += ret;
+    }
+    *(uint16_t*)len_addr = (uint16_t)bsz;
+    return tsz;
+}
+
+static
+int _vlsctlc_pack_cmd_find_service(struct vlsctlc* lsctlc, void* buf, int len)
+{
+    void* len_addr = NULL;
+    int tsz = 0;
+    int bsz = 0;
+
+    vassert(lsctlc);
+    vassert(buf);
+    vassert(len > 0);
+
+    if (lsctlc->bound_cmd != VLSCTL_FIND_SERVICE) {
+        return 0;
+    }
+
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
+    tsz += sizeof(uint16_t);
+
+    len_addr = buf + tsz;
+    *(uint16_t*)len_addr = 0;
+    tsz += sizeof(uint16_t);
+
+     memcpy(buf + tsz, &lsctlc->args.find_service_args.hash, sizeof(vsrvcHash));
+    bsz += sizeof(vsrvcHash);
+    tsz += sizeof(vsrvcHash);
 
     *(uint16_t*)len_addr = (uint16_t)bsz;
     return tsz;
@@ -527,7 +502,6 @@ int _vlsctlc_pack_cmd_unpost_service(struct vlsctlc* lsctlc, void* buf, int len)
 static
 int _vlsctlc_pack_cmd_probe_service(struct vlsctlc* lsctlc, void* buf, int len)
 {
-    vsrvcHash* hash = &lsctlc->hash3;
     void* len_addr = NULL;
     int tsz = 0;
     int bsz = 0;
@@ -536,19 +510,20 @@ int _vlsctlc_pack_cmd_probe_service(struct vlsctlc* lsctlc, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    if (!lsctlc->bind_probe_service) {
+    if (lsctlc->bound_cmd != VLSCTL_PROBE_SERVICE) {
         return 0;
     }
-    *(uint16_t*)(buf + tsz) = VLSCTL_PROBE_SERVICE;
+
+    *(uint16_t*)(buf + tsz) = lsctlc->bound_cmd;
     tsz += sizeof(uint16_t);
 
     len_addr = buf + tsz;
     *(uint16_t*)len_addr = 0;
     tsz += sizeof(uint16_t);
 
-    memcpy(buf + tsz, &hash->data, VTOKEN_LEN);
-    bsz += VTOKEN_LEN;
-    tsz += VTOKEN_LEN;
+     memcpy(buf + tsz, &lsctlc->args.probe_service_args.hash, sizeof(vsrvcHash));
+    bsz += sizeof(vsrvcHash);
+    tsz += sizeof(vsrvcHash);
 
     *(uint16_t*)len_addr = (uint16_t)bsz;
     return tsz;
@@ -565,12 +540,13 @@ struct vlsctlc_pack_cmd_desc lsctlc_cmds_desc[] = {
     {"bogus query",    VLSCTL_BOGUS_QUERY,    _vlsctlc_pack_cmd_bogus_query    },
     {"post service",   VLSCTL_POST_SERVICE,   _vlsctlc_pack_cmd_post_service   },
     {"unpost service", VLSCTL_UNPOST_SERVICE, _vlsctlc_pack_cmd_unpost_service },
+    {"find service",   VLSCTL_FIND_SERVICE,   _vlsctlc_pack_cmd_find_service   },
     {"probe service",  VLSCTL_PROBE_SERVICE,  _vlsctlc_pack_cmd_probe_service  },
     {NULL, VLSCTL_BUTT, NULL }
 };
 
 static
-int _vlsctlc_pack_cmds(struct vlsctlc* lsctlc, void* buf, int len)
+int _vlsctlc_pack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
 {
     struct vlsctlc_pack_cmd_desc* desc = lsctlc_cmds_desc;
     void* len_addr = NULL;
@@ -607,10 +583,21 @@ int _vlsctlc_pack_cmds(struct vlsctlc* lsctlc, void* buf, int len)
     return tsz;
 }
 
-struct vlsctlc_ops lsctlc_ops = {
-    .pack_cmds = _vlsctlc_pack_cmds
-};
+static
+int _vlsctlc_unpack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
+{
+    vassert(lsctlc);
+    vassert(buf);
+    vassert(len > 0);
 
+    //todo;
+    return 0;
+}
+
+struct vlsctlc_ops lsctlc_ops = {
+    .pack_cmd   = _vlsctlc_pack_cmd,
+    .unpack_cmd = _vlsctlc_unpack_cmd
+};
 
 int vlsctlc_init(struct vlsctlc* lsctlc)
 {

@@ -180,12 +180,14 @@ int _vlsctl_exec_cmd_post_service(struct vlsctl* lsctl, void* buf, int len)
     memcpy(hash.data, buf + tsz, VTOKEN_LEN);
     tsz += VTOKEN_LEN;
 
-    ret = _aux_lsctl_unpack_addr(buf + tsz, len - tsz, &addr);
-    retE((ret < 0));
-    tsz += ret;
+    while(len - tsz > 0) {
+        ret = _aux_lsctl_unpack_addr(buf + tsz, len - tsz, &addr);
+        retE((ret < 0));
+        tsz += ret;
 
-    ret = host->srvc_ops->post(host, &hash, &addr);
-    retE((ret < 0));
+        ret = host->srvc_ops->post(host, &hash, &addr);
+        retE((ret < 0));
+    }
     return tsz;
 }
 
@@ -208,12 +210,18 @@ int _vlsctl_exec_cmd_unpost_service(struct vlsctl* lsctl, void* buf, int len)
     memcpy(hash.data, buf + tsz, VTOKEN_LEN);
     tsz += VTOKEN_LEN;
 
-    ret = _aux_lsctl_unpack_addr(buf + tsz, len - tsz, &addr);
-    retE((ret < 0));
-    tsz += ret;
+    while(len - tsz > 0) {
+        ret = _aux_lsctl_unpack_addr(buf + tsz, len - tsz, &addr);
+        retE((ret < 0));
+        tsz += ret;
 
-    ret = host->srvc_ops->unpost(host, &hash, &addr);
-    retE((ret < 0));
+        ret = host->srvc_ops->unpost(host, &hash, &addr);
+        retE((ret < 0));
+    }
+    if (tsz <= VTOKEN_LEN) {
+        // no addresses followed, means to unpost total service.
+        //todo;
+    }
     return tsz;
 }
 

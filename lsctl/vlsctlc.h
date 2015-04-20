@@ -36,6 +36,7 @@ enum {
 };
 
 enum {
+    VLSCTL_RESERVE       = 0,
     VLSCTL_HOST_UP       = (uint16_t)0x10,
     VLSCTL_HOST_DOWN     = (uint16_t)0x11,
     VLSCTL_HOST_EXIT     = (uint16_t)0x12,
@@ -44,9 +45,11 @@ enum {
 
     VLSCTL_BOGUS_QUERY   = (uint16_t)0x25,
     VLSCTL_JOIN_NODE     = (uint16_t)0x26,
+
     VLSCTL_POST_SERVICE  = (uint16_t)0x30,
     VLSCTL_UNPOST_SERVICE= (uint16_t)0x31,
-    VLSCTL_PROBE_SERVICE = (uint16_t)0x32,
+    VLSCTL_FIND_SERVICE  = (uint16_t)0x32,
+    VLSCTL_PROBE_SERVICE = (uint16_t)0x33,
 
     VLSCTL_BUTT          = (uint16_t)0x99
 };
@@ -67,41 +70,52 @@ struct vlsctlc_bind_ops {
     int (*bind_cfg_dump)   (struct vlsctlc*);
     int (*bind_join_node)  (struct vlsctlc*, struct sockaddr_in*);
     int (*bind_bogus_query)(struct vlsctlc*, int, struct sockaddr_in*);
-    int (*bind_post_service)  (struct vlsctlc*, vsrvcHash*, struct sockaddr_in*);
-    int (*bind_unpost_service)(struct vlsctlc*, vsrvcHash*, struct sockaddr_in*);
+    int (*bind_post_service)  (struct vlsctlc*, vsrvcHash*, struct sockaddr_in**, int);
+    int (*bind_unpost_service)(struct vlsctlc*, vsrvcHash*, struct sockaddr_in**, int);
+    int (*bind_find_service)  (struct vlsctlc*, vsrvcHash*);
     int (*bind_probe_service) (struct vlsctlc*, vsrvcHash*);
 };
 
 struct vlsctlc_ops {
-    int (*pack_cmds)       (struct vlsctlc*, void*, int);
+    int (*pack_cmd)        (struct vlsctlc*, void*, int);
+    int (*unpack_cmd)      (struct vlsctlc*, void*, int);
+};
+
+union vlsctlc_args {
+    struct join_node_args {
+        struct sockaddr_in addr;
+    } join_node_args;
+
+    struct bogus_query_args {
+        int queryId;
+        struct sockaddr_in addr;
+    } bogus_query_args;
+
+    struct post_service_args {
+        vsrvcHash hash;
+        int naddrs;
+        struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+    } post_service_args;
+
+    struct unpost_service_args {
+        vsrvcHash hash;
+        int naddrs;
+        struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+    } unpost_service_args;
+
+    struct find_service_args {
+        vsrvcHash hash;
+    } find_service_args;
+
+    struct probe_service_args {
+        vsrvcHash hash;
+    } probe_service_args;
 };
 
 struct vlsctlc {
     int type;
-
-    int bind_host_up;
-    int bind_host_down;
-    int bind_host_exit;
-    int bind_host_dump;
-    int bind_cfg_dump;
-
-    int bind_join_node;
-    struct sockaddr_in addr1;
-
-    int bind_bogus_query;
-    int queryId;
-    struct sockaddr_in addr2;
-
-    int bind_post_service;
-    vsrvcHash hash1;
-    struct sockaddr_in addr3;
-
-    int bind_unpost_service;
-    vsrvcHash hash2;
-    struct sockaddr_in addr4;
-
-    int bind_probe_service;
-    vsrvcHash hash3;
+    int bound_cmd;
+    union vlsctlc_args args;
 
     struct vlsctlc_ops *ops;
     struct vlsctlc_bind_ops* bind_ops;
