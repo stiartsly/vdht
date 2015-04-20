@@ -9,6 +9,15 @@ void vdhtc_deinit(void);
 int vdhtc_hash(uint8_t*, int, vsrvcHash*);
 int vdhtc_hash_with_cookie(uint8_t*, int, uint8_t*, int, vsrvcHash*);
 
+int vdhtc_start_host     (void);
+int vdhtc_stop_host      (void);
+int vdhtc_make_host_exit (void);
+int vdhtc_dump_host_infos(void);
+int vdhtc_dump_cfg_infos (void);
+
+int vdhtc_join_wellknown_node(struct sockaddr_in*);
+int vdhtc_request_bogus_ping (struct sockaddr_in*);
+
 int vdhtc_post_service_segment  (vsrvcHash*, struct sockaddr_in*);
 int vdhtc_unpost_service_segment(vsrvcHash*, struct sockaddr_in*);
 

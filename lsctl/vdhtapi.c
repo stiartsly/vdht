@@ -22,6 +22,23 @@ enum {
 
 };
 
+enum {
+    VDHT_PING,
+    VDHT_PING_R,
+    VDHT_FIND_NODE,
+    VDHT_FIND_NODE_R,
+    VDHT_FIND_CLOSEST_NODES,
+    VDHT_FIND_CLOSEST_NODES_R,
+    VDHT_REFLEX,
+    VDHT_REFLEX_R,
+    VDHT_PROBE,
+    VDHT_PROBE_R,
+    VDHT_POST_SERVICE,
+    VDHT_FIND_SERVICE,
+    VDHT_FIND_SERVICE_R,
+    VDHT_UNKNOWN
+};
+
 static const char* def_lsctlc_socket = "/var/run/vdht/lsctl_client";
 static const char* def_lsctls_socket = "/var/run/vdht/lsctl_socket";
 static char glsctlc_socket[BUF_SZ];
@@ -198,6 +215,233 @@ int _aux_dhtc_req_and_rsp(void* snd_buf, int snd_len, void* rcv_buf, int rcv_len
     return 0;
 }
 
+int vdhtc_start_host(void)
+{
+    struct vlsctlc lsctlc;
+    char buf[BUF_SZ];
+    int ret = 0;
+
+    ret = vlsctlc_init(&lsctlc);
+    if (ret < 0) {
+        return -1;
+    }
+    ret = lsctlc.bind_ops->bind_host_up(&lsctlc);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    memset(buf, 0, BUF_SZ);
+    ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    vlsctlc_deinit(&lsctlc);
+
+    ret = _aux_dhtc_request(buf, ret);
+    if (ret < 0) {
+        return -1;
+    }
+    return 0;
+error_exit:
+    vlsctlc_deinit(&lsctlc);
+    return -1;
+}
+
+int vdhtc_stop_host(void)
+{
+    struct vlsctlc lsctlc;
+    char buf[BUF_SZ];
+    int ret = 0;
+
+    ret = vlsctlc_init(&lsctlc);
+    if (ret < 0) {
+        return -1;
+    }
+    ret = lsctlc.bind_ops->bind_host_down(&lsctlc);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    memset(buf, 0, BUF_SZ);
+    ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    vlsctlc_deinit(&lsctlc);
+
+    ret = _aux_dhtc_request(buf, ret);
+    if (ret < 0) {
+        return -1;
+    }
+    return 0;
+error_exit:
+    vlsctlc_deinit(&lsctlc);
+    return -1;
+}
+
+int vdhtc_make_host_exit(void)
+{
+    struct vlsctlc lsctlc;
+    char buf[BUF_SZ];
+    int ret = 0;
+
+    ret = vlsctlc_init(&lsctlc);
+    if (ret < 0) {
+        return -1;
+    }
+    ret = lsctlc.bind_ops->bind_host_exit(&lsctlc);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    memset(buf, 0, BUF_SZ);
+    ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    vlsctlc_deinit(&lsctlc);
+
+    ret = _aux_dhtc_request(buf, ret);
+    if (ret < 0) {
+        return -1;
+    }
+    return 0;
+error_exit:
+    vlsctlc_deinit(&lsctlc);
+    return -1;
+}
+
+int vdhtc_dump_host_infos(void)
+{
+    struct vlsctlc lsctlc;
+    char buf[BUF_SZ];
+    int ret = 0;
+
+    ret = vlsctlc_init(&lsctlc);
+    if (ret < 0) {
+        return -1;
+    }
+    ret = lsctlc.bind_ops->bind_host_dump(&lsctlc);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    memset(buf, 0, BUF_SZ);
+    ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    vlsctlc_deinit(&lsctlc);
+
+    ret = _aux_dhtc_request(buf, ret);
+    if (ret < 0) {
+        return -1;
+    }
+    return 0;
+error_exit:
+    vlsctlc_deinit(&lsctlc);
+    return -1;
+}
+
+int vdhtc_dump_cfg_infos(void)
+{
+    struct vlsctlc lsctlc;
+    char buf[BUF_SZ];
+    int ret = 0;
+
+    ret = vlsctlc_init(&lsctlc);
+    if (ret < 0) {
+        return -1;
+    }
+    ret = lsctlc.bind_ops->bind_cfg_dump(&lsctlc);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    memset(buf, 0, BUF_SZ);
+    ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    vlsctlc_deinit(&lsctlc);
+
+    ret = _aux_dhtc_request(buf, ret);
+    if (ret < 0) {
+        return -1;
+    }
+    return 0;
+error_exit:
+    vlsctlc_deinit(&lsctlc);
+    return -1;
+}
+
+int vdhtc_join_wellknown_node(struct sockaddr_in* addr)
+{
+    struct vlsctlc lsctlc;
+    char buf[BUF_SZ];
+    int ret = 0;
+
+    if (!addr) {
+        verrno = verr_bad_args;
+        return -1;
+    }
+
+    ret = vlsctlc_init(&lsctlc);
+    if (ret < 0) {
+        return -1;
+    }
+    ret = lsctlc.bind_ops->bind_join_node(&lsctlc, addr);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    memset(buf, 0, BUF_SZ);
+    ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    vlsctlc_deinit(&lsctlc);
+
+    ret = _aux_dhtc_request(buf, ret);
+    if (ret < 0) {
+        return -1;
+    }
+    return 0;
+error_exit:
+    vlsctlc_deinit(&lsctlc);
+    return -1;
+}
+
+int vdhtc_request_bogus_ping (struct sockaddr_in* addr)
+{
+    struct vlsctlc lsctlc;
+    char buf[BUF_SZ];
+    int ret = 0;
+
+    if (!addr) {
+        verrno = verr_bad_args;
+        return -1;
+    }
+
+    ret = vlsctlc_init(&lsctlc);
+    if (ret < 0) {
+        return -1;
+    }
+    ret = lsctlc.bind_ops->bind_bogus_query(&lsctlc, VDHT_PING, addr);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    memset(buf, 0, BUF_SZ);
+    ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
+    if (ret < 0) {
+        goto error_exit;
+    }
+    vlsctlc_deinit(&lsctlc);
+
+    ret = _aux_dhtc_request(buf, ret);
+    if (ret < 0) {
+        return -1;
+    }
+    return 0;
+error_exit:
+    vlsctlc_deinit(&lsctlc);
+    return -1;
+}
+
 int vdhtc_post_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr)
 {
     struct sockaddr_in* addrs[] = { addr };
@@ -216,12 +460,12 @@ int vdhtc_post_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr)
     }
     ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, addrs, 1);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     memset(buf, 0, BUF_SZ);
     ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     vlsctlc_deinit(&lsctlc);
 
@@ -231,7 +475,7 @@ int vdhtc_post_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr)
     }
     return 0;
 
-err_exit:
+error_exit:
     vlsctlc_deinit(&lsctlc);
     return -1;
 }
@@ -253,12 +497,12 @@ int vdhtc_unpost_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr)
     }
     ret = lsctlc.bind_ops->bind_unpost_service(&lsctlc, srvcHash, addrs, 1);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     memset(buf, 0, BUF_SZ);
     ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     vlsctlc_deinit(&lsctlc);
 
@@ -268,7 +512,7 @@ int vdhtc_unpost_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr)
     }
     return 0;
 
-err_exit:
+error_exit:
     vlsctlc_deinit(&lsctlc);
     return -1;
 }
@@ -300,12 +544,12 @@ int vdhtc_post_service(vsrvcHash* srvcHash, struct sockaddr_in* addrs, int num)
     }
     ret = lsctlc.bind_ops->bind_unpost_service(&lsctlc, srvcHash, addrs_a, num);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     memset(buf, 0, BUF_SZ);
     ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     vlsctlc_deinit(&lsctlc);
 
@@ -315,7 +559,7 @@ int vdhtc_post_service(vsrvcHash* srvcHash, struct sockaddr_in* addrs, int num)
     }
     return 0;
 
-err_exit:
+error_exit:
     vlsctlc_deinit(&lsctlc);
     return -1;
 }
@@ -338,12 +582,12 @@ int vdhtc_unpost_service(vsrvcHash* srvcHash)
     }
     ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, addrs, 0);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     memset(buf, 0, BUF_SZ);
     ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     vlsctlc_deinit(&lsctlc);
 
@@ -353,7 +597,7 @@ int vdhtc_unpost_service(vsrvcHash* srvcHash)
     }
     return 0;
 
-err_exit:
+error_exit:
     vlsctlc_deinit(&lsctlc);
     return -1;
 }
@@ -385,23 +629,23 @@ int vdhtc_find_service(vsrvcHash* srvcHash, vsrvcInfo_iterate_addr_t cb, void* c
     memset(buf, 0, BUF_SZ);
     ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     ret = _aux_dhtc_req_and_rsp(buf, ret, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     memset(buf, 0, BUF_SZ);
     ret = lsctlc.ops->unpack_cmd(&lsctlc, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
 
     //todo;
     vlsctlc_deinit(&lsctlc);
     return 0;
 
-err_exit:
+error_exit:
     vlsctlc_deinit(&lsctlc);
     return -1;
 }
@@ -427,28 +671,28 @@ int vdhtc_probe_service(vsrvcHash* srvcHash, vsrvcInfo_iterate_addr_t cb, void* 
     }
     ret = lsctlc.bind_ops->bind_probe_service(&lsctlc, srvcHash);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     memset(buf, 0, BUF_SZ);
     ret = lsctlc.ops->pack_cmd(&lsctlc, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     ret = _aux_dhtc_req_and_rsp(buf, ret, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
     memset(buf, 0, BUF_SZ);
     ret = lsctlc.ops->unpack_cmd(&lsctlc, buf, BUF_SZ);
     if (ret < 0) {
-        goto err_exit;
+        goto error_exit;
     }
 
     //todo;
     vlsctlc_deinit(&lsctlc);
     return 0;
 
-err_exit:
+error_exit:
     vlsctlc_deinit(&lsctlc);
     return -1;
 }

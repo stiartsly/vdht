@@ -29,7 +29,7 @@ vdht_objs = \
 %.o: %.c 
 	@$(CC) -c -o $@ $< $(CFLAGS)
 
-all: vdhtd vlsctlc 
+all: vdhtd vlsctlc libvdhtapi.a
 
 vdhtd: vmain.o libvdht.a libutils.a 
 	@$(CC) -o $@ $^ libutils.a  $(LDFLAGS)
@@ -42,6 +42,9 @@ libvdht.a: $(vdht_objs)
 
 libutils.a:
 	@cd utils && make libutils.a
+
+libvdhtapi.a:
+	@cd lsctl && make libvdhtapi.a
 
 clean:
 	@cd lsctl && make clean
