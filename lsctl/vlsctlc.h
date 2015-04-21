@@ -62,6 +62,13 @@ struct vlsctlc_pack_cmd_desc {
     vlsctlc_pack_cmd_t cmd;
 };
 
+typedef int (*vlsctlc_unpack_cmd_t)(struct vlsctlc*, void*, int);
+struct vlsctlc_unpack_cmd_desc {
+    const char* desc;
+    int32_t cmd_id;
+    vlsctlc_unpack_cmd_t cmd;
+};
+
 struct vlsctlc_bind_ops {
     int (*bind_host_up)    (struct vlsctlc*);
     int (*bind_host_down)  (struct vlsctlc*);
@@ -70,10 +77,15 @@ struct vlsctlc_bind_ops {
     int (*bind_cfg_dump)   (struct vlsctlc*);
     int (*bind_join_node)  (struct vlsctlc*, struct sockaddr_in*);
     int (*bind_bogus_query)(struct vlsctlc*, int, struct sockaddr_in*);
-    int (*bind_post_service)  (struct vlsctlc*, vsrvcHash*, struct sockaddr_in**, int);
-    int (*bind_unpost_service)(struct vlsctlc*, vsrvcHash*, struct sockaddr_in**, int);
-    int (*bind_find_service)  (struct vlsctlc*, vsrvcHash*);
-    int (*bind_probe_service) (struct vlsctlc*, vsrvcHash*);
+    int (*bind_post_service)   (struct vlsctlc*, vsrvcHash*, struct sockaddr_in**, int);
+    int (*bind_unpost_service) (struct vlsctlc*, vsrvcHash*, struct sockaddr_in**, int);
+    int (*bind_find_service)   (struct vlsctlc*, vsrvcHash*);
+    int (*bind_probe_service)  (struct vlsctlc*, vsrvcHash*);
+};
+
+struct vlsctlc_unbind_ops {
+    int (*unbind_probe_service)(struct vlsctlc*, vsrvcHash*, struct sockaddr_in*, int*);
+    int (*unbind_find_service) (struct vlsctlc*, vsrvcHash*, struct sockaddr_in*, int*);
 };
 
 struct vlsctlc_ops {
@@ -112,13 +124,33 @@ union vlsctlc_args {
     } probe_service_args;
 };
 
+union vlsctlc_rsp_args {
+    struct find_service_rsp_args {
+        int num;
+        vsrvcHash hash;
+        struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+    } find_service_rsp_args;
+
+    struct probe_service_rsp_args {
+        int num;
+        vsrvcHash hash;
+        struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+    } probe_service_rsp_args;
+
+    struct error_args {
+        int err_val;
+    } error_args;
+};
+
 struct vlsctlc {
     int type;
     int bound_cmd;
     union vlsctlc_args args;
+    union vlsctlc_rsp_args rsp_args;
 
     struct vlsctlc_ops *ops;
     struct vlsctlc_bind_ops* bind_ops;
+    struct vlsctlc_unbind_ops* unbind_ops;
 };
 
 int  vlsctlc_init  (struct vlsctlc*);
