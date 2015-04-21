@@ -31,13 +31,13 @@ vdht_objs = \
 
 all: vdhtd vlsctlc libvdhtapi.a
 
-vdhtd: vmain.o libvdht.a libutils.a 
+vdhtd: vmain.o libvdht.a 
 	@$(CC) -o $@ $^ libutils.a  $(LDFLAGS)
 
 vlsctlc:
 	@cd lsctl && make vlsctlc
 
-libvdht.a: $(vdht_objs)
+libvdht.a: $(vdht_objs) libutils.a
 	@ar -rv $@ $^
 
 libutils.a:
