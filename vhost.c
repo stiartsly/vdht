@@ -209,80 +209,6 @@ struct vhost_ops host_ops = {
     .bogus_query   = _vhost_bogus_query
 };
 
-/* the routine to plug a plugin server, which will be added into route
- * table.
- * @host:
- * @waht: plugin ID.
- */
-static
-int _vhost_post_service(struct vhost* host, vsrvcHash* hash, struct sockaddr_in* addr)
-{
-    struct vnode* node = &host->node;
-    int ret = 0;
-
-    vassert(host);
-    vassert(addr);
-    vassert(hash);
-
-    ret = node->ops->post(node, hash, addr);
-    retE((ret < 0));
-    return 0;
-}
-
-/* the routine to unplug a plugin server, which will be removed out of
- * route table.
- * @host:
- * @waht: plugin ID.
- */
-static
-int _vhost_unpost_service(struct vhost* host, vsrvcHash* hash, struct sockaddr_in* addr)
-{
-    struct vnode* node = &host->node;
-    vassert(host);
-    vassert(addr);
-    vassert(hash);
-
-    node->ops->unpost(node, hash, addr);
-    return 0;
-}
-
-static
-int _vhost_find_service(struct vhost* host, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
-{
-    struct vroute* route = &host->route;
-    int ret = 0;
-
-    vassert(host);
-    vassert(hash);
-    vassert(cb);
-
-    ret = route->ops->find_service(route, hash, cb, cookie);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _vhost_probe_service(struct vhost* host, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
-{
-    struct vroute* route = &host->route;
-    int ret = 0;
-
-    vassert(host);
-    vassert(hash);
-    vassert(cb);
-
-    ret = route->ops->probe_service(route, hash, cb, cookie);
-    retE((ret < 0));
-    return 0;
-}
-
-struct vhost_srvc_ops host_srvc_ops = {
-    .post   = _vhost_post_service,
-    .unpost = _vhost_unpost_service,
-    .find   = _vhost_find_service,
-    .probe  = _vhost_probe_service
-};
-
 /*
  * @cookie
  * @um: [in]  usr msg format
@@ -358,7 +284,7 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
     return 0;
 }
 
-int vhost_init(struct vhost* host, struct vconfig* cfg)
+int vhost_init(struct vhost* host, struct vconfig* cfg, struct vlsctl* lsctl)
 {
     int ret = 0;
 
@@ -369,15 +295,14 @@ int vhost_init(struct vhost* host, struct vconfig* cfg)
     host->tick_tmo = cfg->ext_ops->get_host_tick_tmo(cfg);
     host->to_quit  = 0;
     host->cfg      = cfg;
+    host->lsctl    = lsctl;
     host->ops      = &host_ops;
-    host->srvc_ops = &host_srvc_ops;
 
     vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &host->zaddr);
     vtoken_make(&host->myid);
 
     ret += vticker_init(&host->ticker);
     ret += vwaiter_init(&host->waiter);
-    ret += vlsctl_init (&host->lsctl, host, cfg);
     ret += vmsger_init (&host->msger);
     ret += vrpc_init   (&host->rpc,  &host->msger, VRPC_UDP, to_vsockaddr_from_sin(&host->zaddr));
     ret += vroute_init (&host->route, cfg, host, &host->myid);
@@ -387,14 +312,13 @@ int vhost_init(struct vhost* host, struct vconfig* cfg)
         vroute_deinit  (&host->route);
         vrpc_deinit    (&host->rpc);
         vmsger_deinit  (&host->msger);
-        vlsctl_deinit  (&host->lsctl);
         vwaiter_deinit (&host->waiter);
         vticker_deinit (&host->ticker);
         return -1;
     }
 
     host->waiter.ops->add(&host->waiter, &host->rpc);
-    host->waiter.ops->add(&host->waiter, &host->lsctl.rpc);
+    host->waiter.ops->add(&host->waiter, &lsctl->rpc);
     vmsger_reg_pack_cb  (&host->msger, _aux_vhost_pack_msg_cb  , host);
     vmsger_reg_unpack_cb(&host->msger, _aux_vhost_unpack_msg_cb, host);
 
@@ -405,13 +329,12 @@ void vhost_deinit(struct vhost* host)
 {
     vassert(host);
 
-    host->waiter.ops->remove(&host->waiter, &host->lsctl.rpc);
+    host->waiter.ops->remove(&host->waiter, &host->lsctl->rpc);
     host->waiter.ops->remove(&host->waiter, &host->rpc);
 
     vnode_deinit  (&host->node);
     vroute_deinit (&host->route);
     vrpc_deinit   (&host->rpc);
-    vlsctl_deinit (&host->lsctl);
     vwaiter_deinit(&host->waiter);
     vticker_deinit(&host->ticker);
     vmsger_deinit (&host->msger);

@@ -358,6 +358,21 @@ int _vnode_has_addr(struct vnode* node, struct sockaddr_in* addr)
     return found;
 }
 
+static
+struct vnode_ops node_ops = {
+    .start         = _vnode_start,
+    .stop          = _vnode_stop,
+    .wait_for_stop = _vnode_wait_for_stop,
+    .stabilize     = _vnode_stabilize,
+    .dump          = _vnode_dump,
+    .clear         = _vnode_clear,
+    .renice        = _vnode_renice,
+    .tick          = _vnode_tick,
+    .reflex_addr   = _vnode_reflex_addr,
+    .has_addr      = _vnode_has_addr,
+};
+
+
 /*
  * the routine to post a service info (only contain meta info) as local
  * service, and this service will be broadcasted to all nodes in routing table.
@@ -368,7 +383,7 @@ int _vnode_has_addr(struct vnode* node, struct sockaddr_in* addr)
  *
  */
 static
-int _vnode_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
+int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
 {
     vsrvcInfo* srvci = NULL;
     int found = 0;
@@ -410,7 +425,7 @@ int _vnode_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
  *
  */
 static
-void _vnode_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
+int _vnode_srvc_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
 {
     vsrvcInfo* srvci = NULL;
     int found = 0;
@@ -435,23 +450,73 @@ void _vnode_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr
         node->nodei.weight--;
     }
     vlock_leave(&node->lock);
-    return;
+    return 0;
 }
 
 static
-struct vnode_ops node_ops = {
-    .start                = _vnode_start,
-    .stop                 = _vnode_stop,
-    .wait_for_stop        = _vnode_wait_for_stop,
-    .stabilize            = _vnode_stabilize,
-    .dump                 = _vnode_dump,
-    .clear                = _vnode_clear,
-    .renice               = _vnode_renice,
-    .tick                 = _vnode_tick,
-    .reflex_addr          = _vnode_reflex_addr,
-    .has_addr             = _vnode_has_addr,
-    .post                 = _vnode_post,
-    .unpost               = _vnode_unpost
+int _vnode_srvc_unpost_ext(struct vnode* node, vsrvcHash* hash)
+{
+    vsrvcInfo* srvci = NULL;
+    int found = 0;
+    int i = 0;
+
+    vassert(node);
+    vassert(hash);
+
+    vlock_enter(&node->lock);
+    for (i = 0; i < varray_size(&node->services); i++) {
+        srvci = (vsrvcInfo*)varray_get(&node->services, i);
+        if (vtoken_equal(&srvci->hash, hash)) {
+            found = 1;
+            break;
+        }
+    }
+    if (found) {
+        srvci = (vsrvcInfo*)varray_del(&node->services, i);
+        vsrvcInfo_free(srvci);
+        node->nodei.weight--;
+    }
+    vlock_leave(&node->lock);
+    return 0;
+}
+
+static
+int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+{
+    struct vroute* route = node->route;
+    int ret = 0;
+
+    vassert(node);
+    vassert(hash);
+    vassert(cb);
+
+    ret = route->ops->find_service(route, hash, cb, cookie);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+int _vnode_srvc_probe(struct vnode* node, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+{
+    struct vroute* route = node->route;
+    int ret = 0;
+
+    vassert(node);
+    vassert(hash);
+    vassert(cb);
+
+    ret = route->ops->probe_service(route, hash, cb, cookie);
+    retE((ret < 0));
+    return 0;
+}
+
+static
+struct vnode_srvc_ops node_srvc_ops = {
+    .post       = _vnode_srvc_post,
+    .unpost     = _vnode_srvc_unpost,
+    .unpost_ext = _vnode_srvc_unpost_ext,
+    .find       = _vnode_srvc_find,
+    .probe      = _vnode_srvc_probe
 };
 
 static
@@ -545,6 +610,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     node->ticker  = &host->ticker;
     node->route   = &host->route;
     node->ops     = &node_ops;
+    node->srvc_ops= &node_srvc_ops;
     node->tick_tmo= cfg->ext_ops->get_host_tick_tmo(cfg);
 
     return 0;

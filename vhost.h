@@ -20,13 +20,6 @@ struct vhost_ops {
     int   (*bogus_query)(struct vhost*, int, struct sockaddr_in*);
 };
 
-struct vhost_srvc_ops {
-    int (*post)  (struct vhost*, vsrvcHash*, struct sockaddr_in*);
-    int (*unpost)(struct vhost*, vsrvcHash*, struct sockaddr_in*);
-    int (*find)  (struct vhost*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
-    int (*probe) (struct vhost*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
-};
-
 struct vhost {
     int  to_quit;
     int  tick_tmo;
@@ -40,15 +33,14 @@ struct vhost {
     struct vticker  ticker;
     struct vroute   route;
     struct vnode    node;
-    struct vlsctl   lsctl;
 
     struct vconfig*   cfg;
+    struct vlsctl*    lsctl;
     struct vhost_ops* ops;
-    struct vhost_srvc_ops* srvc_ops;
 };
 
 const char* vhost_get_version(void);
-int  vhost_init  (struct vhost*, struct vconfig*);
+int  vhost_init  (struct vhost*, struct vconfig*, struct vlsctl*);
 void vhost_deinit(struct vhost*);
 
 #endif

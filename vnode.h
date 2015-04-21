@@ -61,8 +61,14 @@ struct vnode_ops {
     void (*tick)       (struct vnode*);
     int  (*reflex_addr)(struct vnode*, struct sockaddr_in*, struct sockaddr_in*);
     int  (*has_addr)   (struct vnode*, struct sockaddr_in*);
+};
+
+struct vnode_srvc_ops {
     int  (*post)       (struct vnode*, vsrvcHash*, struct sockaddr_in*);
-    void (*unpost)     (struct vnode*, vsrvcHash*, struct sockaddr_in*);
+    int  (*unpost)     (struct vnode*, vsrvcHash*, struct sockaddr_in*);
+    int  (*unpost_ext) (struct vnode*, vsrvcHash*);
+    int  (*find)       (struct vnode*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
+    int  (*probe)      (struct vnode*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
 };
 
 struct vnode {
@@ -84,6 +90,7 @@ struct vnode {
     struct vroute*  route;
 
     struct vnode_ops* ops;
+    struct vnode_srvc_ops* srvc_ops;
 };
 
 int  vnode_init  (struct vnode*, struct vconfig*, struct vhost*, vnodeId*);

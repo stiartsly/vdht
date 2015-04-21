@@ -4,6 +4,7 @@
 #include "vrpc.h"
 #include "vmsger.h"
 #include "vhost.h"
+#include "vapp.h"
 
 /*
  * lsctl message structure:
@@ -69,13 +70,13 @@ struct vlsctl_ops {
 struct vlsctl {
     struct vrpc      rpc;
     struct vmsger    msger;
-    struct vhost*    host;
+    struct vappmain* app;
 
     struct vsockaddr   addr;
     struct vlsctl_ops* ops;
 };
 
-int  vlsctl_init  (struct vlsctl*, struct vhost*, struct vconfig*);
+int  vlsctl_init  (struct vlsctl*, struct vappmain*, struct vconfig*);
 void vlsctl_deinit(struct vlsctl*);
 
 #endif
