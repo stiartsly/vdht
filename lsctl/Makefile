@@ -5,6 +5,7 @@ DEPS =
 
 libvdhtapi_objs = \
     vhashgen.o \
+    vlsctlc.o \
     vdhtapi.o 
 
 .PHONY: vlsctlc clean
@@ -12,13 +13,14 @@ libvdhtapi_objs = \
 %.o: %.c 
 	$(CC) -c -o $@ $< $(CFLAGS)
 
+vlsctlc: vlsctlc_main.o libvdhtapi.a
+	$(CC) -o $@ $^ $(LDFLAGS)
+
 libvdhtapi.a: $(libvdhtapi_objs)
 	ar -rv $@ $^
 
-vlsctlc: vlsctlc_main.o vlsctlc.o vhashgen.o
-	$(CC) -o $@ $^ $(LDFLAGS)
-
 clean:
 	-rm -f *.o 
+	-rm -f *.a
 	-rm -f vlsctlc
 

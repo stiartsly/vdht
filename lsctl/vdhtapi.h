@@ -2,6 +2,7 @@
 #define __VDHTC_API_H__
 
 #include "vnodeId.h"
+#include "vhashgen.h"
 
 int  vdhtc_init  (const char*, const char*);
 void vdhtc_deinit(void);

@@ -1,42 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stddef.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <netdb.h>
 #include <getopt.h>
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/select.h>
-#include <sys/ioctl.h>
-#include <sys/un.h>
 #include <arpa/inet.h>
-
-#include "vlsctlc.h"
-#include "vhashgen.h"
-
-enum {
-    VDHT_PING,
-    VDHT_PING_R,
-    VDHT_FIND_NODE,
-    VDHT_FIND_NODE_R,
-    VDHT_FIND_CLOSEST_NODES,
-    VDHT_FIND_CLOSEST_NODES_R,
-    VDHT_REFLEX,
-    VDHT_REFLEX_R,
-    VDHT_PROBE,
-    VDHT_PROBE_R,
-    VDHT_POST_SERVICE,
-    VDHT_FIND_SERVICE,
-    VDHT_FIND_SERVICE_R,
-    VDHT_UNKNOWN
-};
+#include "vdhtapi.h"
 
 static
 struct option long_options[] = {
@@ -97,319 +65,91 @@ void show_version(void)
     return ;
 }
 
-static int has_hlp_opt = 0;
-static int has_ver_opt = 0;
-static
-int show_help_param(int opt)
-{
-    has_hlp_opt = 1;
-    return 0;
-}
-static
-int show_ver_param(int opt)
-{
-    has_ver_opt = 1;
-    return 0;
-}
+#define VCMD_MASK_ADDR  ((uint32_t)0x0100)
+#define VCMD_MASK_HASH  ((uint32_t)0x0200)
 
-static char* lsctlc_socket_def = "/var/run/vdht/lsctl_client";
-static char  lsctlc_socket[256];
-static int   lsctlc_socket_opt = 0;
-static
-int lsctlc_socket_param(int opt)
-{
-    if (strlen(optarg) + 1 >= 256) {
-        printf("Too long for option\n");
-        return -1;
-    }
-    memset(lsctlc_socket, 0, 256);
-    strcpy(lsctlc_socket, optarg);
-    lsctlc_socket_opt = 1;
-    return 0;
-}
+enum {
+    VCMD_RESERVED       = 0,
+    VCMD_START_HOST     = (uint32_t)0x0001,
+    VCMD_STOP_HOST      = (uint32_t)0x0002,
+    VCMD_MAKE_HOST_EXIT = (uint32_t)0x0003,
+    VCMD_DUMP_HOST      = (uint32_t)0x0004,
+    VCMD_DUMP_CFG       = (uint32_t)0x0005,
+    VCMD_JOIN_NODE      = (uint32_t)0x0006 | VCMD_MASK_ADDR,
+    VCMD_BOGUS_PING     = (uint32_t)0x0007 | VCMD_MASK_ADDR,
+    VCMD_POST_SERVICE   = (uint32_t)0x0008 | VCMD_MASK_ADDR | VCMD_MASK_HASH,
+    VCMD_UNPOST_SERVICE = (uint32_t)0x0009 | VCMD_MASK_ADDR | VCMD_MASK_HASH,
+    VCMD_FIND_SERVICE   = (uint32_t)0x000A | VCMD_MASK_HASH,
+    VCMD_PROBE_SERVICE  = (uint32_t)0x000B | VCMD_MASK_HASH
+};
 
+static int  glsctlc_cmd = -1;
 
-static char* lsctls_socket_def = "/var/run/vdht/lsctl_socket";
-static char  lsctls_socket[256];
-static int   lsctls_socket_opt = 0;
-static
-int lsctls_socket_param(int opt)
-{
-    if (strlen(optarg) + 1 >= 256) {
-        printf("Too long for option\n");
-        return -1;
-    }
-
-    memset(lsctls_socket, 0, 256);
-    strcpy(lsctls_socket, optarg);
-    lsctls_socket_opt = 1;
-    return 0;
-}
-
-static int host_up_opt   = 0;
-static int host_down_opt = 0;
-static int host_exit_opt = 0;
-static int host_dump_opt = 0;
-static int cfg_dump_opt  = 0;
-static
-int host_cmds_param(int opt)
-{
-    switch(opt) {
-    case 'd':
-        host_up_opt = 1;
-        break;
-    case 'D':
-        host_down_opt = 1;
-        break;
-    case 'x':
-        host_exit_opt = 1;
-        break;
-    case 's':
-        host_dump_opt = 1;
-        break;
-    case 'c':
-        cfg_dump_opt = 1;
-        break;
-    default:
-        return -1;
-        break;
-    }
-    return 0;
-}
+static char glsctlc_socket[256];
+static char glsctls_socket[256];
+static int  glsctlc_addr_opt   = 0;
+static struct sockaddr_in glsctlc_addr;
+static vsrvcHash glsctlc_hash;
 
 static
-int host_cmds_bind(struct vlsctlc* lsctlc)
+int _aux_parse_sockaddr_param(void)
 {
-    int ret = 0;
-
-    if (host_up_opt) {
-        ret = lsctlc->bind_ops->bind_host_up(lsctlc);
-        if (ret < 0) return -1;
-    }
-    if (host_down_opt) {
-        ret = lsctlc->bind_ops->bind_host_down(lsctlc);
-        if (ret < 0) return -1;
-    }
-    if (host_exit_opt) {
-        ret = lsctlc->bind_ops->bind_host_exit(lsctlc);
-        if (ret < 0) return -1;
-    }
-    if (host_dump_opt) {
-        ret = lsctlc->bind_ops->bind_host_dump(lsctlc);
-        if (ret < 0) return -1;
-    }
-    if (cfg_dump_opt) {
-        ret = lsctlc->bind_ops->bind_cfg_dump(lsctlc);
-        if (ret < 0) return -1;
-    }
-    return 0;
-}
-
-static int  aux_addr_opt  = 0;
-static int  aux_addr_port = 0;
-static char aux_addr_ip[64];
-static
-int aux_address_param(int opt)
-{
-    char* port_addr = NULL;
+    const char* addr = NULL;
+    char ip[64];
+    int  port = 0;
+    int  ret = 0;
 
     if (strlen(optarg) + 1 >= 64) {
         printf("Invalid IP\n");
         return -1;
     }
 
-    port_addr = strchr(optarg, ':');
-    if (!port_addr) {
+    addr = strchr(optarg, ':');
+    if (!addr) {
         printf("Invalid IP\n");
         return -1;
     }
-    if ((port_addr - optarg + 1) >= 64) {
+    if ((addr - optarg + 1) >= 64) {
         printf("Invalid IP\n");
         return -1;
     }
-    memset(aux_addr_ip, 0, 64);
-    strncpy(aux_addr_ip, optarg, (int)(port_addr - optarg));
-    port_addr += 1;
+    memset(ip, 0, 64);
+    strncpy(ip, optarg, (int)(addr-optarg));
 
     errno = 0;
-    aux_addr_port = strtol(port_addr, NULL, 10);
+    port = strtol(addr + 1, NULL, 10);
     if (errno) {
         printf("Invalid IP\n");
         return -1;
     }
-    aux_addr_opt = 1;
-    return 0;
-}
 
-static int join_node_opt = 0;
-static
-int join_node_cmd_param(int opt)
-{
-    switch(opt) {
-    case 'a':
-        join_node_opt = 1;
-        break;
-    default:
+    glsctlc_addr.sin_family = AF_INET;
+    glsctlc_addr.sin_port = htons(port);
+    ret = inet_aton(ip, (struct in_addr*)&glsctlc_addr.sin_addr);
+    if (ret < 0) {
         return -1;
-        break;
-    }
-    return 0;
-}
-static
-int join_node_cmd_bind(struct vlsctlc* lsctlc)
-{
-    struct sockaddr_in addr;
-    int ret = 0;
-
-    if (join_node_opt && aux_addr_opt) {
-        addr.sin_family = AF_INET;
-        addr.sin_port   = htons(aux_addr_port);
-        ret = inet_aton(aux_addr_ip, (struct in_addr*)&addr.sin_addr);
-        if (ret < 0) return -1;
-        ret = lsctlc->bind_ops->bind_join_node(lsctlc, &addr);
-        if (ret < 0) return -1;
-    }
-    return 0;
-}
-
-static int relay_service_up_opt    = 0;
-static int relay_service_down_opt  = 0;
-static int relay_service_find_opt  = 0;
-static int relay_service_probe_opt = 0;
-static
-int relay_service_param(int opt)
-{
-    switch(opt) {
-    case 'r':
-        relay_service_up_opt = 1;
-        break;
-    case 'R':
-        relay_service_down_opt = 1;
-        break;
-    case 'f':
-        relay_service_find_opt = 1;
-        break;
-    case 'p':
-        relay_service_probe_opt = 1;
-        break;
-    default:
-        return -1;
-        break;
     }
     return 0;
 }
 
 static
-int relay_service_cmd_bind(struct vlsctlc* lsctlc)
+void _aux_print_service_addrs_cb(struct sockaddr_in* addr, void* cookie)
 {
-    struct sockaddr_in addr;
-    vsrvcHash hash;
-    int ret = 0;
-
-    ret = vhashhelper_get_stun_srvcHash(&hash);
-    if (ret < 0) return -1;
-
-    if (aux_addr_opt) {
-        addr.sin_family = AF_INET;
-        addr.sin_port   = htons(aux_addr_port);
-        ret = inet_aton(aux_addr_ip, (struct in_addr*)&addr.sin_addr);
-        if (ret < 0) return -1;
-    }
-    if (relay_service_up_opt && aux_addr_opt) {
-        struct sockaddr_in* addrs[] = {
-            &addr
-        };
-        ret = lsctlc->bind_ops->bind_post_service(lsctlc, &hash, addrs, 1);
-        if (ret < 0) return -1;
-    }
-    if (relay_service_down_opt && aux_addr_opt) {
-        struct sockaddr_in* addrs[] = {
-            &addr
-        };
-        ret = lsctlc->bind_ops->bind_unpost_service(lsctlc, &hash, addrs, 1);
-        if (ret < 0) return -1;
-    }
-    if (relay_service_find_opt) {
-        ret = lsctlc->bind_ops->bind_find_service(lsctlc, &hash);
-        if (ret < 0) return -1;
-    }
-    if (relay_service_probe_opt) {
-        ret = lsctlc->bind_ops->bind_probe_service(lsctlc, &hash);
-        if (ret < 0) return -1;
-    }
-    return 0;
+    printf("todo\n");
+    //todo;
+    return ;
 }
-
-static int bogus_ping_opt  = 0;
-static
-int bogus_ping_param(int opt)
-{
-    switch(opt) {
-    case 't':
-        bogus_ping_opt = 1;
-        break;
-    default:
-        return -1;
-        break;
-    }
-    return 0;
-}
-
-static
-int bogus_ping_cmd_bind(struct vlsctlc* lsctlc)
-{
-    struct sockaddr_in addr;
-    int ret = 0;
-
-    if (bogus_ping_opt && aux_addr_opt) {
-        addr.sin_family = AF_INET;
-        addr.sin_port   = htons(aux_addr_port);
-        ret = inet_aton(aux_addr_ip, (struct in_addr*)&addr.sin_addr);
-        if (ret < 0) return -1;
-        ret = lsctlc->bind_ops->bind_bogus_query(lsctlc, VDHT_PING, &addr);
-        if (ret < 0) return -1;
-    }
-    return 0;
-}
-
-struct opt_routine {
-    char opt;
-    int (*parse_cb)(int);
-};
-
-struct opt_routine param_routines[] = {
-    {'U', lsctlc_socket_param },
-    {'S', lsctls_socket_param },
-    {'d', host_cmds_param      },
-    {'D', host_cmds_param      },
-    {'x', host_cmds_param      },
-    {'s', host_cmds_param      },
-    {'c', host_cmds_param      },
-    {'a', join_node_cmd_param },
-    {'r', relay_service_param },
-    {'R', relay_service_param },
-    {'p', relay_service_param },
-    {'t', bogus_ping_param    },
-    {'m', aux_address_param   },
-    {'v', show_ver_param      },
-    {'h', show_help_param     },
-    {0, 0}
-};
-
-int (*bind_routines[])(struct vlsctlc*) = {
-    host_cmds_bind,
-    join_node_cmd_bind,
-    relay_service_cmd_bind,
-    bogus_ping_cmd_bind,
-    NULL
-};
 
 int main(int argc, char** argv)
 {
     int opt_idx = 0;
     int ret = 0;
-    int i = 0;
     int c = 0;
+
+    memset(glsctlc_socket, 0, 1024);
+    memset(glsctls_socket, 0, 1024);
+    strcpy(glsctlc_socket, "/var/run/vdht/lsctl_client");
+    strcpy(glsctls_socket, "/var/run/vdht/lsctl_socket");
 
     if (argc <= 1) {
         printf("Few arguments\n");
@@ -433,96 +173,157 @@ int main(int argc, char** argv)
             continue;
         }
         else {
-            struct opt_routine* routine = param_routines;
-            for (i = 0; routine[i].parse_cb; i++) {
-                if (routine[i].opt != c) {
-                    continue;
-                }
-                ret = routine[i].parse_cb(c);
-                if (ret < 0) {
+            switch(c) {
+            case 'd':
+                glsctlc_cmd = VCMD_START_HOST;
+                break;
+            case 'D':
+                glsctlc_cmd = VCMD_STOP_HOST;
+                break;
+            case 'x':
+                glsctlc_cmd = VCMD_MAKE_HOST_EXIT;
+                break;
+            case 's':
+                glsctlc_cmd = VCMD_DUMP_HOST;
+                break;
+            case 'c':
+                glsctlc_cmd = VCMD_DUMP_CFG;
+                break;
+            case 'a':
+                glsctlc_cmd = VCMD_JOIN_NODE;
+                break;
+            case 'r':
+                glsctlc_cmd = VCMD_POST_SERVICE;
+                break;
+            case 'R':
+                glsctlc_cmd = VCMD_UNPOST_SERVICE;
+                break;
+            case 'f':
+                glsctlc_cmd = VCMD_FIND_SERVICE;
+                break;
+            case 'p':
+                glsctlc_cmd = VCMD_PROBE_SERVICE;
+                break;
+            case 't':
+                glsctlc_cmd = VCMD_BOGUS_PING;
+                break;
+            case 'U':
+                if (strlen(optarg) + 1 >= 256) {
+                    printf("Too long for option 'unix-domain-file' \n");
                     exit(-1);
                 }
+                memset(glsctlc_socket, 0, 256);
+                strcpy(glsctlc_socket, optarg);
+                break;
+            case 'S':
+                if (strlen(optarg) + 1 >= 256) {
+                    printf("Too long for option '--lsctl-socket-file' \n");
+                    exit(-1);
+                }
+                memset(glsctls_socket, 0, 256);
+                strcpy(glsctls_socket, optarg);
+                break;
+            case 'm':
+                ret = _aux_parse_sockaddr_param();
+                if (ret < 0) {
+                    printf("Invalid address\n");
+                    exit(-1);
+                }
+                glsctlc_addr_opt = 1;
+                break;
+            case 'v':
+                if (glsctlc_cmd) {
+                    printf("Confused command, only one demand allowed\n");
+                    exit(-1);
+                }
+                show_version();
+                exit(0);
+                break;
+            case 'h':
+                if (glsctlc_cmd) {
+                    printf("Confused command, only one demand allowed\n");
+                    exit(-1);
+                }
+                show_usage();
+                exit(0);
                 break;
             }
-            if (!routine[i].parse_cb) {
-                exit(-1);
-            }
         }
-     }
-
-     if (optind < argc) {
-            printf("Too many arguments.\n");
-            show_usage();
-            exit(-1);
-     }
-     if (has_hlp_opt) {
+    }
+    if (optind < argc) {
+        printf("Too many arguments.\n");
         show_usage();
-        return 0;
-     }
-     if (has_ver_opt) {
-        show_version();
-        return 0;
-     }
-     {
-        int (**bind_cb)(struct vlsctlc*) = bind_routines;
-        struct vlsctlc lsctlc;
-        char data[1024];
-        int ret = 0;
-        int tsz = 0;
+        exit(-1);
+    }
 
-        vlsctlc_init(&lsctlc);
-        for (i = 0; bind_cb[i]; i++) {
-            ret = bind_cb[i](&lsctlc);
-            if (ret < 0) {
-                printf("error: conflict arguments.\n");
-                exit(-1);
-            }
-        }
-
-        memset(data, 0, 1024);
-        ret = lsctlc.ops->pack_cmd(&lsctlc, data, 1024);
+    if (glsctlc_cmd <= 0) {
+        printf("Confused command, at least one demand needed\n");
+        exit(-1);
+    }
+    if ((glsctlc_cmd & VCMD_MASK_ADDR) && (!glsctlc_addr_opt)) {
+        printf("address argument is missing.\n");
+        exit(-1);
+    }
+    if (glsctlc_cmd & VCMD_MASK_HASH) {
+        const char* magic = HASH_MAGIC_STUN;
+        struct vhashgen hashgen;
+        ret = vhashgen_init(&hashgen);
         if (ret < 0) {
-            printf("error: package wrong.\n");
+            printf("generate relay sevice hash failed\n");
             exit(-1);
-        }
-        tsz = ret;
-
-        struct sockaddr_un unix_addr;
-        struct sockaddr_un dest_addr;
-        int fd = 0;
-
-        if (!lsctlc_socket_opt) {
-            strcpy(lsctlc_socket, lsctlc_socket_def);
-        }
-        if (!lsctls_socket_opt) {
-            strcpy(lsctls_socket, lsctls_socket_def);
-        }
-
-        fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-        if (fd < 0) {
-            perror("socket:");
-            exit(-1);
-        }
-        unlink(lsctlc_socket);
-
-        unix_addr.sun_family = AF_UNIX;
-        strcpy(unix_addr.sun_path, lsctlc_socket);
-        ret = bind(fd, (struct sockaddr*)&unix_addr, sizeof(unix_addr));
+        };
+        ret = hashgen.ops->hash(&hashgen, (uint8_t*)magic, strlen(magic), &glsctlc_hash);
+        vhashgen_deinit(&hashgen);
         if (ret < 0) {
-            perror("bind:");
-            close(fd);
+            printf("generate relay service hash failed\n");
             exit(-1);
         }
-        dest_addr.sun_family = AF_UNIX;
-        strcpy(dest_addr.sun_path, lsctls_socket);
+    }
+    vdhtc_init(glsctlc_socket, glsctls_socket);
 
-        ret = sendto(fd, data, tsz, 0, (struct sockaddr*)&dest_addr, sizeof(dest_addr));
-        if (ret < 0) {
-            perror("sendto:");
-            close(fd);
-            exit(-1);
-        }
-        close(fd);
+    switch(glsctlc_cmd) {
+    case VCMD_START_HOST:
+        ret = vdhtc_start_host();
+        break;
+    case VCMD_STOP_HOST:
+        ret = vdhtc_stop_host();
+        break;
+    case VCMD_MAKE_HOST_EXIT:
+        ret = vdhtc_make_host_exit();
+        break;
+    case VCMD_DUMP_HOST:
+        ret = vdhtc_dump_host_infos();
+        break;
+    case VCMD_DUMP_CFG:
+        ret = vdhtc_dump_cfg_infos();
+        break;
+    case VCMD_JOIN_NODE:
+        ret = vdhtc_join_wellknown_node(&glsctlc_addr);
+        break;
+    case VCMD_BOGUS_PING:
+        ret = vdhtc_request_bogus_ping(&glsctlc_addr);
+        break;
+    case VCMD_POST_SERVICE:
+        ret = vdhtc_post_service_segment(&glsctlc_hash, &glsctlc_addr);
+        break;
+    case VCMD_UNPOST_SERVICE:
+        ret = vdhtc_unpost_service_segment(&glsctlc_hash, &glsctlc_addr);
+        break;
+    case VCMD_FIND_SERVICE:
+        ret = vdhtc_find_service(&glsctlc_hash, _aux_print_service_addrs_cb, NULL);
+        break;
+    case VCMD_PROBE_SERVICE:
+        ret = vdhtc_probe_service(&glsctlc_hash, _aux_print_service_addrs_cb, NULL);
+        break;
+    default:
+        printf("Invalid command.\n");
+        break;
+    }
+    vdhtc_deinit();
+    if (ret < 0) {
+        printf("command execution failed.\n");
+    }else {
+        printf("command execution succeed.\n");
     }
     return 0;
 }
