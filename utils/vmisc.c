@@ -386,3 +386,23 @@ int vmacaddr_get(uint8_t* macaddr, int len)
     return 0;
 }
 
+void vhexbuf_dump(uint8_t* hex_buf, int len)
+{
+    int i = 0;
+
+    vassert(hex_buf);
+    vassert(len > 0);
+
+    for (i = 0; i < len ; i++) {
+        if (i % 16 == 0) {
+            printf("0x%x: ", hex_buf + i);
+        }
+        printf("%02x ", hex_buf[i]);
+        if (i % 16 == 15) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+    return ;
+}
+

@@ -31,5 +31,10 @@ int  vsockaddr_dump      (struct sockaddr_in*);
  */
 int  vmacaddr_get(uint8_t*, int);
 
+/*
+ * for hex buffer
+ */
+void vhexbuf_dump(uint8_t*, int);
+
 #endif
 
