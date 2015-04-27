@@ -4,11 +4,6 @@
 /*
  * service node structure and it follows it's correspondent help APIs.
  */
-struct vservice {
-    vsrvcInfo* srvci;
-    time_t rcv_ts;
-};
-
 static MEM_AUX_INIT(service_cache, sizeof(struct vservice), 8);
 static
 struct vservice* vservice_alloc(void)
@@ -112,7 +107,7 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
  *
  */
 static
-int _vroute_srvc_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvci)
+int _vroute_srvc_space_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvci)
 {
     struct varray* srvcs = NULL;
     struct vservice*  to = NULL;
@@ -158,7 +153,7 @@ int _vroute_srvc_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvci)
  * @svci : service infos
  */
 static
-int _vroute_srvc_get_service(struct vroute_srvc_space* space, vsrvcHash* hash, vsrvcInfo* srvci)
+int _vroute_srvc_space_get_service(struct vroute_srvc_space* space, vsrvcHash* hash, vsrvcInfo* srvci)
 {
     struct varray* srvcs = NULL;
     struct vservice*  to = NULL;
@@ -193,7 +188,7 @@ int _vroute_srvc_get_service(struct vroute_srvc_space* space, vsrvcHash* hash, v
  * @sapce:
  */
 static
-void _vroute_srvc_clear(struct vroute_srvc_space* space)
+void _vroute_srvc_space_clear(struct vroute_srvc_space* space)
 {
     struct varray* svcs = NULL;
     int i = 0;
@@ -209,12 +204,34 @@ void _vroute_srvc_clear(struct vroute_srvc_space* space)
 }
 
 /*
+ *
+ */
+static
+void _vroute_srvc_space_iterate(struct vroute_srvc_space* space, vroute_srvc_space_iterate_t cb, void* cookie)
+{
+    struct varray* services = NULL;
+    int i = 0;
+    int j = 0;
+
+    vassert(space);
+    vassert(cb);
+
+    for (i = 0; i < NBUCKETS; i++) {
+        services = &space->bucket[i].srvcs;
+        for (j = 0; j < varray_size(services); j++) {
+            cb((struct vservice*)varray_get(services, j), cookie);
+        }
+    }
+    return ;
+}
+
+/*
  * the routine to dump all service nodes in service routing table
  *
  * @space:
  */
 static
-void _vroute_srvc_dump(struct vroute_srvc_space* space)
+void _vroute_srvc_space_dump(struct vroute_srvc_space* space)
 {
     struct varray* svcs = NULL;
     int titled = 0;
@@ -240,10 +257,11 @@ void _vroute_srvc_dump(struct vroute_srvc_space* space)
 
 static
 struct vroute_srvc_space_ops route_srvc_space_ops = {
-    .add_service = _vroute_srvc_add_service,
-    .get_service = _vroute_srvc_get_service,
-    .clear       = _vroute_srvc_clear,
-    .dump        = _vroute_srvc_dump
+    .add_service = _vroute_srvc_space_add_service,
+    .get_service = _vroute_srvc_space_get_service,
+    .clear       = _vroute_srvc_space_clear,
+    .iterate     = _vroute_srvc_space_iterate,
+    .dump        = _vroute_srvc_space_dump
 };
 
 int vroute_srvc_space_init(struct vroute_srvc_space* space, struct vconfig* cfg)

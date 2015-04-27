@@ -5,15 +5,6 @@
 /*
  * for vpeer
  */
-struct vpeer {
-    vnodeConn  conn;
-    vnodeInfo* nodei;
-    time_t snd_ts;
-    time_t rcv_ts;
-    int ntries;
-    int nprobes;
-};
-
 static MEM_AUX_INIT(peer_cache, sizeof(struct vpeer), 0);
 static
 struct vpeer* vpeer_alloc(void)
@@ -788,6 +779,28 @@ void _vroute_node_space_clear(struct vroute_node_space* space)
 }
 
 /*
+ * to iterate all node infos in routing table.
+ */
+static
+void _vroute_node_space_iterate(struct vroute_node_space* space, vroute_node_space_iterate_t cb, void* cookie)
+{
+    struct varray* peers = NULL;
+    int i = 0;
+    int j = 0;
+
+    vassert(space);
+    vassert(cb);
+
+    for (i = 0; i < NBUCKETS; i++) {
+        peers = &space->bucket[i].peers;
+        for (j = 0; j < varray_size(peers); j++) {
+            cb((struct vpeer*)varray_get(peers, j), cookie);
+        }
+    }
+    return ;
+}
+
+/*
  * to dump all dht nodes info in routing table
  * @route:
  */
@@ -830,6 +843,7 @@ struct vroute_node_space_ops route_space_ops = {
     .load          = _vroute_node_space_load,
     .store         = _vroute_node_space_store,
     .clear         = _vroute_node_space_clear,
+    .iterate       = _vroute_node_space_iterate,
     .dump          = _vroute_node_space_dump
 };
 

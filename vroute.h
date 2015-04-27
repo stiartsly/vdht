@@ -60,6 +60,16 @@ void vroute_recr_space_deinit(struct vroute_recr_space*);
 /*
  * for node space
  */
+struct vpeer {
+    vnodeConn  conn;
+    vnodeInfo* nodei;
+    time_t snd_ts;
+    time_t rcv_ts;
+    int ntries;
+    int nprobes;
+};
+
+typedef void (*vroute_node_space_iterate_t)(struct vpeer*, void*);
 struct vroute_node_space;
 struct vroute_node_space_ops {
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
@@ -77,6 +87,7 @@ struct vroute_node_space_ops {
     int  (*load)         (struct vroute_node_space*);
     int  (*store)        (struct vroute_node_space*);
     void (*clear)        (struct vroute_node_space*);
+    void (*iterate)      (struct vroute_node_space*, vroute_node_space_iterate_t, void*);
     void (*dump)         (struct vroute_node_space*);
 };
 
@@ -103,11 +114,18 @@ void vroute_node_space_deinit(struct vroute_node_space*);
 /*
  *
  */
+struct vservice {
+    vsrvcInfo* srvci;
+    time_t rcv_ts;
+};
+
+typedef void (*vroute_srvc_space_iterate_t)(struct vservice*, void*);
 struct vroute_srvc_space;
 struct vroute_srvc_space_ops {
     int  (*add_service)  (struct vroute_srvc_space*, vsrvcInfo*);
     int  (*get_service)  (struct vroute_srvc_space*, vsrvcHash*, vsrvcInfo*);
     void (*clear)        (struct vroute_srvc_space*);
+    void (*iterate)      (struct vroute_srvc_space*, vroute_srvc_space_iterate_t, void*);
     void (*dump)         (struct vroute_srvc_space*);
 };
 
@@ -134,6 +152,8 @@ struct vroute_ops {
     int  (*reflex)       (struct vroute*, struct sockaddr_in*);
     int  (*probe_connectivity)
                          (struct vroute*, struct sockaddr_in*);
+    void (*set_ncb)      (struct vroute*, vroute_node_space_iterate_t, void*); //only support for test.
+    void (*set_scb)      (struct vroute*, vroute_srvc_space_iterate_t, void*); //only support for test.
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
@@ -180,6 +200,14 @@ struct vroute {
     struct vconfig* cfg;
     struct vmsger*  msger;
     struct vnode*   node;
+
+    /*
+     * fields to support test.
+     */
+    vroute_node_space_iterate_t ncb;
+    void* ncb_cookie;
+    vroute_srvc_space_iterate_t scb;
+    void* scb_cookie;
 };
 
 int  vroute_init  (struct vroute*, struct vconfig*, struct vhost*, vnodeId*);
