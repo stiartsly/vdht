@@ -321,6 +321,10 @@ int _aux_space_store_cb(void* item, void* cookie)
     vassert(peer);
     vassert(db);
 
+    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+        //skip node with unknown version.
+        return 0;
+    }
     {
         memset(id,    0, 64);
         memset(ver,   0, 64);
@@ -330,6 +334,7 @@ int _aux_space_store_cb(void* item, void* cookie)
         vtoken_strlize   (&peer->nodei->id,  id,  64);
         vnodeVer_strlize (&peer->nodei->ver, ver, 64);
         vsockaddr_strlize(&peer->nodei->addrs[0], addr, 64);
+        off = 0;
         off += sprintf(addrs + off, "%s", addr);
         for (i = 1; i < peer->nodei->naddrs; i++) {
             memset(addr, 0, 64);
@@ -339,6 +344,7 @@ int _aux_space_store_cb(void* item, void* cookie)
     }
 
     memset(sql_buf, 0, BUF_SZ);
+    off = 0;
     off += sprintf(sql_buf + off, "insert into '%s' ", VPEER_TB);
     off += sprintf(sql_buf + off, " ('nodeId', 'ver', 'addrs')");
     off += sprintf(sql_buf + off, " values (");
@@ -722,7 +728,7 @@ int _vroute_node_space_load(struct vroute_node_space* space)
     retE((ret));
 
     memset(sql_buf, 0, BUF_SZ);
-    sprintf(sql_buf, "select * from %s", VPEER_TB);
+    sprintf(sql_buf, "select * from '%s'", VPEER_TB);
     ret = sqlite3_exec(db, sql_buf, _aux_space_load_cb, space, &err);
     vlogEv((ret && err), "db err:%s\n", err);
     vlogEv((ret), elog_sqlite3_exec);
