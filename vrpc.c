@@ -77,7 +77,7 @@ static
 int _vrpc_unix_rcvfrom(void* impl, struct vmsg_sys* msg)
 {
     struct vunix_domain* unx = (struct vunix_domain*)impl;
-    int len = 0;
+    int len = sizeof(struct sockaddr_un);
     int ret = 0;
 
     vassert(unx);

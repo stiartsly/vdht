@@ -67,8 +67,8 @@ struct vnode_srvc_ops {
     int  (*post)       (struct vnode*, vsrvcHash*, struct sockaddr_in*);
     int  (*unpost)     (struct vnode*, vsrvcHash*, struct sockaddr_in*);
     int  (*unpost_ext) (struct vnode*, vsrvcHash*);
-    int  (*find)       (struct vnode*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
-    int  (*probe)      (struct vnode*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
+    int  (*find)       (struct vnode*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
+    int  (*probe)      (struct vnode*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
 };
 
 struct vnode {

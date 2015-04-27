@@ -8,6 +8,7 @@
 
 /*
  * lsctl message structure:
+ * @message length only includes fields of "command Id", "command legth", and "comand content"
  *
  *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -18,12 +19,6 @@
  * |          command Id           |        command length           |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * |          command content   ....                                 |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |          command Id           |        command length           |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * |          command content   ....                                 |
- * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * | ....                                                            |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
@@ -38,6 +33,7 @@ enum {
 };
 
 enum {
+    VLSCTL_RESERVE       = 0,
     VLSCTL_HOST_UP       = (uint16_t)0x10,
     VLSCTL_HOST_DOWN     = (uint16_t)0x11,
     VLSCTL_HOST_EXIT     = (uint16_t)0x12,
@@ -56,15 +52,46 @@ enum {
 };
 
 struct vlsctl;
-typedef int (*vlsctl_exec_cmd_t)(struct vlsctl*, void*, int);
 struct vlsctl_exec_cmd_desc {
     const char* desc;
     uint32_t cmd_id;
-    vlsctl_exec_cmd_t cmd;
+    int (*cmd)(struct vlsctl*, void*, int, struct vsockaddr*);
 };
 
 struct vlsctl_ops {
-    int (*unpack_cmds)(struct vlsctl*, void*, int);
+    int (*unpack_cmd)(struct vlsctl*, void*, int, struct vsockaddr*);
+    int (*pack_cmd)  (struct vlsctl*, void*, int, void*);
+};
+
+typedef int (*vlsctl_pack_cmd_t)(void*, int, void*);
+union vlsctl_rsp_args {
+    struct find_service_rsp_args {
+        vlsctl_pack_cmd_t pack_cb;
+        int total;
+        vsrvcHash hash;
+        int index;
+        struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+    } find_service_rsp_args;
+
+    struct probe_service_rsp_args {
+        vlsctl_pack_cmd_t pack_cb;
+        struct vlsctl* lsctl;
+        struct vsockaddr from;
+
+        int total;
+        vsrvcHash hash;
+        int index;
+        struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+    } probe_service_rsp_args;
+
+    struct error_rsp_args {
+        int err_val;
+    } error_rsp_args;
+};
+
+struct vlsctl_pack_cmd_ops {
+    int (*find_service_rsp) (void*, int, void*);
+    int (*probe_service_rsp)(void*, int, void*);
 };
 
 struct vlsctl {
@@ -72,8 +99,9 @@ struct vlsctl {
     struct vmsger    msger;
     struct vappmain* app;
 
-    struct vsockaddr   addr;
+    struct vsockaddr addr;
     struct vlsctl_ops* ops;
+    struct vlsctl_pack_cmd_ops* pack_cmd_ops;
 };
 
 int  vlsctl_init  (struct vlsctl*, struct vappmain*, struct vconfig*);

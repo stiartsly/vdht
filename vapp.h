@@ -22,8 +22,8 @@ struct vappmain_api_ops {
     int  (*post_service)          (struct vappmain*, vsrvcHash*, struct sockaddr_in*, int);
     int  (*unpost_service_segment)(struct vappmain*, vsrvcHash*, struct sockaddr_in*);
     int  (*unpost_service)        (struct vappmain*, vsrvcHash*);
-    int  (*find_service)          (struct vappmain*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
-    int  (*probe_service)         (struct vappmain*, vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
+    int  (*find_service)          (struct vappmain*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
+    int  (*probe_service)         (struct vappmain*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
     const char* (*get_version)    (struct vappmain*);
 };
 

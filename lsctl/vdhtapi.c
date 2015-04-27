@@ -179,7 +179,7 @@ int _aux_dhtc_req_and_rsp(void* snd_buf, int snd_len, void* rcv_buf, int rcv_len
 {
     struct sockaddr_un caddr;
     struct sockaddr_un saddr;
-    int saddr_len = 0;
+    int saddr_len = sizeof(struct sockaddr_un);
     int ret = 0;
     int fd = 0;
 
@@ -205,6 +205,8 @@ int _aux_dhtc_req_and_rsp(void* snd_buf, int snd_len, void* rcv_buf, int rcv_len
         close(fd);
         return -1;
     }
+
+    memset(rcv_buf, 0, rcv_len);
     ret = recvfrom(fd, rcv_buf, rcv_len, 0, (struct sockaddr*)&saddr, (socklen_t*)&saddr_len);
     if (ret < 0) {
         perror("recvfrom:");
@@ -212,7 +214,7 @@ int _aux_dhtc_req_and_rsp(void* snd_buf, int snd_len, void* rcv_buf, int rcv_len
         return -1;
     }
     close(fd);
-    return 0;
+    return ret;
 }
 
 int vdhtc_start_host(void)
@@ -602,21 +604,21 @@ error_exit:
     return -1;
 }
 
-int vdhtc_find_service(vsrvcHash* srvcHash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int vdhtc_find_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
+    struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
+    vsrvcHash hash;
+    int num = 0;
     int ret = 0;
+    int i = 0;
 
-    if (!srvcHash || !cb) {
+    if (!srvcHash || !ncb || !icb) {
         verrno = verr_bad_args;
         return -1;
     }
 
-    if (!srvcHash || !cb) {
-        verrno = verr_bad_args;
-        return -1;
-    }
     ret = vlsctlc_init(&lsctlc);
     if (ret < 0) {
         return -1;
@@ -635,13 +637,18 @@ int vdhtc_find_service(vsrvcHash* srvcHash, vsrvcInfo_iterate_addr_t cb, void* c
     if (ret < 0) {
         goto error_exit;
     }
-    memset(buf, 0, BUF_SZ);
-    ret = lsctlc.ops->unpack_cmd(&lsctlc, buf, BUF_SZ);
+    ret = lsctlc.ops->unpack_cmd(&lsctlc, buf, ret);
     if (ret < 0) {
         goto error_exit;
     }
-
-    //todo;
+    ret = lsctlc.unbind_ops->unbind_find_service(&lsctlc, &hash, addrs, &num);
+   // if ((ret < 0) || memcmp(&hash, srvcHash, sizeof(vsrvcHash))) {
+   //     goto error_exit;
+   // }
+    ncb(&hash, num, cookie);
+    for (i = 0; i < num; i++) {
+        icb(&hash, &addrs[i], ((i + 1) == num), cookie);
+    }
     vlsctlc_deinit(&lsctlc);
     return 0;
 
@@ -650,21 +657,21 @@ error_exit:
     return -1;
 }
 
-int vdhtc_probe_service(vsrvcHash* srvcHash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int vdhtc_probe_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
+    struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
+    vsrvcHash hash;
+    int num = 0;
     int ret = 0;
+    int i = 0;
 
-    if (!srvcHash || !cb) {
+    if (!srvcHash || !ncb || !icb) {
         verrno = verr_bad_args;
         return -1;
     }
 
-    if (!srvcHash || !cb) {
-        verrno = verr_bad_args;
-        return -1;
-    }
     ret = vlsctlc_init(&lsctlc);
     if (ret < 0) {
         return -1;
@@ -682,13 +689,19 @@ int vdhtc_probe_service(vsrvcHash* srvcHash, vsrvcInfo_iterate_addr_t cb, void* 
     if (ret < 0) {
         goto error_exit;
     }
-    memset(buf, 0, BUF_SZ);
+
     ret = lsctlc.ops->unpack_cmd(&lsctlc, buf, BUF_SZ);
     if (ret < 0) {
         goto error_exit;
     }
-
-    //todo;
+    ret = lsctlc.unbind_ops->unbind_probe_service(&lsctlc, &hash, addrs, &num);
+    if ((ret < 0) || memcmp(&hash, srvcHash, sizeof(vsrvcHash))) {
+        goto error_exit;
+    }
+    ncb(&hash, num, cookie);
+    for (i = 0; i < num; i++) {
+        icb(&hash, &addrs[i], ((i + 1) == num), cookie);
+    }
     vlsctlc_deinit(&lsctlc);
     return 0;
 

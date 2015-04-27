@@ -44,7 +44,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
  * @addr : [out] address of service
  */
 static
-int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
     vsrvcInfo_relax srvci;
@@ -53,28 +53,36 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_iterat
 
     vassert(route);
     vassert(hash);
-    vassert(cb);
+    vassert(ncb);
+    vassert(icb);
 
     vlock_enter(&route->lock);
     ret = srvc_space->ops->get_service(srvc_space, hash, (vsrvcInfo*)&srvci);
     vlock_leave(&route->lock);
-    retE((ret <= 0));
+    retE((ret < 0));
 
+    if (!ret) {
+        ncb(&srvci.hash, 0, cookie);
+        return 0;
+    }
+
+    ncb(&srvci.hash, srvci.naddrs, cookie);
     for (i = 0; i < srvci.naddrs; i++) {
-        cb(&srvci.addrs[i], cookie);
+        icb(&srvci.hash, &srvci.addrs[i], ((i+1) == srvci.naddrs), cookie);
     }
     return 0;
 }
 
 static
-int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
     struct vroute_node_space* node_space = &route->node_space;
     int ret = 0;
 
     vassert(route);
     vassert(hash);
-    vassert(cb);
+    vassert(ncb);
+    vassert(icb);
 
     vlock_enter(&route->lock);
     ret = node_space->ops->probe_service(node_space, hash);

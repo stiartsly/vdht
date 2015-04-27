@@ -280,11 +280,10 @@ int _aux_vlsctlc_pack_addr(void* buf, int len, struct sockaddr_in* addr)
     vassert(buf);
     vassert(len > 0);
 
-    *(int16_t*)(buf + tsz) = (int16_t)addr->sin_family;
+    tsz += sizeof(uint16_t); // skip family;
+    *(uint16_t*)(buf + tsz) = addr->sin_port;
     tsz += sizeof(int16_t);
-    *(int16_t*)(buf + tsz) = (int16_t)addr->sin_port;
-    tsz += sizeof(int16_t);
-    *(uint32_t*)(buf + tsz) = (uint32_t)addr->sin_addr.s_addr;
+    *(uint32_t*)(buf + tsz) = addr->sin_addr.s_addr;
     tsz += sizeof(uint32_t);
 
     return tsz;
@@ -610,10 +609,10 @@ int _aux_vlsctlc_unpack_addr(void* buf, int len, struct sockaddr_in* addr)
     vassert(buf);
     vassert(len > 0);
 
-    addr->sin_family = *(int16_t*)(buf + tsz);
-    tsz += sizeof(int16_t);
-    addr->sin_port = *(int16_t*)(buf + tsz);
-    tsz += sizeof(int16_t);
+    memset(addr, 0, sizeof(*addr));
+    tsz += sizeof(int16_t); //skip family;
+    addr->sin_port = *(uint16_t*)(buf + tsz);
+    tsz += sizeof(uint16_t);
     addr->sin_addr.s_addr = *(uint32_t*)(buf + tsz);
     tsz += sizeof(uint32_t);
 
@@ -634,9 +633,6 @@ int _vlsctlc_unpack_cmd_find_service_rsp(struct vlsctlc* lsctlc, void* buf, int 
     if (lsctlc->bound_cmd != VLSCTL_FIND_SERVICE) {
         return 0;
     }
-
-    tsz += sizeof(uint16_t); // skip cmd ID;
-    tsz += sizeof(uint16_t); // skip cmd property length;
 
     memcpy(&lsctlc->rsp_args.find_service_rsp_args.hash, buf + tsz, sizeof(vsrvcHash));
     tsz += sizeof(vsrvcHash);
@@ -661,9 +657,6 @@ int _vlsctlc_unpack_cmd_probe_service_rsp(struct vlsctlc* lsctlc, void* buf, int
     if (lsctlc->bound_cmd != VLSCTL_PROBE_SERVICE) {
         return 0;
     }
-
-    tsz += sizeof(uint16_t); // skip cmd ID;
-    tsz += sizeof(uint16_t); // skip cmd property length;
 
     memcpy(&lsctlc->rsp_args.probe_service_rsp_args.hash, buf + tsz, sizeof(vsrvcHash));
     tsz += sizeof(vsrvcHash);
@@ -721,17 +714,41 @@ int _vlsctlc_pack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
 }
 
 static
+void _aux_vhexbuf_dump(uint8_t* hex_buf, int len)
+{
+    int i = 0;
+
+    vassert(hex_buf);
+    vassert(len > 0);
+
+    for (i = 0; i < len ; i++) {
+        if (i % 16 == 0) {
+            printf("0x%x: ", (unsigned int)(hex_buf + i));
+        }
+        printf("%02x ", hex_buf[i]);
+        if (i % 16 == 15) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+    return ;
+}
+
+static
 int _vlsctlc_unpack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
 {
     struct vlsctlc_unpack_cmd_desc* desc = lsctlc_unpack_cmd_desc;
     uint32_t magic = 0;
     int tsz = 0;
     int bsz = 0;
+    int csz = 0;
     int ret = 0;
 
     vassert(lsctlc);
     vassert(buf);
     vassert(len > 0);
+
+    _aux_vhexbuf_dump(buf, len);
 
     tsz += sizeof(uint8_t); // skip version;
     lsctlc->type = *(uint8_t*)(buf + tsz);
@@ -745,21 +762,32 @@ int _vlsctlc_unpack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
     if (magic != VLSCTL_MAGIC) {
         return -1;
     }
-
-    while(bsz > 0) {
+    while(bsz - csz > 0) {
         uint16_t cmd_id = 0;
         int cmd_len = 0;
+        int i = 0;
 
         cmd_id  = *(uint16_t*)(buf + tsz);
-        cmd_len = (int)(*(uint16_t*)(buf + tsz + sizeof(uint16_t)));
+        tsz += sizeof(uint16_t);
+        csz += sizeof(uint16_t);
+        cmd_len = (int)(*(uint16_t*)(buf + tsz));
+        tsz += sizeof(uint16_t);
+        csz += sizeof(uint16_t);
         lsctlc->bound_cmd = cmd_id;
-        for (; desc->cmd; desc++) {
-            ret = desc->cmd(lsctlc, buf + tsz, cmd_len + 2* sizeof(uint16_t));
-            if (ret < 0) {
-                return -1;
+        while(cmd_len > 0) {
+            for (i = 0; desc[i].cmd; i++) {
+                ret = desc[i].cmd(lsctlc, buf + tsz, cmd_len);
+                if (ret < 0) {
+                    return -1;
+                } else if (ret > 0) {
+                    tsz += ret;
+                    csz += ret;
+                    cmd_len -= ret;
+                    break;
+                }else {
+                    //do nothing;
+                }
             }
-            tsz += ret;
-            bsz -= ret;
         }
     }
     return 0;

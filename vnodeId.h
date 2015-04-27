@@ -131,7 +131,8 @@ struct vsrvcInfo {
     struct sockaddr_in addrs[VSRVCINFO_MIN_ADDRS];
 };
 typedef struct vsrvcInfo vsrvcInfo;
-typedef void (*vsrvcInfo_iterate_addr_t)(struct sockaddr_in*, void*);
+typedef void (*vsrvcInfo_number_addr_t) (vsrvcHash*, int, void*);
+typedef void (*vsrvcInfo_iterate_addr_t)(vsrvcHash*, struct sockaddr_in*, int, void*);
 vsrvcInfo* vsrvcInfo_alloc(void);
 void vsrvcInfo_free(vsrvcInfo*);
 int  vsrvcInfo_init(vsrvcInfo*, vtoken*, vsrvcHash*, int);

@@ -481,31 +481,33 @@ int _vnode_srvc_unpost_ext(struct vnode* node, vsrvcHash* hash)
 }
 
 static
-int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
     struct vroute* route = node->route;
     int ret = 0;
 
     vassert(node);
     vassert(hash);
-    vassert(cb);
+    vassert(ncb);
+    vassert(icb);
 
-    ret = route->ops->find_service(route, hash, cb, cookie);
+    ret = route->ops->find_service(route, hash, ncb, icb, cookie);
     retE((ret < 0));
     return 0;
 }
 
 static
-int _vnode_srvc_probe(struct vnode* node, vsrvcHash* hash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vnode_srvc_probe(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
     struct vroute* route = node->route;
     int ret = 0;
 
     vassert(node);
     vassert(hash);
-    vassert(cb);
+    vassert(ncb);
+    vassert(icb);
 
-    ret = route->ops->probe_service(route, hash, cb, cookie);
+    ret = route->ops->probe_service(route, hash, ncb, icb, cookie);
     retE((ret < 0));
     return 0;
 }

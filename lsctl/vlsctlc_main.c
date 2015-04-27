@@ -133,10 +133,25 @@ int _aux_parse_sockaddr_param(void)
 }
 
 static
-void _aux_print_service_addrs_cb(struct sockaddr_in* addr, void* cookie)
+void _aux_print_addr_num_cb(vsrvcHash* hash, int num, void* cookie)
 {
-    printf("todo\n");
-    //todo;
+    printf("addr num: %d.\n", num);
+    return ;
+}
+
+static
+void _aux_print_service_addrs_cb(vsrvcHash* hash, struct sockaddr_in* addr, int last, void* cookie)
+{
+    char* hostname = NULL;
+    int port = 0;
+
+    hostname = inet_ntoa((struct in_addr)addr->sin_addr);
+    if (!hostname) {
+        printf("Wrong address\n");
+        return;
+    }
+    port = (int)ntohs(addr->sin_port);
+    printf("address: %s:%d, last:%s\n", hostname, port, last ? "yes":"no");
     return ;
 }
 
@@ -310,10 +325,10 @@ int main(int argc, char** argv)
         ret = vdhtc_unpost_service_segment(&glsctlc_hash, &glsctlc_addr);
         break;
     case VCMD_FIND_SERVICE:
-        ret = vdhtc_find_service(&glsctlc_hash, _aux_print_service_addrs_cb, NULL);
+        ret = vdhtc_find_service(&glsctlc_hash, _aux_print_addr_num_cb, _aux_print_service_addrs_cb, NULL);
         break;
     case VCMD_PROBE_SERVICE:
-        ret = vdhtc_probe_service(&glsctlc_hash, _aux_print_service_addrs_cb, NULL);
+        ret = vdhtc_probe_service(&glsctlc_hash, _aux_print_addr_num_cb, _aux_print_service_addrs_cb, NULL);
         break;
     default:
         printf("Invalid command.\n");

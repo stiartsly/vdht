@@ -25,8 +25,8 @@ int vdhtc_unpost_service_segment(vsrvcHash*, struct sockaddr_in*);
 int vdhtc_post_service  (vsrvcHash*, struct sockaddr_in*, int);
 int vdhtc_unpost_service(vsrvcHash*);
 
-int vdhtc_find_service  (vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
-int vdhtc_probe_service (vsrvcHash*, vsrvcInfo_iterate_addr_t, void*);
+int vdhtc_find_service  (vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
+int vdhtc_probe_service (vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
 
 #endif
 

@@ -228,31 +228,31 @@ int _vappmain_unpost_service(struct vappmain* app, vsrvcHash* srvcHash)
 }
 
 static
-int _vappmain_find_service(struct vappmain* app, vsrvcHash* srvcHash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vappmain_find_service(struct vappmain* app, vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
     struct vnode* node = &app->host.node;
     int ret = 0;
 
-    if (!srvcHash || !cb) {
+    if (!srvcHash || !ncb || !icb) {
         vlogE("invalid arguments");
         retE((1));
     }
-    ret = node->srvc_ops->find(node, srvcHash, cb, cookie);
+    ret = node->srvc_ops->find(node, srvcHash, ncb, icb, cookie);
     retE((ret < 0));
     return 0;
 }
 
 static
-int _vappmain_probe_service(struct vappmain* app, vsrvcHash* srvcHash, vsrvcInfo_iterate_addr_t cb, void* cookie)
+int _vappmain_probe_service(struct vappmain* app, vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
     struct vnode* node = &app->host.node;
     int ret = 0;
 
-    if (!srvcHash || !cb) {
+    if (!srvcHash || !ncb || !icb) {
         vlogE("invalid arguments");
         retE((1));
     }
-    ret = node->srvc_ops->probe(node, srvcHash, cb, cookie);
+    ret = node->srvc_ops->probe(node, srvcHash, ncb, icb, cookie);
     retE((ret < 0));
     return 0;
 }
