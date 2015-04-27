@@ -76,6 +76,7 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
 static
 int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
+    struct vroute_srvc_probe_helper* probe_helper = &route->probe_helper;
     struct vroute_node_space* node_space = &route->node_space;
     int ret = 0;
 
@@ -86,10 +87,12 @@ int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_numbe
 
     vlock_enter(&route->lock);
     ret = node_space->ops->probe_service(node_space, hash);
+    if (ret < 0) {
+        vlock_leave(&route->lock);
+        retE((1));
+    }
+    probe_helper->ops->add(probe_helper, hash, ncb, icb, cookie);
     vlock_leave(&route->lock);
-    retE((ret < 0));
-
-    //todo;
     return 0;
 }
 
@@ -1229,6 +1232,7 @@ int _vroute_cb_find_service(struct vroute* route, vnodeConn* conn, void* ctxt)
 static
 int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
+    struct vroute_srvc_probe_helper* probe_helper = &route->probe_helper;
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
     struct vroute_recr_space* recr_space = &route->recr_space;
     struct vroute_node_space* node_space = &route->node_space;
@@ -1245,14 +1249,14 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     retE((ret < 0));
     retE((!recr_space->ops->check(recr_space, &token)));
 
-    //try to added info of host node hosting the service to routing space.
     ret = srvc_space->ops->add_service(srvc_space, (vsrvcInfo*)&srvci);
     retE((ret < 0));
+
+    //try to add info of node hosting that service.
     ret = node_space->ops->probe_node(node_space, &srvci.hostid);
     retE((ret < 0));
     srvc_space->ops->iterate(srvc_space, route->scb, route->scb_cookie, &token);
-
-    //todo;
+    probe_helper->ops->invoke(probe_helper, &srvci.hash, (vsrvcInfo*)&srvci);
     return 0;
 }
 
@@ -1340,6 +1344,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vhost* host, v
     vroute_node_space_init(&route->node_space, route, cfg, myid);
     vroute_srvc_space_init(&route->srvc_space, cfg);
     vroute_recr_space_init(&route->recr_space);
+    vroute_srvc_probe_helper_init(&route->probe_helper);
 
     route->ops     = &route_ops;
     route->dht_ops = &route_dht_ops;
@@ -1364,6 +1369,7 @@ void vroute_deinit(struct vroute* route)
 {
     vassert(route);
 
+    vroute_srvc_probe_helper_deinit (&route->probe_helper);
     vroute_recr_space_deinit(&route->recr_space);
     vroute_node_space_deinit(&route->node_space);
     vroute_srvc_space_deinit(&route->srvc_space);

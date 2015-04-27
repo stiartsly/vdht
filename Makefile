@@ -20,6 +20,7 @@ vdht_objs = \
     vroute_node.o  \
     vroute_srvc.o  \
     vroute_recr.o  \
+    vroute_helper.o \
     vlsctl.o  \
     vticker.o \
     vnodeId.o \
