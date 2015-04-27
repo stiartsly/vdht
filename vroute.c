@@ -1295,7 +1295,9 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
     vlogD("received @%s", vdht_get_desc(ret));
 
     vnodeConn_set(&conn, to_sockaddr_sin(mu->spec), to_sockaddr_sin(mu->addr));
+    vlock_enter(&route->lock);
     ret = route->cb_ops[ret](route, &conn, ctxt);
+    vlock_leave(&route->lock);
     route->dec_ops->dec_done(ctxt);
     retE((ret < 0));
     return 0;
