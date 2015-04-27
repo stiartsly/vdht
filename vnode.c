@@ -309,6 +309,22 @@ void _vnode_tick(struct vnode* node)
     return ;
 }
 
+static
+int _vnode_myself(struct vnode* node, vnodeInfo_relax* nodei)
+{
+    int ret = 0;
+
+    vassert(node);
+    vassert(nodei);
+
+    memset(nodei, 0, sizeof(*nodei));
+    nodei->capc   = VNODEINFO_MAX_ADDRS;
+
+    ret = vnodeInfo_copy((vnodeInfo*)nodei, (vnodeInfo*)&node->nodei);
+    retE((ret < 0));
+    return 0;
+}
+
 /*
  * the routine to update reflexive address.
  * @node
@@ -368,6 +384,7 @@ struct vnode_ops node_ops = {
     .clear         = _vnode_clear,
     .renice        = _vnode_renice,
     .tick          = _vnode_tick,
+    .myself        = _vnode_myself,
     .reflex_addr   = _vnode_reflex_addr,
     .has_addr      = _vnode_has_addr,
 };
