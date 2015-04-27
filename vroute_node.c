@@ -782,19 +782,22 @@ void _vroute_node_space_clear(struct vroute_node_space* space)
  * to iterate all node infos in routing table.
  */
 static
-void _vroute_node_space_iterate(struct vroute_node_space* space, vroute_node_space_iterate_t cb, void* cookie)
+void _vroute_node_space_iterate(struct vroute_node_space* space, vroute_node_space_iterate_t cb, void* cookie, vtoken* token)
 {
     struct varray* peers = NULL;
     int i = 0;
     int j = 0;
 
     vassert(space);
-    vassert(cb);
+
+    if (!cb) {
+        return;
+    }
 
     for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
-            cb((struct vpeer*)varray_get(peers, j), cookie);
+            cb((struct vpeer*)varray_get(peers, j), cookie, token);
         }
     }
     return ;

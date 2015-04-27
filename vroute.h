@@ -69,7 +69,7 @@ struct vpeer {
     int nprobes;
 };
 
-typedef void (*vroute_node_space_iterate_t)(struct vpeer*, void*);
+typedef void (*vroute_node_space_iterate_t)(struct vpeer*, void*, vtoken*);
 struct vroute_node_space;
 struct vroute_node_space_ops {
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
@@ -87,7 +87,7 @@ struct vroute_node_space_ops {
     int  (*load)         (struct vroute_node_space*);
     int  (*store)        (struct vroute_node_space*);
     void (*clear)        (struct vroute_node_space*);
-    void (*iterate)      (struct vroute_node_space*, vroute_node_space_iterate_t, void*);
+    void (*iterate)      (struct vroute_node_space*, vroute_node_space_iterate_t, void*, vtoken*);
     void (*dump)         (struct vroute_node_space*);
 };
 
@@ -119,13 +119,13 @@ struct vservice {
     time_t rcv_ts;
 };
 
-typedef void (*vroute_srvc_space_iterate_t)(struct vservice*, void*);
+typedef void (*vroute_srvc_space_iterate_t)(struct vservice*, void*, vtoken*);
 struct vroute_srvc_space;
 struct vroute_srvc_space_ops {
     int  (*add_service)  (struct vroute_srvc_space*, vsrvcInfo*);
     int  (*get_service)  (struct vroute_srvc_space*, vsrvcHash*, vsrvcInfo*);
     void (*clear)        (struct vroute_srvc_space*);
-    void (*iterate)      (struct vroute_srvc_space*, vroute_srvc_space_iterate_t, void*);
+    void (*iterate)      (struct vroute_srvc_space*, vroute_srvc_space_iterate_t, void*, vtoken*);
     void (*dump)         (struct vroute_srvc_space*);
 };
 

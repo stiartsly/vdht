@@ -207,19 +207,22 @@ void _vroute_srvc_space_clear(struct vroute_srvc_space* space)
  *
  */
 static
-void _vroute_srvc_space_iterate(struct vroute_srvc_space* space, vroute_srvc_space_iterate_t cb, void* cookie)
+void _vroute_srvc_space_iterate(struct vroute_srvc_space* space, vroute_srvc_space_iterate_t cb, void* cookie, vtoken* token)
 {
-    struct varray* services = NULL;
+    struct varray*  services = NULL;
     int i = 0;
     int j = 0;
 
     vassert(space);
-    vassert(cb);
+
+    if (!cb) {
+        return ;
+    }
 
     for (i = 0; i < NBUCKETS; i++) {
         services = &space->bucket[i].srvcs;
         for (j = 0; j < varray_size(services); j++) {
-            cb((struct vservice*)varray_get(services, j), cookie);
+            cb((struct vservice*)varray_get(services, j), cookie, token);
         }
     }
     return ;
