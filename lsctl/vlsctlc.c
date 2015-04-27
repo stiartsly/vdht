@@ -723,7 +723,7 @@ void _aux_vhexbuf_dump(uint8_t* hex_buf, int len)
 
     for (i = 0; i < len ; i++) {
         if (i % 16 == 0) {
-            printf("0x%x: ", (unsigned int)(hex_buf + i));
+            printf("0x%p: ", (void*)(hex_buf + i));
         }
         printf("%02x ", hex_buf[i]);
         if (i % 16 == 15) {
