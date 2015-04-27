@@ -178,15 +178,15 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* remote_
     case VDHT_PING:
         ret = route->dht_ops->ping(route, &conn);
         break;
-
     case VDHT_FIND_NODE:
         ret = route->dht_ops->find_node(route, &conn, &host->myid);
         break;
-
     case VDHT_FIND_CLOSEST_NODES:
         ret = route->dht_ops->find_closest_nodes(route, &conn, &host->myid);
         break;
-
+    case VDHT_REFLEX:
+        ret = route->dht_ops->reflex(route, &conn);
+        break;
     case VDHT_POST_SERVICE:
     default:
         retE((1));
