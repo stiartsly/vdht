@@ -67,9 +67,7 @@ int _vroute_recr_space_make(struct vroute_recr_space* space, vtoken* token)
     retE((!record));
 
     vrecord_init(record, token);
-    vlock_enter(&space->lock);
     varray_add_tail(&space->records, record);
-    vlock_leave(&space->lock);
 
     return 0;
 }
@@ -91,7 +89,6 @@ int _vroute_recr_space_check(struct vroute_recr_space* space, vtoken* token)
     vassert(space);
     vassert(token);
 
-    vlock_enter(&space->lock);
     for (i = 0; i < varray_size(&space->records); i++) {
         record = (struct vrecord*)varray_get(&space->records, i);
         if (vtoken_equal(&record->token, token)) {
@@ -101,7 +98,6 @@ int _vroute_recr_space_check(struct vroute_recr_space* space, vtoken* token)
             break;
         }
     }
-    vlock_leave(&space->lock);
     return found;
 }
 
@@ -119,7 +115,6 @@ void _vroute_recr_space_timed_reap(struct vroute_recr_space* space)
     int i = 0;
     vassert(space);
 
-    vlock_enter(&space->lock);
     for (i = 0; i < varray_size(&space->records);) {
         record = (struct vrecord*)varray_get(&space->records, i);
         if ((now - record->snd_ts) > space->max_recr_period) {
@@ -129,7 +124,6 @@ void _vroute_recr_space_timed_reap(struct vroute_recr_space* space)
             i++;
         }
     }
-    vlock_leave(&space->lock);
     return ;
 }
 
@@ -143,12 +137,10 @@ void _vroute_recr_space_clear(struct vroute_recr_space* space)
     struct vrecord* record = NULL;
     vassert(space);
 
-    vlock_enter(&space->lock);
     while (varray_size(&space->records)) {
         record = (struct vrecord*)varray_pop_tail(&space->records);
         vrecord_free(record);
     }
-    vlock_leave(&space->lock);
     return ;
 }
 
@@ -164,12 +156,10 @@ void _vroute_recr_space_dump(struct vroute_recr_space* space)
     int i = 0;
     vassert(space);
 
-    vlock_enter(&space->lock);
     for (i = 0; i < varray_size(&space->records); i++) {
         record = (struct vrecord*)varray_get(&space->records, i);
         vrecord_dump(record);
     }
-    vlock_leave(&space->lock);
     return ;
 }
 
@@ -188,7 +178,6 @@ int vroute_recr_space_init(struct vroute_recr_space* space)
 
     space->max_recr_period = 5; //5s;
     varray_init(&space->records, 8);
-    vlock_init(&space->lock);
 
     space->ops = &route_record_space_ops;
     return 0;
@@ -199,7 +188,6 @@ void vroute_recr_space_deinit(struct vroute_recr_space* space)
     vassert(space);
 
     space->ops->clear(space);
-    vlock_deinit(&space->lock);
     varray_deinit(&space->records);
 
     return ;

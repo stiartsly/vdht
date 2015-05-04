@@ -3,6 +3,8 @@
 
 #define VMEM_FIRST_CAPC ((int)4)
 
+#include "vsys.h"
+
 struct vmem_chunk {
     uint32_t magic;
     int32_t  taken;

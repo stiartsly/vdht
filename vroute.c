@@ -216,8 +216,8 @@ int _vroute_tick(struct vroute* route)
 
     vlock_enter(&route->lock);
     node_space->ops->tick(node_space);
-    vlock_leave(&route->lock);
     recr_space->ops->timed_reap(recr_space);// reap all timeout records.
+    vlock_leave(&route->lock);
     return 0;
 }
 
@@ -229,6 +229,7 @@ int _vroute_tick(struct vroute* route)
 static
 void _vroute_clear(struct vroute* route)
 {
+    struct vroute_srvc_probe_helper* probe_helper = &route->probe_helper;
     struct vroute_recr_space* recr_space = &route->recr_space;
     struct vroute_node_space* node_space = &route->node_space;
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
@@ -237,8 +238,9 @@ void _vroute_clear(struct vroute* route)
     vlock_enter(&route->lock);
     node_space->ops->clear(node_space);
     srvc_space->ops->clear(srvc_space);
-    vlock_leave(&route->lock);
     recr_space->ops->clear(recr_space);
+    probe_helper->ops->clear(probe_helper);
+    vlock_leave(&route->lock);
 
     return;
 }

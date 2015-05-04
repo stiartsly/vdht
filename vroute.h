@@ -49,7 +49,6 @@ struct vroute_recr_space_ops {
 struct vroute_recr_space {
     int max_recr_period;
     struct varray records; //has all dht query(but not received rsp yet) records;
-    struct vlock lock;
 
     struct vroute_recr_space_ops* ops;
 };
@@ -153,8 +152,6 @@ struct vroute_srvc_probe_helper_ops {
 
 struct vroute_srvc_probe_helper {
     struct varray items;
-    struct vlock  lock;
-
     struct vroute_srvc_probe_helper_ops* ops;
 };
 

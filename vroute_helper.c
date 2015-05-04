@@ -64,7 +64,6 @@ int _vroute_srvc_probe_helper_add(struct vroute_srvc_probe_helper* probe_helper,
     vassert(hash);
     vassert(ncb);
 
-    vlock_enter(&probe_helper->lock);
     for (i = 0; i < varray_size(&probe_helper->items); i++) {
         probe_item = (struct vroute_srvc_probe_item*)varray_get(&probe_helper->items, i);
         if (vtoken_equal(&probe_item->hash, hash) &&
@@ -77,13 +76,11 @@ int _vroute_srvc_probe_helper_add(struct vroute_srvc_probe_helper* probe_helper,
     if (!found) {
         probe_item = vroute_srvc_probe_item_alloc();
         if (!probe_item) {
-            vlock_leave(&probe_helper->lock);
             return -1;
         }
         vroute_srvc_probe_item_init(probe_item, hash, ncb, icb, cookie);
         varray_add_tail(&probe_helper->items, probe_item);
     }
-    vlock_leave(&probe_helper->lock);
     return 0;
 }
 
@@ -98,7 +95,6 @@ int _vroute_srvc_probe_helper_invoke(struct vroute_srvc_probe_helper* probe_help
     vassert(hash);
     vassert(srvci);
 
-    vlock_enter(&probe_helper->lock);
     for (i = 0; i < varray_size(&probe_helper->items); i++) {
         probe_item = (struct vroute_srvc_probe_item*)varray_get(&probe_helper->items, i);
         if (vtoken_equal(&probe_item->hash, hash)) {
@@ -109,7 +105,6 @@ int _vroute_srvc_probe_helper_invoke(struct vroute_srvc_probe_helper* probe_help
             varray_del(&probe_helper->items, i);
         }
     }
-    vlock_leave(&probe_helper->lock);
     return 0;
 }
 
@@ -119,12 +114,10 @@ void _vroute_srvc_probe_helper_clear(struct vroute_srvc_probe_helper* probe_help
     struct vroute_srvc_probe_item* probe_item = NULL;
     vassert(probe_helper);
 
-    vlock_enter(&probe_helper->lock);
     while (varray_size(&probe_helper->items)) {
         probe_item = (struct vroute_srvc_probe_item*)varray_pop_tail(&probe_helper->items);
         vroute_srvc_probe_item_free(probe_item);
     }
-    vlock_leave(&probe_helper->lock);
     return ;
 }
 
@@ -150,8 +143,6 @@ int vroute_srvc_probe_helper_init(struct vroute_srvc_probe_helper* probe_helper)
     vassert(probe_helper);
 
     varray_init(&probe_helper->items, 4);
-    vlock_init(&probe_helper->lock);
-
     probe_helper->ops = &route_srvc_probe_helper_ops;
     return 0;
 }
@@ -161,7 +152,6 @@ void vroute_srvc_probe_helper_deinit(struct vroute_srvc_probe_helper* probe_help
     vassert(probe_helper);
 
     probe_helper->ops->clear(probe_helper);
-    vlock_deinit(&probe_helper->lock);
     return;
 }
 
