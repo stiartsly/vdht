@@ -141,7 +141,7 @@ int _aux_node_load_boot_cb(struct sockaddr_in* boot_addr, void* cookie)
     vassert(node);
     vassert(boot_addr);
 
-    if (node->ops->has_addr(node, boot_addr)) {
+    if (vnodeInfo_has_addr((vnodeInfo*)&node->nodei, boot_addr)) {
         return 0;
     }
     ret = node->route->ops->join_node(node->route, boot_addr);
