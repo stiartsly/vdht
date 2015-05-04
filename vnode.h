@@ -57,8 +57,8 @@ struct vnode_ops {
     int  (*stabilize)  (struct vnode*);
     void (*dump)       (struct vnode*);
     void (*clear)      (struct vnode*);
-    int  (*renice)     (struct vnode*);
-    void (*tick)       (struct vnode*);
+    int  (*renice_unlocked)(struct vnode*);
+    void (*tick_unlocked)  (struct vnode*);
     int  (*myself)     (struct vnode*, vnodeInfo_relax*);
     int  (*reflex_addr)(struct vnode*, struct sockaddr_in*, struct sockaddr_in*);
     int  (*has_addr)   (struct vnode*, struct sockaddr_in*);

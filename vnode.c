@@ -178,8 +178,8 @@ int _aux_node_tick_cb(void* cookie)
     case VDHT_RUN: {
         if (now - node->ts > node->tick_tmo) {
             node->route->ops->tick(node->route);
-            node->ops->renice(node);
-            node->ops->tick(node);
+            node->ops->renice_unlocked(node);
+            node->ops->tick_unlocked(node);
             node->ts = now;
         }
         break;
@@ -271,7 +271,7 @@ void _vnode_clear(struct vnode* node)
  *
  */
 static
-int _vnode_renice(struct vnode* node)
+int _vnode_renice_unlocked(struct vnode* node)
 {
     struct vnode_nice* node_nice = &node->node_nice;
     vsrvcInfo* svc = NULL;
@@ -280,32 +280,28 @@ int _vnode_renice(struct vnode* node)
 
     vassert(node);
 
-    vlock_enter(&node->lock);
     node->nice = node_nice->ops->get_nice(node_nice);
     for (i = 0; i < varray_size(&node->services); i++) {
         svc = (vsrvcInfo*)varray_get(&node->services, i);
         svc->nice = nice;
     }
-    vlock_leave(&node->lock);
     return 0;
 }
 
 static
-void _vnode_tick(struct vnode* node)
+void _vnode_tick_unlocked(struct vnode* node)
 {
     struct vroute* route = node->route;
     vsrvcInfo* svc = NULL;
     int i = 0;
     vassert(node);
 
-    vlock_enter(&node->lock);
     _aux_node_get_eaddrs(node);
     _aux_node_probe_connectivity(node);
     for (i = 0; i < varray_size(&node->services); i++) {
         svc = (vsrvcInfo*)varray_get(&node->services, i);
         route->ops->air_service(route, svc);
     }
-    vlock_leave(&node->lock);
     return ;
 }
 
@@ -382,8 +378,8 @@ struct vnode_ops node_ops = {
     .stabilize     = _vnode_stabilize,
     .dump          = _vnode_dump,
     .clear         = _vnode_clear,
-    .renice        = _vnode_renice,
-    .tick          = _vnode_tick,
+    .renice_unlocked  = _vnode_renice_unlocked,
+    .tick_unlocked = _vnode_tick_unlocked,
     .myself        = _vnode_myself,
     .reflex_addr   = _vnode_reflex_addr,
     .has_addr      = _vnode_has_addr,

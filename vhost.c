@@ -93,7 +93,7 @@ void _vhost_dump(struct vhost* host)
     vdump(printf("-> HOST"));
     host->node.ops->dump(&host->node);
     host->route.ops->dump(&host->route);
-    host->waiter.ops->dump(&host->waiter);
+    //host->waiter.ops->dump(&host->waiter);
     vdump(printf("<- HOST"));
 
     return;
