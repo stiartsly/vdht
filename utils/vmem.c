@@ -19,6 +19,7 @@ int vmem_aux_init(struct vmem_aux* aux, int obj_sz, int first_capc)
     aux->used   = 0;
     aux->first  = (first_capc > 0) ? first_capc : VMEM_FIRST_CAPC;
     aux->obj_sz = obj_sz;
+    vlock_init(&aux->lock);
     vlist_init(&aux->zones);
     return 0;
 }
@@ -75,8 +76,9 @@ void* vmem_aux_alloc(struct vmem_aux* aux)
     int i = 0;
     vassert(aux);
 
+    vlock_enter(&aux->lock);
     if (aux->used >= aux->capc) {
-        retE_p((_aux_extend(aux) < 0));
+        ret1E_p((_aux_extend(aux) < 0), vlock_leave(&aux->lock));
     }
 
     __vlist_for_each(node, &aux->zones) {
@@ -94,6 +96,8 @@ void* vmem_aux_alloc(struct vmem_aux* aux)
     }
     vassert(found);
     aux->used++;
+    vlock_leave(&aux->lock);
+
     memset(zone->chunks[i]->obj, 0, aux->obj_sz);
     return zone->chunks[i]->obj;
 }
@@ -110,12 +114,14 @@ void vmem_aux_free(struct vmem_aux* aux, void* obj)
 
     retE_v((!obj));
 
+    vlock_enter(&aux->lock);
     chunk = (struct vmem_chunk*)(obj - sz);
     vassert((chunk->magic == CHUNK_MAGIC));
     vassert((chunk->taken = 1));
 
     chunk->taken = 0;
     aux->used--;
+    vlock_leave(&aux->lock);
     return ;
 }
 
@@ -128,6 +134,7 @@ void vmem_aux_deinit(struct vmem_aux* aux)
     struct vlist* node = NULL;
     vassert(aux);
 
+    vlock_enter(&aux->lock);
     __vlist_for_each(node, &aux->zones) {
         zone = vlist_entry(node, struct vmem_zone, list);
         if (zone->mem_cache) {
@@ -137,6 +144,8 @@ void vmem_aux_deinit(struct vmem_aux* aux)
             free(zone->chunks);
         }
     }
+    vlock_leave(&aux->lock);
+    vlock_deinit(&aux->lock);
     return ;
 }
 

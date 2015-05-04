@@ -7,9 +7,7 @@
 int vlock_init(struct vlock* lock)
 {
     vassert(lock);
-    pthread_mutexattr_init(&lock->attr);
-    pthread_mutexattr_settype(&lock->attr, PTHREAD_MUTEX_RECURSIVE_NP);
-    return pthread_mutex_init(&lock->mutex, &lock->attr);
+    return pthread_mutex_init(&lock->mutex, NULL);
 }
 
 int vlock_enter(struct vlock* lock)
@@ -28,7 +26,6 @@ void vlock_deinit(struct vlock* lock)
 {
     vassert(lock);
     pthread_mutex_destroy(&lock->mutex);
-    pthread_mutexattr_destroy(&lock->attr);
     return ;
 }
 

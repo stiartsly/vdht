@@ -20,6 +20,7 @@ struct vmem_aux {
     int used;
     int capc;
     int first;
+    struct vlock lock;
     struct vlist zones;
 };
 
@@ -29,6 +30,7 @@ struct vmem_aux {
         0, \
         0, \
         ((!first_capc) ? VMEM_FIRST_CAPC : first_capc ), \
+        VLOCK_INITIALIZER, \
         {&maux.zones, &maux.zones }\
     }
 
