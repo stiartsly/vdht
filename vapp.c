@@ -18,7 +18,7 @@ int _aux_appmain_prepare(const char* pid_file)
     vlogEv((errno != ENOENT), elog_stat);
     retE((errno != ENOENT));
 
-    fd = open(pid_file, O_CLOEXEC|O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
+    fd = open(pid_file, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
     vlogEv((fd < 0), elog_open);
     retE((fd < 0));
     memset(buf, 0, 8);
