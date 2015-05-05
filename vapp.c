@@ -5,23 +5,45 @@ static
 int _aux_appmain_prepare(const char* pid_file)
 {
     struct stat sbuf;
-    char buf[8];
+    char buf[32];
     int fd  = 0;
+    int pid = 0;
     int ret = 0;
 
     vassert(pid_file);
 
-    ret = stat(pid_file, &sbuf);
-    vlogEv((ret >= 0), "vdhtd is already running");
-    retE((ret >= 0));
+    fd = open(pid_file, O_RDONLY);
+    if (fd > 0) {
+        memset(buf, 0, 32);
+        ret = read(fd, buf, 32);
+        close(fd);
+        vlogEv((ret < 0), elog_read);
+        retE((ret < 0));
+        errno = 0;
+        pid = strtol(buf, NULL, 10);
+        vlogEv((errno), elog_strtol);
+        retE((errno));
+        retE((pid < 0));
 
-    vlogEv((errno != ENOENT), elog_stat);
-    retE((errno != ENOENT));
+        memset(buf, 0, 32);
+        sprintf(buf, "/proc/%d", pid);
+        errno = 0;
+        ret = stat(buf, &sbuf);
+        if (ret >= 0) {
+            vlogE("vdhtd is already running");
+            retE((1));
+        }else if (errno == ENOENT) {
+            unlink(pid_file);
+        }else {
+            vlogE(elog_stat);
+            retE((1));
+        }
+    }
 
     fd = open(pid_file, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
     vlogEv((fd < 0), elog_open);
     retE((fd < 0));
-    memset(buf, 0, 8);
+    memset(buf, 0, 32);
     sprintf(buf, "%d", getpid());
     write(fd, buf, strlen(buf));
     close(fd);
