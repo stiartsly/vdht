@@ -1,4 +1,4 @@
-CFLAGS = -I. -I.. -g -Wall
+CFLAGS = -I. -I.. -g -Wall -D_GNU_SOURCE
 utils_objs = \
     vhashmap.o \
     varray.o \

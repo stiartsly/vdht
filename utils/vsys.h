@@ -12,9 +12,10 @@
 
 struct vlock {
     pthread_mutex_t mutex;
+    pthread_attr_t  attr;
 };
 
-#define VLOCK_INITIALIZER {.mutex = PTHREAD_MUTEX_INITIALIZER }
+#define VLOCK_RECURSIVE_INITIALIZER {.mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP }
 
 extern int  vlock_init  (struct vlock*);
 extern int  vlock_enter (struct vlock*);

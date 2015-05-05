@@ -32,7 +32,7 @@ struct vmem_aux {
         0, \
         0, \
         ((!first_capc) ? VMEM_FIRST_CAPC : first_capc ), \
-        VLOCK_INITIALIZER, \
+        VLOCK_RECURSIVE_INITIALIZER, \
         {&maux.zones, &maux.zones }\
     }
 
