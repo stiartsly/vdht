@@ -202,7 +202,7 @@ struct vroute_ops {
     int  (*reflex)       (struct vroute*, struct sockaddr_in*);
     int  (*probe_connectivity) (struct vroute*, struct sockaddr_in*);
     void (*set_inspect_cb)     (struct vroute*, vroute_inspect_t, void*);
-    void (*inspect_unlocked)   (struct vroute*, vtoken*, uint32_t);
+    void (*inspect)      (struct vroute*, vtoken*, uint32_t);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
