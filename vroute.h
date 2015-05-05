@@ -68,7 +68,7 @@ struct vpeer {
     int nprobes;
 };
 
-typedef void (*vroute_node_space_iterate_t)(struct vpeer*, void*, vtoken*);
+typedef void (*vroute_node_space_inspect_t)(struct vpeer*, void*, vtoken*, uint32_t);
 struct vroute_node_space;
 struct vroute_node_space_ops {
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
@@ -86,7 +86,7 @@ struct vroute_node_space_ops {
     int  (*load)         (struct vroute_node_space*);
     int  (*store)        (struct vroute_node_space*);
     void (*clear)        (struct vroute_node_space*);
-    void (*iterate)      (struct vroute_node_space*, vroute_node_space_iterate_t, void*, vtoken*);
+    void (*inspect)      (struct vroute_node_space*, vroute_node_space_inspect_t, void*, vtoken*, uint32_t);
     void (*dump)         (struct vroute_node_space*);
 };
 
@@ -118,13 +118,13 @@ struct vservice {
     time_t rcv_ts;
 };
 
-typedef void (*vroute_srvc_space_iterate_t)(struct vservice*, void*, vtoken*);
+typedef void (*vroute_srvc_space_inspect_t)(struct vservice*, void*, vtoken*, uint32_t);
 struct vroute_srvc_space;
 struct vroute_srvc_space_ops {
     int  (*add_service)  (struct vroute_srvc_space*, vsrvcInfo*);
     int  (*get_service)  (struct vroute_srvc_space*, vsrvcHash*, vsrvcInfo*);
     void (*clear)        (struct vroute_srvc_space*);
-    void (*iterate)      (struct vroute_srvc_space*, vroute_srvc_space_iterate_t, void*, vtoken*);
+    void (*inspect)      (struct vroute_srvc_space*, vroute_srvc_space_inspect_t, void*, vtoken*, uint32_t);
     void (*dump)         (struct vroute_srvc_space*);
 };
 
@@ -157,6 +157,39 @@ struct vroute_srvc_probe_helper {
 
 int  vroute_srvc_probe_helper_init  (struct vroute_srvc_probe_helper*);
 void vroute_srvc_probe_helper_deinit(struct vroute_srvc_probe_helper*);
+
+enum {
+    VROUTE_INSP_RESERVE   = (uint32_t)0x0,
+    VROUTE_INSP_SND_PING  = (uint32_t)0x01,
+    VROUTE_INSP_SND_PING_RSP,
+    VROUTE_INSP_SND_FIND_NODE,
+    VROUTE_INSP_SND_FIND_NODE_RSP,
+    VROUTE_INSP_SND_FIND_CLOSEST_NODES,
+    VROUTE_INSP_SND_FIND_CLOSEST_NODES_RSP,
+    VROUTE_INSP_SND_REFLEX,
+    VROUTE_INSP_SND_REFLEX_RSP,
+    VROUTE_INSP_SND_PROBE,
+    VROUTE_INSP_SND_PROBE_RSP,
+    VROUTE_INSP_SND_POST_SERVICE,
+    VROUTE_INSP_SND_FIND_SERVICE,
+    VROUTE_INSP_SND_FIND_SERVICE_RSP,
+    VROUTE_INSP_RCV_PING  = (uint32_t)0x81,
+    VROUTE_INSP_RCV_PING_RSP,
+    VROUTE_INSP_RCV_FIND_NODE,
+    VROUTE_INSP_RCV_FIND_NODE_RSP,
+    VROUTE_INSP_RCV_FIND_CLOSEST_NODES,
+    VROUTE_INSP_RCV_FIND_CLOSEST_NODES_RSP,
+    VROUTE_INSP_RCV_REFLEX,
+    VROUTE_INSP_RCV_REFLEX_RSP,
+    VROUTE_INSP_RCV_PROBE,
+    VROUTE_INSP_RCV_PROBE_RSP,
+    VROUTE_INSP_RCV_POST_SERVICE,
+    VROUTE_INSP_RCV_FIND_SERVICE,
+    VROUTE_INSP_RCV_FIND_SERVICE_RSP,
+    VROUTE_INSP_BUTT
+};
+typedef void (*vroute_inspect_t)(struct vroute*, void* cookie, vtoken*, uint32_t);
+
 /*
  * for routing table.
  */
@@ -167,10 +200,9 @@ struct vroute_ops {
 
     int  (*air_service)  (struct vroute*, vsrvcInfo*);
     int  (*reflex)       (struct vroute*, struct sockaddr_in*);
-    int  (*probe_connectivity)
-                         (struct vroute*, struct sockaddr_in*);
-    void (*set_ncb)      (struct vroute*, vroute_node_space_iterate_t, void*); //only support for test.
-    void (*set_scb)      (struct vroute*, vroute_srvc_space_iterate_t, void*); //only support for test.
+    int  (*probe_connectivity) (struct vroute*, struct sockaddr_in*);
+    void (*set_inspect_cb)     (struct vroute*, vroute_inspect_t, void*);
+    void (*inspect_unlocked)   (struct vroute*, vtoken*, uint32_t);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
@@ -220,12 +252,10 @@ struct vroute {
     struct vnode*   node;
 
     /*
-     * fields to support test.
+     * fields to inspect route details.
      */
-    vroute_node_space_iterate_t ncb;
-    void* ncb_cookie;
-    vroute_srvc_space_iterate_t scb;
-    void* scb_cookie;
+    vroute_inspect_t insp_cb;
+    void* insp_cookie;
 };
 
 int  vroute_init  (struct vroute*, struct vconfig*, struct vhost*, vnodeId*);
