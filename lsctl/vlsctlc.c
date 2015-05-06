@@ -12,6 +12,27 @@
     } while(0)
 
 static
+void _aux_vhexbuf_dump(uint8_t* hex_buf, int len)
+{
+    int i = 0;
+
+    vassert(hex_buf);
+    vassert(len > 0);
+
+    for (i = 0; i < len ; i++) {
+        if (i % 16 == 0) {
+            printf("0x%p: ", (void*)(hex_buf + i));
+        }
+        printf("%02x ", hex_buf[i]);
+        if (i % 16 == 15) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+    return ;
+}
+
+static
 int _vlsctlc_bind_cmd_host_up(struct vlsctlc* lsctlc)
 {
     vassert(lsctlc);
@@ -610,7 +631,10 @@ int _aux_vlsctlc_unpack_addr(void* buf, int len, struct sockaddr_in* addr)
     vassert(len > 0);
 
     memset(addr, 0, sizeof(*addr));
-    tsz += sizeof(int16_t); //skip family;
+
+    tsz += sizeof(uint8_t);
+    addr->sin_family = *(uint8_t*)(buf + tsz);
+    tsz += sizeof(uint8_t);
     addr->sin_port = *(uint16_t*)(buf + tsz);
     tsz += sizeof(uint16_t);
     addr->sin_addr.s_addr = *(uint32_t*)(buf + tsz);
@@ -639,6 +663,7 @@ int _vlsctlc_unpack_cmd_find_service_rsp(struct vlsctlc* lsctlc, void* buf, int 
     while(len - tsz > 0) {
         tsz += _aux_vlsctlc_unpack_addr(buf + tsz, len - tsz, &lsctlc->rsp_args.find_service_rsp_args.addrs[i]);
         i++;
+        printf("<%s> len:%d, tsz:%d.\n", __FUNCTION__, len, tsz);
     }
     lsctlc->rsp_args.find_service_rsp_args.num = i;
     return tsz;
@@ -714,27 +739,6 @@ int _vlsctlc_pack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
 }
 
 static
-void _aux_vhexbuf_dump(uint8_t* hex_buf, int len)
-{
-    int i = 0;
-
-    vassert(hex_buf);
-    vassert(len > 0);
-
-    for (i = 0; i < len ; i++) {
-        if (i % 16 == 0) {
-            printf("0x%p: ", (void*)(hex_buf + i));
-        }
-        printf("%02x ", hex_buf[i]);
-        if (i % 16 == 15) {
-            printf("\n");
-        }
-    }
-    printf("\n");
-    return ;
-}
-
-static
 int _vlsctlc_unpack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
 {
     struct vlsctlc_unpack_cmd_desc* desc = lsctlc_unpack_cmd_desc;
@@ -762,6 +766,7 @@ int _vlsctlc_unpack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
     if (magic != VLSCTL_MAGIC) {
         return -1;
     }
+
     while(bsz - csz > 0) {
         uint16_t cmd_id = 0;
         int cmd_len = 0;
@@ -785,6 +790,7 @@ int _vlsctlc_unpack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
                     cmd_len -= ret;
                     break;
                 }else {
+                    printf("do nothing.\n");
                     //do nothing;
                 }
             }

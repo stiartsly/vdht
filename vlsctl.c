@@ -443,7 +443,10 @@ int _aux_vlsctl_pack_addr(void* buf, int len, struct sockaddr_in* addr)
     vassert(buf);
     vassert(len > 0);
 
-    tsz += sizeof(uint16_t); // skip family;
+    *(uint8_t*)(buf + tsz) = 0;
+    tsz += sizeof(uint8_t);
+    *(uint8_t*)(buf + tsz) = (uint8_t)addr->sin_family;
+    tsz += sizeof(uint8_t);
     *(uint16_t*)(buf + tsz) = addr->sin_port;
     tsz += sizeof(uint16_t);
     *(uint32_t*)(buf + tsz) = addr->sin_addr.s_addr;
@@ -476,8 +479,7 @@ int _vlsctl_pack_find_service_rsp(void* buf, int len, void* cookie)
     bsz += sizeof(vsrvcHash);
     tsz += sizeof(vsrvcHash);
     for (i = 0; i < args->find_service_rsp_args.total; i++) {
-        ret = _aux_vlsctl_pack_addr(buf + bsz, len - bsz, &args->find_service_rsp_args.addrs[i]);
-        vsockaddr_dump(&args->find_service_rsp_args.addrs[i]);
+        ret = _aux_vlsctl_pack_addr(buf + tsz, len - tsz, &args->find_service_rsp_args.addrs[i]);
         printf("\n");
         tsz += ret;
         bsz += ret;
