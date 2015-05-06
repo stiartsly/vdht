@@ -56,6 +56,9 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
     vassert(ncb);
     vassert(icb);
 
+    memset(&srvci, 0, sizeof(srvci));
+    srvci.capc = VSRVCINFO_MAX_ADDRS;
+
     vlock_enter(&route->lock);
     ret = srvc_space->ops->get_service(srvc_space, hash, (vsrvcInfo*)&srvci);
     vlock_leave(&route->lock);
