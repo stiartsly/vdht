@@ -38,7 +38,7 @@ void show_usage(void)
     printf("Usage: vdhtd [OPTION...]\n");
     printf("  --unix-domain-file=UNIX_DOMAIN_FILE     unix domain path to communicate with vdhtd\n");
     printf("  --lsctl-socket-file=LSCTL_FILE          unix domain path for vdhtd to use\n");
-    printf("  -p, --port=PORT                         port to use for service provision\n");
+    printf("  -p, --port=PORT                         port to use for communication\n");
     printf("\n");
     printf("Help options\n");
     printf("  -h  --help                              show this help message.\n");
@@ -118,12 +118,11 @@ int vexample_get_addr(struct sockaddr_in* addr)
 }
 
 static
-int vexample_loop_run(struct sockaddr_in* addr)
+int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
 {
     struct sockaddr_in from_addr;
     char data[32];
-    int prnt = 0;
-    int quit = 0;
+    int ask  = 0;
     int err = 0;
     int ret = 0;
     int fd  = 0;
@@ -141,7 +140,7 @@ int vexample_loop_run(struct sockaddr_in* addr)
         close(fd);
         return -1;
     }
-    while(!quit) {
+    while(1) {
         struct timespec tmo = {0, 5000*1000*100};
         sigset_t sigmask;
         sigset_t origmask;
@@ -180,25 +179,20 @@ int vexample_loop_run(struct sockaddr_in* addr)
                     break;
                 }
                 if (ret > 0) {
-                    if (data[0] == 'o') {
-                        prnt = 1;
-                    } else if (data[0] == 'x') {
-                        quit = 1;
-                    } else {
-                        //do nothing;
-                    }
+                    printf("%c", data[0]);
+                    ask = 1;
                 }
             }
             if (FD_ISSET(fd, &wfds)) {
-                if (prnt) {
-                    char a = (char)rand();
-                    printf("%c", a);
-                    ret = sendto(fd, &a, 1, 0, (struct sockaddr*)&from_addr, sizeof(struct sockaddr_in));
+                if (ask) {
+                    char a = 'o';
+                    ret = sendto(fd, &a, 1, 0, (struct sockaddr*)to, sizeof(struct sockaddr_in));
                     if (ret < 0) {
                         perror("sendto:");
                         err = 1;
                         break;
                     }
+                    ask = 0;
                 }
             }
             if (FD_ISSET(fd, &efds)) {
@@ -224,6 +218,22 @@ void vexample_dump_addr(struct sockaddr_in* addr)
     }
     port = (int)ntohs(addr->sin_port);
     printf("dump addr: (%s:%d)\n", hostname, port);
+    return ;
+}
+
+void vexample_number_addr_cb(vsrvcHash* hash, int num, void* cookie)
+{
+    printf("addr num:%d.\n", num);
+    return ;
+}
+
+void vexample_iterate_addr_cb(vsrvcHash* hash, struct sockaddr_in* addr, int last, void* cookie)
+{
+    struct sockaddr_in* from = (struct sockaddr_in*)cookie;
+    vexample_dump_addr(addr);
+    printf("last:%d.\n", last);
+
+    memcpy(from, addr, sizeof(*addr));
     return ;
 }
 
@@ -313,7 +323,8 @@ int main(int argc, char** argv)
     }
 
     {
-        struct sockaddr_in srvcAddr;
+        struct sockaddr_in laddr;
+        struct sockaddr_in to;
         vsrvcHash srvcHash;
 
         ret = vexample_get_hash(&srvcHash);
@@ -321,22 +332,22 @@ int main(int argc, char** argv)
             printf("failed to get service hash\n");
             exit(-1);
         }
-        ret = vexample_get_addr(&srvcAddr);
+        ret = vexample_get_addr(&laddr);
         if (ret < 0) {
             printf("failed to get local addr.\n");
             exit(-1);
         }
-        vexample_dump_addr(&srvcAddr);
+        vexample_dump_addr(&laddr);
 
         vdhtc_init(gserver_socket, glsctls_socket);
-        ret = vdhtc_post_service_segment(&srvcHash, &srvcAddr);
+        ret = vdhtc_find_service(&srvcHash, vexample_number_addr_cb, vexample_iterate_addr_cb, &to);
         if (ret < 0) {
             printf("post service failed.\n");
             vdhtc_deinit();
             exit(-1);
         }
 
-        ret = vexample_loop_run(&srvcAddr);
+        ret = vexample_loop_run(&laddr, &to);
         if (ret < 0) {
             printf("failed to run server.\n");
             exit(-1);
