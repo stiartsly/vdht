@@ -1220,6 +1220,9 @@ int _vroute_cb_find_service(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(conn);
     vassert(ctxt);
 
+    memset(&srvci, 0, sizeof(srvci));
+    srvci.capc = VSRVCINFO_MAX_ADDRS;
+
     ret = route->dec_ops->find_service(ctxt, &token, &fromId, &srvcHash);
     retE((ret < 0));
     ret = srvc_space->ops->get_service(srvc_space, &srvcHash, (vsrvcInfo*)&srvci);
