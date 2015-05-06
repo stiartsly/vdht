@@ -158,6 +158,9 @@ struct vroute_srvc_probe_helper {
 int  vroute_srvc_probe_helper_init  (struct vroute_srvc_probe_helper*);
 void vroute_srvc_probe_helper_deinit(struct vroute_srvc_probe_helper*);
 
+/*
+ * for inspection
+ */
 enum {
     VROUTE_INSP_RESERVE   = (uint32_t)0x0,
     VROUTE_INSP_SND_PING  = (uint32_t)0x01,
@@ -188,7 +191,7 @@ enum {
     VROUTE_INSP_RCV_FIND_SERVICE_RSP,
     VROUTE_INSP_BUTT
 };
-typedef void (*vroute_inspect_t)(struct vroute*, void* cookie, vtoken*, uint32_t);
+typedef void (*vroute_inspect_t)(struct vroute*, void*, vtoken*, uint32_t);
 
 /*
  * for routing table.

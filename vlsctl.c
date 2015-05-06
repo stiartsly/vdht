@@ -19,6 +19,7 @@ int _aux_lsctl_unpack_addr(void* buf, int len, struct sockaddr_in* addr)
     tsz += sizeof(uint16_t);
     saddr = *(uint32_t*)(buf + tsz);
     saddr = ntohl(saddr);
+    tsz += sizeof(uint32_t);
 
     ret = vsockaddr_convert2(saddr, port, addr);
     retE((ret < 0));
