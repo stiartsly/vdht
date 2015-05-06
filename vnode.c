@@ -501,12 +501,39 @@ static
 int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
     struct vroute* route = node->route;
+    vsrvcInfo_relax srvci_relax;
+    vsrvcInfo* srvci = NULL;
+    int found = 0;
     int ret = 0;
+    int i = 0;
 
     vassert(node);
     vassert(hash);
     vassert(ncb);
     vassert(icb);
+
+    vlock_enter(&node->lock);
+    for (i = 0; i < varray_size(&node->services); i++) {
+        srvci = (vsrvcInfo*)varray_get(&node->services, i);
+        if (vtoken_equal(&srvci->hash, hash)) {
+            found = 1;
+            break;
+        }
+    }
+    if (found) {
+        memset(&srvci_relax, 0, sizeof(srvci_relax));
+        srvci_relax.capc = VSRVCINFO_MAX_ADDRS;
+        vsrvcInfo_copy((vsrvcInfo*)&srvci_relax, srvci);
+    }
+    vlock_leave(&node->lock);
+
+    if (found){
+        ncb(hash, srvci->naddrs, cookie);
+        for (i = 0; i < srvci->naddrs; i++) {
+            icb(hash, &srvci->addrs[i], (i+1) == srvci->naddrs, cookie);
+        }
+        return 0;
+    }
 
     ret = route->ops->find_service(route, hash, ncb, icb, cookie);
     retE((ret < 0));
