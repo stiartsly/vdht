@@ -1,6 +1,31 @@
 #include "vglobal.h"
 #include "vmsger.h"
 
+void* vmsg_buf_alloc(int sz)
+{
+    void* buf = NULL;
+    int bsz = BUF_SZ;
+
+    if (sz > 0) {
+        bsz = sz * BUF_SZ;
+    }
+
+    buf = malloc(bsz);
+    vlogEv((!buf), elog_malloc);
+    retE_p((!buf));
+
+    memset(buf, 0, bsz);
+    return buf;
+}
+
+void vmsg_buf_free(void* buf)
+{
+    if (buf) {
+        free(buf);
+    }
+    return ;
+}
+
 /*
  * auxiliary funcs for vmsg_sys.
  */

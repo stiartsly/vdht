@@ -289,14 +289,12 @@ int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, stru
     ret = app->api_ops->find_service(app, &hash, _aux_vlsctl_number_addr_cb1, _aux_vlsctl_iterate_addr_cb1, args);
     ret1E((ret < 0), free(args));
 
-    snd_buf = (char*)malloc(BUF_SZ);
-    vlogEv((!snd_buf), elog_malloc);
+    snd_buf = (char*)vmsg_buf_alloc(0);
     ret1E((!snd_buf), free(args));
-    memset(snd_buf, 0, BUF_SZ);
 
     ret = lsctl->ops->pack_cmd(lsctl, snd_buf, BUF_SZ, args);
     free(args);
-    ret1E((ret < 0), free(buf));
+    ret1E((ret < 0), free(snd_buf));
     {
         struct vmsg_usr msg = {
             .addr  = from,
@@ -324,10 +322,8 @@ void _aux_vlsctl_number_addr_cb2(vsrvcHash* hash, int naddrs, void* cookie)
 
     args->probe_service_rsp_args.total = naddrs;
     if (!naddrs) {
-        buf = (char*)malloc(BUF_SZ);
-        vlogEv((!buf), elog_malloc);
+        buf = (char*)vmsg_buf_alloc(0);
         ret1E_v((!buf), free(args));
-        memset(buf, 0, BUF_SZ);
 
         ret = lsctl->ops->pack_cmd(lsctl, buf, BUF_SZ, cookie);
         free(args);
@@ -359,10 +355,8 @@ void _aux_vlsctl_iterate_addr_cb2(vsrvcHash* hash, struct sockaddr_in* addr, int
     args->probe_service_rsp_args.index++;
 
     if (last) {
-        buf = (char*)malloc(BUF_SZ);
-        vlogEv((!buf), elog_malloc);
+        buf = (char*)vmsg_buf_alloc(0);
         ret1E_v((!buf), free(args));
-        memset(buf, 0, BUF_SZ);
 
         ret = lsctl->ops->pack_cmd(lsctl, buf, BUF_SZ, cookie);
         free(args);

@@ -119,24 +119,23 @@ void* vdht_buf_alloc(void)
 {
     void* buf = NULL;
 
-    buf = malloc(8*BUF_SZ);
-    vlogEv((!buf), elog_malloc);
+    buf = vmsg_buf_alloc(4);
     retE_p((!buf));
-    memset(buf, 0, 8*BUF_SZ);
 
-    return buf + 8;
+    //reserve msgId and magic space.
+    return buf + sizeof(int32_t) + sizeof(uint32_t);
 }
 
 int vdht_buf_len(void)
 {
-    return (int)(8*BUF_SZ - 8);
+    return (int)(4*BUF_SZ - sizeof(int32_t) - sizeof(uint32_t));
 }
 
 void vdht_buf_free(void* buf)
 {
     vassert(buf);
 
-    free(buf - 8);
+    vmsg_buf_free(buf - sizeof(int32_t) - sizeof(uint32_t));
     return ;
 }
 

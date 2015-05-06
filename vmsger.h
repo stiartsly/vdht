@@ -15,6 +15,15 @@ enum {
 
 #define VDHT_MSG(msgId)  (msgId == VMSG_DHT)
 
+/*
+ * for message buffer
+ */
+void* vmsg_buf_alloc(int);
+void  vmsg_buf_free(void*);
+
+/*
+ * vmsg_usr
+ */
 struct vsockaddr {
     union {
         struct sockaddr_in s_in;
