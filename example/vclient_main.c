@@ -46,6 +46,21 @@ void show_usage(void)
     return ;
 }
 
+void vexample_dump_addr(struct sockaddr_in* addr)
+{
+    char* hostname = NULL;
+    int port = 0;
+
+    hostname = inet_ntoa((struct in_addr)addr->sin_addr);
+    if (!hostname) {
+        printf("inet_ntoa failed\n");
+        return ;
+    }
+    port = (int)ntohs(addr->sin_port);
+    printf("dump addr: (%s:%d)\n", hostname, port);
+    return ;
+}
+
 static
 int vexample_get_hash(vsrvcHash* hash)
 {
@@ -122,7 +137,8 @@ int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
 {
     struct sockaddr_in from_addr;
     char data[32];
-    int ask  = 0;
+    int quit = 0;
+    int ask  = 1;
     int err = 0;
     int ret = 0;
     int fd  = 0;
@@ -140,8 +156,8 @@ int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
         close(fd);
         return -1;
     }
-    while(1) {
-        struct timespec tmo = {0, 5000*1000*100};
+    while(!quit) {
+        struct timespec tmo = {0, 5000*1000};
         sigset_t sigmask;
         sigset_t origmask;
         fd_set rfds;
@@ -161,6 +177,17 @@ int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
         FD_SET(fd, &wfds);
         FD_SET(fd, &efds);
 
+        if (ask) {
+            char a = 'o';
+            ret = sendto(fd, &a, 1, 0, (struct sockaddr*)to, sizeof(struct sockaddr_in));
+            if (ret < 0) {
+                perror("sendto:");
+                err = 1;
+                break;
+            }
+            ask = 0;
+        }
+
         ret = pselect(fd + 1, &rfds, &wfds, &efds, &tmo, &sigmask);
         if (ret < 0) {
             printf("pselect:");
@@ -179,8 +206,14 @@ int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
                     break;
                 }
                 if (ret > 0) {
-                    printf("%c", data[0]);
-                    ask = 1;
+                    char ch = (char)data[0];
+                    if (ch == 'x') {
+                        quit = 1;
+                        break;
+                    } else {
+                        printf("%c", (char)data[0]);
+                        ask = 1;
+                    }
                 }
             }
             if (FD_ISSET(fd, &wfds)) {
@@ -204,21 +237,6 @@ int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
     }
     close(fd);
     return (err) ? -1 : 0;
-}
-
-void vexample_dump_addr(struct sockaddr_in* addr)
-{
-    char* hostname = NULL;
-    int port = 0;
-
-    hostname = inet_ntoa((struct in_addr)addr->sin_addr);
-    if (!hostname) {
-        printf("inet_ntoa failed\n");
-        return ;
-    }
-    port = (int)ntohs(addr->sin_port);
-    printf("dump addr: (%s:%d)\n", hostname, port);
-    return ;
 }
 
 void vexample_number_addr_cb(vsrvcHash* hash, int num, void* cookie)
