@@ -663,7 +663,6 @@ int _vlsctlc_unpack_cmd_find_service_rsp(struct vlsctlc* lsctlc, void* buf, int 
     while(len - tsz > 0) {
         tsz += _aux_vlsctlc_unpack_addr(buf + tsz, len - tsz, &lsctlc->rsp_args.find_service_rsp_args.addrs[i]);
         i++;
-        printf("<%s> len:%d, tsz:%d.\n", __FUNCTION__, len, tsz);
     }
     lsctlc->rsp_args.find_service_rsp_args.num = i;
     return tsz;
@@ -790,7 +789,6 @@ int _vlsctlc_unpack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
                     cmd_len -= ret;
                     break;
                 }else {
-                    printf("do nothing.\n");
                     //do nothing;
                 }
             }
