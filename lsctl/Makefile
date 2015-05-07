@@ -1,26 +1,24 @@
-CC=gcc
-CFLAGS=-I. -I..  -Iutils -I/usr/local/include -g -Wall -std=gnu99 -D_STUB
-LDFLAGS=
-DEPS = 
+ROOT_PATH := $(shell pwd)/..
 
-libvdhtapi_objs = \
-    vhashgen.o \
-    vlsctlc.o \
-    vdhtapi.o 
+include ../Makefile.def
+
+libvdhtapi := libvdhtapi.a
+
+libvdhtapi_objs := \
+        vhashgen.o \
+        vlsctlc.o  \
+        vdhtapi.o 
 
 .PHONY: vlsctlc clean
 
-%.o: %.c 
-	$(CC) -c -o $@ $< $(CFLAGS)
-
-vlsctlc: vlsctlc_main.o libvdhtapi.a
+vlsctlc: vlsctlc_main.o $(libvdhtapi)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-libvdhtapi.a: $(libvdhtapi_objs)
-	ar -rv $@ $^
+$(libvdhtapi): $(libvdhtapi_objs)
+	$(AR) -r $@ $^
 
 clean:
-	-rm -f *.o 
-	-rm -f *.a
-	-rm -f vlsctlc
+	-$(RM) -f $(libvdhtapi_objs)
+	-$(RM) -f $(libvdhtapi)
+	-$(RM) -f vlsctlc
 

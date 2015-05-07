@@ -1,45 +1,44 @@
-CC=gcc
-CFLAGS=-I. -Iutils -Istun -I/usr/local/include -I3rdparties/miniupnpc -g -Wall -std=gnu99 -D_STUB -D_GNU_SOURCE
-LDFLAGS=-lpthread -lsqlite3 -lrt -L3rdparties/miniupnpc -lminiupnpc
-DEPS = 
+ROOT_PATH := $(shell pwd)
 
-vdht_objs = \
-    vlog.o \
-    vcfg.o  \
-    vapp.o \
-    vrpc.o  \
-    vdht.o  \
-    vdht_core.o \
-    vhost.o \
-    vnode.o \
-    vnode_nice.o \
-    vperf.o \
-    vmsger.o  \
-    vroute.o  \
-    vupnpc.o \
-    vroute_node.o  \
-    vroute_srvc.o  \
-    vroute_recr.o  \
-    vroute_helper.o \
-    vlsctl.o  \
-    vticker.o \
-    vnodeId.o \
+include Makefile.def
+
+libvdht = libvdht.a 
+
+libvdht_objs := \
+        vlog.o \
+        vcfg.o  \
+        vapp.o \
+        vrpc.o  \
+        vdht.o  \
+        vdht_core.o \
+        vhost.o \
+        vnode.o \
+        vnode_nice.o \
+        vmsger.o  \
+        vroute.o  \
+        vupnpc.o \
+        vroute_node.o  \
+        vroute_srvc.o  \
+        vroute_recr.o  \
+        vroute_helper.o \
+        vlsctl.o  \
+        vticker.o \
+        vnodeId.o \
 
 .PHONY: all vdhtd vlsctlc clean
 
-%.o: %.c 
-	@$(CC) -c -o $@ $< $(CFLAGS)
+all: vdhtd vlsctlc $(libvdht) libutils.a libvdhtapi.a vserver vclient
 
-all: vdhtd vlsctlc libvdhtapi.a
+$(libvdht_objs): vglobal.h
 
-vdhtd: vmain.o libvdht.a 
+$(libvdht): $(libvdht_objs) libutils.a
+	$(AR) -r $@ $^
+
+vdhtd: vmain.o $(libvdht)
 	@$(CC) -o $@ $^ libutils.a  $(LDFLAGS)
 
 vlsctlc:
-	@cd lsctl && make vlsctlc
-
-libvdht.a: $(vdht_objs) libutils.a
-	@ar -rv $@ $^
+	@cd lsctl && make -e vlsctlc 
 
 libutils.a:
 	@cd utils && make libutils.a
@@ -47,11 +46,18 @@ libutils.a:
 libvdhtapi.a:
 	@cd lsctl && make libvdhtapi.a
 
+vserver:
+	@cd example && make vserver
+
+vclient:
+	@cd example && make vclient 
+
 clean:
 	@cd lsctl && make clean
 	@cd utils && make clean
-	-rm -f *.o 
-	-rm -f libvdht.a
-	-rm -f libutils.a
-	-rm -f vdhtd 
+	-$(RM) -f $(libvdht_objs)
+	-$(RM) -f vmain.o
+	-$(RM) -f $(libvdht)
+	-$(RM) -f libutils.a
+	-$(RM) -f vdhtd 
 

@@ -1,14 +1,10 @@
-CC=gcc
-CFLAGS=-I. -I..  -I../lsctl -I/usr/local/include -g -Wall -std=gnu99 -D_STUB
-LDFLAGS= -pthread
-DEPS = 
+ROOT_PATH := $(shell pwd)/..
+
+include ../Makefile.def
 
 .PHONY: verser vclient clean
 
 all: vserver vclient
-
-%.o: %.c 
-	$(CC) -c -o $@ $< $(CFLAGS)
 
 vserver: vserver_main.o libvdhtapi.a
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -16,8 +12,8 @@ vserver: vserver_main.o libvdhtapi.a
 vclient: vclient_main.o libvdhtapi.a
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-
 clean:
-	-rm -f *.o 
-	-rm -f vserver
+	-$(RM) -f *.o 
+	-$(RM) -f vserver
+	-$(RM) -f vclient
 

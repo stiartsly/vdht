@@ -1,0 +1,19 @@
+CC := gcc
+AR := ar
+RM := rm
+MV := mv
+
+INC_FLAGS := -I$(ROOT_PATH) \
+             -I$(ROOT_PATH)/utils \
+             -I$(ROOT_PATH)/lsctl \
+             -I$(ROOT_PATH)/3rdparties/miniupnpc
+
+CFLAGS  := -g -Wall -std=gnu99 -D_GNU_SOURCE $(INC_FLAGS)
+LDFLAGS := -lpthread -lsqlite3 -lrt -L3rdparties/miniupnpc -lminiupnpc
+
+(%.o): %.c 
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $*.o
+	$(AR) -r $@ $*.o
+	$(RM) $*.o
+
+

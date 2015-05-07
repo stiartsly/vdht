@@ -1,21 +1,22 @@
-CFLAGS = -I. -I.. -g -Wall -D_GNU_SOURCE
-utils_objs = \
-    vhashmap.o \
-    varray.o \
-    vmisc.o \
-    vdict.o \
-    vmem.o \
-    vsys.o 
+ROOT_PATH := $(shell pwd)/..
+include ../Makefile.def
 
-%.o: %.c 
-	$(CC) -c -o $@ $< $(CFLAGS)
+libutils := libutils.a
 
-libutils.a: $(utils_objs)
-	ar -rv $@ $^
-	@mv $@ ../.
+libutils_objs := \
+        vhashmap.o \
+        varray.o \
+        vmisc.o \
+        vdict.o \
+        vmem.o \
+        vsys.o 
+
+$(libutils): $(libutils_objs)
+	$(AR) -r $@ $^
+	$(MV) $@ ../.
 
 clean:
-	-rm -f *.o
-	-rm -f libutils.a 
+	-$(RM) -f $(libutils_objs)
+	-$(RM) -f $(libutils)
 
 
