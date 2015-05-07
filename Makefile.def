@@ -2,6 +2,7 @@ CC := gcc
 AR := ar
 RM := rm
 MV := mv
+CP := cp
 
 INC_FLAGS := -I$(ROOT_PATH) \
              -I$(ROOT_PATH)/utils \

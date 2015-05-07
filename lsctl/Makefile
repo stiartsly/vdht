@@ -19,6 +19,7 @@ $(libvdhtapi): $(libvdhtapi_objs)
 
 clean:
 	-$(RM) -f $(libvdhtapi_objs)
+	-$(RM) -f vlsctlc_main.o
 	-$(RM) -f $(libvdhtapi)
 	-$(RM) -f vlsctlc
 
