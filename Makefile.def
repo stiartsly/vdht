@@ -3,6 +3,7 @@ AR := ar
 RM := rm
 MV := mv
 CP := cp
+MK := make
 
 INC_FLAGS := -I$(ROOT_PATH) \
              -I$(ROOT_PATH)/utils \

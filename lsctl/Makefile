@@ -16,6 +16,7 @@ vlsctlc: vlsctlc_main.o $(libvdhtapi)
 
 $(libvdhtapi): $(libvdhtapi_objs)
 	$(AR) -r $@ $^
+	$(CP) -f $@ $(ROOT_PATH)/example
 
 clean:
 	-$(RM) -f $(libvdhtapi_objs)
