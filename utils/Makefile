@@ -1,22 +1,17 @@
 ROOT_PATH := ..
 include ../common.mk
 
-libutils := libutils.a
+objs := $(subst .c,.o,$(notdir $(shell find . -name '*.c')))
+lib  := libutils.a
 
-libutils_objs := \
-        vhashmap.o \
-        varray.o \
-        vmisc.o \
-        vdict.o \
-        vmem.o \
-        vsys.o 
+.PHONY: $(lib)
 
-$(libutils): $(libutils_objs)
+$(lib): $(objs)
 	$(AR) -r $@ $^
 	$(RM) -f $^
 
 clean:
-	-$(RM) -f $(libutils_objs)
-	-$(RM) -f $(libutils)
+	-$(RM) -f $(objs)
+	-$(RM) -f $(lib)
 
 

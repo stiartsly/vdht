@@ -2,26 +2,22 @@ ROOT_PATH := ..
 
 include ../common.mk
 
-libvdhtapi := libvdhtapi.a
+objs := vhashgen.o vlsctlc.o  vdhtapi.o 
+lib  := libvdhtapi.a
+bin  := vlsctlc
 
-libvdhtapi_objs := \
-        vhashgen.o \
-        vlsctlc.o  \
-        vdhtapi.o 
+.PHONY: $(bin) $(lib) clean
 
-.PHONY: vlsctlc clean
-
-vlsctlc: vlsctlc_main.o $(libvdhtapi)
+$(bin): vlsctlc_main.o $(lib)
 	$(CC) -o $@ $^ $(LDFLAGS)
 	$(RM) -f $<
 
-$(libvdhtapi): $(libvdhtapi_objs)
+$(lib): $(objs)
 	$(AR) -r $@ $^
 	$(RM) -f $^
 
 clean:
-	-$(RM) -f $(libvdhtapi_objs)
-	-$(RM) -f vlsctlc_main.o
-	-$(RM) -f $(libvdhtapi)
-	-$(RM) -f vlsctlc
+	$(RM) -f $(objs) vlsctlc_main.o
+	$(RM) -f $(lib)
+	$(RM) -f $(bin)
 

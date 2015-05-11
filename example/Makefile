@@ -2,9 +2,10 @@ ROOT_PATH := ..
 
 include ../common.mk
 
-.PHONY: verser vclient clean
+bins := vserver vclient
 
-all: vserver vclient
+.PHONY: $(bins) clean
+all: $(bins)
 
 vserver: vserver_main.o 
 	$(CC) -o $@ $^ $(LDFLAGS) $(ROOT_PATH)/lsctl/libvdhtapi.a
