@@ -1,6 +1,6 @@
-ROOT_PATH := $(shell pwd)/..
+ROOT_PATH := ..
 
-include ../Makefile.def
+include ../common.mk
 
 libvdhtapi := libvdhtapi.a
 
@@ -13,10 +13,11 @@ libvdhtapi_objs := \
 
 vlsctlc: vlsctlc_main.o $(libvdhtapi)
 	$(CC) -o $@ $^ $(LDFLAGS)
+	$(RM) -f $<
 
 $(libvdhtapi): $(libvdhtapi_objs)
 	$(AR) -r $@ $^
-	$(CP) -f $@ $(ROOT_PATH)/example
+	$(RM) -f $^
 
 clean:
 	-$(RM) -f $(libvdhtapi_objs)

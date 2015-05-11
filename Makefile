@@ -1,6 +1,6 @@
-ROOT_PATH := $(shell pwd)
+ROOT_PATH := .
 
-include Makefile.def
+include common.mk
 
 libutils   := libutils.a
 libvdht    := libvdht.a 
@@ -39,8 +39,9 @@ libvdht_objs := \
 
 all: $(libs) $(apps)
 
-$(libvdht): $(libvdht_objs) 
-	$(AR) -r $@ $^ 
+$(libvdht): $(libvdht_objs) $(libutils)
+	$(AR) -r $@ $(libvdht_objs) $(addprefix $(ROOT_PATH)/utils/, $(libutils))
+	$(RM) -f $(libvdht_objs)
 
 $(libutils):
 	$(MK) --directory=utils $@
@@ -48,13 +49,14 @@ $(libutils):
 $(libvdhtapi):
 	$(MK) --directory=lsctl $@
 
-$(vdhtd): vmain.o $(libvdht) $(libutils)
-	$(CC) -o $@ $^ $(LDFLAGS)
+$(vdhtd): vmain.o $(libvdht) 
+	$(CC) -o $@ $^ $(addprefix $(ROOT_PATH)/utils/, $(libutils)) $(LDFLAGS)
+	$(RM) -f $<
 
-$(vlsctlc):
+$(vlsctlc): $(libvdhtapi)
 	$(MK) --directory=lsctl $@
 
-$(vserver) $(vclient):
+$(vserver) $(vclient): $(libvdhtapi)
 	$(MK) --directory=example $@
 
 clean:
@@ -64,6 +66,5 @@ clean:
 	$(RM) -f $(libvdht_objs)
 	$(RM) -f vmain.o
 	$(RM) -f $(libvdht)
-	$(RM) -f $(libutils)
 	$(RM) -f $(vdhtd)
 

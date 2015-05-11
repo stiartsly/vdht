@@ -1,5 +1,5 @@
-ROOT_PATH := $(shell pwd)/..
-include ../Makefile.def
+ROOT_PATH := ..
+include ../common.mk
 
 libutils := libutils.a
 
@@ -13,7 +13,7 @@ libutils_objs := \
 
 $(libutils): $(libutils_objs)
 	$(AR) -r $@ $^
-	$(MV) $@ ../.
+	$(RM) -f $^
 
 clean:
 	-$(RM) -f $(libutils_objs)
