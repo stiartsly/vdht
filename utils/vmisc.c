@@ -17,6 +17,23 @@ enum {
 static struct ifconf gifc;
 static struct ifreq  gifr[16];
 static int gindex = 0;
+
+static
+int _aux_hostaddr_if_match(char* ifname)
+{
+    char* ifname_set[] = {"eth", "em", "wlan", NULL};
+    int yes = 0;
+    int i = 0;
+
+    for (i = 0; ifname_set[i]; i++) {
+        if (!strncmp(ifname, ifname_set[i], strlen(ifname_set[i]))) {
+            yes = 1;
+            break;
+        }
+    }
+    return yes;
+}
+
 int vhostaddr_get_first(char* host, int sz)
 {
     struct ifreq* req = NULL;
@@ -44,7 +61,7 @@ int vhostaddr_get_first(char* host, int sz)
     retE((ret < 0));
 
     req = &gifr[gindex];
-    yes = !strncmp(req->ifr_name, "eth", 3) || !strncmp(req->ifr_name, "wlan", 4);
+    yes = _aux_hostaddr_if_match(req->ifr_name);
     while (!yes) {
         gindex++;
         if (gindex >= gifc.ifc_len/sizeof(struct ifreq)) {
@@ -52,7 +69,7 @@ int vhostaddr_get_first(char* host, int sz)
             break;
         }
         req = &gifr[gindex];
-        yes = !strncmp(req->ifr_name, "eth", 3) || !strncmp(req->ifr_name, "wlan", 4);
+        yes = _aux_hostaddr_if_match(req->ifr_name);
     }
     retS((no_ifs));
 
@@ -364,25 +381,54 @@ int vsockaddr_dump(struct sockaddr_in* addr)
 
 int vmacaddr_get(uint8_t* macaddr, int len)
 {
-    struct ifreq req;
+    struct ifconf ifc;
+    struct ifreq  ifr[16];
+    struct ifreq* req = NULL;
+    int index = 0;
+    int sockfd = 0;
+    int no_ifs = 0;
     int ret = 0;
-    int fd  = 0;
+    int yes = 0;
 
     vassert(macaddr);
     vassert(len > 0);
     retE((len < ETH_ALEN)); // ETH_ALEN (6).
 
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-    vlogEv((fd < 0), elog_socket);
-    retE((fd < 0));
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    vlogEv((sockfd < 0), elog_socket);
+    retE((sockfd < 0));
 
-    strcpy(req.ifr_name, "eth0");
-    ret = ioctl(fd, SIOCGIFHWADDR, &req);
-    close(fd);
+    index = 0;
+    memset(ifr, 0, sizeof(ifr));
+    ifc.ifc_len = sizeof(ifr);
+    ifc.ifc_buf = (caddr_t)ifr;
+
+    ret = ioctl(sockfd, SIOCGIFCONF, &ifc);
+    vlogEv((ret < 0), elog_ioctl);
+    ret1E((ret < 0), close(sockfd));
+
+    req = &ifr[index];
+    yes = _aux_hostaddr_if_match(req->ifr_name);
+    while (!yes) {
+        index++;
+        if (index >= ifc.ifc_len/sizeof(struct ifreq)) {
+            no_ifs = 1;
+            break;
+        }
+        req = &ifr[index];
+        yes = _aux_hostaddr_if_match(req->ifr_name);
+    }
+    if (no_ifs) {
+        close(sockfd);
+        return -1;
+    }
+
+    ret = ioctl(sockfd, SIOCGIFHWADDR, req);
+    close(sockfd);
     vlogEv((ret < 0), elog_ioctl);
     retE((ret < 0));
 
-    memcpy(macaddr, req.ifr_hwaddr.sa_data, ETH_ALEN);
+    memcpy(macaddr, req->ifr_hwaddr.sa_data, ETH_ALEN);
     return 0;
 }
 
