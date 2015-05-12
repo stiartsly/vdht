@@ -50,7 +50,7 @@ $(libutils):
 $(libvdhtapi):
 	$(MK) --directory=lsctl $@
 
-$(bin_vdhd): $(bin_vdht_objs) $(libvdht)
+$(bin_vdhtd): $(bin_vdht_objs) $(libvdht)
 	$(CC) -o $@ $^ $(addprefix $(ROOT_PATH)/utils/, $(libutils)) $(LDFLAGS)
 	$(RM) -f $<
 
