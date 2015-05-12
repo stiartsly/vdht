@@ -54,10 +54,10 @@ $(bin_vdhtd): $(bin_vdht_objs) $(libvdht)
 	$(CC) -o $@ $^ $(addprefix $(ROOT_PATH)/utils/, $(libutils)) $(LDFLAGS)
 	$(RM) -f $<
 
-$(vlsctlc): $(libvdhtapi)
+$(bin_lsctlc): $(libvdhtapi)
 	$(MK) --directory=lsctl $@
 
-$(vserver) $(vclient): $(libvdhtapi)
+$(bin_server) $(bin_client): $(libvdhtapi)
 	$(MK) --directory=example $@
 
 clean:
