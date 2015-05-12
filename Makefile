@@ -1,41 +1,42 @@
 ROOT_PATH := .
-
 include common.mk
 
-libutils   := libutils.a
-libvdht    := libvdht.a 
-libvdhtapi := libvdhtapi.a
+libvdht_objs  :=  vlog.o \
+                  vcfg.o  \
+                  vapp.o \
+                  vrpc.o  \
+                  vdht.o  \
+                  vdht_core.o \
+                  vhost.o \
+        	  vnode.o \
+      		  vnode_nice.o \
+	          vmsger.o  \
+	          vupnpc.o \
+ 	          vlsctl.o  \
+                  vticker.o \
+                  vnodeId.o \
+	          vroute.o  \
+                  vroute_node.o  \
+	          vroute_srvc.o  \
+                  vroute_recr.o  \
+                  vroute_helper.o 
 
-vdhtd      := vdhtd
-vlsctlc    := vlsctlc
-vserver    := vserver
-vclient    := vclient
+libvdht       := libvdht.a
+libutils      := libutils.a
+libvdhtapi    := libvdhtapi.a
 
-libs       := $(libutils) $(libvdht) $(libvdhtapi)
-apps       := $(vdhtd) $(vlsctlc) $(vserver) $(vclient)
+bin_vdht_objs := vmain.o
+bin_vdht_libs := $(libvdht) $(libutils)
+bin_vdhtd     := vdhtd
+bin_lsctlc    := vlsctlc
+bin_server    := vserver
+bin_client    := vclient
 
-libvdht_objs := \
-        vlog.o \
-        vcfg.o  \
-        vapp.o \
-        vrpc.o  \
-        vdht.o  \
-        vdht_core.o \
-        vhost.o \
-        vnode.o \
-        vnode_nice.o \
-        vmsger.o  \
-        vroute.o  \
-        vupnpc.o \
-        vroute_node.o  \
-        vroute_srvc.o  \
-        vroute_recr.o  \
-        vroute_helper.o \
-        vlsctl.o  \
-        vticker.o \
-        vnodeId.o \
+objs          := $(libvdht_objs)
+libs          := $(libutils) $(libvdht) $(libvdhtapi)
+apps          := $(bin_vdhtd) $(bin_lsctlc) $(bin_server) $(bin_client)
 
-.PHONY: $(apps) all clean
+.PHONY: $(apps) $(libs) all clean
 
 all: $(libs) $(apps)
 
@@ -49,7 +50,7 @@ $(libutils):
 $(libvdhtapi):
 	$(MK) --directory=lsctl $@
 
-$(vdhtd): vmain.o $(libvdht) 
+$(bin_vdhd): $(bin_vdht_objs) $(libvdht)
 	$(CC) -o $@ $^ $(addprefix $(ROOT_PATH)/utils/, $(libutils)) $(LDFLAGS)
 	$(RM) -f $<
 
@@ -63,8 +64,7 @@ clean:
 	$(MK) --directory=lsctl clean
 	$(MK) --directory=utils clean
 	$(MK) --directory=example clean
-	$(RM) -f $(libvdht_objs)
-	$(RM) -f vmain.o
-	$(RM) -f $(libvdht)
-	$(RM) -f $(vdhtd)
+	$(RM) -f $(objs)
+	$(RM) -f $(libs)
+	$(RM) -f $(apps)
 

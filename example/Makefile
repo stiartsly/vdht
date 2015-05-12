@@ -2,23 +2,32 @@ ROOT_PATH := ..
 
 include ../common.mk
 
-bins := vserver vclient
 
-.PHONY: $(bins) clean
-all: $(bins)
+bin_server_objs := vserver_main.o
+bin_server_libs := $(libvdhtapi)
+bin_server      := vserver
 
-vserver: vserver_main.o 
+bin_client_objs := vclient_main.o
+bin_client_libs := $(libvdhtapi)
+bin_client      := vclient
+
+objs := $(bin_server_objs)
+libs := 
+apps := $(bin_server) $(bin_client)
+
+.PHONY: $(apps) $(libs) all clean
+all: $(apps) $(libs)
+
+$(bin_server): $(bin_server_objs) $(bin_server_libs)
 	$(CC) -o $@ $^ $(LDFLAGS) $(ROOT_PATH)/lsctl/libvdhtapi.a
-	$(RM) -f vserver_main.o
+	$(RM) -f $(bin_server_objs)
  
-
-vclient: vclient_main.o
+$(bin_client): $(bin_client_objs) $(bin_client_libs)
 	$(CC) -o $@ $^ $(LDFLAGS) $(ROOT_PATH)/lsctl/libvdhtapi.a
-	$(RM) -f vclient_main.o
+	$(RM) -f $(bin_client_objs)
 
 clean:
-	-$(RM) -f vserver_main.o 
-	-$(RM) -f vclient_main.o 
-	-$(RM) -f vserver
-	-$(RM) -f vclient
+	$(RM) -f $(objs)
+	$(RM) -f $(libs)
+	$(RM) -f $(apps)
 
