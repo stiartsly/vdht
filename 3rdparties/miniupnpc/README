@@ -1,0 +1,8 @@
+1. The referenece website of minupnpc source:
+	http://miniupnp.tuxfamily.org/files/
+   currently miniupnpc-1.9.tar.gz is used for vdhtd-0.0.1.0 version.
+
+2. Download the source code and untar it, and execute following commands:
+	make
+        make install
+
