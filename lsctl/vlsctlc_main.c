@@ -133,9 +133,9 @@ int _aux_parse_sockaddr_param(void)
 }
 
 static
-void _aux_print_addr_num_cb(vsrvcHash* hash, int num, void* cookie)
+void _aux_print_addr_num_cb(vsrvcHash* hash, int num, int proto, void* cookie)
 {
-    printf("addr num: %d.\n", num);
+    printf("addr num: %d, proto:%d.\n", num, proto);
     return ;
 }
 

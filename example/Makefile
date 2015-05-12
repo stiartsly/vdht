@@ -2,7 +2,6 @@ ROOT_PATH := ..
 
 include ../common.mk
 
-
 bin_server_objs := vserver_main.o
 bin_server_libs := $(libvdhtapi)
 bin_server      := vserver

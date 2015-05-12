@@ -98,7 +98,7 @@ int _vroute_srvc_probe_helper_invoke(struct vroute_srvc_probe_helper* probe_help
     for (i = 0; i < varray_size(&probe_helper->items); i++) {
         probe_item = (struct vroute_srvc_probe_item*)varray_get(&probe_helper->items, i);
         if (vtoken_equal(&probe_item->hash, hash)) {
-            probe_item->ncb(hash, srvci->naddrs, probe_item->cookie);
+            probe_item->ncb(hash, srvci->naddrs, VPROTO_UDP, probe_item->cookie);
             for (j = 0; j < srvci->naddrs; j++) {
                 probe_item->icb(hash, &srvci->addrs[j], (j+1)== srvci->naddrs, probe_item->cookie);
             }

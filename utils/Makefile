@@ -22,8 +22,8 @@ $(libutils): $(libutils_objs)
 	$(RM) -f $^
 
 clean:
-	-$(RM) -f $(objs)
-	-$(RM) -f $(libs)
-	-$(RM) -f $(apps)
+	$(RM) -f $(objs)
+	$(RM) -f $(libs)
+	$(RM) -f $(apps)
 
 

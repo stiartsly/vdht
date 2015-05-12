@@ -239,9 +239,9 @@ int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
     return (err) ? -1 : 0;
 }
 
-void vexample_number_addr_cb(vsrvcHash* hash, int num, void* cookie)
+void vexample_number_addr_cb(vsrvcHash* hash, int num, int proto, void* cookie)
 {
-    printf("addr num:%d.\n", num);
+    printf("addr num:%d (proto:%d).\n", num, proto);
     return ;
 }
 

@@ -642,10 +642,10 @@ int vdhtc_find_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcIn
         goto error_exit;
     }
     ret = lsctlc.unbind_ops->unbind_find_service(&lsctlc, &hash, addrs, &num);
-   // if ((ret < 0) || memcmp(&hash, srvcHash, sizeof(vsrvcHash))) {
-   //     goto error_exit;
-   // }
-    ncb(&hash, num, cookie);
+    if ((ret < 0) || memcmp(&hash, srvcHash, sizeof(vsrvcHash))) {
+        goto error_exit;
+    }
+    ncb(&hash, num, VPROTO_UDP, cookie);
     for (i = 0; i < num; i++) {
         icb(&hash, &addrs[i], ((i + 1) == num), cookie);
     }
@@ -698,7 +698,7 @@ int vdhtc_probe_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcI
     if ((ret < 0) || memcmp(&hash, srvcHash, sizeof(vsrvcHash))) {
         goto error_exit;
     }
-    ncb(&hash, num, cookie);
+    ncb(&hash, num, VPROTO_UDP, cookie);
     for (i = 0; i < num; i++) {
         icb(&hash, &addrs[i], ((i + 1) == num), cookie);
     }

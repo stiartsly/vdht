@@ -65,11 +65,11 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
     retE((ret < 0));
 
     if (!ret) {
-        ncb(&srvci.hash, 0, cookie);
+        ncb(&srvci.hash, 0, VPROTO_UNKNOWN, cookie);
         return 0;
     }
 
-    ncb(&srvci.hash, srvci.naddrs, cookie);
+    ncb(&srvci.hash, srvci.naddrs, VPROTO_UDP, cookie);
     for (i = 0; i < srvci.naddrs; i++) {
         icb(&srvci.hash, &srvci.addrs[i], ((i+1) == srvci.naddrs), cookie);
     }

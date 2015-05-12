@@ -234,7 +234,7 @@ int _vlsctl_exec_cmd_unpost_service(struct vlsctl* lsctl, void* buf, int len, st
 }
 
 static
-void _aux_vlsctl_number_addr_cb1(vsrvcHash* hash, int naddrs, void* cookie)
+void _aux_vlsctl_number_addr_cb1(vsrvcHash* hash, int naddrs, int proto, void* cookie)
 {
     union  vlsctl_rsp_args* args = (union vlsctl_rsp_args*)cookie;
     vassert(hash);
@@ -310,7 +310,7 @@ int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, stru
 }
 
 static
-void _aux_vlsctl_number_addr_cb2(vsrvcHash* hash, int naddrs, void* cookie)
+void _aux_vlsctl_number_addr_cb2(vsrvcHash* hash, int naddrs, int proto, void* cookie)
 {
     union  vlsctl_rsp_args* args = (union vlsctl_rsp_args*)cookie;
     struct vlsctl* lsctl = args->probe_service_rsp_args.lsctl;

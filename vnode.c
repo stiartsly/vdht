@@ -528,7 +528,7 @@ int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_
     vlock_leave(&node->lock);
 
     if (found) {
-        ncb(hash, srvci_relax.naddrs, cookie);
+        ncb(hash, srvci_relax.naddrs, VPROTO_UDP, cookie);
         for (i = 0; i < srvci_relax.naddrs; i++) {
             icb(hash, &srvci_relax.addrs[i], (i+1) == srvci_relax.naddrs, cookie);
         }

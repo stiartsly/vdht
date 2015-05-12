@@ -130,8 +130,17 @@ struct vsrvcInfo {
     int16_t capc;
     struct sockaddr_in addrs[VSRVCINFO_MIN_ADDRS];
 };
+
+enum {
+    VPROTO_RES0,
+    VPROTO_UDP,
+    VPROTO_TCP,
+    VPROTO_RES1,
+    VPROTO_RES2,
+    VPROTO_UNKNOWN
+};
 typedef struct vsrvcInfo vsrvcInfo;
-typedef void (*vsrvcInfo_number_addr_t) (vsrvcHash*, int, void*);
+typedef void (*vsrvcInfo_number_addr_t) (vsrvcHash*, int, int, void*);
 typedef void (*vsrvcInfo_iterate_addr_t)(vsrvcHash*, struct sockaddr_in*, int, void*);
 vsrvcInfo* vsrvcInfo_alloc(void);
 void vsrvcInfo_free(vsrvcInfo*);
