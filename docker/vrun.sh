@@ -1,5 +1,10 @@
 #!/bin/bash
 
-mkdir -p /var/run/vdht && /root/vdht/vdhtd -D
+if [ ! -e /var/run/vdht ]
+then
+   mkdir /var/run/vdht
+fi
+
+/root/vdht/vdhtd -S
 
 

@@ -5,22 +5,22 @@ FROM ubuntu
 
 MAINTAINER tang.zhilong tang.zhilong@kortide.com
 
-RUN apt-get update && apt-get install build-essential
+RUN apt-get update && apt-get install -y build-essential
 RUN apt-get install -y libsqlite3-dev
 RUN apt-get install -y wget
 RUN apt-get install -y git
 
 WORKDIR /root
-RUN git clone ttps://github.com/miniupnp/miniupnp.git
+RUN git clone https://github.com/miniupnp/miniupnp.git
 WORKDIR /root/miniupnp/miniupnpc
 RUN make && make install
 
 WORKDIR /root
 RUN git clone https://github.com/stiartsly/vdht.git
 WORKDIR /root/vdht
-RUN make && make install
+RUN make
 
-ADD docker/vrun.sh /run.sh
+RUN mv /root/vdht/docker/vrun.sh /run.sh
 RUN chmod 755 /run.sh
 
 CMD ["/run.sh"]
