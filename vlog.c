@@ -202,7 +202,7 @@ int vlog_open_with_cfg(struct vconfig* cfg)
          g_need_syslog = 1;
          openlog(ident, LOG_CONS | LOG_PID, LOG_DAEMON);
     } else {
-        //todo;
+         g_need_syslog = 0;
     }
     return 0;
 }
