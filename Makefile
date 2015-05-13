@@ -31,6 +31,7 @@ bin_vdhtd     := vdhtd
 bin_lsctlc    := vlsctlc
 bin_server    := vserver
 bin_client    := vclient
+bin_hashgen   := vhashgen
 
 objs          := $(libvdht_objs)
 libs          := $(libutils) $(libvdht) $(libvdhtapi)
@@ -60,6 +61,8 @@ $(bin_lsctlc): $(libvdhtapi)
 $(bin_server) $(bin_client): $(libvdhtapi)
 	$(MK) --directory=example $@
 
+$(bin_hashgen): 
+	$(MK) --directory=hashgen $@
 clean:
 	$(MK) --directory=lsctl clean
 	$(MK) --directory=utils clean

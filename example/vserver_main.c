@@ -18,7 +18,10 @@
 #include <unistd.h>
 #include "vdhtapi.h"
 
-static char* gserver_magic = "server.example.201503140506abcdefg";
+static char* gserver_magic = \
+     "@example-service@zhilong@kortide-corp@example@765fce110adcb92685cfe4"\
+     "a2e990cc02ae361f483a2ad2929498e0e2d06abc46c98a58d36611f9ebe1";
+
 static char  gserver_socket[256];
 static char  glsctls_socket[256];
 static int   gserver_port = 0;
