@@ -1,0 +1,11 @@
+1. Use following command to build vdht image, which vdht source code can make compilation:
+
+     sudo docker build -t mytest1 .
+ 
+   If vdht image want to be remake without involving cache, the command can changed to be:
+     sudo docker build --no-cache -t mytest1 . 
+
+2. Use following command to start run vdhtd container
+   
+     sudo docker run -d mytest1 /run.sh
+
