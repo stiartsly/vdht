@@ -5,6 +5,6 @@ then
    mkdir /var/run/vdht
 fi
 
-/root/vdht/vdhtd -S
+vdhtd -S -D -f /etc/vdht.conf
 
 
