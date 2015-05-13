@@ -23,13 +23,14 @@
  */
 
 #define VLSCTL_MAGIC    ((uint32_t)0x10423373)
-#define VLSCTL_VERSION  ((uint8_t)0b01)
+#define VLSCTL_VERSION  ((uint8_t)0x1)
 
 enum {
-    vlsctl_cmd           = (uint8_t)0b00,
-    vlsctl_req           = (uint8_t)0b01,
-    vlsctl_rsp_succ      = (uint8_t)0b10,
-    vlsctl_rsp_err       = (uint8_t)0b11
+    vlsctl_cmd           = (uint8_t)0x0,
+    vlsctl_req           = (uint8_t)0x1,
+    vlsctl_rsp_succ      = (uint8_t)0x2,
+    vlsctl_rsp_err       = (uint8_t)0x3,
+    vlsctl_raw           = (uint8_t)0x4
 };
 
 enum {
