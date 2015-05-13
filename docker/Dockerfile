@@ -20,9 +20,9 @@ RUN git clone https://github.com/stiartsly/vdht.git
 WORKDIR /root/vdht
 RUN make
 
-RUN mv /root/vdht/vdhtd /usr/bin/.
-RUN mv /root/vdht/docker/vrun.sh /run.sh
-RUN mv /root/vdht/docker/vdht.conf /etc/.
+RUN cp /root/vdht/vdhtd /usr/bin/.
+RUN cp /root/vdht/docker/vrun.sh /run.sh
+RUN cp /root/vdht/docker/vdht.conf /etc/.
 
 RUN chmod 755 /run.sh
 
