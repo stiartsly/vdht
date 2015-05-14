@@ -144,13 +144,15 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space*);
  */
 struct vroute_srvc_probe_helper;
 struct vroute_srvc_probe_helper_ops {
-    int  (*add)   (struct vroute_srvc_probe_helper*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
-    int  (*invoke)(struct vroute_srvc_probe_helper*, vsrvcHash*, vsrvcInfo*);
-    void (*clear) (struct vroute_srvc_probe_helper*);
-    void (*dump)  (struct vroute_srvc_probe_helper*);
+    int  (*add)          (struct vroute_srvc_probe_helper*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
+    int  (*invoke)       (struct vroute_srvc_probe_helper*, vsrvcHash*, vsrvcInfo*);
+    void (*timed_reap)   (struct vroute_srvc_probe_helper*);
+    void (*clear)        (struct vroute_srvc_probe_helper*);
+    void (*dump)         (struct vroute_srvc_probe_helper*);
 };
 
 struct vroute_srvc_probe_helper {
+    int max_tmo;
     struct varray items;
     struct vroute_srvc_probe_helper_ops* ops;
 };

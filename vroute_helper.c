@@ -6,6 +6,7 @@ struct vroute_srvc_probe_item {
     vsrvcInfo_number_addr_t  ncb;
     vsrvcInfo_iterate_addr_t icb;
     void* cookie;
+    time_t ts;
 };
 
 static MEM_AUX_INIT(srvc_probe_item_cache, sizeof(struct vroute_srvc_probe_item), 0);
@@ -45,6 +46,7 @@ int vroute_srvc_probe_item_init(struct vroute_srvc_probe_item* item,
     item->ncb = ncb;
     item->icb = icb;
     item->cookie = cookie;
+    item->ts  = time(NULL);
 
     return 0;
 }
@@ -95,7 +97,7 @@ int _vroute_srvc_probe_helper_invoke(struct vroute_srvc_probe_helper* probe_help
     vassert(hash);
     vassert(srvci);
 
-    for (i = 0; i < varray_size(&probe_helper->items); i++) {
+    for (i = 0; i < varray_size(&probe_helper->items);) {
         probe_item = (struct vroute_srvc_probe_item*)varray_get(&probe_helper->items, i);
         if (vtoken_equal(&probe_item->hash, hash)) {
             probe_item->ncb(hash, srvci->naddrs, VPROTO_UDP, probe_item->cookie);
@@ -103,9 +105,31 @@ int _vroute_srvc_probe_helper_invoke(struct vroute_srvc_probe_helper* probe_help
                 probe_item->icb(hash, &srvci->addrs[j], (j+1)== srvci->naddrs, probe_item->cookie);
             }
             varray_del(&probe_helper->items, i);
+            vroute_srvc_probe_item_free(probe_item);
+        } else {
+            i++;
         }
     }
     return 0;
+}
+
+static
+void _vroute_srvc_probe_helper_timed_reap(struct vroute_srvc_probe_helper* probe_helper)
+{
+    struct vroute_srvc_probe_item* probe_item = NULL;
+    time_t now = time(NULL);
+    int i = 0;
+
+    for (i = 0; i < varray_size(&probe_helper->items);) {
+        probe_item = (struct vroute_srvc_probe_item*)varray_get(&probe_helper->items, i);
+        if ((now - probe_item->ts) > probe_helper->max_tmo) {
+            varray_del(&probe_helper->items, i);
+            vroute_srvc_probe_item_free(probe_item);
+        } else {
+            i++;
+        }
+    }
+    return;
 }
 
 static
@@ -132,16 +156,18 @@ void _vroute_srvc_probe_helper_dump(struct vroute_srvc_probe_helper* probe_helpe
 
 static
 struct vroute_srvc_probe_helper_ops route_srvc_probe_helper_ops = {
-    .add    = _vroute_srvc_probe_helper_add,
-    .invoke = _vroute_srvc_probe_helper_invoke,
-    .clear  = _vroute_srvc_probe_helper_clear,
-    .dump   = _vroute_srvc_probe_helper_dump
+    .add        = _vroute_srvc_probe_helper_add,
+    .invoke     = _vroute_srvc_probe_helper_invoke,
+    .timed_reap = _vroute_srvc_probe_helper_timed_reap,
+    .clear      = _vroute_srvc_probe_helper_clear,
+    .dump       = _vroute_srvc_probe_helper_dump
 };
 
 int vroute_srvc_probe_helper_init(struct vroute_srvc_probe_helper* probe_helper)
 {
     vassert(probe_helper);
 
+    probe_helper->max_tmo = 5; //max timeout 5s.
     varray_init(&probe_helper->items, 4);
     probe_helper->ops = &route_srvc_probe_helper_ops;
     return 0;
