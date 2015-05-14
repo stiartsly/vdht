@@ -5,6 +5,7 @@
 #include <getopt.h>
 #include <arpa/inet.h>
 #include "vdhtapi.h"
+#include "vhashgen.h"
 
 static
 struct option long_options[] = {
@@ -319,7 +320,7 @@ int main(int argc, char** argv)
         ret = vdhtc_request_bogus_ping(&glsctlc_addr);
         break;
     case VCMD_POST_SERVICE:
-        ret = vdhtc_post_service_segment(&glsctlc_hash, &glsctlc_addr);
+        ret = vdhtc_post_service_segment(&glsctlc_hash, &glsctlc_addr, VPROTO_UDP);
         break;
     case VCMD_UNPOST_SERVICE:
         ret = vdhtc_unpost_service_segment(&glsctlc_hash, &glsctlc_addr);

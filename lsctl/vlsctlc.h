@@ -1,7 +1,7 @@
 #ifndef __VLSCTLC_H__
 #define __VLSCTLC_H__
 
-#include "vnodeId.h"
+#include "vdhtapi.h"
 
 /*
  * lsctl message structure:
@@ -53,6 +53,9 @@ enum {
 
     VLSCTL_BUTT          = (uint16_t)0x99
 };
+
+#define VSRVCINFO_MAX_ADDRS ((int16_t)12)
+#define VSRVCINFO_MIN_ADDRS ((int16_t)2)
 
 struct vlsctlc;
 typedef int (*vlsctlc_pack_cmd_t)(struct vlsctlc*, void*, int);

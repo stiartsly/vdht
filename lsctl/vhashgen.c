@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include "vnodeId.h"
 #include "vhashgen.h"
 
 /*  Description:
@@ -281,7 +280,7 @@ struct vhashgen_sha1_ops hashgen_sha1_ops = {
  * @hash:
  */
 static
-int _vhashgen_hash(struct vhashgen* gen, uint8_t* msg, int len, vtoken* hash)
+int _vhashgen_hash(struct vhashgen* gen, uint8_t* msg, int len, vsrvcHash* hash)
 {
     int ret = 0;
     //vassert(gen);
@@ -305,7 +304,7 @@ int _vhashgen_hash(struct vhashgen* gen, uint8_t* msg, int len, vtoken* hash)
  * @hash
  */
 static
-int _vhashgen_hash_with_cookie(struct vhashgen* gen, uint8_t* content, int len, uint8_t* cookie, int cookie_len, vtoken* hash)
+int _vhashgen_hash_with_cookie(struct vhashgen* gen, uint8_t* content, int len, uint8_t* cookie, int cookie_len, vsrvcHash* hash)
 {
     int ret = 0;
     //vassert(gen);

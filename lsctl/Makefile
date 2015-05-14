@@ -13,7 +13,7 @@ bin_lsctlc := vlsctlc
 
 objs := $(libvdhtapi_objs) $(lsctlc_objs)
 libs := $(libvdhtapi)
-apps := $(lsctlc)
+apps := $(bin_lsctlc)
 
 .PHONY: $(apps) $(libs) all clean
 all: $(apps) $(libs)

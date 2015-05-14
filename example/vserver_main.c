@@ -348,7 +348,7 @@ int main(int argc, char** argv)
         vexample_dump_addr(&srvcAddr);
 
         vdhtc_init(gserver_socket, glsctls_socket);
-        ret = vdhtc_post_service_segment(&srvcHash, &srvcAddr);
+        ret = vdhtc_post_service_segment(&srvcHash, &srvcAddr, VPROTO_UDP);
         if (ret < 0) {
             printf("post service failed.\n");
             vdhtc_deinit();

@@ -1,11 +1,22 @@
 #ifndef __VHASHGEN_H__
 #define __VHASHGEN_H__
 
-#include "vnodeId.h"
+#ifndef uint8_t
+typedef unsigned char  uint8_t;
+typedef unsigned short uint16_t;
+typedef signed short   int16_t;
+typedef unsigned int   uint32_t;
+typedef signed int     int32_t;
+#endif
 
-#define HASH_MAGIC_RELAY  "elastos.dht.service.relay.3eb2c2beb25d3ffeb4f5ce3dbcf618862baf69e8"
-#define HASH_MAGIC_STUN   "elastos.dht.service.stunx.6e89fe134a90afb03da00123d3d0x01213edc3a0"
+struct vsrvcHash {
+    uint8_t data[20];
+};
+typedef struct vsrvcHash vsrvcHash;
 
+
+#define HASH_MAGIC_RELAY  "@elastos.relay@none@kortide.org@relay@c60394519b248604e106db38a9f138d1eb75c28848b003527bf0d07603e40ec9e7a21a82c6a187a8a762e05053"
+#define HASH_MAGIC_STUN   "@elastos.stun@none@kortide.org@stun@39d3a0eb5d501648ca5a087d1417a2637426e375d9a44cbec80680d2a909d9e2dd7acd3acae382943e8b1152a2b4"
 struct vhashgen;
 
 /*
@@ -18,8 +29,8 @@ struct vhashgen_sha1_ops {
 };
 
 struct vhashgen_ops {
-    int (*hash)   (struct vhashgen*, uint8_t*, int, vtoken*);
-    int (*hash_with_cookie)(struct vhashgen*, uint8_t*, int, uint8_t*, int, vtoken*);
+    int (*hash)   (struct vhashgen*, uint8_t*, int, vsrvcHash*);
+    int (*hash_with_cookie)(struct vhashgen*, uint8_t*, int, uint8_t*, int, vsrvcHash*);
 };
 
 struct vhashgen {
