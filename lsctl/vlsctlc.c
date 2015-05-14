@@ -4,13 +4,6 @@
 #include <stddef.h>
 #include "vlsctlc.h"
 
-#define vassert(exp) do { \
-	if (!exp) {\
-            printf("{assert} [%s:%d]\n", __FUNCTION__, __LINE__);\
-            *(int*)0 = 0; \
-        } \
-    } while(0)
-
 static
 void _aux_vhexbuf_dump(uint8_t* hex_buf, int len)
 {
@@ -150,7 +143,7 @@ int _vlsctlc_bind_cmd_post_service(struct vlsctlc* lsctlc, vsrvcHash* hash, stru
     vassert(lsctlc);
     vassert(hash);
     vassert(addrs);
-    //vassert(num > 0);
+    vassert(num > 0);
 
     if (lsctlc->bound_cmd > 0) {
         return -1;
@@ -173,7 +166,7 @@ int _vlsctlc_bind_cmd_unpost_service(struct vlsctlc* lsctlc, vsrvcHash* hash, st
     vassert(lsctlc);
     vassert(hash);
     vassert(addrs);
-    //vassert(num >= 0);
+    vassert(num > 0);
 
     if (lsctlc->bound_cmd > 0) {
         return -1;

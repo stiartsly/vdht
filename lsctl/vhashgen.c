@@ -60,7 +60,7 @@ void _aux_sha1_digest_msgbuf(struct vhashgen_ctxt_sha1* ctxt)
 
 #define sha1_circular_shift(bits,word) ((((word) << (bits)) & 0xFFFFFFFF) | ((word) >> (32-(bits))))
 
-   // vassert(ctxt);
+    vassert(ctxt);
 
     for (i = 0; i < 16; i++) {
         seq[i]  = ((uint32_t)ctxt->msgbuf[i*4]) << 24;
@@ -176,7 +176,7 @@ static
 void _vhashgen_sha1_reset(struct vhashgen* gen)
 {
     struct vhashgen_ctxt_sha1* ctxt = (struct vhashgen_ctxt_sha1*)gen->ctxt;
-    //vassert(gen);
+    vassert(gen);
 
     ctxt->len_low  = 0;
     ctxt->len_high = 0;
@@ -203,9 +203,9 @@ static
 void _vhashgen_sha1_input(struct vhashgen* gen, uint8_t* msg, int len)
 {
     struct vhashgen_ctxt_sha1* ctxt = (struct vhashgen_ctxt_sha1*)gen->ctxt;
-    //vassert(gen);
-    //vassert(msg);
-    //vassert(len >= 0);
+    vassert(gen);
+    vassert(msg);
+    vassert(len > 0);
 
     if (len <= 0) {
         ctxt->oops = 1;
@@ -243,8 +243,8 @@ static
 int _vhashgen_sha1_result(struct vhashgen* gen, uint32_t* hash_array)
 {
     struct vhashgen_ctxt_sha1* ctxt = (struct vhashgen_ctxt_sha1*)gen->ctxt;
-    //vassert(gen);
-    //vassert(hash_array);
+    vassert(gen);
+    vassert(hash_array);
 
     if (ctxt->oops) {
         return -1;
@@ -283,10 +283,10 @@ static
 int _vhashgen_hash(struct vhashgen* gen, uint8_t* msg, int len, vsrvcHash* hash)
 {
     int ret = 0;
-    //vassert(gen);
-    //vassert(msg);
-    //vassert(len > 0);
-    //vassert(hash);
+    vassert(gen);
+    vassert(msg);
+    vassert(len > 0);
+    vassert(hash);
 
     gen->sha_ops->reset(gen);
     gen->sha_ops->input(gen, msg, len);
@@ -307,12 +307,12 @@ static
 int _vhashgen_hash_with_cookie(struct vhashgen* gen, uint8_t* content, int len, uint8_t* cookie, int cookie_len, vsrvcHash* hash)
 {
     int ret = 0;
-    //vassert(gen);
-    //vassert(content);
-    //vassert(len > 0);
-    //vassert(cookie);
-    //vassert(cookie_len > 0);
-    //vassert(hash);
+    vassert(gen);
+    vassert(content);
+    vassert(len > 0);
+    vassert(cookie);
+    vassert(cookie_len > 0);
+    vassert(hash);
 
     gen->sha_ops->reset(gen);
     gen->sha_ops->input(gen, content, len);
@@ -330,7 +330,7 @@ struct vhashgen_ops hashgen_ops = {
 int vhashgen_init (struct vhashgen* gen)
 {
     void* ctxt = NULL;
-    //vassert(gen);
+    vassert(gen);
 
     ctxt = malloc(sizeof(struct vhashgen_ctxt_sha1));
     if (!ctxt) {
@@ -347,42 +347,10 @@ int vhashgen_init (struct vhashgen* gen)
 
 void vhashgen_deinit(struct vhashgen* gen)
 {
-    //vassert(gen);
+    vassert(gen);
     if (gen->ctxt) {
         free(gen->ctxt);
     }
     return ;
-}
-
-int vhashhelper_get_stun_srvcHash(vsrvcHash* srvcHash)
-{
-    const char* magic = HASH_MAGIC_STUN;
-    struct vhashgen hashgen;
-    int ret = 0;
-    //vassert(srvcHash);
-
-    ret = vhashgen_init(&hashgen);
-    if (ret < 0) {
-        return -1;
-    };
-    ret = hashgen.ops->hash(&hashgen, (uint8_t*)magic, strlen(magic), srvcHash);
-    vhashgen_deinit(&hashgen);
-    return ret;
-}
-
-int vhashhelper_get_relay_srvcHash(vsrvcHash* srvcHash)
-{
-    const char* magic = HASH_MAGIC_RELAY;
-    struct vhashgen hashgen;
-    int ret = 0;
-    //vassert(srvcHash);
-
-    ret = vhashgen_init(&hashgen);
-    if (ret < 0) {
-        return -1;
-    }
-    ret = hashgen.ops->hash(&hashgen, (uint8_t*)magic, strlen(magic), srvcHash);
-    vhashgen_deinit(&hashgen);
-    return ret;
 }
 

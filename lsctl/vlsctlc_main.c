@@ -7,6 +7,10 @@
 #include "vdhtapi.h"
 #include "vhashgen.h"
 
+#define FAKE_SERVICE_MAGIC \
+    "@elastos-fake@tzl@kortide.orp@fake-service@f66e053099614dbdc93ad" \
+    "4fa4556fa3fe9a9e65589900c742331030598d704cf3519ffce7b4d7c4478413"
+
 static
 struct option long_options[] = {
     {"unix-domain-file",    required_argument, 0,        'U'},
@@ -17,10 +21,10 @@ struct option long_options[] = {
     {"dump-host",           no_argument,       0,        's'},
     {"dump-config",         no_argument,       0,        'c'},
     {"add-node",            no_argument,       0,        'a'},
-    {"relay-service-up",    no_argument,       0,        'r'},
-    {"relay-service-down",  no_argument,       0,        'R'},
-    {"relay-service-find",  no_argument,       0,        'f'},
-    {"relay-service-probe", no_argument,       0,        'p'},
+    {"fake-service-up",     no_argument,       0,        'r'},
+    {"fake-service-down",   no_argument,       0,        'R'},
+    {"fake-service-find",   no_argument,       0,        'f'},
+    {"fake-service-probe",  no_argument,       0,        'p'},
     {"ping",                no_argument,       0,        't'},
     {"addr",                required_argument, 0,        'm'},
     {"version",             no_argument,       0,        'v'},
@@ -45,10 +49,10 @@ void show_usage(void)
     printf("  -a, --add-node           --addr=IP:PORT   request to join node\n");
     printf("\n");
     printf(" About service options:\n");
-    printf("  -r, --relay-service-up   --addr=IP:PORT   request to post a relay service\n");
-    printf("  -R, --relay-service-down --addr=IP:PORT   request to unpost a relay service\n");
-    printf("  -f, --relay_service_find                  request to find relay service in vdhtd\n");
-    printf("  -p, --relay-service-probe                 request to probe relay service in neighbor nodes\n");
+    printf("  -r, --fake-service-up    --addr=IP:PORT   request to post a fake service\n");
+    printf("  -R, --fake-service-down  --addr=IP:PORT   request to unpost a fake service\n");
+    printf("  -f, --fake-service-find                   request to find fake service in vdhtd\n");
+    printf("  -p, --fake-service-probe                  request to probe fake service in neighbor nodes\n");;
     printf("\n");
     printf(" About bogus query options:\n");
     printf("  -t, --ping               --addr=IP:PORT   request to send ping query\n");
@@ -84,7 +88,7 @@ enum {
     VCMD_PROBE_SERVICE  = (uint32_t)0x000B | VCMD_MASK_HASH
 };
 
-static int  glsctlc_cmd = -1;
+static int  glsctlc_cmd = 0;
 
 static char glsctlc_socket[256];
 static char glsctls_socket[256];
@@ -281,17 +285,17 @@ int main(int argc, char** argv)
         exit(-1);
     }
     if (glsctlc_cmd & VCMD_MASK_HASH) {
-        const char* magic = HASH_MAGIC_STUN;
+        const char* magic = FAKE_SERVICE_MAGIC;
         struct vhashgen hashgen;
         ret = vhashgen_init(&hashgen);
         if (ret < 0) {
-            printf("generate relay sevice hash failed\n");
+            printf("generate fake sevice hash failed\n");
             exit(-1);
         };
         ret = hashgen.ops->hash(&hashgen, (uint8_t*)magic, strlen(magic), &glsctlc_hash);
         vhashgen_deinit(&hashgen);
         if (ret < 0) {
-            printf("generate relay service hash failed\n");
+            printf("generate fake service hash failed\n");
             exit(-1);
         }
     }
