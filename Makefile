@@ -53,7 +53,7 @@ $(libvdhtapi):
 
 $(bin_vdhtd): $(bin_vdht_objs) $(libvdht)
 	$(CC) -o $@ $^ $(addprefix $(ROOT_PATH)/utils/, $(libutils)) $(LDFLAGS)
-	$(RM) -f $<
+	$(RM) -f $(bin_vdht_objs)
 
 $(bin_lsctlc): $(libvdhtapi)
 	$(MK) --directory=lsctl $@
