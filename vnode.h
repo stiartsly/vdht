@@ -39,14 +39,16 @@ void vnode_nice_deinit(struct vnode_nice*);
 #define VNODE_MAX_LOCAL_ADDRS ((int)3)
 struct vnode_addr_helper {
     int32_t  naddrs;
-    uint32_t mask;  //private address(local address) is unreflexed yet.
+    uint32_t mask;  //unreflexed yet if address is private address.
     struct sockaddr_in addrs[VNODE_MAX_LOCAL_ADDRS];
 };
 
-#define unreflexive_mask_check(mask, i)   (mask & (1 << i))
-#define reflexive_mask_check(mask, i)     (!unreflexive_mask_check(mask, i))
-#define unreflexive_mask_set(mask, i)     (mask |= (1 << i))
-#define reflexive_mask_set(mask, i)       (mask &= ~(1 << i))
+#define to_reflex_mask_check(mask, i)     (mask & (1 << i))
+#define reflexed_mask_check(mask, i)      (!(mask & (1 << i)))
+
+#define to_reflex_mask_set(mask, i)       (mask |=  (1 << i))
+#define reflexed_mask_set(mask, i)        (mask &= ~(1 << i))
+
 /*
  * for vnode
  */

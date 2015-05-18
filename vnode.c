@@ -93,6 +93,9 @@ int _aux_node_get_uaddrs(struct vnode* node)
 
     vassert(node);
     for (i = 0; i < helper->naddrs; i++) {
+        if (vsockaddr_is_public(&helper->addrs[i])) {
+            continue;
+        }
         ret = upnpc->ops->map(upnpc, &helper->addrs[i], UPNP_PROTO_UDP, &uaddr);
         if (ret < 0) {
             continue;
@@ -110,7 +113,7 @@ void _aux_node_get_eaddrs(struct vnode* node)
     vassert(node);
 
     for (i = 0; i < helper->naddrs; i++) {
-        if (reflexive_mask_check(helper->mask, i)) {
+        if (reflexed_mask_check(helper->mask, i)) {
             continue;
         }
         node->route->ops->reflex(node->route, &helper->addrs[i]);
@@ -342,11 +345,11 @@ int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct soc
         if (!vsockaddr_equal(laddr, &helper->addrs[i])) {
             continue;
         }
-        if (reflexive_mask_check(helper->mask, i)) {
+        if (reflexed_mask_check(helper->mask, i)) {
             break;
         }
         vnodeInfo_add_addr(&nodei, eaddr);
-        reflexive_mask_set(helper->mask, i);
+        reflexed_mask_set(helper->mask, i);
         break;
     }
     vlock_leave(&node->lock);
@@ -573,7 +576,7 @@ static
 int _aux_node_get_local_addrs(struct vnode_addr_helper* helper, struct vconfig* cfg)
 {
     struct sockaddr_in laddr;
-    char ip[64];
+    char ip[64] = {0};
     int port = 0;
     int ret  = 0;
 
@@ -584,13 +587,12 @@ int _aux_node_get_local_addrs(struct vnode_addr_helper* helper, struct vconfig* 
     helper->mask   = 0;
 
     port = cfg->ext_ops->get_dht_port(cfg);
-    memset(ip, 0, 64);
     ret = vhostaddr_get_first(ip, 64);
     retE((ret < 0));
     vsockaddr_convert(ip, port, &laddr);
     vsockaddr_copy(&helper->addrs[helper->naddrs], &laddr);
-    if (vsockaddr_is_private(&laddr)) {
-        unreflexive_mask_set(helper->mask, helper->naddrs);
+    if (vsockaddr_is_private(&laddr)) {// need to get relevant reflexive address.
+        to_reflex_mask_set(helper->mask, helper->naddrs);
     }
     helper->naddrs++;
 
@@ -603,7 +605,7 @@ int _aux_node_get_local_addrs(struct vnode_addr_helper* helper, struct vconfig* 
         vsockaddr_convert(ip, port, &laddr);
         vsockaddr_copy(&helper->addrs[helper->naddrs], &laddr);
         if (vsockaddr_is_private(&laddr)) {
-            unreflexive_mask_set(helper->mask, helper->naddrs);
+            to_reflex_mask_set(helper->mask, helper->naddrs);
         }
         helper->naddrs++;
     }
