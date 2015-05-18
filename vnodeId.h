@@ -142,6 +142,25 @@ enum {
 typedef struct vsrvcInfo vsrvcInfo;
 typedef void (*vsrvcInfo_number_addr_t) (vsrvcHash*, int, int, void*);
 typedef void (*vsrvcInfo_iterate_addr_t)(vsrvcHash*, struct sockaddr_in*, int, void*);
+
+static inline
+int32_t vsrvcInfo_proto(vsrvcInfo* srvci) {
+    return (srvci->nice >> 16);
+}
+
+static inline
+int32_t vsrvcInfo_nice(vsrvcInfo* srvci) {
+    return (srvci->nice & 0x0000ffff);
+}
+
+static inline
+void vsrvcInfo_set_nice(vsrvcInfo* srvci, int32_t nice)
+{
+    srvci->nice &= 0xffff0000;
+    srvci->nice |= 0x0000ffff & nice;
+    return ;
+}
+
 vsrvcInfo* vsrvcInfo_alloc(void);
 void vsrvcInfo_free(vsrvcInfo*);
 int  vsrvcInfo_init(vsrvcInfo*, vtoken*, vsrvcHash*, int);

@@ -175,6 +175,7 @@ int _vlsctl_exec_cmd_post_service(struct vlsctl* lsctl, void* buf, int len, stru
     struct vappmain* app = lsctl->app;
     struct sockaddr_in addr;
     vsrvcHash hash;
+    int proto = 0;
     int tsz = 0;
     int ret = 0;
 
@@ -186,12 +187,15 @@ int _vlsctl_exec_cmd_post_service(struct vlsctl* lsctl, void* buf, int len, stru
     memcpy(hash.data, buf + tsz, VTOKEN_LEN);
     tsz += VTOKEN_LEN;
 
+    proto = *(int32_t*)(buf + tsz);
+    tsz += sizeof(int32_t);
+
     while(len - tsz > 0) {
         ret = _aux_lsctl_unpack_addr(buf + tsz, len - tsz, &addr);
         retE((ret < 0));
         tsz += ret;
 
-        ret = app->api_ops->post_service_segment(app, &hash, &addr);
+        ret = app->api_ops->post_service_segment(app, &hash, &addr, proto);
         retE((ret < 0));
     }
     return tsz;
@@ -241,6 +245,7 @@ void _aux_vlsctl_number_addr_cb1(vsrvcHash* hash, int naddrs, int proto, void* c
     vassert(naddrs >= 0);
 
     args->find_service_rsp_args.total = naddrs;
+    args->find_service_rsp_args.proto = proto;
     return ;
 }
 
@@ -321,6 +326,7 @@ void _aux_vlsctl_number_addr_cb2(vsrvcHash* hash, int naddrs, int proto, void* c
     vassert(naddrs >= 0);
 
     args->probe_service_rsp_args.total = naddrs;
+    args->probe_service_rsp_args.proto = proto;
     if (!naddrs) {
         buf = (char*)vmsg_buf_alloc(0);
         ret1E_v((!buf), free(args));
@@ -472,9 +478,11 @@ int _vlsctl_pack_find_service_rsp(void* buf, int len, void* cookie)
     memcpy(buf + tsz, &args->find_service_rsp_args.hash, sizeof(vsrvcHash));
     bsz += sizeof(vsrvcHash);
     tsz += sizeof(vsrvcHash);
+    *(int32_t*)(buf + tsz) = args->find_service_rsp_args.proto;
+    bsz += sizeof(int32_t);
+    tsz += sizeof(int32_t);
     for (i = 0; i < args->find_service_rsp_args.total; i++) {
         ret = _aux_vlsctl_pack_addr(buf + tsz, len - tsz, &args->find_service_rsp_args.addrs[i]);
-        printf("\n");
         tsz += ret;
         bsz += ret;
     }
@@ -505,6 +513,9 @@ int _vlsctl_pack_probe_service_rsp(void* buf, int len, void* cookie)
     memcpy(buf + tsz, &args->probe_service_rsp_args.hash, sizeof(vsrvcHash));
     bsz += sizeof(vsrvcHash);
     tsz += sizeof(vsrvcHash);
+    *(int32_t*)(buf + tsz) = args->find_service_rsp_args.proto;
+    bsz += sizeof(int32_t);
+    tsz += sizeof(int32_t);
     for (i = 0; i < args->probe_service_rsp_args.total; i++) {
         ret = _aux_vlsctl_pack_addr(buf + bsz, len - bsz, &args->find_service_rsp_args.addrs[i]);
         tsz += ret;

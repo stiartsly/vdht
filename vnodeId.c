@@ -618,8 +618,8 @@ int vsrvcInfo_init(vsrvcInfo* srvci, vsrvcHash* hash, vnodeId* hostid, int nice)
 
     vtoken_copy(&srvci->hash, hash);
     vtoken_copy(&srvci->hostid, hostid);
-    srvci->nice = nice;
 
+    srvci->nice = nice;
     srvci->naddrs = 0;
     srvci->capc   = VSRVCINFO_MIN_ADDRS;
 
@@ -715,11 +715,25 @@ int vsrvcInfo_copy(vsrvcInfo* dest, vsrvcInfo* src)
 
 void vsrvcInfo_dump(vsrvcInfo* srvci)
 {
+    char* sproto = NULL;
     int i = 0;
     vassert(srvci);
 
+    switch(vsrvcInfo_proto(srvci)) {
+    case VPROTO_UDP:
+        sproto = "udp";
+        break;
+    case VPROTO_TCP:
+        sproto = "tcp";
+        break;
+    default:
+        sproto = "err";
+        break;
+    }
+
     vtoken_dump(&srvci->hash);
-    printf(", nice: %d", srvci->nice);
+    printf(", nice: %d", vsrvcInfo_nice(srvci));
+    printf(", proto: %s", sproto);
     printf(", addrs: ");
     vsockaddr_dump(&srvci->addrs[0]);
     for (i = 1; i < srvci->naddrs; i++) {

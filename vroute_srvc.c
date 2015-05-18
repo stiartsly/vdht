@@ -91,9 +91,9 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
     varg_decl(cookie, 2, int*, min_nice);
 
     if (vtoken_equal(&srvc_item->srvci->hash, hash)) {
-        if (srvc_item->srvci->nice < *min_nice) {
+        if (vsrvcInfo_nice(srvc_item->srvci) < *min_nice) {
             *to = srvc_item;
-            *min_nice = srvc_item->srvci->nice;
+            *min_nice = vsrvcInfo_nice(srvc_item->srvci);
         }
     }
     return 0;

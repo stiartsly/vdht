@@ -70,6 +70,7 @@ union vlsctl_rsp_args {
         vlsctl_pack_cmd_t pack_cb;
         int total;
         vsrvcHash hash;
+        int proto;
         int index;
         struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } find_service_rsp_args;
@@ -81,6 +82,7 @@ union vlsctl_rsp_args {
 
         int total;
         vsrvcHash hash;
+        int proto;
         int index;
         struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } probe_service_rsp_args;

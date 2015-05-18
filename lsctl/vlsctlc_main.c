@@ -27,6 +27,7 @@ struct option long_options[] = {
     {"fake-service-probe",  no_argument,       0,        'p'},
     {"ping",                no_argument,       0,        't'},
     {"addr",                required_argument, 0,        'm'},
+    {"proto",               required_argument, 0,        'l'},
     {"version",             no_argument,       0,        'v'},
     {"help",                no_argument,       0,        'h'},
     {0, 0, 0, 0}
@@ -49,8 +50,9 @@ void show_usage(void)
     printf("  -a, --add-node           --addr=IP:PORT   request to join node\n");
     printf("\n");
     printf(" About service options:\n");
-    printf("  -r, --fake-service-up    --addr=IP:PORT   request to post a fake service\n");
-    printf("  -R, --fake-service-down  --addr=IP:PORT   request to unpost a fake service\n");
+    printf("  -r, --fake-service-up   --addr=IP:PORT  --proto=tcp[,udp]\n");
+    printf("                                            request to post a fake service\n");
+    printf("  -R, --fake-service-down --addr=IP:PORT    request to unpost a fake service\n");
     printf("  -f, --fake-service-find                   request to find fake service in vdhtd\n");
     printf("  -p, --fake-service-probe                  request to probe fake service in neighbor nodes\n");;
     printf("\n");
@@ -92,8 +94,10 @@ static int  glsctlc_cmd = 0;
 
 static char glsctlc_socket[256];
 static char glsctls_socket[256];
-static int  glsctlc_addr_opt   = 0;
+static int  glsctlc_addr_opt  = 0;
+static int  glsctlc_proto_opt = 0;
 static struct sockaddr_in glsctlc_addr;
+static int  glsctlc_proto = VPROTO_UDP;
 static vsrvcHash glsctlc_hash;
 
 static
@@ -138,9 +142,41 @@ int _aux_parse_sockaddr_param(void)
 }
 
 static
+int _aux_parse_proto_param(void)
+{
+    char str_proto[8] = {0};
+
+    if (strlen(optarg) + 1 >= 8) {
+        printf("Invalid IP\n");
+        return -1;
+    }
+    if (!strcmp(optarg, "udp")) {
+        glsctlc_proto = VPROTO_UDP;
+    } else if (!strcmp(optarg, "tcp")) {
+        glsctlc_proto = VPROTO_TCP;
+    } else {
+        return -1;
+    }
+    return 0;
+}
+
+static
 void _aux_print_addr_num_cb(vsrvcHash* hash, int num, int proto, void* cookie)
 {
-    printf("addr num: %d, proto:%d.\n", num, proto);
+    char* sproto = NULL;
+
+    switch(proto) {
+    case VPROTO_UDP:
+        sproto = "udp";
+        break;
+    case VPROTO_TCP:
+        sproto = "tcp";
+        break;
+    default:
+        sproto = "err";
+        break;
+    }
+    printf("addr num: %d, proto:%s.\n", num, sproto);
     return ;
 }
 
@@ -178,7 +214,7 @@ int main(int argc, char** argv)
     }
 
     while(c >= 0) {
-        c = getopt_long(argc, argv, "U:S:dDxscarRfptm:vh", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:S:dDxscarRfptm:l:vh", long_options, &opt_idx);
         if (c < 0) {
             break;
         } else if (c == 0) {
@@ -246,10 +282,18 @@ int main(int argc, char** argv)
             case 'm':
                 ret = _aux_parse_sockaddr_param();
                 if (ret < 0) {
-                    printf("Invalid address\n");
+                    printf("Bad address\n");
                     exit(-1);
                 }
                 glsctlc_addr_opt = 1;
+                break;
+            case 'l':
+                ret = _aux_parse_proto_param();
+                if (ret < 0) {
+                    printf("Bad protocol\n");
+                    exit(-1);
+                }
+                glsctlc_proto_opt = 1;
                 break;
             case 'v':
                 if (glsctlc_cmd) {
@@ -324,7 +368,7 @@ int main(int argc, char** argv)
         ret = vdhtc_request_bogus_ping(&glsctlc_addr);
         break;
     case VCMD_POST_SERVICE:
-        ret = vdhtc_post_service_segment(&glsctlc_hash, &glsctlc_addr, VPROTO_UDP);
+        ret = vdhtc_post_service_segment(&glsctlc_hash, &glsctlc_addr, glsctlc_proto);
         break;
     case VCMD_UNPOST_SERVICE:
         ret = vdhtc_unpost_service_segment(&glsctlc_hash, &glsctlc_addr);

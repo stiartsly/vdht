@@ -567,7 +567,7 @@ int vdhtc_post_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr, in
     if (ret < 0) {
         return -1;
     }
-    ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, addrs, 1);
+    ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, addrs, 1, proto);
     if (ret < 0) {
         goto error_exit;
     }
@@ -673,7 +673,7 @@ int vdhtc_post_service(vsrvcHash* srvcHash, struct sockaddr_in* addrs, int num, 
     for (i = 0; i < num; i++) {
         addrs_a[i] = &addrs[i];
     }
-    ret = lsctlc.bind_ops->bind_unpost_service(&lsctlc, srvcHash, addrs_a, num);
+    ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, addrs_a, num, proto);
     if (ret < 0) {
         goto error_exit;
     }
@@ -717,7 +717,7 @@ int vdhtc_unpost_service(vsrvcHash* srvcHash)
     if (ret < 0) {
         return -1;
     }
-    ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, addrs, 0);
+    ret = lsctlc.bind_ops->bind_unpost_service(&lsctlc, srvcHash, addrs, 0);
     if (ret < 0) {
         goto error_exit;
     }
@@ -762,6 +762,7 @@ int vdhtc_find_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcIn
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
     vsrvcHash hash;
+    int proto = 0;
     int num = 0;
     int ret = 0;
     int i = 0;
@@ -793,11 +794,11 @@ int vdhtc_find_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcIn
     if (ret < 0) {
         goto error_exit;
     }
-    ret = lsctlc.unbind_ops->unbind_find_service(&lsctlc, &hash, addrs, &num);
+    ret = lsctlc.unbind_ops->unbind_find_service(&lsctlc, &hash, addrs, &num, &proto);
     if ((ret < 0) || memcmp(&hash, srvcHash, sizeof(vsrvcHash))) {
         goto error_exit;
     }
-    ncb(&hash, num, VPROTO_UDP, cookie);
+    ncb(&hash, num, proto, cookie);
     for (i = 0; i < num; i++) {
         icb(&hash, &addrs[i], ((i + 1) == num), cookie);
     }
@@ -834,6 +835,7 @@ int vdhtc_probe_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcI
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
     vsrvcHash hash;
+    int proto = 0;
     int num = 0;
     int ret = 0;
     int i = 0;
@@ -865,11 +867,11 @@ int vdhtc_probe_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcI
     if (ret < 0) {
         goto error_exit;
     }
-    ret = lsctlc.unbind_ops->unbind_probe_service(&lsctlc, &hash, addrs, &num);
+    ret = lsctlc.unbind_ops->unbind_probe_service(&lsctlc, &hash, addrs, &num, &proto);
     if ((ret < 0) || memcmp(&hash, srvcHash, sizeof(vsrvcHash))) {
         goto error_exit;
     }
-    ncb(&hash, num, VPROTO_UDP, cookie);
+    ncb(&hash, num, proto, cookie);
     for (i = 0; i < num; i++) {
         icb(&hash, &addrs[i], ((i + 1) == num), cookie);
     }

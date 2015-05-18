@@ -18,8 +18,8 @@ struct vappmain_api_ops {
     void (*dump_cfg_info)         (struct vappmain*);
     int  (*join_wellknown_node)   (struct vappmain*, struct sockaddr_in*);
     int  (*bogus_query)           (struct vappmain*, int, struct sockaddr_in*);
-    int  (*post_service_segment)  (struct vappmain*, vsrvcHash*, struct sockaddr_in*);
-    int  (*post_service)          (struct vappmain*, vsrvcHash*, struct sockaddr_in*, int);
+    int  (*post_service_segment)  (struct vappmain*, vsrvcHash*, struct sockaddr_in*, int);
+    int  (*post_service)          (struct vappmain*, vsrvcHash*, struct sockaddr_in*, int, int);
     int  (*unpost_service_segment)(struct vappmain*, vsrvcHash*, struct sockaddr_in*);
     int  (*unpost_service)        (struct vappmain*, vsrvcHash*);
     int  (*find_service)          (struct vappmain*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);

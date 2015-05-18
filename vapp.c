@@ -187,7 +187,7 @@ int _vappmain_bogus_query(struct vappmain* app, int queryId, struct sockaddr_in*
 }
 
 static
-int _vappmain_post_service_segment(struct vappmain* app, vsrvcHash* srvcHash, struct sockaddr_in* addr)
+int _vappmain_post_service_segment(struct vappmain* app, vsrvcHash* srvcHash, struct sockaddr_in* addr, int proto)
 {
     struct vnode* node = &app->host.node;
     int ret = 0;
@@ -196,13 +196,13 @@ int _vappmain_post_service_segment(struct vappmain* app, vsrvcHash* srvcHash, st
         vlogE("invalid arguments");
         retE((1));
     }
-    ret = node->srvc_ops->post(node, srvcHash, addr);
+    ret = node->srvc_ops->post(node, srvcHash, addr, proto);
     retE((ret < 0));
     return 0;
 }
 
 static
-int _vappmain_post_service(struct vappmain* app, vsrvcHash* srvcHash, struct sockaddr_in* addrs, int num)
+int _vappmain_post_service(struct vappmain* app, vsrvcHash* srvcHash, struct sockaddr_in* addrs, int num, int proto)
 {
     struct vnode* node = &app->host.node;
     int ret = 0;
@@ -213,7 +213,7 @@ int _vappmain_post_service(struct vappmain* app, vsrvcHash* srvcHash, struct soc
         retE((1));
     }
     for (i = 0; i < num; i++) {
-        ret = node->srvc_ops->post(node, srvcHash, &addrs[i]);
+        ret = node->srvc_ops->post(node, srvcHash, &addrs[i], proto);
         retE((ret < 0));
     }
     return 0;

@@ -80,15 +80,15 @@ struct vlsctlc_bind_ops {
     int (*bind_cfg_dump)   (struct vlsctlc*);
     int (*bind_join_node)  (struct vlsctlc*, struct sockaddr_in*);
     int (*bind_bogus_query)(struct vlsctlc*, int, struct sockaddr_in*);
-    int (*bind_post_service)   (struct vlsctlc*, vsrvcHash*, struct sockaddr_in**, int);
+    int (*bind_post_service)   (struct vlsctlc*, vsrvcHash*, struct sockaddr_in**, int, int);
     int (*bind_unpost_service) (struct vlsctlc*, vsrvcHash*, struct sockaddr_in**, int);
     int (*bind_find_service)   (struct vlsctlc*, vsrvcHash*);
     int (*bind_probe_service)  (struct vlsctlc*, vsrvcHash*);
 };
 
 struct vlsctlc_unbind_ops {
-    int (*unbind_probe_service)(struct vlsctlc*, vsrvcHash*, struct sockaddr_in*, int*);
-    int (*unbind_find_service) (struct vlsctlc*, vsrvcHash*, struct sockaddr_in*, int*);
+    int (*unbind_probe_service)(struct vlsctlc*, vsrvcHash*, struct sockaddr_in*, int*, int*);
+    int (*unbind_find_service) (struct vlsctlc*, vsrvcHash*, struct sockaddr_in*, int*, int*);
 };
 
 struct vlsctlc_ops {
@@ -108,6 +108,7 @@ union vlsctlc_args {
 
     struct post_service_args {
         vsrvcHash hash;
+        int proto;
         int naddrs;
         struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } post_service_args;
@@ -131,12 +132,14 @@ union vlsctlc_rsp_args {
     struct find_service_rsp_args {
         int num;
         vsrvcHash hash;
+        int proto;
         struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } find_service_rsp_args;
 
     struct probe_service_rsp_args {
         int num;
         vsrvcHash hash;
+        int proto;
         struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } probe_service_rsp_args;
 
