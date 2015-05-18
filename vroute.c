@@ -889,15 +889,17 @@ int _vroute_cb_ping_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_node_space* node_space = &route->node_space;
     struct vroute_recr_space* recr_space = &route->recr_space;
-    vnodeInfo_relax nodei;
+    vnodeInfo_relax nodei_relax;
+    vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
     vtoken  token;
     int ret = 0;
 
-    ret = route->dec_ops->ping_rsp(ctxt, &token, (vnodeInfo*)&nodei);
+    ret = route->dec_ops->ping_rsp(ctxt, &token, nodei);
     retE((ret < 0));
     retE((!recr_space->ops->check(recr_space, &token))); // skip vicious response.
+    vnodeInfo_add_addr(&nodei, &conn->remote);
 
-    ret = node_space->ops->add_node(node_space, (vnodeInfo*)&nodei, 1);
+    ret = node_space->ops->add_node(node_space, nodei, 1);
     retE((ret < 0));
     route->ops->inspect(route, &token, VROUTE_INSP_RCV_PING_RSP);
     return 0;

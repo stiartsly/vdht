@@ -814,6 +814,7 @@ static
 void _vroute_node_space_dump(struct vroute_node_space* space)
 {
     struct varray* peers = NULL;
+    struct vpeer*  peer  = NULL;
     int titled = 0;
     int i = 0;
     int j = 0;
@@ -822,12 +823,16 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
     for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
+            peer = (struct vpeer*)varray_get(peers, j);
+            if (peer->ntries >= space->max_snd_tms) {
+                continue;
+            }
             if (!titled) {
                 vdump(printf("-> list of peers in node routing space:"));
                 titled = 1;
             }
             printf("{ ");
-            vpeer_dump((struct vpeer*)varray_get(peers, j));
+            vpeer_dump(peer);
             printf(" }\n");
         }
     }
