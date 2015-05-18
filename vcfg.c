@@ -1066,7 +1066,7 @@ int _vcfg_get_route_max_rcv_tmo(struct vconfig* cfg)
 
     vassert(cfg);
 
-    val = cfg->ops->get_str_val(cfg, "global.tick_timeout");
+    val = cfg->ops->get_str_val(cfg, "route.max_rcv_period");
     if (!val) {
         goto error_exit;
     }
