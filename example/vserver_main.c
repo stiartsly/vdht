@@ -25,6 +25,7 @@ static char* gserver_magic = \
 static char  gserver_socket[256];
 static char  glsctls_socket[256];
 static int   gserver_port = 0;
+static int   gserver_proto = VPROTO_UDP;
 static int   gserver_help = 0;
 
 static
@@ -32,6 +33,7 @@ struct option long_options[] = {
     {"unix-domain-file",  required_argument, 0,  'U' },
     {"lsctl-socket-file", required_argument, 0,  'S' },
     {"port",              required_argument, 0,  'p' },
+    {"proto",             required_argument, 0,  'l' },
     {"help",              no_argument,       0,  'h' },
     {0, 0, 0, 0}
 };
@@ -42,6 +44,7 @@ void show_usage(void)
     printf("  --unix-domain-file=UNIX_DOMAIN_FILE     unix domain path to communicate with vdhtd\n");
     printf("  --lsctl-socket-file=LSCTL_FILE          unix domain path for vdhtd to use\n");
     printf("  -p, --port=PORT                         port to use for service provision\n");
+    printf("  -l, --proto=udp[,tcp]                   proto to use for service provision\n");
     printf("\n");
     printf("Help options\n");
     printf("  -h  --help                              show this help message.\n");
@@ -147,7 +150,7 @@ int vexample_get_addr(struct sockaddr_in* addr)
 }
 
 static
-int vexample_loop_run(struct sockaddr_in* addr)
+int vexample_loop_run_with_udp(struct sockaddr_in* addr)
 {
     struct sockaddr_in from_addr;
     char data[32];
@@ -246,6 +249,133 @@ int vexample_loop_run(struct sockaddr_in* addr)
     return (err) ? -1 : 0;
 }
 
+static
+int vexample_loop_run_with_tcp(struct sockaddr_in* addr)
+{
+    struct sockaddr_in from_addr;
+    char data[32];
+    int prnt = 0;
+    int quit = 0;
+    int err = 0;
+    int ret = 0;
+    int work_fd = 0;
+    int fd  = 0;
+    int i = 0;
+
+    srand(time(NULL));
+
+    fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) {
+        perror("socket");
+        return -1;
+    }
+    ret = bind(fd, (struct sockaddr*)addr, sizeof(struct sockaddr_in));
+    if (ret < 0) {
+        perror("bind");
+        close(fd);
+        return -1;
+    }
+    ret = listen(fd, 1);
+    if (ret < 0) {
+        perror("listen");
+        close(fd);
+        return -1;
+    }
+    while(!quit) {
+        struct timespec tmo = {0, 5000*1000};
+        sigset_t sigmask;
+        sigset_t origmask;
+        fd_set rfds;
+        fd_set wfds;
+        fd_set efds;
+        int max_fd = 0;
+        int ret = 0;
+
+        sigemptyset(&sigmask);
+        sigemptyset(&origmask);
+        pthread_sigmask(SIG_SETMASK, &sigmask, &origmask);
+
+        FD_ZERO(&rfds);
+        FD_ZERO(&wfds);
+        FD_ZERO(&efds);
+
+        FD_SET(fd, &rfds);
+        FD_SET(fd, &wfds);
+        FD_SET(fd, &efds);
+
+        max_fd = fd;
+
+        if (work_fd > 0) {
+            FD_SET(work_fd, &rfds);
+            FD_SET(work_fd, &wfds);
+            FD_SET(work_fd, &efds);
+
+            if (work_fd > max_fd) {
+                max_fd = work_fd;
+            }
+        }
+
+        ret = pselect(max_fd + 1, &rfds, &wfds, &efds, &tmo, &sigmask);
+        if (ret < 0) {
+            printf("pselect");
+            err = 1;
+            break;
+        } else if (ret == 0) {
+            continue;
+        } else {
+            if (FD_ISSET(fd, &rfds)) {
+                int len = sizeof(struct sockaddr_in);
+                work_fd = accept(fd, (struct sockaddr*)&from_addr, (socklen_t*)&len);
+                if (work_fd < 0) {
+                    perror("accept");
+                    err = 1;
+                    break;
+                }
+            }
+            if (FD_ISSET(work_fd, &rfds)) {
+                ret = recv(work_fd, data, 32, 0);
+                if (ret < 0) {
+                    perror("recv");
+                    err = 1;
+                    break;
+                }
+                if (ret > 0) {
+                    if (data[0] == 'o') {
+                        prnt = 1;
+                    } else if (data[0] == 'x') {
+                        quit = 1;
+                    } else {
+                        //do nothing;
+                    }
+                }
+            }
+            if (FD_ISSET(work_fd, &wfds)) {
+                if (prnt) {
+                    if (i + 1 > strlen(gserver_buf)) {
+                        quit = 1;
+                        break;
+                    }
+                    printf("%c", *(char*)(gserver_buf + i));
+                    ret = send(work_fd, gserver_buf + i, 1, 0);
+                    if (ret < 0) {
+                        perror("send");
+                        err = 1;
+                        break;
+                    }
+                    i++;
+                }
+            }
+            if (FD_ISSET(work_fd, &efds)) {
+                printf("pselect error\n");
+                err = 1;
+                break;
+            }
+        }
+    }
+    close(fd);
+    return (err) ? -1 : 0;
+}
+
 int main(int argc, char** argv)
 {
     int opt_idx = 0;
@@ -264,7 +394,7 @@ int main(int argc, char** argv)
     }
 
     while(c >= 0) {
-        c = getopt_long(argc, argv, "U:S:p:h", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:S:p:l:h", long_options, &opt_idx);
         if (c < 0) {
             break;
         }
@@ -310,6 +440,21 @@ int main(int argc, char** argv)
             }
             break;
         }
+        case 'l': {
+            if (strlen(optarg) + 1 >= 32) {
+                printf("Too long for option 'port'\n");
+                exit(-1);
+            }
+            if (!strcmp(optarg, "udp")) {
+                gserver_proto = VPROTO_UDP;
+            }else if (!strcmp(optarg, "tcp")) {
+                gserver_proto = VPROTO_TCP;
+            }else {
+                printf("Wrong option for protocol\n");
+                exit(-1);
+            }
+            break;
+        }
         case 'h':
             gserver_help = 1;
             break;
@@ -348,14 +493,24 @@ int main(int argc, char** argv)
         vexample_dump_addr(&srvcAddr);
 
         vdhtc_init(gserver_socket, glsctls_socket);
-        ret = vdhtc_post_service_segment(&srvcHash, &srvcAddr, VPROTO_UDP);
+        ret = vdhtc_post_service_segment(&srvcHash, &srvcAddr, gserver_proto);
         if (ret < 0) {
             printf("post service failed.\n");
             vdhtc_deinit();
             exit(-1);
         }
 
-        ret = vexample_loop_run(&srvcAddr);
+        switch(gserver_proto) {
+        case VPROTO_UDP:
+            ret = vexample_loop_run_with_udp(&srvcAddr);
+            break;
+        case VPROTO_TCP:
+            ret = vexample_loop_run_with_tcp(&srvcAddr);
+            break;
+        default:
+            //impossible be here;
+            break;
+        }
         if (ret < 0) {
             printf("failed to run server.\n");
             exit(-1);

@@ -24,7 +24,8 @@ static char* gserver_magic = \
 
 static char  gserver_socket[256];
 static char  glsctls_socket[256];
-static int   gserver_port = 0;
+static int   gclient_port = 0;
+static int   gserver_proto = VPROTO_UDP;
 static int   gserver_help = 0;
 
 static
@@ -129,14 +130,14 @@ int vexample_get_addr(struct sockaddr_in* addr)
 
     memset(addr, 0, sizeof(struct sockaddr_in));
     addr->sin_family = AF_INET;
-    addr->sin_port = htons(gserver_port);
+    addr->sin_port = htons(gclient_port);
     addr->sin_addr = ((struct sockaddr_in*)&(req->ifr_addr))->sin_addr;
 
     return 0;
 }
 
 static
-int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
+int vexample_loop_run_with_udp(struct sockaddr_in* addr, struct sockaddr_in* to)
 {
     struct sockaddr_in from_addr;
     char data[32];
@@ -159,6 +160,18 @@ int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
         close(fd);
         return -1;
     }
+
+    if (ask) {
+        char a = 'o';
+        ret = sendto(fd, &a, 1, 0, (struct sockaddr*)to, sizeof(struct sockaddr_in));
+        if (ret < 0) {
+            perror("sendto:");
+            close(fd);
+            return -1;
+        }
+        ask = 0;
+    }
+
     while(!quit) {
         struct timespec tmo = {0, 5000*1000};
         sigset_t sigmask;
@@ -179,17 +192,6 @@ int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
         FD_SET(fd, &rfds);
         FD_SET(fd, &wfds);
         FD_SET(fd, &efds);
-
-        if (ask) {
-            char a = 'o';
-            ret = sendto(fd, &a, 1, 0, (struct sockaddr*)to, sizeof(struct sockaddr_in));
-            if (ret < 0) {
-                perror("sendto:");
-                err = 1;
-                break;
-            }
-            ask = 0;
-        }
 
         ret = pselect(fd + 1, &rfds, &wfds, &efds, &tmo, &sigmask);
         if (ret < 0) {
@@ -242,19 +244,146 @@ int vexample_loop_run(struct sockaddr_in* addr, struct sockaddr_in* to)
     return (err) ? -1 : 0;
 }
 
+static
+int vexample_loop_run_with_tcp(struct sockaddr_in* addr, struct sockaddr_in* to)
+{
+    char data[32];
+    int quit = 0;
+    int ask  = 1;
+    int err = 0;
+    int ret = 0;
+    int fd  = 0;
+
+    srand(time(NULL));
+
+    fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) {
+        perror("socket");
+        return -1;
+    }
+    ret = bind(fd, (struct sockaddr*)addr, sizeof(struct sockaddr_in));
+    if (ret < 0) {
+        perror("bind");
+        close(fd);
+        return -1;
+    }
+    ret = connect(fd, (struct sockaddr*)to, sizeof(*to));
+    if (ret < 0) {
+        perror("connect");
+        close(fd);
+        return -1;
+    }
+
+    if (ask) {
+        char a = 'o';
+        ret = send(fd, &a, 1, 0);
+        if (ret < 0) {
+            perror("send:");
+            close(fd);
+            return -1;
+        }
+        ask = 0;
+    }
+
+    while(!quit) {
+        struct timespec tmo = {0, 5000*1000};
+        sigset_t sigmask;
+        sigset_t origmask;
+        fd_set rfds;
+        fd_set wfds;
+        fd_set efds;
+        int ret = 0;
+
+        sigemptyset(&sigmask);
+        sigemptyset(&origmask);
+        pthread_sigmask(SIG_SETMASK, &sigmask, &origmask);
+
+        FD_ZERO(&rfds);
+        FD_ZERO(&wfds);
+        FD_ZERO(&efds);
+
+        FD_SET(fd, &rfds);
+        FD_SET(fd, &wfds);
+        FD_SET(fd, &efds);
+
+        ret = pselect(fd + 1, &rfds, &wfds, &efds, &tmo, &sigmask);
+        if (ret < 0) {
+            printf("pselect:");
+            err = 1;
+            break;
+        } else if (ret == 0) {
+            continue;
+        } else {
+            if (FD_ISSET(fd, &rfds)) {
+                memset(data, 0, 32);
+                ret = recv(fd, data, 32, 0);
+                if (ret < 0) {
+                    perror("recv:");
+                    err = 1;
+                    break;
+                }
+                if (ret > 0) {
+                    char ch = (char)data[0];
+                    if (ch == 'x') {
+                        quit = 1;
+                        break;
+                    } else {
+                        printf("%c", (char)data[0]);
+                        ask = 1;
+                    }
+                }
+            }
+            if (FD_ISSET(fd, &wfds)) {
+                if (ask) {
+                    char a = 'o';
+                    ret = send(fd, &a, 1, 0);
+                    if (ret < 0) {
+                        perror("send:");
+                        err = 1;
+                        break;
+                    }
+                    ask = 0;
+                }
+            }
+            if (FD_ISSET(fd, &efds)) {
+                printf("pselect error\n");
+                err = 1;
+                break;
+            }
+        }
+    }
+    close(fd);
+    return (err) ? -1 : 0;
+}
+
 void vexample_number_addr_cb(vsrvcHash* hash, int num, int proto, void* cookie)
 {
-    printf("addr num:%d (proto:%d).\n", num, proto);
+    char* sproto = NULL;
+
+    switch(proto) {
+    case VPROTO_UDP:
+        sproto = "udp";
+        gserver_proto = VPROTO_UDP;
+        break;
+    case VPROTO_TCP:
+        sproto = "tcp";
+        gserver_proto = VPROTO_TCP;
+        break;
+    default:
+        sproto = "err";
+        break;
+    }
+    printf("addr num:%d (proto:%s).\n", num, sproto);
     return ;
 }
 
 void vexample_iterate_addr_cb(vsrvcHash* hash, struct sockaddr_in* addr, int last, void* cookie)
 {
-    struct sockaddr_in* from = (struct sockaddr_in*)cookie;
+    struct sockaddr_in* server = (struct sockaddr_in*)cookie;
     vexample_dump_addr(addr);
     printf("last:%d.\n", last);
 
-    memcpy(from, addr, sizeof(*addr));
+    memcpy(server, addr, sizeof(*addr));
     return ;
 }
 
@@ -315,7 +444,7 @@ int main(int argc, char** argv)
             memset(port_buf, 0, 32);
             strcpy(port_buf, optarg);
             errno = 0;
-            gserver_port = strtol(port_buf, NULL, 10);
+            gclient_port = strtol(port_buf, NULL, 10);
             if (errno) {
                 printf("Wrong option for 'port'\n");
                 exit(-1);
@@ -368,9 +497,21 @@ int main(int argc, char** argv)
             exit(-1);
         }
 
-        ret = vexample_loop_run(&laddr, &to);
+        switch(gserver_proto) {
+        case VPROTO_UDP:
+            ret = vexample_loop_run_with_udp(&laddr, &to);
+            break;
+        case VPROTO_TCP:
+            ret = vexample_loop_run_with_tcp(&laddr, &to);
+            break;
+        default:
+            vdhtc_deinit();
+            printf("Bad protocol\n");
+            exit(-1);
+        }
         if (ret < 0) {
             printf("failed to run server.\n");
+            vdhtc_deinit();
             exit(-1);
         }
 
