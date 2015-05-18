@@ -7,8 +7,8 @@
  * the routine to join a node with well known address into routing table,
  * whose ID usually is fake and trivial.
  *
- * @route: routing table.
- * @node:  well-known address of node to be joined
+ * @route: routing table space
+ * @node:  well-known address of node to join.
  *
  */
 static
@@ -23,7 +23,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
     vassert(route);
     vassert(addr);
 
-    vtoken_make(&id);
+    vtoken_make(&id); //make up a fake ID.
     vnodeInfo_relax_init(&nodei_relax, &id, vnodeVer_unknown(), 0);
     vnodeInfo_add_addr(&nodei, addr);
 
@@ -36,12 +36,15 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
 
 
 /*
- * the routine to find best suitable service from service routing table
- * so that local app can meet its needs with that service.
+ * the routine to find 'best' suitable service from service routing space.
+ * here, 'best' means resources of system that service docks is most avaiable,
+ * that is to say, the service is probably the most responsive to client.
  *
  * @route:
  * @svc_hash: service hash id.
- * @addr : [out] address of service
+ * @ncb: callback to show the number and protocol of service;
+ * @icb: callback to show addresses.
+ * @cookie: private data from user.
  */
 static
 int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
@@ -64,7 +67,7 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
     vlock_leave(&route->lock);
     retE((ret < 0));
 
-    if (!ret) {
+    if (!ret) { // means no services found, but need to tell client.
         ncb(&srvci.hash, 0, VPROTO_UNKNOWN, cookie);
         return 0;
     }
@@ -76,6 +79,14 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
     return 0;
 }
 
+/*
+ * the routine to probe 'best' suitable service from neighbor nodes.
+ *
+ * @route:
+ * @ncb: callback to show the number of service addresses and protocol used by service
+ * @icb: callback to show all addresses of service
+ * @cookie: private data for user.
+ */
 static
 int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
@@ -99,6 +110,12 @@ int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_numbe
     return 0;
 }
 
+/*
+ * the routine to broadcast the service to all neighbor nodes.
+ *
+ * @route:
+ * @srvci: service to be broadcasted.
+ */
 static
 int _vroute_air_service(struct vroute* route, vsrvcInfo* srvci)
 {
@@ -114,6 +131,14 @@ int _vroute_air_service(struct vroute* route, vsrvcInfo* srvci)
     return 0;
 }
 
+/*
+ * the routine to reflex an address. The request from this address has
+ * been sent to all inernet-accessible neighbor nodes, where all those
+ * nodes have to response back it's relevant reflexive address.
+ *
+ * @route:
+ * @addr:  address to be reflexed.
+ */
 static
 int _vroute_reflex_addr(struct vroute* route, struct sockaddr_in* addr)
 {
@@ -129,6 +154,13 @@ int _vroute_reflex_addr(struct vroute* route, struct sockaddr_in* addr)
     return 0;
 }
 
+/*
+ * the routine to probe the connectivity between current node and all active
+ * neighbor nodes.
+ *
+ * @route:
+ * @laddr: the candidate address on current node side.
+ */
 int _vroute_probe_connectivity(struct vroute* route, struct sockaddr_in* laddr)
 {
     struct vroute_node_space* node_space = &route->node_space;
@@ -144,6 +176,15 @@ int _vroute_probe_connectivity(struct vroute* route, struct sockaddr_in* laddr)
     return 0;
 }
 
+/*
+ * the routine set inspect callback for testing module
+ * this API is supposed to be uesd for testing module.
+ *
+ * @route:
+ * @cb : callback to install
+ * @cookie: private data;
+ *
+ */
 void _vroute_set_inspect_cb(struct vroute* route, vroute_inspect_t cb, void* cookie)
 {
     vassert(route);
@@ -157,6 +198,16 @@ void _vroute_set_inspect_cb(struct vroute* route, vroute_inspect_t cb, void* coo
     return ;
 }
 
+/*
+ * the routine to inspect route space( includes node routing space and service
+ * routing space);
+ * this API is supposed to be used for testing module.
+ *
+ * @route:
+ * @token:
+ * @insp_id:
+ *
+ */
 void _vroute_inspect(struct vroute* route, vtoken* token, uint32_t insp_id)
 {
     vassert(route);
@@ -171,8 +222,9 @@ void _vroute_inspect(struct vroute* route, vtoken* token, uint32_t insp_id)
 }
 
 /*
- * the routine to load routing table infos from route database when host
- * starts at first.
+ * the routine to load nodes infos from database storage when host
+ * starts at first. All loaded nodes infos become potential neigbor nodes
+ * in node routing space.
  *
  * @route:
  */
@@ -191,7 +243,7 @@ int _vroute_load(struct vroute* route)
 }
 
 /*
- * the routine to write all nodes in node routing table back to route database
+ * the routine to write back all nodes in node routing table back to database
  * as long as the host become offline
  *
  * @route:
@@ -211,7 +263,7 @@ int _vroute_store(struct vroute* route)
 }
 
 /*
- * the routine to priodically refresh the routing table.
+ * the routine to priodically refresh the routing space.
  *
  * @route:
  */
@@ -232,7 +284,8 @@ int _vroute_tick(struct vroute* route)
 }
 
 /*
- * the routine to clean routing table
+ * the routine to clean routing space, including node routing space and service
+ * routing space.
  *
  * @route:
  */
@@ -255,7 +308,8 @@ void _vroute_clear(struct vroute* route)
     return;
 }
 
-/* the routine to dump routing table
+/* the routine to dump routing space, including node routing space and service
+ * routing space.
  *
  * @route:
  */
