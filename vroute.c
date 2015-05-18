@@ -917,7 +917,7 @@ int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(conn);
     vassert(ctxt);
 
-    ret =route->dec_ops->ping(ctxt, &token, &fromId);
+    ret = route->dec_ops->ping(ctxt, &token, &fromId);
     retE((ret < 0));
 
     vnodeInfo_relax_init(&nodei_relax, &fromId, vnodeVer_unknown(), 0);

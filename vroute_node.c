@@ -696,7 +696,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
         if (varray_size(peers) <= 0) {
             continue;
         }
-        if ((space->bucket[i].ts + space->max_rcv_tmo) >= now) {
+        if ((now - space->bucket[i].ts) <= space->max_rcv_tmo * 5) {
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
