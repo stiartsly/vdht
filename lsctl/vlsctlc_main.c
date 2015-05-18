@@ -144,8 +144,6 @@ int _aux_parse_sockaddr_param(void)
 static
 int _aux_parse_proto_param(void)
 {
-    char str_proto[8] = {0};
-
     if (strlen(optarg) + 1 >= 8) {
         printf("Invalid IP\n");
         return -1;
