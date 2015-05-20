@@ -296,7 +296,7 @@ static
 void _vnode_tick(struct vnode* node)
 {
     struct vroute* route = node->route;
-    vsrvcInfo* svc = NULL;
+    vsrvcInfo* srvci = NULL;
     int i = 0;
     vassert(node);
 
@@ -304,8 +304,8 @@ void _vnode_tick(struct vnode* node)
     _aux_node_get_eaddrs(node);
     _aux_node_probe_connectivity(node);
     for (i = 0; i < varray_size(&node->services); i++) {
-        svc = (vsrvcInfo*)varray_get(&node->services, i);
-        route->ops->air_service(route, svc);
+        srvci = (vsrvcInfo*)varray_get(&node->services, i);
+        route->ops->air_service(route, srvci);
     }
     vlock_leave(&node->lock);
     return ;

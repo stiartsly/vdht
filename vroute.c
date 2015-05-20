@@ -1322,7 +1322,7 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     retE((ret < 0));
 
     //try to add info of node hosting that service.
-    ret = node_space->ops->probe_node(node_space, &srvci.hostid);
+    ret = node_space->ops->find_node(node_space, &srvci.hostid);
     retE((ret < 0));
     route->ops->inspect(route, &token, VROUTE_INSP_RCV_FIND_SERVICE_RSP);
     probe_helper->ops->invoke(probe_helper, &srvci.hash, (vsrvcInfo*)&srvci);

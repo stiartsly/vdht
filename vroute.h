@@ -74,8 +74,8 @@ struct vroute_node_space_ops {
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
     int  (*get_node)     (struct vroute_node_space*, vnodeId*, vnodeInfo*);
     int  (*get_neighbors)(struct vroute_node_space*, vnodeId*, struct varray*, int);
-    int  (*probe_node)   (struct vroute_node_space*, vnodeId*);
-    int  (*air_service)  (struct vroute_node_space*, void*);
+    int  (*find_node)    (struct vroute_node_space*, vnodeId*);
+    int  (*air_service)  (struct vroute_node_space*, vsrvcInfo*);
     int  (*probe_service)(struct vroute_node_space*, vsrvcHash*);
     int  (*reflex_addr)  (struct vroute_node_space*, struct sockaddr_in*);
     int  (*adjust_connectivity)
@@ -98,6 +98,7 @@ struct vroute_node_space {
     int  bucket_sz;
     int  max_snd_tms;
     int  max_rcv_tmo;
+    int  max_probe_tms;
 
     struct vroute* route;
     struct vroute_node_space_bucket {

@@ -110,7 +110,7 @@ int _aux_space_add_node_cb(void* item, void* cookie)
 }
 
 static
-int _aux_space_probe_node_cb(void* item, void* cookie)
+int _aux_space_find_node_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute_node_space*, space);
     varg_decl(cookie, 1, vnodeId*, targetId);
@@ -122,7 +122,7 @@ int _aux_space_probe_node_cb(void* item, void* cookie)
     vassert(targetId);
     vassert(peer);
 
-    if (peer->ntries >=  space->max_snd_tms) {
+    if (peer->ntries >= space->max_snd_tms) {
         return 0;
     }
     if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
@@ -224,7 +224,7 @@ int _aux_space_probe_connectivity_cb(void* item, void* cookie)
     vassert(space);
     vassert(laddr);
 
-    if (peer->nprobes >= 3) { //already probed enough;
+    if (peer->nprobes >= space->max_probe_tms) { //probed enough;
         return 0;
     }
     if (peer->ntries >= space->max_snd_tms) {
@@ -257,6 +257,7 @@ int _aux_space_tick_cb(void* item, void* cookie)
     if (peer->ntries >=  space->max_snd_tms) { //unreachable.
         return 0;
     }
+
     if ((!peer->snd_ts) ||
         (*now - peer->rcv_ts > space->max_rcv_tmo)) {
         route->dht_ops->ping(route, &peer->conn);
@@ -450,10 +451,11 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* node
 }
 
 /*
- * the routine to find info structure of give nodeId
+ * the routine to find a node with given nodeID @targetId in local node routing space.
+ *
  * @route: handle to route table.
- * @targetId: node ID.
- * @info:
+ * @targetId: node Id to find
+ * @nodei[out]:
  */
 static
 int _vroute_node_space_get_node(struct vroute_node_space* space, vnodeId* targetId, vnodeInfo* nodei)
@@ -547,7 +549,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
  * @targetId:
  */
 static
-int _vroute_node_space_probe_node(struct vroute_node_space* space, vnodeId* targetId)
+int _vroute_node_space_find_node_in_neighbors(struct vroute_node_space* space, vnodeId* targetId)
 {
     int i = 0;
 
@@ -559,7 +561,7 @@ int _vroute_node_space_probe_node(struct vroute_node_space* space, vnodeId* targ
             space,
             targetId
         };
-        varray_iterate(&space->bucket[i].peers, _aux_space_probe_node_cb, argv);
+        varray_iterate(&space->bucket[i].peers, _aux_space_find_node_cb, argv);
     }
     return 0;
 }
@@ -570,9 +572,10 @@ int _vroute_node_space_probe_node(struct vroute_node_space* space, vnodeId* targ
  *
  * @space:
  * @svci:  metadata of service.
+ *
  */
 static
-int _vroute_node_space_air_service(struct vroute_node_space* space, void* srvci)
+int _vroute_node_space_air_service(struct vroute_node_space* space, vsrvcInfo* srvci)
 {
     int i = 0;
     vassert(space);
@@ -588,6 +591,13 @@ int _vroute_node_space_air_service(struct vroute_node_space* space, void* srvci)
     return 0;
 }
 
+/*
+ * the routine to find service in neighbor nodes
+ *
+ * @space:
+ * @hash:  the service hash ID to find.
+ *
+ */
 static
 int _vroute_node_space_probe_service(struct vroute_node_space* space, vsrvcHash* hash)
 {
@@ -605,6 +615,13 @@ int _vroute_node_space_probe_service(struct vroute_node_space* space, vsrvcHash*
     return 0;
 }
 
+/*
+ * the routine to get reflexive address from remote node in internet.
+ *
+ * @space:
+ * @addr: the local address to get it's reflexive address.
+ *
+ */
 static
 int _vroute_node_space_reflex_addr(struct vroute_node_space* space, struct sockaddr_in* addr)
 {
@@ -621,6 +638,13 @@ int _vroute_node_space_reflex_addr(struct vroute_node_space* space, struct socka
     return 0;
 }
 
+/*
+ * the routine to select better candidate connection.
+ *
+ * @space:
+ * @targetId:
+ * @conn: the candidate connection.
+ */
 static
 int _vroute_node_space_adjust_connectivity(struct vroute_node_space* space, vnodeId* targetId, vnodeConn* conn)
 {
@@ -645,12 +669,16 @@ int _vroute_node_space_adjust_connectivity(struct vroute_node_space* space, vnod
     return 0;
 }
 
+/*
+ * the routine to probe connectivity with all neighbor nodes.
+ *
+ * @space:
+ * @laddr: the source address where the probe query is from
+ */
 static
 int _vroute_node_space_probe_connectivity(struct vroute_node_space* space, struct sockaddr_in* laddr)
 {
-    struct varray* peers = NULL;
     int i = 0;
-
     vassert(space);
     vassert(laddr);
 
@@ -659,8 +687,7 @@ int _vroute_node_space_probe_connectivity(struct vroute_node_space* space, struc
             space,
             laddr
         };
-        peers = &space->bucket[i].peers;
-        varray_iterate(peers, _aux_space_probe_connectivity_cb, argv);
+        varray_iterate(&space->bucket[i].peers, _aux_space_probe_connectivity_cb, argv);
     }
     return 0;
 }
@@ -785,7 +812,13 @@ void _vroute_node_space_clear(struct vroute_node_space* space)
 }
 
 /*
- * to iterate all node infos in routing table.
+ * to inspect node routing space. used for testing module.
+ *
+ * @space:
+ * @cb: inspect callback
+ * @cookie: private data to @cb;
+ * @token: token at that moment;
+ * @insp_id: type ID of inspection;
  */
 static
 void _vroute_node_space_inspect(struct vroute_node_space* space, vroute_node_space_inspect_t cb, void* cookie, vtoken* token, uint32_t insp_id)
@@ -844,7 +877,7 @@ struct vroute_node_space_ops route_space_ops = {
     .add_node      = _vroute_node_space_add_node,
     .get_node      = _vroute_node_space_get_node,
     .get_neighbors = _vroute_node_space_get_neighbors,
-    .probe_node    = _vroute_node_space_probe_node,
+    .find_node     = _vroute_node_space_find_node_in_neighbors,
     .air_service   = _vroute_node_space_air_service,
     .probe_service = _vroute_node_space_probe_service,
     .reflex_addr   = _vroute_node_space_reflex_addr,
@@ -867,7 +900,6 @@ int _aux_space_prepare_db(struct vroute_node_space* space)
     char* err = NULL;
     int ret = 0;
 
-    errno = 0;
     ret = stat(space->db, &stat_buf);
     retS((ret >= 0));
 
@@ -883,15 +915,15 @@ int _aux_space_prepare_db(struct vroute_node_space* space)
     ret += sprintf(sql_buf + ret, "'addrs'  TEXT)");
 
     ret = sqlite3_exec(db, sql_buf, NULL, NULL, &err);
-    vlogEv((ret && err), "db err:%s\n", err);
     vlogEv((ret), elog_sqlite3_exec);
+    vlogEv((ret && err), "db err:%s\n", err);
+
     sqlite3_close(db);
     return 0;
 }
 
 int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route, struct vconfig* cfg, vnodeId* myid)
 {
-    vnodeVer myver;
     int ret = 0;
     int i = 0;
 
@@ -905,6 +937,7 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     space->bucket_sz   = cfg->ext_ops->get_route_bucket_sz(cfg);
     space->max_snd_tms = cfg->ext_ops->get_route_max_snd_tms(cfg);
     space->max_rcv_tmo = cfg->ext_ops->get_route_max_rcv_tmo(cfg);
+    space->max_probe_tms = 3;
 
     ret = _aux_space_prepare_db(space);
     retE((ret < 0));
@@ -914,8 +947,7 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
         space->bucket[i].ts = 0;
     }
 
-    vnodeVer_unstrlize(vhost_get_version(), &myver);
-    vtoken_copy(&space->myver, &myver);
+    vnodeVer_unstrlize(vhost_get_version(), &space->myver);
     vtoken_copy(&space->myid,  myid);
     space->route = route;
     space->ops   = &route_space_ops;
