@@ -96,9 +96,72 @@ static char glsctlc_socket[256];
 static char glsctls_socket[256];
 static int  glsctlc_addr_opt  = 0;
 static int  glsctlc_proto_opt = 0;
+
 static struct sockaddr_in glsctlc_addr;
+static uint32_t glsctlc_addr_type = VSOCKADDR_LOCAL;
 static int  glsctlc_proto = VPROTO_UDP;
 static vsrvcHash glsctlc_hash;
+
+static
+int _aux_sockaddr_is_private(struct sockaddr_in* addr)
+{
+    enum {
+        VADDR_CLASS_A,
+        VADDR_CLASS_B,
+        VADDR_CLASS_C,
+        VADDR_CLASS_D,
+        VADDR_CLASS_E
+    };
+
+    int _aux_sockaddr_class(uint32_t haddr) //host byte order
+    {
+        struct addr_class_pattern {
+            int  klass;
+            uint32_t mask;
+        } patterns[] = {
+            {VADDR_CLASS_A, 0x80000000 },
+            {VADDR_CLASS_B, 0x40000000 },
+            {VADDR_CLASS_C, 0x20000000 },
+            {VADDR_CLASS_D, 0x10000000 },
+            {VADDR_CLASS_E, 0 }
+        };
+        struct addr_class_pattern* pattern = patterns;
+
+        for (; pattern->klass != VADDR_CLASS_E; pattern++) {
+            if (!(haddr & pattern->mask)) {
+                break;
+            }
+        }
+        return pattern->klass;
+    }
+
+    struct priv_addr_pattern {
+        int klass;
+        uint32_t mask;
+        uint32_t pattern;
+    } priv_patterns[] = {
+        {VADDR_CLASS_A, 0xff000000, 0x0a000000 }, //"10.0.0.0/8"
+        {VADDR_CLASS_B, 0xfff00000, 0xac100000 }, //"172.16.0.0/12",
+        {VADDR_CLASS_C, 0xffff0000, 0xc0a80000 }, //"192.168.0.0/16",
+        {-1, 0, 0 }
+    };
+    struct priv_addr_pattern* pattern = priv_patterns;
+    uint32_t haddr = ntohl(addr->sin_addr.s_addr);
+    int klass = 0;
+    int yes = 0;
+    vassert(addr);
+
+    klass = _aux_sockaddr_class(haddr);
+
+    for (; pattern->klass != -1; pattern++) {
+        if ((klass == pattern->klass)
+           && ((haddr & pattern->mask) == pattern->pattern)){
+            yes = 1;
+            break;
+        }
+    }
+    return yes;
+}
 
 static
 int _aux_parse_sockaddr_param(void)
@@ -137,6 +200,12 @@ int _aux_parse_sockaddr_param(void)
     ret = inet_aton(ip, (struct in_addr*)&glsctlc_addr.sin_addr);
     if (ret < 0) {
         return -1;
+    }
+
+    if (_aux_sockaddr_is_private(&glsctlc_addr)) {
+        glsctlc_addr_type = VSOCKADDR_LOCAL;
+    }else {
+        glsctlc_addr_type = VSOCKADDR_REFLEXIVE;
     }
     return 0;
 }
@@ -179,7 +248,7 @@ void _aux_print_addr_num_cb(vsrvcHash* hash, int num, int proto, void* cookie)
 }
 
 static
-void _aux_print_service_addrs_cb(vsrvcHash* hash, struct sockaddr_in* addr, int last, void* cookie)
+void _aux_print_service_addrs_cb(vsrvcHash* hash, struct sockaddr_in* addr, uint32_t type, int last, void* cookie)
 {
     char* hostname = NULL;
     int port = 0;
@@ -190,7 +259,7 @@ void _aux_print_service_addrs_cb(vsrvcHash* hash, struct sockaddr_in* addr, int 
         return;
     }
     port = (int)ntohs(addr->sin_port);
-    printf("address: %s:%d, last:%s\n", hostname, port, last ? "yes":"no");
+    printf("address: %s:%d, type:%ud last:%s\n", hostname, port, type, last ? "yes":"no");
     return ;
 }
 
@@ -366,7 +435,7 @@ int main(int argc, char** argv)
         ret = vdhtc_request_bogus_ping(&glsctlc_addr);
         break;
     case VCMD_POST_SERVICE:
-        ret = vdhtc_post_service_segment(&glsctlc_hash, &glsctlc_addr, glsctlc_proto);
+        ret = vdhtc_post_service_segment(&glsctlc_hash, &glsctlc_addr, glsctlc_addr_type, glsctlc_proto);
         break;
     case VCMD_UNPOST_SERVICE:
         ret = vdhtc_unpost_service_segment(&glsctlc_hash, &glsctlc_addr);

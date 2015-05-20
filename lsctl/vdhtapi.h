@@ -13,6 +13,14 @@ enum {
     VPROTO_UNKNOWN
 };
 
+enum {
+    VSOCKADDR_LOCAL,
+    VSOCKADDR_UPNP,
+    VSOCKADDR_REFLEXIVE,
+    VSOCKADDR_RELAY,
+    VSOCKADDR_BUTT
+};
+
 /*
  * the API to initialize vdhtc API module. As we know, vdhtapi module use domain
  * socket to communicate with vdhtd daemon.
@@ -133,12 +141,13 @@ int vdhtc_request_bogus_ping (struct sockaddr_in* addr);
  *
  * @hash: hash value to service to post;
  * @addr: socket address to service
+ * @type: socket address type;
  * @proto: protocol to service, currently supported for udp and tcp.
  *         tcp: VPROTO_TCP,
  *         udp: VPROTO_UDP
  *
  */
-int vdhtc_post_service_segment  (vsrvcHash* hash, struct sockaddr_in* addr, int proto);
+int vdhtc_post_service_segment  (vsrvcHash* hash, struct sockaddr_in* addr, uint32_t type, int proto);
 
 /*
  * the API to unpost a service segment.
@@ -153,13 +162,14 @@ int vdhtc_unpost_service_segment(vsrvcHash* hash, struct sockaddr_in* addr);
  * the API to post a whole service to vdhtd Daemon.
  *
  * @hash: service hash;
- * @addr: array of service addresses;
+ * @addrs: array of service addresses;
+ * @types: array of address types;
  * @sz:   size of array of service addresses.
  * @proto: service protocol, currently supported for udp and tcp
  *        tcp: VPROTO_TCP;
  *        udp: VPROTO_UDP;
  */
-int vdhtc_post_service  (vsrvcHash* hash, struct sockaddr_in* addrs, int sz, int proto);
+int vdhtc_post_service  (vsrvcHash* hash, struct sockaddr_in* addrs, uint32_t* types, int sz, int proto);
 
 /*
  * the API to unpost a whole service
@@ -187,11 +197,12 @@ typedef void (*vsrvcInfo_number_addr_t) (vsrvcHash* hash, int num, int proto, vo
  *
  * @hash: service hash
  * @addr: service address
+ * @type: sockaddr type;
  * @last: bool value to indcate wheather this invoke is last or not.
  * @cookie: the private data from API @vdhtc_find_service or @vdhtc_probe_service
  *
  */
-typedef void (*vsrvcInfo_iterate_addr_t)(vsrvcHash* hash, struct sockaddr_in* addr, int last, void* cookie);
+typedef void (*vsrvcInfo_iterate_addr_t)(vsrvcHash* hash, struct sockaddr_in* addr, uint32_t type,  int last, void* cookie);
 
 
 /*

@@ -402,7 +402,7 @@ struct vnode_ops node_ops = {
  *
  */
 static
-int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr, int proto)
+int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct vsockaddr_in* addr, int proto)
 {
     vsrvcInfo* srvci = NULL;
     int found = 0;
@@ -412,6 +412,7 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* ad
     vassert(node);
     vassert(hash);
     vassert(addr);
+    vassert((proto > VPROTO_RES0) && (proto < VPROTO_RES1));
 
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++){
@@ -421,7 +422,7 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* ad
             if (vsrvcInfo_proto(srvci) != proto) {
                 ret = -1;
             } else {
-                vsrvcInfo_add_addr(&srvci, addr);
+                vsrvcInfo_add_addr(&srvci, &addr->addr, addr->type);
             }
             break;
         }
@@ -432,7 +433,7 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* ad
         ret1E((!srvci), vlock_leave(&node->lock));
 
         vsrvcInfo_init(srvci, hash, &node->nodei.id, (proto << 16) | node->nice);
-        vsrvcInfo_add_addr(&srvci, addr);
+        vsrvcInfo_add_addr(&srvci, &addr->addr, addr->type);
         varray_add_tail(&node->services, srvci);
         node->nodei.weight++;
     }
@@ -537,7 +538,7 @@ int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_
     if (found) {
         ncb(hash, srvci_relax.naddrs, vsrvcInfo_proto((vsrvcInfo*)&srvci_relax), cookie);
         for (i = 0; i < srvci_relax.naddrs; i++) {
-            icb(hash, &srvci_relax.addrs[i], (i+1) == srvci_relax.naddrs, cookie);
+            icb(hash, &srvci_relax.addrs[i].addr, srvci_relax.addrs[i].type, (i+1) == srvci_relax.naddrs, cookie);
         }
         return 0;
     }

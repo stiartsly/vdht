@@ -188,7 +188,7 @@ struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* srvci)
 
     node = be_create_list();
     for (i = 0; i < srvci->naddrs; i++) {
-        addr = be_create_addr(&srvci->addrs[i]);
+        addr = be_create_vaddr(&srvci->addrs[i]);
         be_add_list(node, addr);
     }
     be_add_keypair(dict, "m", node);
@@ -1034,10 +1034,10 @@ int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* srvci)
 
     vsrvcInfo_relax_init((vsrvcInfo_relax*)srvci, &hash, &id, nice);
     for (i = 0; node->val.l[i]; i++) {
-        struct sockaddr_in addr;
+        struct vsockaddr_in vaddr;
         struct be_node* addr_node = node->val.l[i];
-        be_unpack_addr(addr_node, &addr);
-        vsrvcInfo_add_addr(&srvci, &addr);
+        be_unpack_vaddr(addr_node, &vaddr);
+        vsrvcInfo_add_addr(&srvci, &vaddr.addr, vaddr.type);
     }
     return 0;
 }

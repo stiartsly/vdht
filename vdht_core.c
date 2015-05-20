@@ -281,6 +281,20 @@ struct be_node* be_create_addr(struct sockaddr_in* addr)
     return node;
 }
 
+struct be_node* be_create_vaddr(struct vsockaddr_in* addr)
+{
+    struct be_node* node = NULL;
+    char buf[64];
+    vassert(addr);
+
+    memset(buf, 0, 64);
+    vsockaddr_strlize(&addr->addr, buf, 64);
+    sprintf(buf + strlen(buf), ":%d", addr->type);
+    node = be_create_str(buf);
+    retE_p((!node));
+    return node;
+}
+
 struct be_node* be_create_ver(vnodeVer* ver)
 {
     struct be_node* node = NULL;
@@ -487,6 +501,65 @@ int be_unpack_addr(struct be_node* node, struct sockaddr_in* addr)
     retE((ret != strlen(node->val.s)));
 
     ret = vsockaddr_unstrlize(node->val.s, addr);
+    retE((ret < 0));
+    return 0;
+}
+
+int _aux_vsockaddr_unstrlize(const char* buf, struct vsockaddr_in* addr)
+{
+    char* cur = NULL;
+    char* end = NULL;
+    char ip[64];
+    int  port = 0;
+    int  type = 0;
+    int  ret = 0;
+
+    vassert(buf);
+    vassert(addr);
+
+    cur = strchr(buf, ':');
+    retE((!cur));
+
+    memset(ip, 0, 64);
+    strncpy(ip, buf, cur-buf);
+
+    cur += 1;
+    errno = 0;
+    port = strtol(cur, &end, 10);
+    vlogEv((errno), elog_strtol);
+    retE((errno));
+
+    ret = vsockaddr_convert(ip, port, &addr->addr);
+    vlogEv((ret < 0), elog_vsockaddr_convert);
+    retE((ret < 0));
+
+    end = strchr(end, ':');
+    retE((!end));
+    end += 1;
+    errno = 0;
+    type = strtol(end, NULL, 10);
+    vlogEv((errno), elog_strtol);
+    retE((errno));
+
+    addr->type = (uint32_t)type;
+    return 0;
+}
+
+int be_unpack_vaddr(struct be_node* node, struct vsockaddr_in* addr)
+{
+    char* s = NULL;
+    int ret = 0;
+
+    vassert(node);
+    vassert(addr);
+
+    retE((BE_STR != node->type));
+
+    s = unoff_addr(node->val.s, sizeof(int32_t));
+    ret = get_int32(s);
+    retE((ret != strlen(node->val.s)));
+
+    ret = _aux_vsockaddr_unstrlize(node->val.s, addr);
     retE((ret < 0));
     return 0;
 }

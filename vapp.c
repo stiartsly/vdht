@@ -187,7 +187,7 @@ int _vappmain_bogus_query(struct vappmain* app, int queryId, struct sockaddr_in*
 }
 
 static
-int _vappmain_post_service_segment(struct vappmain* app, vsrvcHash* srvcHash, struct sockaddr_in* addr, int proto)
+int _vappmain_post_service_segment(struct vappmain* app, vsrvcHash* srvcHash, struct vsockaddr_in* addr, int proto)
 {
     struct vnode* node = &app->host.node;
     int ret = 0;
@@ -202,7 +202,7 @@ int _vappmain_post_service_segment(struct vappmain* app, vsrvcHash* srvcHash, st
 }
 
 static
-int _vappmain_post_service(struct vappmain* app, vsrvcHash* srvcHash, struct sockaddr_in* addrs, int num, int proto)
+int _vappmain_post_service(struct vappmain* app, vsrvcHash* srvcHash, struct vsockaddr_in* addrs, int num, int proto)
 {
     struct vnode* node = &app->host.node;
     int ret = 0;

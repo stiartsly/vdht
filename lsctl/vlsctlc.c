@@ -137,7 +137,7 @@ int _vlsctlc_bind_cmd_bogus_query(struct vlsctlc* lsctlc, int queryId, struct so
 }
 
 static
-int _vlsctlc_bind_cmd_post_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct sockaddr_in** addrs, int num, int proto)
+int _vlsctlc_bind_cmd_post_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct vsockaddr_in* addrs, int num, int proto)
 {
     int i = 0;
     vassert(lsctlc);
@@ -154,14 +154,14 @@ int _vlsctlc_bind_cmd_post_service(struct vlsctlc* lsctlc, vsrvcHash* hash, stru
     lsctlc->args.post_service_args.proto = proto;
     memcpy(&lsctlc->args.post_service_args.hash, hash, sizeof(*hash));
     for (i = 0; i < num; i++) {
-        memcpy(&lsctlc->args.post_service_args.addrs[i], addrs[i], sizeof(struct sockaddr_in));
+        memcpy(&lsctlc->args.post_service_args.addrs[i], &addrs[i], sizeof(struct vsockaddr_in));
     }
     lsctlc->args.post_service_args.naddrs = num;
     return 0;
 }
 
 static
-int _vlsctlc_bind_cmd_unpost_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct sockaddr_in** addrs, int num)
+int _vlsctlc_bind_cmd_unpost_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct sockaddr_in* addrs, int num)
 {
     int i = 0;
     vassert(lsctlc);
@@ -177,7 +177,7 @@ int _vlsctlc_bind_cmd_unpost_service(struct vlsctlc* lsctlc, vsrvcHash* hash, st
 
     memcpy(&lsctlc->args.unpost_service_args.hash, hash, sizeof(*hash));
     for (i = 0; i < num; i++) {
-        memcpy(&lsctlc->args.unpost_service_args.addrs[i], addrs[i], sizeof(struct sockaddr_in));
+        memcpy(&lsctlc->args.unpost_service_args.addrs[i], &addrs[i], sizeof(struct sockaddr_in));
     }
     lsctlc->args.unpost_service_args.naddrs = num;
     return 0;
@@ -231,7 +231,7 @@ struct vlsctlc_bind_ops lsctlc_bind_ops = {
 };
 
 static
-int _vlsctlc_unbind_cmd_find_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct sockaddr_in* addrs, int* num, int* proto)
+int _vlsctlc_unbind_cmd_find_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct vsockaddr_in* addrs, int* num, int* proto)
 {
     vassert(lsctlc);
     vassert(hash);
@@ -251,14 +251,14 @@ int _vlsctlc_unbind_cmd_find_service(struct vlsctlc* lsctlc, vsrvcHash* hash, st
     memcpy(hash, &lsctlc->rsp_args.find_service_rsp_args.hash, sizeof(*hash));
     *proto = lsctlc->rsp_args.find_service_rsp_args.proto;
     for (i = 0; i < lsctlc->rsp_args.find_service_rsp_args.num; i++) {
-        memcpy(&addrs[i], &lsctlc->rsp_args.find_service_rsp_args.addrs[i], sizeof(struct sockaddr_in));
+        memcpy(&addrs[i], &lsctlc->rsp_args.find_service_rsp_args.addrs[i], sizeof(struct vsockaddr_in));
     }
     *num = lsctlc->rsp_args.find_service_rsp_args.num;
     return 0;
 }
 
 static
-int _vlsctlc_unbind_cmd_probe_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct sockaddr_in* addrs, int* num, int* proto)
+int _vlsctlc_unbind_cmd_probe_service(struct vlsctlc* lsctlc, vsrvcHash* hash, struct vsockaddr_in* addrs, int* num, int* proto)
 {
     vassert(lsctlc);
     vassert(hash);
@@ -278,7 +278,7 @@ int _vlsctlc_unbind_cmd_probe_service(struct vlsctlc* lsctlc, vsrvcHash* hash, s
     memcpy(hash, &lsctlc->rsp_args.probe_service_rsp_args.hash, sizeof(*hash));
     *proto = lsctlc->rsp_args.probe_service_rsp_args.proto;
     for (i = 0; i < lsctlc->rsp_args.probe_service_rsp_args.num; i++) {
-        memcpy(&addrs[i], &lsctlc->rsp_args.probe_service_rsp_args.addrs[i], sizeof(struct sockaddr_in));
+        memcpy(&addrs[i], &lsctlc->rsp_args.probe_service_rsp_args.addrs[i], sizeof(struct vsockaddr_in));
     }
     *num = lsctlc->rsp_args.probe_service_rsp_args.num;
     return 0;
@@ -303,6 +303,26 @@ int _aux_vlsctlc_pack_addr(void* buf, int len, struct sockaddr_in* addr)
     *(uint16_t*)(buf + tsz) = addr->sin_port;
     tsz += sizeof(int16_t);
     *(uint32_t*)(buf + tsz) = addr->sin_addr.s_addr;
+    tsz += sizeof(uint32_t);
+
+    return tsz;
+}
+
+static
+int _aux_vlsctlc_pack_vaddr(void* buf, int len, struct vsockaddr_in* addr)
+{
+    int tsz = 0;
+
+    vassert(addr);
+    vassert(buf);
+    vassert(len > 0);
+
+    tsz += sizeof(uint16_t); // skip family;
+    *(uint16_t*)(buf + tsz) = addr->addr.sin_port;
+    tsz += sizeof(int16_t);
+    *(uint32_t*)(buf + tsz) = addr->addr.sin_addr.s_addr;
+    tsz += sizeof(uint32_t);
+    *(uint32_t*)(buf + tsz) = addr->type;
     tsz += sizeof(uint32_t);
 
     return tsz;
@@ -472,7 +492,7 @@ int _vlsctlc_pack_cmd_bogus_query(struct vlsctlc* lsctlc, void* buf, int len)
 static
 int _vlsctlc_pack_cmd_post_service(struct vlsctlc* lsctlc, void* buf, int len)
 {
-    struct sockaddr_in* addrs = lsctlc->args.post_service_args.addrs;
+    struct vsockaddr_in* addrs = lsctlc->args.post_service_args.addrs;
     void* len_addr = NULL;
     int tsz = 0;
     int bsz = 0;
@@ -502,7 +522,7 @@ int _vlsctlc_pack_cmd_post_service(struct vlsctlc* lsctlc, void* buf, int len)
     tsz += sizeof(int32_t);
 
     for (i = 0; i < lsctlc->args.post_service_args.naddrs; i++) {
-        ret = _aux_vlsctlc_pack_addr(buf + tsz, len - tsz, &addrs[i]);
+        ret = _aux_vlsctlc_pack_vaddr(buf + tsz, len - tsz, &addrs[i]);
         bsz += ret;
         tsz += ret;
     }
@@ -624,7 +644,7 @@ struct vlsctlc_pack_cmd_desc lsctlc_pack_cmd_desc[] = {
 };
 
 static
-int _aux_vlsctlc_unpack_addr(void* buf, int len, struct sockaddr_in* addr)
+int _aux_vlsctlc_unpack_vaddr(void* buf, int len, struct vsockaddr_in* addr)
 {
     int tsz = 0;
 
@@ -635,11 +655,13 @@ int _aux_vlsctlc_unpack_addr(void* buf, int len, struct sockaddr_in* addr)
     memset(addr, 0, sizeof(*addr));
 
     tsz += sizeof(uint8_t);
-    addr->sin_family = *(uint8_t*)(buf + tsz);
+    addr->addr.sin_family = *(uint8_t*)(buf + tsz);
     tsz += sizeof(uint8_t);
-    addr->sin_port = *(uint16_t*)(buf + tsz);
+    addr->addr.sin_port = *(uint16_t*)(buf + tsz);
     tsz += sizeof(uint16_t);
-    addr->sin_addr.s_addr = *(uint32_t*)(buf + tsz);
+    addr->addr.sin_addr.s_addr = *(uint32_t*)(buf + tsz);
+    tsz += sizeof(uint32_t);
+    addr->type = *(uint32_t*)(buf + tsz);
     tsz += sizeof(uint32_t);
 
     return tsz;
@@ -666,7 +688,7 @@ int _vlsctlc_unpack_cmd_find_service_rsp(struct vlsctlc* lsctlc, void* buf, int 
     tsz += sizeof(int32_t);
 
     while(len - tsz > 0) {
-        tsz += _aux_vlsctlc_unpack_addr(buf + tsz, len - tsz, &lsctlc->rsp_args.find_service_rsp_args.addrs[i]);
+        tsz += _aux_vlsctlc_unpack_vaddr(buf + tsz, len - tsz, &lsctlc->rsp_args.find_service_rsp_args.addrs[i]);
         i++;
     }
     lsctlc->rsp_args.find_service_rsp_args.num = i;
@@ -693,7 +715,7 @@ int _vlsctlc_unpack_cmd_probe_service_rsp(struct vlsctlc* lsctlc, void* buf, int
     tsz += sizeof(int32_t);
 
     while(len - tsz > 0) {
-        tsz += _aux_vlsctlc_unpack_addr(buf + tsz, len - tsz, &lsctlc->rsp_args.probe_service_rsp_args.addrs[i]);
+        tsz += _aux_vlsctlc_unpack_vaddr(buf + tsz, len - tsz, &lsctlc->rsp_args.probe_service_rsp_args.addrs[i]);
         i++;
     }
     lsctlc->rsp_args.probe_service_rsp_args.num = i;

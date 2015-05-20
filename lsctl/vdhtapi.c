@@ -546,14 +546,19 @@ error_exit:
  *         udp: VPROTO_UDP
  *
  */
-int vdhtc_post_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr, int proto)
+int vdhtc_post_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr, uint32_t type, int proto)
 {
-    struct sockaddr_in* addrs[] = { addr };
+    struct vsockaddr_in vaddr;
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
     int ret = 0;
 
     if (!srvcHash || !addr) {
+        verrno = verr_bad_args;
+        return -1;
+    }
+
+    if (type >= VSOCKADDR_BUTT) {
         verrno = verr_bad_args;
         return -1;
     }
@@ -567,7 +572,10 @@ int vdhtc_post_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr, in
     if (ret < 0) {
         return -1;
     }
-    ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, addrs, 1, proto);
+
+    memcpy(&vaddr.addr, addr, sizeof(*addr));
+    vaddr.type = type;
+    ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, &vaddr, 1, proto);
     if (ret < 0) {
         goto error_exit;
     }
@@ -598,7 +606,6 @@ error_exit:
  */
 int vdhtc_unpost_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr)
 {
-    struct sockaddr_in* addrs[] = { addr };
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
     int ret = 0;
@@ -611,7 +618,7 @@ int vdhtc_unpost_service_segment(vsrvcHash* srvcHash, struct sockaddr_in* addr)
     if (ret < 0) {
         return -1;
     }
-    ret = lsctlc.bind_ops->bind_unpost_service(&lsctlc, srvcHash, addrs, 1);
+    ret = lsctlc.bind_ops->bind_unpost_service(&lsctlc, srvcHash, addr, 1);
     if (ret < 0) {
         goto error_exit;
     }
@@ -643,9 +650,9 @@ error_exit:
  *        tcp: VPROTO_TCP;
  *        udp: VPROTO_UDP;
  */
-int vdhtc_post_service(vsrvcHash* srvcHash, struct sockaddr_in* addrs, int num, int proto)
+int vdhtc_post_service(vsrvcHash* srvcHash, struct sockaddr_in* addrs, uint32_t* type, int num, int proto)
 {
-    struct sockaddr_in* addrs_a[12] = {0};
+    struct vsockaddr_in vaddrs[VSRVCINFO_MAX_ADDRS];
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
     int ret = 0;
@@ -655,14 +662,23 @@ int vdhtc_post_service(vsrvcHash* srvcHash, struct sockaddr_in* addrs, int num, 
         verrno = verr_bad_args;
         return -1;
     }
-    if (!addrs || num <= 0) {
+    if (!addrs || !type) {
         verrno = verr_bad_args;
         return -1;
     }
-
+    if ((num <= 0) || (num > VSRVCINFO_MAX_ADDRS)) {
+        verrno = verr_bad_args;
+        return -1;
+    }
     if ((proto <= VPROTO_RES0) || (proto > VPROTO_TCP)) {
         verrno = verr_bad_args;
         return -1;
+    }
+    for (i = 0; i < num; i++) {
+        if (type[i] >= VSOCKADDR_BUTT) {
+            verrno = verr_bad_args;
+            return -1;
+        }
     }
 
     ret = vlsctlc_init(&lsctlc);
@@ -671,9 +687,10 @@ int vdhtc_post_service(vsrvcHash* srvcHash, struct sockaddr_in* addrs, int num, 
     }
 
     for (i = 0; i < num; i++) {
-        addrs_a[i] = &addrs[i];
+        memcpy(&vaddrs[i].addr, &addrs[i], sizeof(struct sockaddr_in));
+        vaddrs[i].type = type[i];
     }
-    ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, addrs_a, num, proto);
+    ret = lsctlc.bind_ops->bind_post_service(&lsctlc, srvcHash, vaddrs, num, proto);
     if (ret < 0) {
         goto error_exit;
     }
@@ -703,7 +720,7 @@ error_exit:
  */
 int vdhtc_unpost_service(vsrvcHash* srvcHash)
 {
-    struct sockaddr_in* addrs[] = {0};
+    struct sockaddr_in addr;
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
     int ret = 0;
@@ -717,7 +734,7 @@ int vdhtc_unpost_service(vsrvcHash* srvcHash)
     if (ret < 0) {
         return -1;
     }
-    ret = lsctlc.bind_ops->bind_unpost_service(&lsctlc, srvcHash, addrs, 0);
+    ret = lsctlc.bind_ops->bind_unpost_service(&lsctlc, srvcHash, &addr, 0);
     if (ret < 0) {
         goto error_exit;
     }
@@ -758,7 +775,7 @@ error_exit:
  */
 int vdhtc_find_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
-    struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+    struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
     vsrvcHash hash;
@@ -800,7 +817,7 @@ int vdhtc_find_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcIn
     }
     ncb(&hash, num, proto, cookie);
     for (i = 0; i < num; i++) {
-        icb(&hash, &addrs[i], ((i + 1) == num), cookie);
+        icb(&hash, &addrs[i].addr, addrs[i].type, ((i + 1) == num), cookie);
     }
     vlsctlc_deinit(&lsctlc);
     return 0;
@@ -831,7 +848,7 @@ error_exit:
  */
 int vdhtc_probe_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
-    struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+    struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     struct vlsctlc lsctlc;
     char buf[BUF_SZ];
     vsrvcHash hash;
@@ -873,7 +890,7 @@ int vdhtc_probe_service(vsrvcHash* srvcHash, vsrvcInfo_number_addr_t ncb, vsrvcI
     }
     ncb(&hash, num, proto, cookie);
     for (i = 0; i < num; i++) {
-        icb(&hash, &addrs[i], ((i + 1) == num), cookie);
+        icb(&hash, &addrs[i].addr, addrs[i].type, ((i + 1) == num), cookie);
     }
     vlsctlc_deinit(&lsctlc);
     return 0;

@@ -155,7 +155,6 @@ int _vroute_srvc_space_add_service(struct vroute_srvc_space* space, vsrvcInfo* s
 static
 int _vroute_srvc_space_get_service(struct vroute_srvc_space* space, vsrvcHash* hash, vsrvcInfo* srvci)
 {
-    struct varray* srvcs = NULL;
     struct vservice*  to = NULL;
     int min_nice = 100;
     int found = 0;
@@ -172,8 +171,7 @@ int _vroute_srvc_space_get_service(struct vroute_srvc_space* space, vsrvcHash* h
             &min_nice
         };
 
-        srvcs = &space->bucket[i].srvcs;
-        varray_iterate(srvcs, _aux_srvc_get_service_cb, argv);
+        varray_iterate(&space->bucket[i].srvcs, _aux_srvc_get_service_cb, argv);
         if (to) {
             vsrvcInfo_copy(srvci, to->srvci);
             found = 1;

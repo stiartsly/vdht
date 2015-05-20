@@ -308,6 +308,29 @@ void vnodeVer_dump(vnodeVer* ver)
     return;
 }
 
+static
+const char* vsockaddr_in_desc(uint32_t type)
+{
+    struct vsockaddr_desc {
+        uint32_t type;
+        const char* desc;
+    } sockaddr_descs[] = {
+        {VSOCKADDR_LOCAL,     "host" },
+        {VSOCKADDR_UPNP,      "upnp" },
+        {VSOCKADDR_REFLEXIVE, "rflx" },
+        {VSOCKADDR_RELAY,     "relay"},
+        {VSOCKADDR_BUTT, 0}
+    };
+
+    struct vsockaddr_desc* desc = sockaddr_descs;
+    for (; desc->desc; desc++) {
+        if (desc->type == type) {
+            return desc->desc;
+        }
+    }
+    return "unknown";
+}
+
 static MEM_AUX_INIT(nodeinfo_relax_cache, sizeof(vnodeInfo_relax), 0);
 vnodeInfo_relax* vnodeInfo_relax_alloc(void)
 {
@@ -628,7 +651,7 @@ int vsrvcInfo_init(vsrvcInfo* srvci, vsrvcHash* hash, vnodeId* hostid, int nice)
     return 0;
 }
 
-int vsrvcInfo_add_addr(vsrvcInfo** ppsrvci, struct sockaddr_in* addr)
+int vsrvcInfo_add_addr(vsrvcInfo** ppsrvci, struct sockaddr_in* addr, uint32_t type)
 {
     vsrvcInfo* srvci = *ppsrvci;
     int found = 0;
@@ -636,12 +659,12 @@ int vsrvcInfo_add_addr(vsrvcInfo** ppsrvci, struct sockaddr_in* addr)
 
     vassert(*ppsrvci);
     vassert(addr);
-
+    vassert(type < VSOCKADDR_BUTT);
     retE((srvci->naddrs >= VSRVCINFO_MAX_ADDRS));
 
     if (srvci->naddrs >= srvci->capc) {
         vsrvcInfo* new_srvci = NULL;
-        int extra_sz = sizeof(*addr) * srvci->capc;
+        int extra_sz = sizeof(struct vsockaddr_in) * srvci->capc;
 
         new_srvci = (vsrvcInfo*)realloc(srvci, sizeof(vsrvcInfo) + extra_sz);
         vlogEv((!new_srvci), elog_realloc);
@@ -652,13 +675,15 @@ int vsrvcInfo_add_addr(vsrvcInfo** ppsrvci, struct sockaddr_in* addr)
     }
 
     for (i = 0; i < srvci->naddrs; i++) {
-        if (vsockaddr_equal(&srvci->addrs[i], addr)) {
+        if (vsockaddr_equal(&srvci->addrs[i].addr, addr)) {
             found = 1;
             break;
         }
     }
     if (!found) {
-        vsockaddr_copy(&srvci->addrs[srvci->naddrs++], addr);
+        vsockaddr_copy(&srvci->addrs[srvci->naddrs].addr, addr);
+        srvci->addrs[srvci->naddrs].type = type;
+        srvci->naddrs++;
     }
     return 0;
 }
@@ -672,7 +697,7 @@ void vsrvcInfo_del_addr(vsrvcInfo* srvci, struct sockaddr_in* addr)
     vassert(addr);
 
     for (i = 0; i < srvci->naddrs; i++) {
-        if (vsockaddr_equal(&srvci->addrs[i], addr)) {
+        if (vsockaddr_equal(&srvci->addrs[i].addr, addr)) {
             found = 1;
             break;
         }
@@ -682,7 +707,7 @@ void vsrvcInfo_del_addr(vsrvcInfo* srvci, struct sockaddr_in* addr)
     }
 
     for (; i < srvci->naddrs -1; i++) {
-        vsockaddr_copy(&srvci->addrs[i], &srvci->addrs[i+1]);
+        memcpy(&srvci->addrs[i], &srvci->addrs[i+1], sizeof(struct vsockaddr_in));
     }
     srvci->naddrs -= 1;
     return ;
@@ -709,7 +734,7 @@ int vsrvcInfo_copy(vsrvcInfo* dest, vsrvcInfo* src)
     dest->naddrs = 0;
 
     for (i = 0; i < src->naddrs; i++) {
-        ret = vsrvcInfo_add_addr(&dest, &src->addrs[i]);
+        ret = vsrvcInfo_add_addr(&dest, &src->addrs[i].addr, src->addrs[i].type);
         retE((ret < 0));
     }
     return 0;
@@ -737,10 +762,12 @@ void vsrvcInfo_dump(vsrvcInfo* srvci)
     printf(", nice: %d", vsrvcInfo_nice(srvci));
     printf(", proto: %s", sproto);
     printf(", addrs: ");
-    vsockaddr_dump(&srvci->addrs[0]);
+    vsockaddr_dump(&srvci->addrs[0].addr);
+    printf(" %s", vsockaddr_in_desc(srvci->addrs[i].type));
     for (i = 1; i < srvci->naddrs; i++) {
         printf(", ");
-        vsockaddr_dump(&srvci->addrs[i]);
+        vsockaddr_dump(&srvci->addrs[i].addr);
+        printf(" %s", vsockaddr_in_desc(srvci->addrs[i].type));
     }
     return ;
 }

@@ -74,7 +74,7 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
 
     ncb(&srvci.hash, srvci.naddrs, vsrvcInfo_proto((vsrvcInfo*)&srvci), cookie);
     for (i = 0; i < srvci.naddrs; i++) {
-        icb(&srvci.hash, &srvci.addrs[i], ((i+1) == srvci.naddrs), cookie);
+        icb(&srvci.hash, &srvci.addrs[i].addr, srvci.addrs[i].type, ((i+1) == srvci.naddrs), cookie);
     }
     return 0;
 }

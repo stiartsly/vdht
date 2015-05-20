@@ -39,6 +39,19 @@ int  vnodeVer_strlize  (vnodeVer*, char*, int);
 int  vnodeVer_unstrlize(const char*, vnodeVer*);
 void vnodeVer_dump     (vnodeVer*);
 
+enum {
+    VSOCKADDR_LOCAL,
+    VSOCKADDR_UPNP,
+    VSOCKADDR_REFLEXIVE,
+    VSOCKADDR_RELAY,
+    VSOCKADDR_BUTT
+};
+
+struct vsockaddr_in {
+    struct sockaddr_in addr;
+    uint32_t type;
+};
+
 /*
  * for vnodeInfo
  */
@@ -116,7 +129,7 @@ struct vsrvcInfo_relax {
 
     int16_t naddrs;
     int16_t capc;
-    struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+    struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
 };
 typedef struct vsrvcInfo_relax vsrvcInfo_relax;
 int vsrvcInfo_relax_init(vsrvcInfo_relax*, vsrvcHash*, vnodeId*, int);
@@ -128,7 +141,7 @@ struct vsrvcInfo {
 
     int16_t naddrs;
     int16_t capc;
-    struct sockaddr_in addrs[VSRVCINFO_MIN_ADDRS];
+    struct vsockaddr_in addrs[VSRVCINFO_MIN_ADDRS];
 };
 
 enum {
@@ -141,7 +154,7 @@ enum {
 };
 typedef struct vsrvcInfo vsrvcInfo;
 typedef void (*vsrvcInfo_number_addr_t) (vsrvcHash*, int, int, void*);
-typedef void (*vsrvcInfo_iterate_addr_t)(vsrvcHash*, struct sockaddr_in*, int, void*);
+typedef void (*vsrvcInfo_iterate_addr_t)(vsrvcHash*, struct sockaddr_in*, uint32_t, int, void*);
 
 static inline
 int32_t vsrvcInfo_proto(vsrvcInfo* srvci) {
@@ -165,8 +178,8 @@ vsrvcInfo* vsrvcInfo_alloc(void);
 void vsrvcInfo_free(vsrvcInfo*);
 int  vsrvcInfo_init(vsrvcInfo*, vtoken*, vsrvcHash*, int);
 
-int  vsrvcInfo_add_addr(vsrvcInfo**, struct sockaddr_in*);
-void vsrvcInfo_del_addr(vsrvcInfo*, struct sockaddr_in*);
+int  vsrvcInfo_add_addr(vsrvcInfo**, struct sockaddr_in*, uint32_t);
+void vsrvcInfo_del_addr(vsrvcInfo*,  struct sockaddr_in*);
 int  vsrvcInfo_is_empty(vsrvcInfo*);
 
 int  vsrvcInfo_copy(vsrvcInfo*, vsrvcInfo*);

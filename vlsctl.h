@@ -72,7 +72,7 @@ union vlsctl_rsp_args {
         vsrvcHash hash;
         int proto;
         int index;
-        struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+        struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } find_service_rsp_args;
 
     struct probe_service_rsp_args {
@@ -84,7 +84,7 @@ union vlsctl_rsp_args {
         vsrvcHash hash;
         int proto;
         int index;
-        struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+        struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } probe_service_rsp_args;
 
     struct error_rsp_args {

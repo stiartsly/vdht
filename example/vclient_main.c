@@ -377,11 +377,12 @@ void vexample_number_addr_cb(vsrvcHash* hash, int num, int proto, void* cookie)
     return ;
 }
 
-void vexample_iterate_addr_cb(vsrvcHash* hash, struct sockaddr_in* addr, int last, void* cookie)
+void vexample_iterate_addr_cb(vsrvcHash* hash, struct sockaddr_in* addr, uint32_t type, int last, void* cookie)
 {
     struct sockaddr_in* server = (struct sockaddr_in*)cookie;
     vexample_dump_addr(addr);
-    printf("last:%d.\n", last);
+    printf("type: %u\n", type);
+    printf("last: %d.\n", last);
 
     memcpy(server, addr, sizeof(*addr));
     return ;
