@@ -137,7 +137,7 @@ void _vroute_recr_space_clear(struct vroute_recr_space* space)
     struct vrecord* record = NULL;
     vassert(space);
 
-    while (varray_size(&space->records)) {
+    while (varray_size(&space->records) > 0) {
         record = (struct vrecord*)varray_pop_tail(&space->records);
         vrecord_free(record);
     }

@@ -138,7 +138,7 @@ void _vroute_srvc_probe_helper_clear(struct vroute_srvc_probe_helper* probe_help
     struct vroute_srvc_probe_item* probe_item = NULL;
     vassert(probe_helper);
 
-    while (varray_size(&probe_helper->items)) {
+    while (varray_size(&probe_helper->items) > 0) {
         probe_item = (struct vroute_srvc_probe_item*)varray_pop_tail(&probe_helper->items);
         vroute_srvc_probe_item_free(probe_item);
     }
