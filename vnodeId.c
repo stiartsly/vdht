@@ -763,11 +763,11 @@ void vsrvcInfo_dump(vsrvcInfo* srvci)
     printf(", proto: %s", sproto);
     printf(", addrs: ");
     vsockaddr_dump(&srvci->addrs[0].addr);
-    printf(" %s", vsockaddr_in_desc(srvci->addrs[i].type));
+    printf(" %s", vsockaddr_in_desc(srvci->addrs[0].type));
     for (i = 1; i < srvci->naddrs; i++) {
         printf(", ");
         vsockaddr_dump(&srvci->addrs[i].addr);
-        printf(" %s", vsockaddr_in_desc(srvci->addrs[i].type));
+        printf(" %s ", vsockaddr_in_desc(srvci->addrs[i].type));
     }
     return ;
 }
