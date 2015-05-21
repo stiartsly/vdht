@@ -17,9 +17,9 @@ libvdht_objs  :=  vlog.o \
                   vnodeId.o \
 	          vroute.o  \
                   vroute_node.o  \
-	          vroute_srvc.o  \
                   vroute_recr.o  \
-                  vroute_helper.o 
+	          vroute_srvc.o  \
+                  vroute_srvc_probe.o 
 
 libvdht       := libvdht.a
 libutils      := libutils.a

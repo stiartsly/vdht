@@ -143,23 +143,23 @@ void vroute_srvc_space_deinit(struct vroute_srvc_space*);
 /*
  *
  */
-struct vroute_srvc_probe_helper;
-struct vroute_srvc_probe_helper_ops {
-    int  (*add)          (struct vroute_srvc_probe_helper*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
-    int  (*invoke)       (struct vroute_srvc_probe_helper*, vsrvcHash*, vsrvcInfo*);
-    void (*timed_reap)   (struct vroute_srvc_probe_helper*);
-    void (*clear)        (struct vroute_srvc_probe_helper*);
-    void (*dump)         (struct vroute_srvc_probe_helper*);
+struct vroute_srvc_probe_space;
+struct vroute_srvc_probe_space_ops {
+    int  (*add_cb)       (struct vroute_srvc_probe_space*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
+    int  (*invoke)       (struct vroute_srvc_probe_space*, vsrvcHash*, vsrvcInfo*);
+    void (*timed_reap)   (struct vroute_srvc_probe_space*);
+    void (*clear)        (struct vroute_srvc_probe_space*);
+    void (*dump)         (struct vroute_srvc_probe_space*);
 };
 
-struct vroute_srvc_probe_helper {
+struct vroute_srvc_probe_space {
     int max_tmo;
     struct varray items;
-    struct vroute_srvc_probe_helper_ops* ops;
+    struct vroute_srvc_probe_space_ops* ops;
 };
 
-int  vroute_srvc_probe_helper_init  (struct vroute_srvc_probe_helper*);
-void vroute_srvc_probe_helper_deinit(struct vroute_srvc_probe_helper*);
+int  vroute_srvc_probe_space_init  (struct vroute_srvc_probe_space*);
+void vroute_srvc_probe_space_deinit(struct vroute_srvc_probe_space*);
 
 /*
  * for inspection
@@ -243,7 +243,7 @@ struct vroute {
     struct vroute_node_space node_space;
     struct vroute_srvc_space srvc_space;
     struct vroute_recr_space recr_space;
-    struct vroute_srvc_probe_helper probe_helper;
+    struct vroute_srvc_probe_space srvc_probe_space;
 
     struct vlock lock;
 

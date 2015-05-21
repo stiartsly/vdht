@@ -90,7 +90,7 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
 static
 int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
-    struct vroute_srvc_probe_helper* probe_helper = &route->probe_helper;
+    struct vroute_srvc_probe_space* srvc_probe_space = &route->srvc_probe_space;
     struct vroute_node_space* node_space = &route->node_space;
     int ret = 0;
 
@@ -105,7 +105,7 @@ int _vroute_probe_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_numbe
         vlock_leave(&route->lock);
         retE((1));
     }
-    probe_helper->ops->add(probe_helper, hash, ncb, icb, cookie);
+    srvc_probe_space->ops->add_cb(srvc_probe_space, hash, ncb, icb, cookie);
     vlock_leave(&route->lock);
     return 0;
 }
@@ -270,7 +270,7 @@ int _vroute_store(struct vroute* route)
 static
 int _vroute_tick(struct vroute* route)
 {
-    struct vroute_srvc_probe_helper* probe_helper = &route->probe_helper;
+    struct vroute_srvc_probe_space* srvc_probe_space = &route->srvc_probe_space;
     struct vroute_recr_space* recr_space = &route->recr_space;
     struct vroute_node_space* node_space = &route->node_space;
     vassert(route);
@@ -278,7 +278,7 @@ int _vroute_tick(struct vroute* route)
     vlock_enter(&route->lock);
     node_space->ops->tick(node_space);
     recr_space->ops->timed_reap(recr_space);// reap all timeout records.
-    probe_helper->ops->timed_reap(probe_helper);
+    srvc_probe_space->ops->timed_reap(srvc_probe_space);
     vlock_leave(&route->lock);
     return 0;
 }
@@ -292,7 +292,7 @@ int _vroute_tick(struct vroute* route)
 static
 void _vroute_clear(struct vroute* route)
 {
-    struct vroute_srvc_probe_helper* probe_helper = &route->probe_helper;
+    struct vroute_srvc_probe_space* srvc_probe_space = &route->srvc_probe_space;
     struct vroute_recr_space* recr_space = &route->recr_space;
     struct vroute_node_space* node_space = &route->node_space;
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
@@ -302,7 +302,7 @@ void _vroute_clear(struct vroute* route)
     node_space->ops->clear(node_space);
     srvc_space->ops->clear(srvc_space);
     recr_space->ops->clear(recr_space);
-    probe_helper->ops->clear(probe_helper);
+    srvc_probe_space->ops->clear(srvc_probe_space);
     vlock_leave(&route->lock);
 
     return;
@@ -1301,7 +1301,7 @@ int _vroute_cb_find_service(struct vroute* route, vnodeConn* conn, void* ctxt)
 static
 int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
-    struct vroute_srvc_probe_helper* probe_helper = &route->probe_helper;
+    struct vroute_srvc_probe_space* srvc_probe_space = &route->srvc_probe_space;
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
     struct vroute_recr_space* recr_space = &route->recr_space;
     struct vroute_node_space* node_space = &route->node_space;
@@ -1325,7 +1325,7 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     ret = node_space->ops->find_node(node_space, &srvci.hostid);
     retE((ret < 0));
     route->ops->inspect(route, &token, VROUTE_INSP_RCV_FIND_SERVICE_RSP);
-    probe_helper->ops->invoke(probe_helper, &srvci.hash, (vsrvcInfo*)&srvci);
+    srvc_probe_space->ops->invoke(srvc_probe_space, &srvci.hash, (vsrvcInfo*)&srvci);
     return 0;
 }
 
@@ -1415,7 +1415,7 @@ int vroute_init(struct vroute* route, struct vconfig* cfg, struct vhost* host, v
     vroute_node_space_init(&route->node_space, route, cfg, myid);
     vroute_srvc_space_init(&route->srvc_space, cfg);
     vroute_recr_space_init(&route->recr_space);
-    vroute_srvc_probe_helper_init(&route->probe_helper);
+    vroute_srvc_probe_space_init(&route->srvc_probe_space);
 
     route->ops     = &route_ops;
     route->dht_ops = &route_dht_ops;
@@ -1438,7 +1438,7 @@ void vroute_deinit(struct vroute* route)
 {
     vassert(route);
 
-    vroute_srvc_probe_helper_deinit (&route->probe_helper);
+    vroute_srvc_probe_space_deinit(&route->srvc_probe_space);
     vroute_recr_space_deinit(&route->recr_space);
     vroute_node_space_deinit(&route->node_space);
     vroute_srvc_space_deinit(&route->srvc_space);
