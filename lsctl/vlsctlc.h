@@ -2,6 +2,7 @@
 #define __VLSCTLC_H__
 
 #include "vdhtapi.h"
+#include "vdhtapi_inc.h"
 
 /*
  * lsctl message structure:
@@ -107,20 +108,20 @@ union vlsctlc_args {
     } join_node_args;
 
     struct bogus_query_args {
-        int queryId;
+        int32_t queryId;
         struct sockaddr_in addr;
     } bogus_query_args;
 
     struct post_service_args {
         vsrvcHash hash;
-        int proto;
-        int naddrs;
+        int32_t proto;
+        int32_t naddrs;
         struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } post_service_args;
 
     struct unpost_service_args {
         vsrvcHash hash;
-        int naddrs;
+        int32_t naddrs;
         struct sockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } unpost_service_args;
 
@@ -135,27 +136,27 @@ union vlsctlc_args {
 
 union vlsctlc_rsp_args {
     struct find_service_rsp_args {
-        int num;
+        int32_t num;
         vsrvcHash hash;
-        int proto;
+        int32_t proto;
         struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } find_service_rsp_args;
 
     struct probe_service_rsp_args {
-        int num;
+        int32_t num;
         vsrvcHash hash;
-        int proto;
+        int32_t proto;
         struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
     } probe_service_rsp_args;
 
     struct error_args {
-        int err_val;
+        int32_t err_val;
     } error_args;
 };
 
 struct vlsctlc {
-    int type;
-    int bound_cmd;
+    uint16_t type;
+    uint16_t bound_cmd;
     union vlsctlc_args args;
     union vlsctlc_rsp_args rsp_args;
 

@@ -3,6 +3,7 @@
 
 #include <netinet/in.h>
 #include "vhashgen.h"
+#include "vdhtapi_inc.h"
 
 enum {
     VPROTO_RES0,
