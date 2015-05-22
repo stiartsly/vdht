@@ -361,6 +361,27 @@ struct vroute_ops route_ops = {
         ret = rs->ops->check(rs, &token); \
         retE((!ret)); \
     } while(0)
+
+#define BEGIN_QUERY() do {    \
+        void* buf = NULL;  \
+        buf = vdht_buf_alloc(); \
+        retE((!buf)); {
+
+#define END_QUERY(ret) \
+            ret1E((ret < 0), vdht_buf_free(buf)); \
+        } \
+        { \
+            struct vmsg_usr msg = { \
+                .addr  = to_vsockaddr_from_sin(&conn->remote), \
+                .spec  = to_vsockaddr_from_sin(&conn->local),  \
+                .msgId = VMSG_DHT,  \
+                .data  = buf,       \
+                .len   = ret        \
+            }; \
+            ret = route->msger->ops->push(route->msger, &msg); \
+            ret1E((ret < 0), vdht_buf_free(buf));              \
+        } \
+    }while(0)
 /*
  * the routine to pack a @ping query and send it.
  * @route:
@@ -369,7 +390,6 @@ struct vroute_ops route_ops = {
 static
 int _vroute_dht_ping(struct vroute* route, vnodeConn* conn)
 {
-    void* buf = NULL;
     vtoken token;
     int ret = 0;
 
@@ -377,23 +397,10 @@ int _vroute_dht_ping(struct vroute* route, vnodeConn* conn)
     vassert(conn);
     retS((!(route->props & PROP_PING))); //ping disabled.
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
-
-    vtoken_make(&token);
-    ret = route->enc_ops->ping(&token, &route->myid, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
+    BEGIN_QUERY() {
+        vtoken_make(&token);
+        ret = route->enc_ops->ping(&token, &route->myid, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
     INSPECT_ROUTE(VROUTE_INSP_SND_PING);
     MK_TOKEN_RCRD();
@@ -414,7 +421,6 @@ int _vroute_dht_ping(struct vroute* route, vnodeConn* conn)
 static
 int _vroute_dht_ping_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, vnodeInfo* nodei)
 {
-    void* buf = NULL;
     int ret = 0;
 
     vassert(route);
@@ -423,22 +429,10 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, v
     vassert(nodei);
     retS((!(route->props & PROP_PING_R)));
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
+    BEGIN_QUERY() {
+        ret = route->enc_ops->ping_rsp(token, &route->myid, nodei, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
-    ret = route->enc_ops->ping_rsp(token, &route->myid, nodei, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
     vlogD("send @ping_rsp");
     return 0;
 }
@@ -453,7 +447,6 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, v
 static
 int _vroute_dht_find_node(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
 {
-    void* buf = NULL;
     vtoken token;
     int ret = 0;
 
@@ -462,23 +455,10 @@ int _vroute_dht_find_node(struct vroute* route, vnodeConn* conn, vnodeId* target
     vassert(targetId);
     retS((!(route->props & PROP_FIND_NODE)));
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
-
-    vtoken_make(&token);
-    ret = route->enc_ops->find_node(&token, &route->myid, targetId, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
+    BEGIN_QUERY() {
+        vtoken_make(&token);
+        ret = route->enc_ops->find_node(&token, &route->myid, targetId, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
     INSPECT_ROUTE(VROUTE_INSP_SND_FIND_NODE);
     MK_TOKEN_RCRD();
@@ -497,7 +477,6 @@ int _vroute_dht_find_node(struct vroute* route, vnodeConn* conn, vnodeId* target
 static
 int _vroute_dht_find_node_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, vnodeInfo* nodei)
 {
-    void* buf = NULL;
     int ret = 0;
 
     vassert(route);
@@ -506,22 +485,10 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeConn* conn, vtoken* tok
     vassert(nodei);
     retS((!(route->props & PROP_FIND_NODE_R)));
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
+    BEGIN_QUERY() {
+        ret = route->enc_ops->find_node_rsp(token, &route->myid, nodei, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
-    ret = route->enc_ops->find_node_rsp(token, &route->myid, nodei, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
     vlogD("send @find_node_rsp");
     return 0;
 }
@@ -535,7 +502,6 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeConn* conn, vtoken* tok
 static
 int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
 {
-    void* buf = NULL;
     vtoken token;
     int ret = 0;
 
@@ -544,23 +510,10 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeConn* conn, vnodeI
     vassert(targetId);
     retS((!(route->props & PROP_FIND_CLOSEST_NODES)));
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
-
-    vtoken_make(&token);
-    ret = route->enc_ops->find_closest_nodes(&token, &route->myid, targetId, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
+    BEGIN_QUERY() {
+        vtoken_make(&token);
+        ret = route->enc_ops->find_closest_nodes(&token, &route->myid, targetId, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
     INSPECT_ROUTE(VROUTE_INSP_SND_FIND_CLOSEST_NODES);
     MK_TOKEN_RCRD();
@@ -579,7 +532,6 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeConn* conn, vnodeI
 static
 int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, struct varray* closest)
 {
-    void* buf = NULL;
     int ret = 0;
 
     vassert(route);
@@ -588,22 +540,10 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, vt
     vassert(closest);
     retS((!(route->props & PROP_FIND_CLOSEST_NODES_R)));
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
+    BEGIN_QUERY() {
+        ret = route->enc_ops->find_closest_nodes_rsp(token, &route->myid, closest, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
-    ret = route->enc_ops->find_closest_nodes_rsp(token, &route->myid, closest, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
     vlogD("send @find_closest_nodes_rsp");
     return 0;
 }
@@ -616,30 +556,16 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, vt
 static
 int _vroute_dht_reflex(struct vroute* route, vnodeConn* conn)
 {
-    void* buf = NULL;
     vtoken token;
     int ret = 0;
 
     vassert(route);
     vassert(conn);
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
-
-    vtoken_make(&token);
-    ret = route->enc_ops->reflex(&token, &route->myid, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
+    BEGIN_QUERY() {
+        vtoken_make(&token);
+        ret = route->enc_ops->reflex(&token, &route->myid, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
     INSPECT_ROUTE(VROUTE_INSP_SND_REFLEX);
     MK_TOKEN_RCRD();
@@ -658,7 +584,6 @@ int _vroute_dht_reflex(struct vroute* route, vnodeConn* conn)
 static
 int _vroute_dht_reflex_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, struct sockaddr_in* reflexive_addr)
 {
-    void* buf = NULL;
     int ret = 0;
 
     vassert(route);
@@ -666,22 +591,10 @@ int _vroute_dht_reflex_rsp(struct vroute* route, vnodeConn* conn, vtoken* token,
     vassert(token);
     vassert(reflexive_addr);
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
+    BEGIN_QUERY() {
+        ret = route->enc_ops->reflex_rsp(token, &route->myid, reflexive_addr, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
-    ret = route->enc_ops->reflex_rsp(token, &route->myid, reflexive_addr, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
     vlogD("send @reflex_rsp");
     return 0;
 }
@@ -695,7 +608,6 @@ int _vroute_dht_reflex_rsp(struct vroute* route, vnodeConn* conn, vtoken* token,
 static
 int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
 {
-    void* buf = NULL;
     vtoken token;
     int ret = 0;
 
@@ -703,23 +615,10 @@ int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
     vassert(conn);
     vassert(targetId);
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
-
-    vtoken_make(&token);
-    ret = route->enc_ops->probe(&token, &route->myid, targetId, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
+    BEGIN_QUERY() {
+        vtoken_make(&token);
+        ret = route->enc_ops->probe(&token, &route->myid, targetId, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
     INSPECT_ROUTE(VROUTE_INSP_SND_PROBE);
     MK_TOKEN_RCRD();
@@ -737,29 +636,16 @@ int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
 static
 int _vroute_dht_probe_rsp(struct vroute* route, vnodeConn* conn, vtoken* token)
 {
-    void* buf = NULL;
     int ret = 0;
 
     vassert(route);
     vassert(conn);
     vassert(token);
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
+    BEGIN_QUERY() {
+        ret = route->enc_ops->probe_rsp(token, &route->myid, buf, vdht_buf_len());
+    } END_QUERY(ret);
 
-    ret = route->enc_ops->probe_rsp(token, &route->myid, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
     vlogD("send @probe_rsp");
     return 0;
 }
@@ -773,7 +659,6 @@ int _vroute_dht_probe_rsp(struct vroute* route, vnodeConn* conn, vtoken* token)
 static
 int _vroute_dht_post_service(struct vroute* route, vnodeConn* conn, vsrvcInfo* srvci)
 {
-    void* buf = NULL;
     vtoken token;
     int ret = 0;
 
@@ -782,23 +667,11 @@ int _vroute_dht_post_service(struct vroute* route, vnodeConn* conn, vsrvcInfo* s
     vassert(srvci);
     retS((!(route->props & PROP_POST_SERVICE)));
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
+    BEGIN_QUERY() {
+        vtoken_make(&token);
+        ret = route->enc_ops->post_service(&token, &route->myid, srvci, buf, vdht_buf_len());
+    }END_QUERY(ret);
 
-    vtoken_make(&token);
-    ret = route->enc_ops->post_service(&token, &route->myid, srvci, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
     vlogD("send @post_service");
     return 0;
 }
@@ -812,7 +685,6 @@ int _vroute_dht_post_service(struct vroute* route, vnodeConn* conn, vsrvcInfo* s
 static
 int _vroute_dht_find_service(struct vroute* route, vnodeConn* conn, vsrvcHash* hash)
 {
-    void* buf = NULL;
     vtoken token;
     int ret = 0;
 
@@ -821,23 +693,10 @@ int _vroute_dht_find_service(struct vroute* route, vnodeConn* conn, vsrvcHash* h
     vassert(hash);
     retS((!(route->props & PROP_FIND_SERVICE)));
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
-
-    vtoken_make(&token);
-    ret = route->enc_ops->find_service(&token, &route->myid, hash, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
+    BEGIN_QUERY() {
+        vtoken_make(&token);
+        ret = route->enc_ops->find_service(&token, &route->myid, hash, buf, vdht_buf_len());
+    }END_QUERY(ret);
 
     INSPECT_ROUTE(VROUTE_INSP_SND_FIND_SERVICE);
     MK_TOKEN_RCRD();
@@ -855,7 +714,6 @@ int _vroute_dht_find_service(struct vroute* route, vnodeConn* conn, vsrvcHash* h
 static
 int _vroute_dht_find_service_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, vsrvcInfo* srvc)
 {
-    void* buf = NULL;
     int ret = 0;
 
     vassert(route);
@@ -864,22 +722,10 @@ int _vroute_dht_find_service_rsp(struct vroute* route, vnodeConn* conn, vtoken* 
     vassert(srvc);
     retS((!(route->props & PROP_FIND_SERVICE_R)));
 
-    buf = vdht_buf_alloc();
-    retE((!buf));
+    BEGIN_QUERY() {
+        ret = route->enc_ops->find_service_rsp(token, &route->myid, srvc, buf, vdht_buf_len());
+    }END_QUERY(ret);
 
-    ret = route->enc_ops->find_service_rsp(token, &route->myid, srvc, buf, vdht_buf_len());
-    ret1E((ret < 0), vdht_buf_free(buf));
-    {
-        struct vmsg_usr msg = {
-            .addr  = to_vsockaddr_from_sin(&conn->remote),
-            .spec  = to_vsockaddr_from_sin(&conn->local),
-            .msgId = VMSG_DHT,
-            .data  = buf,
-            .len   = ret
-        };
-        ret = route->msger->ops->push(route->msger, &msg);
-        ret1E((ret < 0), vdht_buf_free(buf));
-    }
     vlogD("send @find_service_rsp");
     return 0;
 }
