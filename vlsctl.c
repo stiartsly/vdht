@@ -13,13 +13,11 @@ int _aux_lsctl_unpack_addr(void* buf, int len, struct sockaddr_in* addr)
     vassert(len > 0);
     vassert(addr);
 
-    tsz += sizeof(uint16_t); //skip faimly value;
-    port  = *(uint16_t*)(buf + tsz);
-    port  = ntohs(port);
-    tsz += sizeof(uint16_t);
-    saddr = *(uint32_t*)(buf + tsz);
-    saddr = ntohl(saddr);
-    tsz += sizeof(uint32_t);
+    tsz  += sizeof(uint16_t); //skip faimly value;
+    port  = ntohs(get_uint16(buf + tsz));
+    tsz  += sizeof(uint16_t);
+    saddr = ntohl(get_uint32(buf + tsz));
+    tsz  += sizeof(uint32_t);
 
     ret = vsockaddr_convert2(saddr, port, addr);
     retE((ret < 0));
@@ -39,15 +37,13 @@ int _aux_lsctl_unpack_vaddr(void* buf, int len, struct vsockaddr_in* addr)
     vassert(len > 0);
     vassert(addr);
 
-    tsz += sizeof(uint16_t); //skip faimly value;
-    port  = *(uint16_t*)(buf + tsz);
-    port  = ntohs(port);
-    tsz += sizeof(uint16_t);
-    saddr = *(uint32_t*)(buf + tsz);
-    saddr = ntohl(saddr);
-    tsz += sizeof(uint32_t);
-    type  = *(uint32_t*)(buf + tsz);
-    tsz += sizeof(uint32_t);
+    tsz  += sizeof(uint16_t); //skip faimly value;
+    port  = ntohs(get_uint16(buf + tsz));
+    tsz  += sizeof(uint16_t);
+    saddr = ntohl(get_uint32(buf + tsz));
+    tsz  += sizeof(uint32_t);
+    type  = get_uint32(buf + tsz);
+    tsz  += sizeof(uint32_t);
 
     ret = vsockaddr_convert2(saddr, port, &addr->addr);
     retE((ret < 0));
@@ -182,7 +178,7 @@ int _vlsctl_exec_cmd_bogus_query(struct vlsctl* lsctl, void* buf, int len, struc
     vassert(len > 0);
     (void)from;
 
-    qId = *(int32_t*)(buf + tsz);
+    qId = get_int32(buf + tsz);
     tsz += sizeof(int32_t);
 
     ret = _aux_lsctl_unpack_addr(buf + tsz, len - tsz, &addr);
@@ -216,7 +212,7 @@ int _vlsctl_exec_cmd_post_service(struct vlsctl* lsctl, void* buf, int len, stru
     memcpy(hash.data, buf + tsz, VTOKEN_LEN);
     tsz += VTOKEN_LEN;
 
-    proto = *(int32_t*)(buf + tsz);
+    proto = get_uint32(buf + tsz);
     tsz += sizeof(int32_t);
 
     while(len - tsz > 0) {
@@ -259,7 +255,7 @@ int _vlsctl_exec_cmd_unpost_service(struct vlsctl* lsctl, void* buf, int len, st
         retE((ret < 0));
     }
     if (tsz <= VTOKEN_LEN) {
-        // no addresses followed, means to unpost total service.
+        // if no address follows, it means to unpost whole service.
         ret = app->api_ops->unpost_service(app, &hash);
         retE((ret < 0));
     }
@@ -269,27 +265,27 @@ int _vlsctl_exec_cmd_unpost_service(struct vlsctl* lsctl, void* buf, int len, st
 static
 void _aux_vlsctl_number_addr_cb1(vsrvcHash* hash, int naddrs, int proto, void* cookie)
 {
-    union  vlsctl_rsp_args* args = (union vlsctl_rsp_args*)cookie;
+    struct find_service_rsp_args* args = (struct find_service_rsp_args*)cookie;
     vassert(hash);
     vassert(naddrs >= 0);
 
-    args->find_service_rsp_args.total = naddrs;
-    args->find_service_rsp_args.proto = proto;
+    args->total = naddrs;
+    args->proto = proto;
     return ;
 }
 
 static
 void _aux_vlsctl_iterate_addr_cb1(vsrvcHash* hash, struct sockaddr_in* addr, uint32_t type, int last, void* cookie)
 {
-    union vlsctl_rsp_args* args = (union vlsctl_rsp_args*)cookie;
-    int index = args->find_service_rsp_args.index;
+    struct find_service_rsp_args* args = (struct find_service_rsp_args*)cookie;
+    int index = args->index;
 
     vassert(hash);
     vassert(addr);
 
-    vsockaddr_copy(&args->find_service_rsp_args.addrs[index].addr, addr);
-    args->find_service_rsp_args.addrs[index].type = type;
-    args->find_service_rsp_args.index++;
+    vsockaddr_copy(&args->addrs[index].addr, addr);
+    args->addrs[index].type = type;
+    args->index++;
     return ;
 }
 
@@ -299,9 +295,10 @@ void _aux_vlsctl_iterate_addr_cb1(vsrvcHash* hash, struct sockaddr_in* addr, uin
 static
 int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    union vlsctl_rsp_args * args = NULL;
+    struct vlsctl_rsp_args*   rsp_args = NULL;
+    struct find_service_rsp_args* args = NULL;
     struct vappmain* app = lsctl->app;
-    char* snd_buf = NULL;
+    char* mbuf = NULL;
     vsrvcHash hash;
     int tsz = 0;
     int ret = 0;
@@ -314,34 +311,37 @@ int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, stru
     memcpy(hash.data, buf + tsz, VTOKEN_LEN);
     tsz += VTOKEN_LEN;
 
-    args = (union vlsctl_rsp_args*)malloc(sizeof(*args));
-    vlogEv((!args), elog_malloc);
-    retE((!args));
-    memset(args, 0, sizeof(*args));
+    rsp_args = (struct vlsctl_rsp_args*)malloc(sizeof(*rsp_args));
+    vlogEv((!rsp_args), elog_malloc);
+    retE((!rsp_args));
+    memset(rsp_args, 0, sizeof(*rsp_args));
 
-    args->find_service_rsp_args.total = 0;
-    args->find_service_rsp_args.index = 0;
-    args->find_service_rsp_args.pack_cb = lsctl->pack_cmd_ops->find_service_rsp;
-    vtoken_copy(&args->find_service_rsp_args.hash, &hash);
+    rsp_args->cmd_id = VLSCTL_FIND_SERVICE;
+    args = &rsp_args->uargs.find_service_rsp_args;
+    args->total = 0;
+    args->index = 0;
+    args->pack_cb = lsctl->pack_cmd_ops->find_service_rsp;
+    vtoken_copy(&args->hash, &hash);
+
     ret = app->api_ops->find_service(app, &hash, _aux_vlsctl_number_addr_cb1, _aux_vlsctl_iterate_addr_cb1, args);
-    ret1E((ret < 0), free(args));
+    ret1E((ret < 0), free(rsp_args));
 
-    snd_buf = (char*)vmsg_buf_alloc(0);
-    ret1E((!snd_buf), free(args));
+    mbuf  = (char*)vmsg_buf_alloc(0);
+    ret1E((!mbuf), free(rsp_args));
 
-    ret = lsctl->ops->pack_cmd(lsctl, snd_buf, BUF_SZ, args);
-    free(args);
-    ret1E((ret < 0), free(snd_buf));
+    ret = lsctl->ops->pack_cmd(lsctl, mbuf, BUF_SZ, rsp_args);
+    free(rsp_args);
+    ret1E((ret < 0), free(mbuf));
     {
         struct vmsg_usr msg = {
             .addr  = from,
             .spec  = NULL,
             .msgId = VMSG_LSCTL,
-            .data  = snd_buf,
+            .data  = mbuf,
             .len   = ret
         };
         ret = lsctl->msger.ops->push(&lsctl->msger, &msg);
-        ret1E((ret < 0), free(snd_buf));
+        ret1E((ret < 0), free(mbuf));
     }
     return tsz;
 }
@@ -349,33 +349,35 @@ int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, stru
 static
 void _aux_vlsctl_number_addr_cb2(vsrvcHash* hash, int naddrs, int proto, void* cookie)
 {
-    union  vlsctl_rsp_args* args = (union vlsctl_rsp_args*)cookie;
-    struct vlsctl* lsctl = args->probe_service_rsp_args.lsctl;
-    char* buf = NULL;
+    struct vlsctl_rsp_args*    rsp_args = (struct vlsctl_rsp_args*)cookie;
+    struct probe_service_rsp_args* args = &rsp_args->uargs.probe_service_rsp_args;
+    struct vlsctl* lsctl = args->lsctl;
+    char* mbuf = NULL;
     int ret = 0;
 
     vassert(hash);
     vassert(naddrs >= 0);
 
-    args->probe_service_rsp_args.total = naddrs;
-    args->probe_service_rsp_args.proto = proto;
-    if (!naddrs) {
-        buf = (char*)vmsg_buf_alloc(0);
-        ret1E_v((!buf), free(args));
+    args->total = naddrs;
+    args->proto = proto;
 
-        ret = lsctl->ops->pack_cmd(lsctl, buf, BUF_SZ, cookie);
-        free(args);
-        ret1E_v((ret < 0), free(buf));
+    if (!naddrs) {
+        mbuf = (char*)vmsg_buf_alloc(0);
+        ret1E_v((!mbuf), free(rsp_args));
+
+        ret = lsctl->ops->pack_cmd(lsctl, mbuf, BUF_SZ, rsp_args);
+        free(rsp_args);
+        ret1E_v((ret < 0), free(mbuf));
         {
             struct vmsg_usr msg = {
-                .addr  = &args->probe_service_rsp_args.from,
+                .addr  = &args->from,
                 .spec  = NULL,
                 .msgId = VMSG_LSCTL,
-                .data  = buf,
+                .data  = mbuf,
                 .len   = ret
             };
             ret = lsctl->msger.ops->push(&lsctl->msger, &msg);
-            ret1E_v((ret < 0), free(buf));
+            ret1E_v((ret < 0), free(mbuf));
         }
     }
     return ;
@@ -384,33 +386,34 @@ void _aux_vlsctl_number_addr_cb2(vsrvcHash* hash, int naddrs, int proto, void* c
 static
 void _aux_vlsctl_iterate_addr_cb2(vsrvcHash* hash, struct sockaddr_in* addr, uint32_t type, int last, void* cookie)
 {
-    union  vlsctl_rsp_args* args = (union vlsctl_rsp_args*)cookie;
-    struct vlsctl* lsctl = args->probe_service_rsp_args.lsctl;
-    int index = args->probe_service_rsp_args.index;
-    char* buf = NULL;
+    struct vlsctl_rsp_args*    rsp_args = (struct vlsctl_rsp_args*)cookie;
+    struct probe_service_rsp_args* args = &rsp_args->uargs.probe_service_rsp_args;
+    struct vlsctl* lsctl = args->lsctl;
+    int index = args->index;
+    char* mbuf = NULL;
     int ret = 0;
 
-    vsockaddr_copy(&args->probe_service_rsp_args.addrs[index].addr, addr);
-    args->probe_service_rsp_args.addrs[index].type = type;
-    args->probe_service_rsp_args.index++;
+    vsockaddr_copy(&args->addrs[index].addr, addr);
+    args->addrs[index].type = type;
+    args->index++;
 
     if (last) {
-        buf = (char*)vmsg_buf_alloc(0);
-        ret1E_v((!buf), free(args));
+        mbuf = (char*)vmsg_buf_alloc(0);
+        ret1E_v((!mbuf), free(rsp_args));
 
-        ret = lsctl->ops->pack_cmd(lsctl, buf, BUF_SZ, cookie);
-        free(args);
-        ret1E_v((ret < 0), free(buf));
+        ret = lsctl->ops->pack_cmd(lsctl, mbuf, BUF_SZ, rsp_args);
+        free(rsp_args);
+        ret1E_v((ret < 0), free(mbuf));
         {
             struct vmsg_usr msg = {
-                .addr  = &args->probe_service_rsp_args.from,
+                .addr  = &args->from,
                 .spec  = NULL,
                 .msgId = VMSG_LSCTL,
-                .data  = buf,
+                .data  = mbuf,
                 .len   = ret
             };
             ret = lsctl->msger.ops->push(&lsctl->msger, &msg);
-            ret1E_v((ret < 0), free(buf));
+            ret1E_v((ret < 0), free(mbuf));
         }
     }
     return ;
@@ -422,7 +425,8 @@ void _aux_vlsctl_iterate_addr_cb2(vsrvcHash* hash, struct sockaddr_in* addr, uin
 static
 int _vlsctl_exec_cmd_probe_service(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    union vlsctl_rsp_args* args = NULL;
+    struct vlsctl_rsp_args*    rsp_args = NULL;
+    struct probe_service_rsp_args* args = NULL;
     struct vappmain* app = lsctl->app;
     vsrvcHash hash;
     int tsz = 0;
@@ -436,19 +440,21 @@ int _vlsctl_exec_cmd_probe_service(struct vlsctl* lsctl, void* buf, int len, str
     memcpy(hash.data, buf + tsz, VTOKEN_LEN);
     tsz += VTOKEN_LEN;
 
-    args = (union vlsctl_rsp_args*)malloc(sizeof(*args));
-    vlogEv((!args), elog_malloc);
-    retE((!args));
-    memset(args, 0, sizeof(*args));
+    rsp_args = (struct vlsctl_rsp_args*)malloc(sizeof(*rsp_args));
+    vlogEv((!rsp_args), elog_malloc);
+    retE((!rsp_args));
+    memset(rsp_args, 0, sizeof(*rsp_args));
 
-    args->probe_service_rsp_args.total = 0;
-    args->probe_service_rsp_args.index = 0;
-    args->probe_service_rsp_args.pack_cb = lsctl->pack_cmd_ops->probe_service_rsp;
-    vtoken_copy(&args->probe_service_rsp_args.hash, &hash);
-    memcpy(&args->probe_service_rsp_args.from, from, sizeof(*from));
+    rsp_args->cmd_id = VLSCTL_PROBE_SERVICE;
+    args = &rsp_args->uargs.probe_service_rsp_args;
+    args->total = 0;
+    args->index = 0;
+    args->pack_cb = lsctl->pack_cmd_ops->probe_service_rsp;
+    vtoken_copy(&args->hash, &hash);
+    memcpy(&args->from, from, sizeof(*from));
 
-    ret = app->api_ops->probe_service(app, &hash, _aux_vlsctl_number_addr_cb2, _aux_vlsctl_iterate_addr_cb2, args);
-    ret1E((ret < 0), free(args));
+    ret = app->api_ops->probe_service(app, &hash, _aux_vlsctl_number_addr_cb2, _aux_vlsctl_iterate_addr_cb2, rsp_args);
+    ret1E((ret < 0), free(rsp_args));
     return tsz;
 }
 
@@ -477,15 +483,15 @@ int _aux_vlsctl_pack_vaddr(void* buf, int len, struct vsockaddr_in* addr)
     vassert(buf);
     vassert(len > 0);
 
-    *(uint8_t*)(buf + tsz) = 0;
+    set_uint8(buf + tsz, 0);
     tsz += sizeof(uint8_t);
-    *(uint8_t*)(buf + tsz) = (uint8_t)addr->addr.sin_family;
+    set_uint8(buf + tsz,  addr->addr.sin_family);
     tsz += sizeof(uint8_t);
-    *(uint16_t*)(buf + tsz) = addr->addr.sin_port;
+    set_uint16(buf + tsz, addr->addr.sin_port);
     tsz += sizeof(uint16_t);
-    *(uint32_t*)(buf + tsz) = addr->addr.sin_addr.s_addr;
+    set_uint32(buf + tsz, addr->addr.sin_addr.s_addr);
     tsz += sizeof(uint32_t);
-    *(uint32_t*)(buf + tsz) = addr->type;
+    set_uint32(buf + tsz, addr->type);
     tsz += sizeof(uint32_t);
 
     return tsz;
@@ -494,7 +500,7 @@ int _aux_vlsctl_pack_vaddr(void* buf, int len, struct vsockaddr_in* addr)
 static
 int _vlsctl_pack_find_service_rsp(void* buf, int len, void* cookie)
 {
-    union vlsctl_rsp_args* args = (union vlsctl_rsp_args*)cookie;
+    struct find_service_rsp_args* args = (struct find_service_rsp_args*)cookie;
     void* len_addr = NULL;
     int tsz = 0;
     int bsz = 0;
@@ -505,31 +511,30 @@ int _vlsctl_pack_find_service_rsp(void* buf, int len, void* cookie)
     vassert(len > 0);
     vassert(args);
 
-    *(uint16_t*)(buf + tsz) = VLSCTL_FIND_SERVICE;
+    set_uint16(buf + tsz, VLSCTL_FIND_SERVICE);
     tsz += sizeof(uint16_t);
-    *(uint16_t*)(buf + tsz) = 0;
-    len_addr = buf + tsz;
+    set_uint16(len_addr = buf + tsz, 0);
     tsz += sizeof(uint16_t);
 
-    memcpy(buf + tsz, &args->find_service_rsp_args.hash, sizeof(vsrvcHash));
+    memcpy(buf + tsz, &args->hash, sizeof(vsrvcHash));
     bsz += sizeof(vsrvcHash);
     tsz += sizeof(vsrvcHash);
-    *(int32_t*)(buf + tsz) = args->find_service_rsp_args.proto;
+    set_int32(buf + tsz, args->proto);
     bsz += sizeof(int32_t);
     tsz += sizeof(int32_t);
-    for (i = 0; i < args->find_service_rsp_args.total; i++) {
-        ret = _aux_vlsctl_pack_vaddr(buf + tsz, len - tsz, &args->find_service_rsp_args.addrs[i]);
+    for (i = 0; i < args->total; i++) {
+        ret = _aux_vlsctl_pack_vaddr(buf + tsz, len - tsz, &args->addrs[i]);
         tsz += ret;
         bsz += ret;
     }
-    *(uint16_t*)len_addr = bsz;
+    set_uint16(len_addr, bsz);
     return tsz;
 }
 
 static
 int _vlsctl_pack_probe_service_rsp(void* buf, int len, void* cookie)
 {
-    union vlsctl_rsp_args* args = (union vlsctl_rsp_args*)cookie;
+    struct probe_service_rsp_args* args = (struct probe_service_rsp_args*)cookie;
     void* len_addr = NULL;
     int tsz = 0;
     int bsz = 0;
@@ -540,24 +545,23 @@ int _vlsctl_pack_probe_service_rsp(void* buf, int len, void* cookie)
     vassert(len > 0);
     vassert(args);
 
-    *(uint16_t*)(buf + tsz) = VLSCTL_FIND_SERVICE;
+    set_uint16(buf + tsz, VLSCTL_FIND_SERVICE);
     tsz += sizeof(uint16_t);
-    *(uint16_t*)(buf + tsz) = 0;
-    len_addr = buf + tsz;
+    set_uint16(len_addr = buf + tsz, 0);
     tsz += sizeof(uint16_t);
 
-    memcpy(buf + tsz, &args->probe_service_rsp_args.hash, sizeof(vsrvcHash));
+    memcpy(buf + tsz, &args->hash, sizeof(vsrvcHash));
     bsz += sizeof(vsrvcHash);
     tsz += sizeof(vsrvcHash);
-    *(int32_t*)(buf + tsz) = args->probe_service_rsp_args.proto;
+    set_int32(buf + tsz, args->proto);
     bsz += sizeof(int32_t);
     tsz += sizeof(int32_t);
-    for (i = 0; i < args->probe_service_rsp_args.total; i++) {
-        ret = _aux_vlsctl_pack_vaddr(buf + bsz, len - bsz, &args->probe_service_rsp_args.addrs[i]);
+    for (i = 0; i < args->total; i++) {
+        ret = _aux_vlsctl_pack_vaddr(buf + bsz, len - bsz, &args->addrs[i]);
         tsz += ret;
         bsz += ret;
     }
-    *(uint16_t*)len_addr = bsz;
+    set_uint16(len_addr, bsz);
     return tsz;
 }
 
@@ -577,9 +581,9 @@ int _vlsctl_unpack_cmd(struct vlsctl* lsctl, void* buf, int len, struct vsockadd
 
     tsz += sizeof(uint8_t); // skip version.
     tsz += sizeof(uint8_t); // skip type; todo;
-    blen = *(uint16_t*)(buf + tsz);
+    blen = get_uint16(buf + tsz);
     tsz += sizeof(uint16_t);
-    magic = *(uint32_t*)(buf + tsz);
+    magic = get_uint32(buf + tsz);
     tsz += sizeof(uint32_t);
 
     if (magic != VLSCTL_MAGIC) {
@@ -591,10 +595,10 @@ int _vlsctl_unpack_cmd(struct vlsctl* lsctl, void* buf, int len, struct vsockadd
         uint16_t clen = 0;
         int ret = 0;
 
-        cid   = *(uint16_t*)(buf + tsz);
+        cid   = get_uint16(buf + tsz);
         tsz  += sizeof(uint16_t);
         blen -= sizeof(uint16_t);
-        clen = *(uint16_t*)(buf + tsz);
+        clen  = get_uint16(buf + tsz);
         tsz  += sizeof(uint16_t);
         blen -= sizeof(uint16_t);
 
@@ -616,7 +620,7 @@ int _vlsctl_unpack_cmd(struct vlsctl* lsctl, void* buf, int len, struct vsockadd
 static
 int _vlsctl_pack_cmd(struct vlsctl* lsctl, void* buf, int len, void* cookie)
 {
-    union vlsctl_rsp_args* args = (union vlsctl_rsp_args*)cookie;
+    struct vlsctl_rsp_args* rsp_args = (struct vlsctl_rsp_args*)cookie;
     void* len_addr = NULL;
     int tsz = 0;
     int ret = 0;
@@ -625,22 +629,33 @@ int _vlsctl_pack_cmd(struct vlsctl* lsctl, void* buf, int len, void* cookie)
     vassert(buf);
     vassert(len > 0);
 
-    *(uint8_t*)(buf + tsz) = VLSCTL_VERSION;
+    set_uint8(buf + tsz, VLSCTL_VERSION);
     tsz += sizeof(uint8_t);
-    *(uint8_t*)(buf + tsz) = vlsctl_rsp_succ;
+    set_uint8(buf + tsz, vlsctl_rsp_succ);
     tsz += sizeof(uint8_t);
 
-    len_addr = buf + tsz;
-    *(uint16_t*)len_addr = 0;
+    set_uint16(len_addr = buf + tsz, 0);
     tsz += sizeof(uint16_t);
-
-    *(uint32_t*)(buf + tsz) = VLSCTL_MAGIC;
+    set_uint32(buf + tsz, VLSCTL_MAGIC);
     tsz += sizeof(uint32_t);
 
-    ret = args->probe_service_rsp_args.pack_cb(buf+tsz, len-tsz, cookie);
-    retE((ret < 0));
+    switch(rsp_args->cmd_id) {
+    case VLSCTL_FIND_SERVICE: {
+        struct find_service_rsp_args* args = &rsp_args->uargs.find_service_rsp_args;
+        ret = args->pack_cb(buf + tsz, len - tsz, args);
+        break;
+    }
+    case VLSCTL_PROBE_SERVICE: {
+        struct probe_service_rsp_args* args = &rsp_args->uargs.probe_service_rsp_args;
+        ret = args->pack_cb(buf + tsz, len - tsz, args);
+        break;
+    }
+    default:
+        retE((1));
+        break;
+    }
     tsz += ret;
-    *(uint16_t*)len_addr = (uint16_t)ret;
+    set_uint16(len_addr, ret);
 
     vhexbuf_dump(buf, tsz);
     return tsz;

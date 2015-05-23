@@ -65,31 +65,34 @@ struct vlsctl_ops {
 };
 
 typedef int (*vlsctl_pack_cmd_t)(void*, int, void*);
-union vlsctl_rsp_args {
-    struct find_service_rsp_args {
-        vlsctl_pack_cmd_t pack_cb;
-        int total;
-        vsrvcHash hash;
-        int proto;
-        int index;
-        struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
-    } find_service_rsp_args;
+struct vlsctl_rsp_args {
+    uint32_t cmd_id;
+    union _rsp_args {
+        struct find_service_rsp_args {
+            vlsctl_pack_cmd_t pack_cb;
+            int total;
+            vsrvcHash hash;
+            int proto;
+            int index;
+            struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+        } find_service_rsp_args;
 
-    struct probe_service_rsp_args {
-        vlsctl_pack_cmd_t pack_cb;
-        struct vlsctl* lsctl;
-        struct vsockaddr from;
+        struct probe_service_rsp_args {
+            vlsctl_pack_cmd_t pack_cb;
+            struct vlsctl* lsctl;
+            struct vsockaddr from;
 
-        int total;
-        vsrvcHash hash;
-        int proto;
-        int index;
-        struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
-    } probe_service_rsp_args;
+            int total;
+            vsrvcHash hash;
+            int proto;
+            int index;
+            struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
+        } probe_service_rsp_args;
 
-    struct error_rsp_args {
-        int err_val;
-    } error_rsp_args;
+        struct error_rsp_args {
+            int err_val;
+        } error_rsp_args;
+    } uargs;
 };
 
 struct vlsctl_pack_cmd_ops {
