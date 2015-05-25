@@ -1334,7 +1334,7 @@ int _vdht_dec_find_closest_nodes_rsp(
         node = list->val.l[i];
         retE((BE_DICT != node->type));
 
-        nodei = (vnodeInfo*)vnodeInfo_relax_alloc();
+        nodei = vnodeInfo_relax_alloc();
         if (!nodei) {
             break;
         }
