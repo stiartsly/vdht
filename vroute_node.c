@@ -276,8 +276,7 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
     char* sid    = (char*)((void**)value)[1];
     char* sver   = (char*)((void**)value)[2];
     char* saddrs = (char*)((void**)value)[3];
-    vnodeInfo_relax nodei_relax;
-    vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
+    DECL_VNODE_RELAX(nodei);
     struct sockaddr_in addr;
     char saddr[64];
     vnodeId  id;
@@ -287,7 +286,7 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
     {
         vtoken_unstrlize(sid, &id);
         vnodeVer_unstrlize(sver, &ver);
-        vnodeInfo_relax_init(&nodei_relax, &id, &ver, 0);
+        vnodeInfo_relax_init(nodei, &id, &ver, 0);
         pos = strchr(saddrs, ',');
         while (pos) {
             memset(saddr, 0, 64);
@@ -529,7 +528,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
         if (i >= num) {
             break;
         }
-        nodei = (vnodeInfo*)vnodeInfo_relax_alloc();
+        nodei = vnodeInfo_relax_alloc();
         if ((!nodei)) {
             break;
         }

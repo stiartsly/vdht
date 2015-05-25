@@ -67,11 +67,6 @@ struct vnodeInfo_relax {
     struct sockaddr_in addrs[VNODEINFO_MAX_ADDRS];
 };
 typedef struct vnodeInfo_relax vnodeInfo_relax;
-
-vnodeInfo_relax* vnodeInfo_relax_alloc(void);
-void vnodeInfo_relax_free(vnodeInfo_relax*);
-int  vnodeInfo_relax_init(vnodeInfo_relax*, vnodeId*, vnodeVer*, int);
-
 struct vnodeInfo {
     vnodeId  id;
     vnodeVer ver;
@@ -82,6 +77,10 @@ struct vnodeInfo {
     struct sockaddr_in addrs[VNODEINFO_MIN_ADDRS];
 };
 typedef struct vnodeInfo vnodeInfo;
+vnodeInfo* vnodeInfo_relax_alloc();
+void vnodeInfo_relax_free(vnodeInfo*);
+int  vnodeInfo_relax_init(vnodeInfo*, vnodeId*, vnodeVer*, int);
+
 vnodeInfo* vnodeInfo_alloc(void);
 void vnodeInfo_free(vnodeInfo*);
 int  vnodeInfo_init(vnodeInfo*, vnodeId*, vnodeVer*, int);
@@ -92,6 +91,11 @@ int  vnodeInfo_cat_addr (vnodeInfo*, vnodeInfo*);
 int  vnodeInfo_update   (vnodeInfo*, vnodeInfo*);
 int  vnodeInfo_copy     (vnodeInfo*, vnodeInfo*);
 void vnodeInfo_dump     (vnodeInfo*);
+
+
+#define DECL_VNODE_RELAX(nodei) \
+    vnodeInfo_relax nodei_relax; \
+    vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
 
 /*
  * for vnodeConn

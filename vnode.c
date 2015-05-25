@@ -614,7 +614,7 @@ int _aux_node_get_local_addrs(struct vnode_addr_helper* helper, struct vconfig* 
 }
 
 static
-int _aux_node_get_nodeinfo(vnodeInfo_relax* nodei, vnodeId* myid, struct vnode_addr_helper* helper)
+int _aux_node_get_nodeinfo(vnodeInfo* nodei, vnodeId* myid, struct vnode_addr_helper* helper)
 {
     vnodeVer ver;
     int i = 0;
@@ -648,7 +648,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
 
     ret = _aux_node_get_local_addrs(&node->addr_helper, cfg);
     retE((ret < 0));
-    ret = _aux_node_get_nodeinfo(&node->nodei, myid, &node->addr_helper);
+    ret = _aux_node_get_nodeinfo((vnodeInfo*)&node->nodei, myid, &node->addr_helper);
     retE((ret < 0));
 
     vlock_init(&node->lock);

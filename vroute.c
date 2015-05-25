@@ -15,8 +15,7 @@ static
 int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
 {
     struct vroute_node_space* node_space = &route->node_space;
-    vnodeInfo_relax nodei_relax;
-    vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
+    DECL_VNODE_RELAX(nodei);
     vtoken id;
     int ret = 0;
 
@@ -24,7 +23,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
     vassert(addr);
 
     vtoken_make(&id); //make up a fake ID.
-    vnodeInfo_relax_init(&nodei_relax, &id, vnodeVer_unknown(), 0);
+    vnodeInfo_relax_init(nodei, &id, vnodeVer_unknown(), 0);
     vnodeInfo_add_addr(&nodei, addr);
 
     vlock_enter(&route->lock);
@@ -750,7 +749,7 @@ struct vroute_dht_ops route_dht_ops = {
 static
 void _aux_vnodeInfo_free(void* item, void* cookie)
 {
-    vnodeInfo_relax* nodei = (vnodeInfo_relax*)item;
+    vnodeInfo* nodei = (vnodeInfo*)item;
     vassert(nodei);
 
     vnodeInfo_relax_free(nodei);
@@ -767,8 +766,7 @@ static
 int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_node_space* node_space = &route->node_space;
-    vnodeInfo_relax nodei_relax;
-    vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
+    DECL_VNODE_RELAX(nodei);
     vnodeId fromId;
     vtoken  token;
     int ret = 0;
@@ -780,7 +778,7 @@ int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret = route->dec_ops->ping(ctxt, &token, &fromId);
     retE((ret < 0));
 
-    vnodeInfo_relax_init(&nodei_relax, &fromId, vnodeVer_unknown(), 0);
+    vnodeInfo_relax_init(nodei, &fromId, vnodeVer_unknown(), 0);
     vnodeInfo_add_addr(&nodei, &conn->remote);
     ret = node_space->ops->add_node(node_space, nodei, 1);
     retE((ret < 0));
@@ -802,8 +800,7 @@ static
 int _vroute_cb_ping_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_node_space* node_space = &route->node_space;
-    vnodeInfo_relax nodei_relax;
-    vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
+    DECL_VNODE_RELAX(nodei);
     vtoken  token;
     int ret = 0;
 
@@ -830,7 +827,7 @@ static
 int _vroute_cb_find_node(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_node_space* node_space = &route->node_space;
-    vnodeInfo_relax nodei;
+    DECL_VNODE_RELAX(nodei);
     struct varray closest;
     vnodeId targetId;
     vnodeId fromId;
@@ -843,10 +840,10 @@ int _vroute_cb_find_node(struct vroute* route, vnodeConn* conn, void* ctxt)
 
     ret = route->dec_ops->find_node(ctxt, &token, &fromId, &targetId);
     retE((ret < 0));
-    ret = node_space->ops->get_node(node_space, &targetId, (vnodeInfo*)&nodei);
+    ret = node_space->ops->get_node(node_space, &targetId, nodei);
     retE((ret < 0));
     if (ret == 1) { //means found
-        ret = route->dht_ops->find_node_rsp(route, conn, &token, (vnodeInfo*)&nodei);
+        ret = route->dht_ops->find_node_rsp(route, conn, &token, nodei);
         retE((ret < 0));
         return 0;
     }
@@ -877,7 +874,7 @@ static
 int _vroute_cb_find_node_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_node_space* node_space = &route->node_space;
-    vnodeInfo_relax nodei;
+    DECL_VNODE_RELAX(nodei);
     vnodeId fromId;
     vtoken  token;
     int ret = 0;
@@ -886,11 +883,11 @@ int _vroute_cb_find_node_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(conn);
     vassert(ctxt);
 
-    ret = route->dec_ops->find_node_rsp(ctxt, &token, &fromId, (vnodeInfo*)&nodei);
+    ret = route->dec_ops->find_node_rsp(ctxt, &token, &fromId, nodei);
     retE((ret < 0));
     CHK_TOKEN_RCRD();
 
-    ret = node_space->ops->add_node(node_space, (vnodeInfo*)&nodei, 0);
+    ret = node_space->ops->add_node(node_space, nodei, 0);
     retE((ret < 0));
 
     INSPECT_ROUTE(VROUTE_INSP_RCV_FIND_NODE_RSP);

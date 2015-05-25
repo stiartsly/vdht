@@ -332,18 +332,18 @@ const char* vsockaddr_in_desc(uint32_t type)
 }
 
 static MEM_AUX_INIT(nodeinfo_relax_cache, sizeof(vnodeInfo_relax), 0);
-vnodeInfo_relax* vnodeInfo_relax_alloc(void)
+vnodeInfo* vnodeInfo_relax_alloc(void)
 {
-    vnodeInfo_relax* nodei = NULL;
-    nodei = (vnodeInfo_relax*)vmem_aux_alloc(&nodeinfo_relax_cache);
+    vnodeInfo* nodei = NULL;
+    nodei = (vnodeInfo*)vmem_aux_alloc(&nodeinfo_relax_cache);
     retE_p((!nodei));
-    memset(nodei, 0, sizeof(*nodei));
+    memset(nodei, 0, sizeof(vnodeInfo_relax));
 
     nodei->capc = VNODEINFO_MAX_ADDRS;
     return nodei;
 }
 
-void vnodeInfo_relax_free(vnodeInfo_relax* nodei)
+void vnodeInfo_relax_free(vnodeInfo* nodei)
 {
     vassert(nodei);
 
@@ -351,7 +351,7 @@ void vnodeInfo_relax_free(vnodeInfo_relax* nodei)
     return ;
 }
 
-int vnodeInfo_relax_init(vnodeInfo_relax* nodei, vnodeId* id, vnodeVer* ver, int weight)
+int vnodeInfo_relax_init(vnodeInfo* nodei, vnodeId* id, vnodeVer* ver, int weight)
 {
     vassert(nodei);
     vassert(id);

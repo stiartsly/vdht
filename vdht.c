@@ -1000,7 +1000,7 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* nodei)
     be_node_by_key(dict, "m", &node);
     vassert(node->type == BE_LIST);
 
-    vnodeInfo_relax_init((vnodeInfo_relax*)nodei, &id, &ver, weight);
+    vnodeInfo_relax_init(nodei, &id, &ver, weight);
     for (i = 0; node->val.l[i]; i++) {
         struct sockaddr_in addr;
         struct be_node* an = node->val.l[i];
