@@ -18,6 +18,7 @@ libvdht_objs  :=  vlog.o \
 	          vroute.o  \
                   vroute_node.o  \
                   vroute_recr.o  \
+                  vroute_conn.o  \
 	          vroute_srvc.o  \
                   vroute_srvc_probe.o 
 

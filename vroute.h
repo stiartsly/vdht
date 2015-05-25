@@ -57,6 +57,29 @@ int  vroute_recr_space_init  (struct vroute_recr_space*);
 void vroute_recr_space_deinit(struct vroute_recr_space*);
 
 /*
+ * for connectivity.
+ */
+struct vroute_conn_space;
+struct vroute_conn_space_ops {
+    int  (*make)         (struct vroute_conn_space*, vtoken*, vnodeId*, struct vnodeConn*);
+    int  (*adjust)       (struct vroute_conn_space*, vtoken*);
+    void (*timed_reap)   (struct vroute_conn_space*);
+    void (*clear)        (struct vroute_conn_space*);
+    void (*dump)         (struct vroute_conn_space*);
+};
+
+struct vroute_conn_space {
+    int max_tmo;
+    struct varray items;
+
+    struct vroute* route;
+    struct vroute_conn_space_ops* ops;
+};
+
+int  vroute_conn_space_init  (struct vroute_conn_space*, struct vroute*);
+void vroute_conn_space_deinit(struct vroute_conn_space*);
+
+/*
  * for node space
  */
 struct vpeer {
