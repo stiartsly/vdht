@@ -172,7 +172,7 @@ int _vlsctlc_bind_cmd_unpost_service(struct vlsctlc* lsctlc, vsrvcHash* hash, st
     vassert(lsctlc);
     vassert(hash);
     vassert(addrs);
-    vassert(num > 0);
+    //vassert(num >= 0);
 
     if (lsctlc->bound_cmd > 0) {
         return -1;
