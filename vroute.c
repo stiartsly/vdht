@@ -1111,11 +1111,11 @@ int _vroute_cb_post_service(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(conn);
     vassert(ctxt);
 
+    memset(srvci, 0, sizeof(vsrvcInfo_relax));
+    srvci->capc = VSRVCINFO_MAX_ADDRS;
     ret = route->dec_ops->post_service(ctxt, &token, &fromId, srvci);
     retE((ret < 0));
 
-    memset(srvci, 0, sizeof(vsrvcInfo_relax));
-    srvci->capc = VSRVCINFO_MAX_ADDRS;
     ret = srvc_space->ops->add_service(srvc_space, srvci);
     retE((ret < 0));
 
