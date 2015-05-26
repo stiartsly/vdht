@@ -44,6 +44,7 @@ enum {
     VSOCKADDR_UPNP,
     VSOCKADDR_REFLEXIVE,
     VSOCKADDR_RELAY,
+    VSOCKADDR_UNKNOWN,
     VSOCKADDR_BUTT
 };
 
@@ -188,6 +189,10 @@ int  vsrvcInfo_is_empty(vsrvcInfo*);
 
 int  vsrvcInfo_copy(vsrvcInfo*, vsrvcInfo*);
 void vsrvcInfo_dump(vsrvcInfo*);
+
+#define DECL_VSRVC_RELAX(srvci) \
+    vsrvcInfo_relax srvci_relax; \
+    vsrvcInfo* srvci = (vsrvcInfo*)&srvci_relax;
 
 #endif
 
