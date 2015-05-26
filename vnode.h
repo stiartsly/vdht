@@ -7,6 +7,17 @@
 #include "vupnpc.h"
 #include "vnodeId.h"
 
+#define NEED_REFLEX_BIT  ((int)16)
+#define NEED_PROBE_BIT   ((int)16)
+
+#define need_reflex_check(mask)   ((mask) & (1 << NEED_REFLEX_BIT))
+#define need_reflex_set(mask)     ((mask) |= (1 << NEED_REFLEX_BIT))
+#define need_reflex_clear(mask)   ((mask) &= ~(1 << NEED_REFLEX_BIT))
+
+#define need_probe_check(mask)    ((mask) & (1 << NEED_PROBE_BIT))
+#define need_probe_set(mask)      ((mask) |= (1 << NEED_PROBE_BIT))
+#define need_probe_clear(mask)    ((mask) &= ~(1 << NEED_PROBE_BIT))
+
 struct vnice_res_status {
     int ratio;
     int criteria;
@@ -34,22 +45,6 @@ int  vnode_nice_init  (struct vnode_nice*, struct vconfig*);
 void vnode_nice_deinit(struct vnode_nice*);
 
 /*
- * for vnode_addr_family
- */
-#define VNODE_MAX_LOCAL_ADDRS ((int)3)
-struct vnode_addr_helper {
-    int32_t  naddrs;
-    uint32_t mask;  //unreflexed yet if address is private address.
-    struct sockaddr_in addrs[VNODE_MAX_LOCAL_ADDRS];
-};
-
-#define to_reflex_mask_check(mask, i)     (mask & (1 << i))
-#define reflexed_mask_check(mask, i)      (!(mask & (1 << i)))
-
-#define to_reflex_mask_set(mask, i)       (mask |=  (1 << i))
-#define reflexed_mask_set(mask, i)        (mask &= ~(1 << i))
-
-/*
  * for vnode
  */
 struct vnode_ops {
@@ -62,7 +57,7 @@ struct vnode_ops {
     int  (*renice)     (struct vnode*);
     void (*tick)       (struct vnode*);
     int  (*myself)     (struct vnode*, vnodeInfo_relax*);
-    int  (*reflex_addr)(struct vnode*, struct sockaddr_in*, struct sockaddr_in*);
+    int  (*reflex_addr)(struct vnode*, struct sockaddr_in*, struct vsockaddr_in*);
     int  (*has_addr)   (struct vnode*, struct sockaddr_in*);
 };
 
@@ -82,8 +77,8 @@ struct vnode {
 
     int nice;
     struct varray services;
-    struct vnode_addr_helper addr_helper;
-    vnodeInfo_relax nodei;
+    vnodeInfo_relax nodei_relax;
+    vnodeInfo* nodei;
 
     struct vnode_nice node_nice;
     struct vupnpc upnpc;

@@ -24,7 +24,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
 
     vtoken_make(&id); //make up a fake ID.
     vnodeInfo_relax_init(nodei, &id, vnodeVer_unknown(), 0);
-    vnodeInfo_add_addr(&nodei, addr);
+    vnodeInfo_add_addr(&nodei, addr, VSOCKADDR_UNKNOWN);
 
     vlock_enter(&route->lock);
     ret = node_space->ops->add_node(node_space, nodei, 0);
@@ -581,7 +581,7 @@ int _vroute_dht_reflex(struct vroute* route, vnodeConn* conn)
  * @reflexive_addr:
  */
 static
-int _vroute_dht_reflex_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, struct sockaddr_in* reflexive_addr)
+int _vroute_dht_reflex_rsp(struct vroute* route, vnodeConn* conn, vtoken* token, struct vsockaddr_in* reflexive_addr)
 {
     int ret = 0;
 
@@ -777,12 +777,12 @@ int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
     retE((ret < 0));
 
     vnodeInfo_relax_init(nodei, &fromId, vnodeVer_unknown(), 0);
-    vnodeInfo_add_addr(&nodei, &conn->remote);
+    vnodeInfo_add_addr(&nodei, &conn->remote, VSOCKADDR_UNKNOWN);
     ret = node_space->ops->add_node(node_space, nodei, 1);
     retE((ret < 0));
 
     INSPECT_ROUTE(VROUTE_INSP_RCV_PING);
-    ret = route->dht_ops->ping_rsp(route, conn, &token, (vnodeInfo*)&route->node->nodei);
+    ret = route->dht_ops->ping_rsp(route, conn, &token, route->node->nodei);
     retE((ret < 0));
     return 0;
 }
@@ -806,7 +806,7 @@ int _vroute_cb_ping_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     retE((ret < 0));
     CHK_TOKEN_RCRD();
 
-    vnodeInfo_add_addr(&nodei, &conn->remote);
+    vnodeInfo_add_addr(&nodei, &conn->remote, VSOCKADDR_UNKNOWN);
     ret = node_space->ops->add_node(node_space, nodei, 1);
     retE((ret < 0));
 
@@ -981,6 +981,7 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, voi
 static
 int _vroute_cb_reflex(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
+    struct vsockaddr_in reflexive_addr;
     vnodeId fromId;
     vtoken  token;
     int ret = 0;
@@ -992,7 +993,14 @@ int _vroute_cb_reflex(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret = route->dec_ops->reflex(ctxt, &token, &fromId);
     retE((ret < 0));
 
-    ret = route->dht_ops->reflex_rsp(route, conn, &token, &conn->remote);
+    vsockaddr_copy(&reflexive_addr.addr, &conn->remote);
+    if (vsockaddr_is_private(&conn->remote)) {
+        reflexive_addr.type = VSOCKADDR_UPNP;
+    } else {
+        reflexive_addr.type = VSOCKADDR_REFLEXIVE;
+    }
+    vsockaddr_copy(&reflexive_addr.addr, &conn->remote);
+    ret = route->dht_ops->reflex_rsp(route, conn, &token, &reflexive_addr);
     retE((ret < 0));
     return 0;
 }
@@ -1007,7 +1015,7 @@ static
 int _vroute_cb_reflex_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vnode* node = route->node;
-    struct sockaddr_in reflexive_addr;
+    struct vsockaddr_in reflexive_addr;
     vnodeId fromId;
     vtoken  token;
     int ret = 0;
@@ -1171,6 +1179,8 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     vassert(ctxt);
     vassert(conn);
 
+    memset(srvci, 0, sizeof(vsrvcInfo_relax));
+    srvci->capc = VSRVCINFO_MAX_ADDRS;
     ret = route->dec_ops->find_service_rsp(ctxt, &token, &fromId, srvci);
     retE((ret < 0));
     CHK_TOKEN_RCRD();

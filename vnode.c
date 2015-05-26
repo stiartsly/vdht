@@ -84,23 +84,27 @@ int _vnode_wait_for_stop(struct vnode* node)
 static
 int _aux_node_get_uaddrs(struct vnode* node)
 {
-    struct vnode_addr_helper* helper = &node->addr_helper;
     struct vupnpc* upnpc = &node->upnpc;
-    vnodeInfo* nodei = (vnodeInfo*)&node->nodei;
-    struct sockaddr_in uaddr;
+    vnodeInfo* nodei = node->nodei;
+    struct vsockaddr_in uaddr;
     int ret = 0;
     int i = 0;
 
     vassert(node);
-    for (i = 0; i < helper->naddrs; i++) {
-        if (vsockaddr_is_public(&helper->addrs[i])) {
+    for (i = 0; i < nodei->naddrs; i++) {
+        if (!need_reflex_check(nodei->addrs[i].type)) {
             continue;
         }
-        ret = upnpc->ops->map(upnpc, &helper->addrs[i], UPNP_PROTO_UDP, &uaddr);
+        ret = upnpc->ops->map(upnpc, &nodei->addrs[i].addr, UPNP_PROTO_UDP, &uaddr.addr);
         if (ret < 0) {
             continue;
         }
-        vnodeInfo_add_addr(&nodei, &uaddr);
+        if (vsockaddr_is_private(&uaddr.addr)) {
+            uaddr.type = VSOCKADDR_UPNP;
+        }else {
+            uaddr.type = VSOCKADDR_REFLEXIVE;
+        }
+        vnodeInfo_add_addr(&nodei, &uaddr.addr, uaddr.type);
     }
     return 0;
 }
@@ -108,15 +112,15 @@ int _aux_node_get_uaddrs(struct vnode* node)
 static
 void _aux_node_get_eaddrs(struct vnode* node)
 {
-    struct vnode_addr_helper* helper = &node->addr_helper;
+    vnodeInfo* nodei = node->nodei;
     int i = 0;
     vassert(node);
 
-    for (i = 0; i < helper->naddrs; i++) {
-        if (reflexed_mask_check(helper->mask, i)) {
+    for (i = 0; i < nodei->naddrs; i++) {
+        if (!need_reflex_check(nodei->addrs[i].type)) {
             continue;
         }
-        node->route->ops->reflex(node->route, &helper->addrs[i]);
+        node->route->ops->reflex(node->route, &nodei->addrs[i].addr);
     }
     return;
 }
@@ -124,13 +128,15 @@ void _aux_node_get_eaddrs(struct vnode* node)
 static
 void _aux_node_probe_connectivity(struct vnode* node)
 {
-    struct vnode_addr_helper* helper = &node->addr_helper;
+    vnodeInfo* nodei = node->nodei;
     int i = 0;
-
     vassert(node);
 
-    for (i = 0; i < helper->naddrs; i++) {
-        node->route->ops->probe_connectivity(node->route, &helper->addrs[i]);
+    for (i = 0; i < nodei->naddrs; i++) {
+        if (!need_probe_check(nodei->addrs[i].type)) {
+            continue;
+        }
+        node->route->ops->probe_connectivity(node->route, &nodei->addrs[i].addr);
     }
     return;
 }
@@ -144,7 +150,7 @@ int _aux_node_load_boot_cb(struct sockaddr_in* boot_addr, void* cookie)
     vassert(node);
     vassert(boot_addr);
 
-    if (vnodeInfo_has_addr((vnodeInfo*)&node->nodei, boot_addr)) {
+    if (vnodeInfo_has_addr(node->nodei, boot_addr)) {
         return 0;
     }
     ret = node->route->ops->join_node(node->route, boot_addr);
@@ -230,7 +236,7 @@ void _vnode_dump(struct vnode* node)
     vlock_enter(&node->lock);
     vdump(printf("-> state:%s", node_mode_desc[node->mode]));
     vdump(printf("-> node infos:"));
-    vnodeInfo_dump((vnodeInfo*)&node->nodei);
+    vnodeInfo_dump(node->nodei);
     if (varray_size(&node->services) > 0) {
         vdump(printf("-> list of services:"));
         for (i = 0; i < varray_size(&node->services); i++) {
@@ -320,9 +326,9 @@ int _vnode_myself(struct vnode* node, vnodeInfo_relax* nodei)
     vassert(nodei);
 
     memset(nodei, 0, sizeof(*nodei));
-    nodei->capc   = VNODEINFO_MAX_ADDRS;
+    nodei->capc = VNODEINFO_MAX_ADDRS;
 
-    ret = vnodeInfo_copy((vnodeInfo*)nodei, (vnodeInfo*)&node->nodei);
+    ret = vnodeInfo_copy((vnodeInfo*)nodei, node->nodei);
     retE((ret < 0));
     return 0;
 }
@@ -332,24 +338,23 @@ int _vnode_myself(struct vnode* node, vnodeInfo_relax* nodei)
  * @node
  */
 static
-int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct sockaddr_in* eaddr)
+int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct vsockaddr_in* eaddr)
 {
-    struct vnode_addr_helper* helper = &node->addr_helper;
-    vnodeInfo* nodei = (vnodeInfo*)&node->nodei;
+    vnodeInfo* nodei = node->nodei;
     int i = 0;
     vassert(node);
     vassert(eaddr);
 
     vlock_enter(&node->lock);
-    for (i = 0; i < helper->naddrs; i++) {
-        if (!vsockaddr_equal(laddr, &helper->addrs[i])) {
+    for (i = 0; i < nodei->naddrs; i++) {
+        if (!need_reflex_check(nodei->addrs[i].type)) {
             continue;
         }
-        if (reflexed_mask_check(helper->mask, i)) {
-            break;
+        if (!vsockaddr_equal(laddr, &nodei->addrs[i].addr)) {
+            continue;
         }
-        vnodeInfo_add_addr(&nodei, eaddr);
-        reflexed_mask_set(helper->mask, i);
+        vnodeInfo_add_addr(&nodei, &eaddr->addr, eaddr->type);
+        need_reflex_clear(nodei->addrs[i].type);
         break;
     }
     vlock_leave(&node->lock);
@@ -370,7 +375,7 @@ int _vnode_has_addr(struct vnode* node, struct sockaddr_in* addr)
     vassert(addr);
 
     vlock_enter(&node->lock);
-    found = vnodeInfo_has_addr((vnodeInfo*)&node->nodei, addr);
+    found = vnodeInfo_has_addr(node->nodei, addr);
     vlock_leave(&node->lock);
 
     return found;
@@ -432,10 +437,10 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct vsockaddr_in* a
         vlogEv((!srvci), elog_vsrvcInfo_alloc);
         ret1E((!srvci), vlock_leave(&node->lock));
 
-        vsrvcInfo_init(srvci, hash, &node->nodei.id, (proto << 16) | node->nice);
+        vsrvcInfo_init(srvci, hash, &node->nodei->id, (proto << 16) | node->nice);
         vsrvcInfo_add_addr(&srvci, &addr->addr, addr->type);
         varray_add_tail(&node->services, srvci);
-        node->nodei.weight++;
+        node->nodei->weight++;
     }
     vlock_leave(&node->lock);
     return ret;
@@ -472,7 +477,7 @@ int _vnode_srvc_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* 
     if ((found) && (vsrvcInfo_is_empty(srvci))) {
         srvci = (vsrvcInfo*)varray_del(&node->services, i);
         vsrvcInfo_free(srvci);
-        node->nodei.weight--;
+        node->nodei->weight--;
     }
     vlock_leave(&node->lock);
     return 0;
@@ -499,7 +504,7 @@ int _vnode_srvc_unpost_ext(struct vnode* node, vsrvcHash* hash)
     if (found) {
         srvci = (vsrvcInfo*)varray_del(&node->services, i);
         vsrvcInfo_free(srvci);
-        node->nodei.weight--;
+        node->nodei->weight--;
     }
     vlock_leave(&node->lock);
     return 0;
@@ -509,8 +514,8 @@ static
 int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
     struct vroute* route = node->route;
-    vsrvcInfo_relax srvci_relax;
-    vsrvcInfo* srvci = NULL;
+    DECL_VSRVC_RELAX(srvci);
+    vsrvcInfo* item = NULL;
     int found = 0;
     int ret = 0;
     int i = 0;
@@ -522,23 +527,23 @@ int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_
 
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++) {
-        srvci = (vsrvcInfo*)varray_get(&node->services, i);
-        if (vtoken_equal(&srvci->hash, hash)) {
+        item = (vsrvcInfo*)varray_get(&node->services, i);
+        if (vtoken_equal(&item->hash, hash)) {
             found = 1;
             break;
         }
     }
     if (found) {
-        memset(&srvci_relax, 0, sizeof(srvci_relax));
-        srvci_relax.capc = VSRVCINFO_MAX_ADDRS;
-        vsrvcInfo_copy((vsrvcInfo*)&srvci_relax, srvci);
+        memset(srvci, 0, sizeof(vsrvcInfo_relax));
+        srvci->capc = VSRVCINFO_MAX_ADDRS;
+        vsrvcInfo_copy(srvci, item);
     }
     vlock_leave(&node->lock);
 
     if (found) {
-        ncb(hash, srvci_relax.naddrs, vsrvcInfo_proto((vsrvcInfo*)&srvci_relax), cookie);
-        for (i = 0; i < srvci_relax.naddrs; i++) {
-            icb(hash, &srvci_relax.addrs[i].addr, srvci_relax.addrs[i].type, (i+1) == srvci_relax.naddrs, cookie);
+        ncb(hash, srvci->naddrs, vsrvcInfo_proto(srvci), cookie);
+        for (i = 0; i < srvci->naddrs; i++) {
+            icb(hash, &srvci->addrs[i].addr, srvci->addrs[i].type, (i+1) == srvci->naddrs, cookie);
         }
         return 0;
     }
@@ -574,59 +579,48 @@ struct vnode_srvc_ops node_srvc_ops = {
 };
 
 static
-int _aux_node_get_local_addrs(struct vnode_addr_helper* helper, struct vconfig* cfg)
+int _aux_node_get_nodeinfo(vnodeInfo* nodei, vnodeId* myid, struct vconfig* cfg)
 {
-    struct sockaddr_in laddr;
+    struct vsockaddr_in vaddr;
+    vnodeVer ver;
     char ip[64] = {0};
-    int port = 0;
+    int port = cfg->ext_ops->get_dht_port(cfg);
     int ret  = 0;
 
+    vassert(nodei);
+    vassert(myid);
     vassert(cfg);
-    vassert(helper);
 
-    helper->naddrs = 0;
-    helper->mask   = 0;
+    vnodeVer_unstrlize(vhost_get_version(), &ver);
+    vnodeInfo_relax_init(nodei, myid, &ver, 0);
 
-    port = cfg->ext_ops->get_dht_port(cfg);
     ret = vhostaddr_get_first(ip, 64);
     retE((ret < 0));
-    vsockaddr_convert(ip, port, &laddr);
-    vsockaddr_copy(&helper->addrs[helper->naddrs], &laddr);
-    if (vsockaddr_is_private(&laddr)) {// need to get relevant reflexive address.
-        to_reflex_mask_set(helper->mask, helper->naddrs);
+    vsockaddr_convert(ip, port, &vaddr.addr);
+    if (vsockaddr_is_private(&vaddr.addr)) {
+        vaddr.type = VSOCKADDR_LOCAL;
+        need_reflex_set(vaddr.type);
+        need_probe_set(vaddr.type);
+    } else {
+        vaddr.type = VSOCKADDR_REFLEXIVE;
     }
-    helper->naddrs++;
+    vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
 
-    while (helper->naddrs <= VNODE_MAX_LOCAL_ADDRS) {
+    while (nodei->naddrs < 3) {
         memset(ip, 0, 64);
         ret = vhostaddr_get_next(ip, 64);
         if (ret <= 0) {
             break;
         }
-        vsockaddr_convert(ip, port, &laddr);
-        vsockaddr_copy(&helper->addrs[helper->naddrs], &laddr);
-        if (vsockaddr_is_private(&laddr)) {
-            to_reflex_mask_set(helper->mask, helper->naddrs);
+        vsockaddr_convert(ip, port, &vaddr.addr);
+        if (vsockaddr_is_private(&vaddr.addr)) {
+            vaddr.type = VSOCKADDR_LOCAL;
+            need_reflex_set(vaddr.type);
+            need_probe_set(vaddr.type);
+        }else {
+            vaddr.type = VSOCKADDR_REFLEXIVE;
         }
-        helper->naddrs++;
-    }
-    return 0;
-}
-
-static
-int _aux_node_get_nodeinfo(vnodeInfo* nodei, vnodeId* myid, struct vnode_addr_helper* helper)
-{
-    vnodeVer ver;
-    int i = 0;
-
-    vassert(myid);
-    vassert(helper);
-
-    vnodeVer_unstrlize(vhost_get_version(), &ver);
-    vnodeInfo_relax_init(nodei, myid, &ver, 0);
-
-    for (i = 0; i < helper->naddrs; i++) {
-        vnodeInfo_add_addr((vnodeInfo**)&nodei, &helper->addrs[i]);
+        vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
     }
     return 0;
 }
@@ -646,9 +640,11 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     vassert(host);
     vassert(myid);
 
-    ret = _aux_node_get_local_addrs(&node->addr_helper, cfg);
-    retE((ret < 0));
-    ret = _aux_node_get_nodeinfo((vnodeInfo*)&node->nodei, myid, &node->addr_helper);
+    node->nodei = (vnodeInfo*)&node->nodei_relax;
+    memset(node->nodei, 0, sizeof(vnodeInfo_relax));
+    node->nodei->capc = VNODEINFO_MAX_ADDRS;
+
+    ret = _aux_node_get_nodeinfo(node->nodei, myid, cfg);
     retE((ret < 0));
 
     vlock_init(&node->lock);

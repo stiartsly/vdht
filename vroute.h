@@ -249,7 +249,7 @@ struct vroute_dht_ops {
     int (*find_closest_nodes_rsp)
                          (struct vroute*, vnodeConn*, vtoken*, struct varray*);
     int (*reflex)        (struct vroute*, vnodeConn*);
-    int (*reflex_rsp)    (struct vroute*, vnodeConn*, vtoken*, struct sockaddr_in*);
+    int (*reflex_rsp)    (struct vroute*, vnodeConn*, vtoken*, struct vsockaddr_in*);
     int (*probe)         (struct vroute*, vnodeConn*, vnodeId*);
     int (*probe_rsp)     (struct vroute*, vnodeConn*, vtoken*);
     int (*post_service)  (struct vroute*, vnodeConn*, vsrvcInfo*);

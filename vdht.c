@@ -160,7 +160,7 @@ struct be_node* _aux_create_vnodeInfo(vnodeInfo* nodei)
 
     node = be_create_list();
     for (i = 0; i < nodei->naddrs; i++) {
-        addr = be_create_addr(&nodei->addrs[i]);
+        addr = be_create_vaddr(&nodei->addrs[i]);
         be_add_list(node, addr);
     }
     be_add_keypair(dict, "m", node);
@@ -634,7 +634,7 @@ static
 int _vdht_enc_reflex_rsp(
         vtoken* token,
         vnodeId* srcId,
-        struct sockaddr_in* reflective_addr,
+        struct vsockaddr_in* reflective_addr,
         void* buf,
         int sz)
 {
@@ -663,7 +663,7 @@ int _vdht_enc_reflex_rsp(
     rslt = be_create_dict();
     node = be_create_vtoken(srcId);
     be_add_keypair(rslt, "id", node);
-    node = be_create_addr(reflective_addr);
+    node = be_create_vaddr(reflective_addr);
     be_add_keypair(rslt, "me", node);
     be_add_keypair(dict, "a", rslt);
 
@@ -1002,10 +1002,10 @@ int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* nodei)
 
     vnodeInfo_relax_init(nodei, &id, &ver, weight);
     for (i = 0; node->val.l[i]; i++) {
-        struct sockaddr_in addr;
+        struct vsockaddr_in vaddr;
         struct be_node* an = node->val.l[i];
-        be_unpack_addr(an, &addr);
-        vnodeInfo_add_addr(&nodei, &addr);
+        be_unpack_vaddr(an, &vaddr);
+        vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
     }
     return 0;
 }
@@ -1385,7 +1385,7 @@ int _vdht_dec_reflex_rsp(
         void* ctxt,
         vtoken* token,
         vnodeId* srcId,
-        struct sockaddr_in* reflexive_addr)
+        struct vsockaddr_in* reflexive_addr)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
@@ -1403,7 +1403,7 @@ int _vdht_dec_reflex_rsp(
     retE((ret < 0));
     ret = be_node_by_2keys(dict, "a", "me", &node);
     retE((ret < 0));
-    ret = be_unpack_addr(node, reflexive_addr);
+    ret = be_unpack_vaddr(node, reflexive_addr);
     retE((ret < 0));
 
     return 0;

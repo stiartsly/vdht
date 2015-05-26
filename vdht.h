@@ -77,7 +77,7 @@ struct vdht_enc_ops {
     int (*reflex_rsp)(
             vtoken* token,
             vnodeId* srcId,
-            struct sockaddr_in* reflexive_addr,
+            struct vsockaddr_in* reflexive_addr,
             void* buf,
             int   sz);
 
@@ -172,7 +172,7 @@ struct vdht_dec_ops {
             void* ctxt,
             vtoken* token,
             vnodeId* srcId,
-            struct sockaddr_in* reflexive_addr);
+            struct vsockaddr_in* reflexive_addr);
 
     int (*probe)(
             void* ctxt,

@@ -43,7 +43,7 @@ int vpeer_init(struct vpeer* peer, struct sockaddr_in* local, vnodeInfo* nodei, 
     vassert(peer);
     vassert(nodei);
 
-    vnodeConn_set(&peer->conn, local, &nodei->addrs[nodei->naddrs-1]);
+    vnodeConn_set(&peer->conn, local, &nodei->addrs[nodei->naddrs-1].addr);
     vnodeInfo_copy(peer->nodei, nodei);
     peer->rcv_ts = direct ? rcv_ts : 0;
     peer->ntries = direct ? 0 : peer->ntries;
@@ -235,7 +235,7 @@ int _aux_space_probe_connectivity_cb(void* item, void* cookie)
     }
     for (j = 0; j < peer->nodei->naddrs; j++) {
         vnodeConn conn;
-        vnodeConn_set(&conn, laddr, &peer->nodei->addrs[i]);
+        vnodeConn_set(&conn, laddr, &peer->nodei->addrs[i].addr);
         route->dht_ops->probe(route, &conn, &peer->nodei->id);
     }
     peer->nprobes++;
@@ -266,6 +266,48 @@ int _aux_space_tick_cb(void* item, void* cookie)
     }
     return 0;
 }
+
+static
+int _aux_vsockaddr_unstrlize(const char* buf, struct vsockaddr_in* addr)
+{
+    char* cur = NULL;
+    char* end = NULL;
+    char ip[64];
+    int  port = 0;
+    int  type = 0;
+    int  ret = 0;
+
+    vassert(buf);
+    vassert(addr);
+
+    cur = strchr(buf, ':');
+    retE((!cur));
+
+    memset(ip, 0, 64);
+    strncpy(ip, buf, cur-buf);
+
+    cur += 1;
+    errno = 0;
+    port = strtol(cur, &end, 10);
+    vlogEv((errno), elog_strtol);
+    retE((errno));
+
+    ret = vsockaddr_convert(ip, port, &addr->addr);
+    vlogEv((ret < 0), elog_vsockaddr_convert);
+    retE((ret < 0));
+
+    end = strchr(end, ':');
+    retE((!end));
+    end += 1;
+    errno = 0;
+    type = strtol(end, NULL, 10);
+    vlogEv((errno), elog_strtol);
+    retE((errno));
+
+    addr->type = (uint32_t)type;
+    return 0;
+}
+
 /*
  *
  */
@@ -277,7 +319,7 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
     char* sver   = (char*)((void**)value)[2];
     char* saddrs = (char*)((void**)value)[3];
     DECL_VNODE_RELAX(nodei);
-    struct sockaddr_in addr;
+    struct vsockaddr_in vaddr;
     char saddr[64];
     vnodeId  id;
     vnodeVer ver;
@@ -292,12 +334,12 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
             memset(saddr, 0, 64);
             strncpy(saddr, saddrs, pos - saddrs);
             saddrs = pos + 1;
-            vsockaddr_unstrlize(saddr, &addr);
-            vnodeInfo_add_addr(&nodei, &addr);
+            _aux_vsockaddr_unstrlize(saddr, &vaddr);
+            vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
             pos = strchr(saddrs, ',');
         }
-        vsockaddr_unstrlize(saddrs, &addr);
-        vnodeInfo_add_addr(&nodei, &addr);
+        _aux_vsockaddr_unstrlize(saddr, &vaddr);
+        vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
     }
     node_space->ops->add_node(node_space, nodei, 0);
     return 0;
@@ -333,12 +375,14 @@ int _aux_space_store_cb(void* item, void* cookie)
 
         vtoken_strlize   (&peer->nodei->id,  id,  64);
         vnodeVer_strlize (&peer->nodei->ver, ver, 64);
-        vsockaddr_strlize(&peer->nodei->addrs[0], addr, 64);
+        vsockaddr_strlize(&peer->nodei->addrs[0].addr, addr, 64);
+        sprintf(addr + strlen(addr), ":%u", peer->nodei->addrs[0].type);
         off = 0;
         off += sprintf(addrs + off, "%s", addr);
         for (i = 1; i < peer->nodei->naddrs; i++) {
             memset(addr, 0, 64);
-            vsockaddr_strlize(&peer->nodei->addrs[i], addr, 64);
+            vsockaddr_strlize(&peer->nodei->addrs[i].addr, addr, 64);
+            sprintf(addr + strlen(addr), ":%u", peer->nodei->addrs[i].type);
             off += sprintf(addrs + off, ",%s", addr);
         }
     }
