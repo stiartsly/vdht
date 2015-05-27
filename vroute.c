@@ -340,19 +340,18 @@ struct vroute_ops route_ops = {
     .dump          = _vroute_dump
 };
 
-#define INSPECT_ROUTE(INSP_ID) do { \
+#define DO_INSPECT(INSP_ID) do { \
         route->ops->inspect(route, &token, INSP_ID); \
     } while(0)
 
-#define MK_TOKEN_RCRD() do { \
+#define ADD_CHECK_LIST() do { \
         struct vroute_recr_space* rs = &route->recr_space; \
         rs->ops->make(rs, &token); \
     } while(0)
 
-#define CHK_TOKEN_RCRD() do { \
+#define DO_CHECK_TOKEN()  do { \
         struct vroute_recr_space* rs = &route->recr_space; \
-        int ret = 0; \
-        ret = rs->ops->check(rs, &token); \
+        int ret = rs->ops->check(rs, &token); \
         retE((!ret)); \
     } while(0)
 
@@ -396,8 +395,8 @@ int _vroute_dht_ping(struct vroute* route, vnodeConn* conn)
         ret = route->enc_ops->ping(&token, &route->myid, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    INSPECT_ROUTE(VROUTE_INSP_SND_PING);
-    MK_TOKEN_RCRD();
+    DO_INSPECT(VROUTE_INSP_SND_PING);
+    ADD_CHECK_LIST();
 
     vlogD("send @ping");
     return 0;
@@ -454,8 +453,8 @@ int _vroute_dht_find_node(struct vroute* route, vnodeConn* conn, vnodeId* target
         ret = route->enc_ops->find_node(&token, &route->myid, targetId, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    INSPECT_ROUTE(VROUTE_INSP_SND_FIND_NODE);
-    MK_TOKEN_RCRD();
+    DO_INSPECT(VROUTE_INSP_SND_FIND_NODE);
+    ADD_CHECK_LIST();
 
     vlogD("send @find_node");
     return 0;
@@ -509,8 +508,8 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeConn* conn, vnodeI
         ret = route->enc_ops->find_closest_nodes(&token, &route->myid, targetId, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    INSPECT_ROUTE(VROUTE_INSP_SND_FIND_CLOSEST_NODES);
-    MK_TOKEN_RCRD();
+    DO_INSPECT(VROUTE_INSP_SND_FIND_CLOSEST_NODES);
+    ADD_CHECK_LIST();
 
     vlogD("send @find_closest_nodes");
     return 0;
@@ -561,8 +560,8 @@ int _vroute_dht_reflex(struct vroute* route, vnodeConn* conn)
         ret = route->enc_ops->reflex(&token, &route->myid, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    INSPECT_ROUTE(VROUTE_INSP_SND_REFLEX);
-    MK_TOKEN_RCRD();
+    DO_INSPECT(VROUTE_INSP_SND_REFLEX);
+    ADD_CHECK_LIST();
 
     vlogD("send @reflex");
     return 0;
@@ -614,8 +613,8 @@ int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
         ret = route->enc_ops->probe(&token, &route->myid, targetId, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    INSPECT_ROUTE(VROUTE_INSP_SND_PROBE);
-    MK_TOKEN_RCRD();
+    DO_INSPECT(VROUTE_INSP_SND_PROBE);
+    ADD_CHECK_LIST();
 
     vlogD("send @probe");
     return 0;
@@ -692,8 +691,9 @@ int _vroute_dht_find_service(struct vroute* route, vnodeConn* conn, vsrvcHash* h
         ret = route->enc_ops->find_service(&token, &route->myid, hash, buf, vdht_buf_len());
     }END_QUERY(ret);
 
-    INSPECT_ROUTE(VROUTE_INSP_SND_FIND_SERVICE);
-    MK_TOKEN_RCRD();
+    DO_INSPECT(VROUTE_INSP_SND_FIND_SERVICE);
+    ADD_CHECK_LIST();
+
     vlogD("send @find_service");
     return 0;
 }
@@ -776,7 +776,7 @@ int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret = node_space->ops->add_node(node_space, nodei, 1);
     retE((ret < 0));
 
-    INSPECT_ROUTE(VROUTE_INSP_RCV_PING);
+    DO_INSPECT(VROUTE_INSP_RCV_PING);
     ret = route->dht_ops->ping_rsp(route, conn, &token, route->node->nodei);
     retE((ret < 0));
     return 0;
@@ -799,13 +799,13 @@ int _vroute_cb_ping_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 
     ret = route->dec_ops->ping_rsp(ctxt, &token, nodei);
     retE((ret < 0));
-    CHK_TOKEN_RCRD();
+    DO_CHECK_TOKEN();
 
     vnodeInfo_add_addr(&nodei, &conn->remote, VSOCKADDR_UNKNOWN);
     ret = node_space->ops->add_node(node_space, nodei, 1);
     retE((ret < 0));
 
-    INSPECT_ROUTE(VROUTE_INSP_RCV_PING_RSP);
+    DO_INSPECT(VROUTE_INSP_RCV_PING_RSP);
     return 0;
 }
 
@@ -878,12 +878,12 @@ int _vroute_cb_find_node_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 
     ret = route->dec_ops->find_node_rsp(ctxt, &token, &fromId, nodei);
     retE((ret < 0));
-    CHK_TOKEN_RCRD();
+    DO_CHECK_TOKEN();
 
     ret = node_space->ops->add_node(node_space, nodei, 0);
     retE((ret < 0));
 
-    INSPECT_ROUTE(VROUTE_INSP_RCV_FIND_NODE_RSP);
+    DO_INSPECT(VROUTE_INSP_RCV_FIND_NODE_RSP);
     return 0;
 }
 
@@ -963,7 +963,7 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, voi
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
     varray_deinit(&closest);
 
-    INSPECT_ROUTE(VROUTE_INSP_RCV_FIND_CLOSEST_NODES_RSP);
+    DO_INSPECT(VROUTE_INSP_RCV_FIND_CLOSEST_NODES_RSP);
     return 0;
 }
 
@@ -1021,12 +1021,12 @@ int _vroute_cb_reflex_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 
     ret = route->dec_ops->reflex_rsp(ctxt, &token, &fromId, &reflexive_addr);
     retE((ret < 0));
-    CHK_TOKEN_RCRD();
+    DO_CHECK_TOKEN();
 
     ret = node->ops->reflex_addr(node, &conn->local, &reflexive_addr);
     retE((ret < 0));
 
-    INSPECT_ROUTE(VROUTE_INSP_RCV_REFLEX_RSP);
+    DO_INSPECT(VROUTE_INSP_RCV_REFLEX_RSP);
     return 0;
 }
 
@@ -1077,12 +1077,12 @@ int _vroute_cb_probe_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 
     ret = route->dec_ops->probe_rsp(ctxt, &token, &fromId);
     retE((ret < 0));
-    CHK_TOKEN_RCRD();
+    DO_CHECK_TOKEN();
 
     ret = node_space->ops->adjust_connectivity(node_space, &fromId, conn);
     retE((ret < 0));
 
-    INSPECT_ROUTE(VROUTE_INSP_RCV_PROBE_RSP);
+    DO_INSPECT(VROUTE_INSP_RCV_PROBE_RSP);
     return 0;
 }
 
@@ -1112,7 +1112,7 @@ int _vroute_cb_post_service(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret = srvc_space->ops->add_service(srvc_space, srvci);
     retE((ret < 0));
 
-    INSPECT_ROUTE(VROUTE_INSP_RCV_POST_SERVICE);
+    DO_INSPECT(VROUTE_INSP_RCV_POST_SERVICE);
     return 0;
 }
 
@@ -1171,7 +1171,7 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
 
     ret = route->dec_ops->find_service_rsp(ctxt, &token, &fromId, srvci);
     retE((ret < 0));
-    CHK_TOKEN_RCRD();
+    DO_CHECK_TOKEN();
 
     ret = srvc_space->ops->add_service(srvc_space, srvci);
     retE((ret < 0));
@@ -1180,7 +1180,7 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     ret = node_space->ops->find_node(node_space, &srvci->hostid);
     retE((ret < 0));
 
-    INSPECT_ROUTE(VROUTE_INSP_RCV_FIND_SERVICE_RSP);
+    DO_INSPECT(VROUTE_INSP_RCV_FIND_SERVICE_RSP);
     srvc_probe_space->ops->invoke(srvc_probe_space, &srvci->hash, srvci);
     return 0;
 }
