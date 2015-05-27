@@ -56,7 +56,6 @@ struct vnode_ops {
     void (*clear)      (struct vnode*);
     int  (*renice)     (struct vnode*);
     void (*tick)       (struct vnode*);
-    int  (*myself)     (struct vnode*, vnodeInfo_relax*);
     int  (*reflex_addr)(struct vnode*, struct sockaddr_in*, struct vsockaddr_in*);
     int  (*has_addr)   (struct vnode*, struct sockaddr_in*);
 };
