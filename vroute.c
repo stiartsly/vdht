@@ -49,7 +49,7 @@ static
 int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
-    vsrvcInfo_relax srvci;
+    DECL_VSRVC_RELAX(srvci);
     int ret = 0;
     int i = 0;
 
@@ -58,22 +58,18 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
     vassert(ncb);
     vassert(icb);
 
-    memset(&srvci, 0, sizeof(srvci));
-    srvci.capc = VSRVCINFO_MAX_ADDRS;
-
     vlock_enter(&route->lock);
-    ret = srvc_space->ops->get_service(srvc_space, hash, (vsrvcInfo*)&srvci);
+    ret = srvc_space->ops->get_service(srvc_space, hash, srvci);
     vlock_leave(&route->lock);
     retE((ret < 0));
 
     if (!ret) { // means no services found, but need to tell client.
-        ncb(&srvci.hash, 0, VPROTO_UNKNOWN, cookie);
+        ncb(&srvci->hash, 0, VPROTO_UNKNOWN, cookie);
         return 0;
     }
-
-    ncb(&srvci.hash, srvci.naddrs, vsrvcInfo_proto((vsrvcInfo*)&srvci), cookie);
-    for (i = 0; i < srvci.naddrs; i++) {
-        icb(&srvci.hash, &srvci.addrs[i].addr, srvci.addrs[i].type, ((i+1) == srvci.naddrs), cookie);
+    ncb(&srvci->hash, srvci->naddrs, vsrvcInfo_proto(srvci), cookie);
+    for (i = 0; i < srvci->naddrs; i++) {
+        icb(&srvci->hash, &srvci->addrs[i].addr, srvci->addrs[i].type, (i+1) == srvci->naddrs, cookie);
     }
     return 0;
 }
@@ -164,7 +160,6 @@ int _vroute_probe_connectivity(struct vroute* route, struct sockaddr_in* laddr)
 {
     struct vroute_node_space* node_space = &route->node_space;
     int ret = 0;
-
     vassert(route);
     vassert(laddr);
 
@@ -1111,8 +1106,6 @@ int _vroute_cb_post_service(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(conn);
     vassert(ctxt);
 
-    memset(srvci, 0, sizeof(vsrvcInfo_relax));
-    srvci->capc = VSRVCINFO_MAX_ADDRS;
     ret = route->dec_ops->post_service(ctxt, &token, &fromId, srvci);
     retE((ret < 0));
 
@@ -1143,9 +1136,6 @@ int _vroute_cb_find_service(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(route);
     vassert(conn);
     vassert(ctxt);
-
-    memset(srvci, 0, sizeof(vsrvcInfo_relax));
-    srvci->capc = VSRVCINFO_MAX_ADDRS;
 
     ret = route->dec_ops->find_service(ctxt, &token, &fromId, &srvcHash);
     retE((ret < 0));
@@ -1179,8 +1169,6 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     vassert(ctxt);
     vassert(conn);
 
-    memset(srvci, 0, sizeof(vsrvcInfo_relax));
-    srvci->capc = VSRVCINFO_MAX_ADDRS;
     ret = route->dec_ops->find_service_rsp(ctxt, &token, &fromId, srvci);
     retE((ret < 0));
     CHK_TOKEN_RCRD();

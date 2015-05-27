@@ -517,8 +517,6 @@ int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_
         }
     }
     if (found) {
-        memset(srvci, 0, sizeof(vsrvcInfo_relax));
-        srvci->capc = VSRVCINFO_MAX_ADDRS;
         vsrvcInfo_copy(srvci, item);
     }
     vlock_leave(&node->lock);

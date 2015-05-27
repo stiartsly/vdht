@@ -358,8 +358,6 @@ int vnodeInfo_relax_init(vnodeInfo* nodei, vnodeId* id, vnodeVer* ver, int weigh
     vassert(ver);
     vassert(weight >= 0);
 
-    memset(nodei, 0, sizeof(*nodei));
-
     vtoken_copy(&nodei->id,  id );
     vtoken_copy(&nodei->ver, ver);
     nodei->weight = (int32_t)weight;

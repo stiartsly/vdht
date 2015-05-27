@@ -95,7 +95,13 @@ void vnodeInfo_dump     (vnodeInfo*);
 
 
 #define DECL_VNODE_RELAX(nodei) \
-    vnodeInfo_relax nodei_relax; \
+    vnodeInfo_relax nodei_relax = { \
+        .id     = { .data = {0}}, \
+        .ver    = { .data = {0}}, \
+        .weight = 0, \
+        .naddrs = 0, \
+        .capc   = VNODEINFO_MAX_ADDRS \
+    };\
     vnodeInfo* nodei = (vnodeInfo*)&nodei_relax;
 
 /*
@@ -191,7 +197,13 @@ int  vsrvcInfo_copy(vsrvcInfo*, vsrvcInfo*);
 void vsrvcInfo_dump(vsrvcInfo*);
 
 #define DECL_VSRVC_RELAX(srvci) \
-    vsrvcInfo_relax srvci_relax; \
+    vsrvcInfo_relax srvci_relax = { \
+        .hash   = {.data = {0}}, \
+        .hostid = {.data = {0}}, \
+        .nice   = 0, \
+        .naddrs = 0, \
+        .capc   = VSRVCINFO_MAX_ADDRS \
+    }; \
     vsrvcInfo* srvci = (vsrvcInfo*)&srvci_relax;
 
 #endif

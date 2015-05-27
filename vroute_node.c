@@ -518,8 +518,6 @@ int _vroute_node_space_get_node(struct vroute_node_space* space, vnodeId* target
     for (i = 0; i < varray_size(peers); i++) {
         peer = (struct vpeer*)varray_get(peers, i);
         if (vtoken_equal(&peer->nodei->id, targetId)) {
-            memset(nodei, 0, sizeof(vnodeInfo_relax));
-            nodei->capc = VNODEINFO_MAX_ADDRS;
             vnodeInfo_copy(nodei, peer->nodei);
             if (vtoken_equal(&peer->nodei->ver, &space->myver)) {
                 //minus because uncareness of version as to other nodes.
