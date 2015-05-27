@@ -511,6 +511,7 @@ int main(int argc, char** argv)
             //impossible be here;
             break;
         }
+        vdhtc_unpost_service(&srvcHash);
         if (ret < 0) {
             printf("failed to run server.\n");
             exit(-1);
