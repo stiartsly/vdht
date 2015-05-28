@@ -148,7 +148,8 @@ int vsrvcInfo_relax_init(vsrvcInfo_relax*, vsrvcHash*, vnodeId*, int);
 struct vsrvcInfo {
     vsrvcHash hash;
     vnodeId hostid;
-    int32_t nice;
+    int32_t nice;  // high 16 bits for protocol;
+                   // low 16 bits for nice value;
 
     int16_t naddrs;
     int16_t capc;
