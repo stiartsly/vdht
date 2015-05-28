@@ -109,7 +109,7 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
 static
 int _vroute_srvc_space_add_service(struct vroute_srvc_space* space, vsrvcInfo* srvci)
 {
-    struct varray* srvcs = NULL;
+    struct varray* services = NULL;
     struct vservice*  to = NULL;
     time_t now = time(NULL);
     int max_period = 0;
@@ -118,7 +118,7 @@ int _vroute_srvc_space_add_service(struct vroute_srvc_space* space, vsrvcInfo* s
     vassert(space);
     vassert(srvci);
 
-    srvcs = &space->bucket[vsrvcId_bucket(&srvci->hostid)].srvcs;
+    services = &space->bucket[vsrvcId_bucket(&srvci->hostid)].srvcs;
     {
         void* argv[] = {
             &to,
@@ -127,16 +127,16 @@ int _vroute_srvc_space_add_service(struct vroute_srvc_space* space, vsrvcInfo* s
             &max_period,
             &found
         };
-        varray_iterate(srvcs, _aux_srvc_add_service_cb, argv);
+        varray_iterate(services, _aux_srvc_add_service_cb, argv);
         if (found) {
             vservice_init(to, srvci, now);
-        } else if (to && varray_size(srvcs) >= space->bucket_sz) {
+        } else if (to && varray_size(services) >= space->bucket_sz) {
             vservice_init(to, srvci, now);
-        } else if (varray_size(srvcs) < space->bucket_sz) {
+        } else if (varray_size(services) < space->bucket_sz) {
             to = vservice_alloc();
             retE((!to));
             vservice_init(to, srvci, now);
-            varray_add_tail(srvcs, to);
+            varray_add_tail(services, to);
         } else {
             //bucket is full, discard it (worst one).
         }
@@ -188,14 +188,14 @@ int _vroute_srvc_space_get_service(struct vroute_srvc_space* space, vsrvcHash* h
 static
 void _vroute_srvc_space_clear(struct vroute_srvc_space* space)
 {
-    struct varray* svcs = NULL;
+    struct varray* services = NULL;
     int i = 0;
     vassert(space);
 
     for (i = 0; i < NBUCKETS; i++) {
-        svcs = &space->bucket[i].srvcs;
-        while(varray_size(svcs) > 0) {
-            vservice_free((struct vservice*)varray_del(svcs, 0));
+        services = &space->bucket[i].srvcs;
+        while(varray_size(services) > 0) {
+            vservice_free((struct vservice*)varray_del(services, 0));
         }
     }
     return;
@@ -207,7 +207,7 @@ void _vroute_srvc_space_clear(struct vroute_srvc_space* space)
 static
 void _vroute_srvc_space_inspect(struct vroute_srvc_space* space, vroute_srvc_space_inspect_t cb, void* cookie, vtoken* token, uint32_t insp_id)
 {
-    struct varray*  services = NULL;
+    struct varray* services = NULL;
     int i = 0;
     int j = 0;
 
@@ -231,7 +231,7 @@ void _vroute_srvc_space_inspect(struct vroute_srvc_space* space, vroute_srvc_spa
 static
 void _vroute_srvc_space_dump(struct vroute_srvc_space* space)
 {
-    struct varray* svcs = NULL;
+    struct varray* services = NULL;
     int titled = 0;
     int i = 0;
     int j = 0;
@@ -239,14 +239,14 @@ void _vroute_srvc_space_dump(struct vroute_srvc_space* space)
     vassert(space);
 
     for (i = 0; i < NBUCKETS; i++) {
-        svcs = &space->bucket[i].srvcs;
-        for (j = 0; j < varray_size(svcs); j++) {
+        services = &space->bucket[i].srvcs;
+        for (j = 0; j < varray_size(services); j++) {
             if (!titled) {
                 vdump(printf("-> list of services in service routing space:"));
                 titled = 1;
             }
             printf("{ ");
-            vservice_dump((struct vservice*)varray_get(svcs, j));
+            vservice_dump((struct vservice*)varray_get(services, j));
             printf(" }\n");
         }
     }
