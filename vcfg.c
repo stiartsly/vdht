@@ -1019,6 +1019,42 @@ error_exit:
 }
 
 static
+int _vcfg_get_host_wb_tmo(struct vconfig* cfg)
+{
+    const char* val = NULL;
+    int tms = 0;
+    int ret = 0;
+
+    vassert(cfg);
+    val = cfg->ops->get_str_val(cfg, "global.writeback_timeout");
+    if (!val) {
+        goto error_exit;
+    }
+
+    ret = strlen(val);
+    switch(val[ret-1]) {
+    case 's':
+        tms = 1;
+        break;
+    case 'm':
+        tms = 60;
+        break;
+    default:
+        goto error_exit;
+        break;
+    }
+    errno = 0;
+    ret = strtol(val, NULL, 10);
+    if (errno) {
+        goto error_exit;
+    }
+    return (ret* tms);
+
+error_exit:
+    return (60);
+}
+
+static
 const char* _vcfg_get_route_db_file(struct vconfig* cfg)
 {
     const char* file = NULL;
@@ -1140,6 +1176,7 @@ struct vconfig_ext_ops cfg_ext_ops = {
     .get_lsctl_socket       = _vcfg_get_lsctl_socket,
     .get_boot_nodes         = _vcfg_load_boot_nodes,
     .get_host_tick_tmo      = _vcfg_get_host_tick_tmo,
+    .get_host_wb_tmo        = _vcfg_get_host_wb_tmo,
 
     .get_route_db_file      = _vcfg_get_route_db_file,
     .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
