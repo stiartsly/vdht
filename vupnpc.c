@@ -48,15 +48,18 @@ int _vupnpc_setup(struct vupnpc* upnpc)
 
     memset(cfg, 0, sizeof(*cfg));
     cfg->devlist = upnpDiscover(2000, NULL, NULL, 0, 0, NULL);
-    vlogEv((!cfg->devlist), "No IGD found");
-    retE((!cfg->devlist));
+    vlogIv((!cfg->devlist), "No IGD found for unpnp mapping");
+    retS((!cfg->devlist));
 
     _aux_dump_IGD_devices(cfg->devlist);
 
     memset(upnpc->lan_iaddr, 0, 32);
     ret = UPNP_GetValidIGD(cfg->devlist, &cfg->urls, &cfg->data, upnpc->lan_iaddr, 32);
-    vlogEv((!ret), elog_UPNP_GetValidIGD);
-    ret1E((!ret), freeUPNPDevlist(cfg->devlist));
+    vlogIv((!ret), "no valid IGD found for upnp mapping");
+    if (!ret) {
+        freeUPNPDevlist(cfg->devlist);
+        return 0;
+    }
 
     upnpc->state = UPNPC_READY;
     return 0;
@@ -88,6 +91,29 @@ int _vupnpc_shutdown(struct vupnpc* upnpc)
         break;
     }
     return 0;
+}
+
+/* the routine test whether the upnp mapper can work (or mapp port);
+ *
+ * @upnpc
+ */
+static
+int _vupnpc_workable(struct vupnpc* upnpc)
+{
+    int workable = 0;
+    vassert(upnpc);
+
+    switch(upnpc->state) {
+    case UPNPC_ACTIVE:
+    case UPNPC_READY:
+        workable = 1;
+        break;
+    case UPNPC_RAW:
+    default:
+        workable = 0;
+        break;
+    }
+    return workable;
 }
 
 /*
@@ -238,6 +264,7 @@ int _vupnpc_status(struct vupnpc* upnpc, struct vupnpc_status* status)
 struct vupnpc_ops upnpc_ops = {
     .setup    = _vupnpc_setup,
     .shutdown = _vupnpc_shutdown,
+    .workable = _vupnpc_workable,
     .map      = _vupnpc_map,
     .unmap    = _vupnpc_unmap,
     .status   = _vupnpc_status

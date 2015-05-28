@@ -27,6 +27,7 @@ struct vupnpc;
 struct vupnpc_ops {
     int (*setup)   (struct vupnpc*);
     int (*shutdown)(struct vupnpc*);
+    int (*workable)(struct vupnpc*);
     int (*map)     (struct vupnpc*, struct sockaddr_in*, int, struct sockaddr_in*);
     int (*unmap)   (struct vupnpc*, uint16_t, int);
     int (*status)  (struct vupnpc*, struct vupnpc_status*);

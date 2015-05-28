@@ -91,6 +91,8 @@ int _aux_node_get_uaddrs(struct vnode* node)
     int i = 0;
 
     vassert(node);
+    retS(!upnpc->ops->workable(upnpc));
+
     for (i = 0; i < nodei->naddrs; i++) {
         if (!need_reflex_check(nodei->addrs[i].type)) {
             continue;
