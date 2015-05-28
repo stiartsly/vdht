@@ -236,7 +236,7 @@ int _vmsger_add_cb(struct vmsger* msger, void* cookie, vmsg_cb_t cb, int id)
  *  work. see (vrpc->ops->select, vroute->ops->loop)
  *
  *  @msger:
- *  @msg:
+ *  @mu:  user message body.
  */
 static
 int _vmsger_push(struct vmsger* msger, struct vmsg_usr* mu)
@@ -262,7 +262,7 @@ int _vmsger_push(struct vmsger* msger, struct vmsg_usr* mu)
 }
 
 /*
- *  to check whether msger has msg to send.
+ *  to check whether msger has message to send.
  *
  * @msger:
  */
@@ -294,12 +294,11 @@ int _vmsger_pop(struct vmsger* msger, struct vmsg_sys** ms)
     vassert(msger);
     vassert(ms);
 
+    *ms = NULL;
     vlock_enter(&msger->lock_msgs);
     if (!vlist_is_empty(&msger->msgs)) {
         node = vlist_pop_head(&msger->msgs);
         *ms = vlist_entry(node, struct vmsg_sys, list);
-    } else {
-        *ms = NULL;
     }
     vlock_leave(&msger->lock_msgs);
 

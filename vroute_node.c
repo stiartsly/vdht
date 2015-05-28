@@ -114,6 +114,25 @@ int _aux_space_find_node_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute_node_space*, space);
     varg_decl(cookie, 1, vnodeId*, targetId);
+    varg_decl(cookie, 2, vnodeInfo*, nodei);
+    varg_decl(cookie, 3, int*, found);
+    struct vpeer* peer = (struct vpeer*)item;
+
+    if (vtoken_equal(&peer->nodei->id, targetId)) {
+        vnodeInfo_copy(nodei, peer->nodei);
+        if (vtoken_equal(&peer->nodei->ver, &space->myver)) {
+            nodei->weight -= 1;
+        }
+        *found = 1;
+    }
+    return *found;
+}
+
+static
+int _aux_space_find_node_in_neighbors_cb(void* item, void* cookie)
+{
+    varg_decl(cookie, 0, struct vroute_node_space*, space);
+    varg_decl(cookie, 1, vnodeId*, targetId);
     struct vroute* route = space->route;
     struct vpeer*  peer  = (struct vpeer*)item;
     int ret = 0;
@@ -501,31 +520,24 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* node
  * @nodei[out]:
  */
 static
-int _vroute_node_space_get_node(struct vroute_node_space* space, vnodeId* targetId, vnodeInfo* nodei)
+int _vroute_node_space_find_node(struct vroute_node_space* space, vnodeId* targetId, vnodeInfo* nodei)
 {
-    struct varray* peers = NULL;
-    struct vpeer*  peer  = NULL;
     int found = 0;
     int idx = 0;
-    int i = 0;
 
     vassert(space);
     vassert(targetId);
     vassert(nodei);
 
     idx = vnodeId_bucket(&space->myid, targetId);
-    peers = &space->bucket[idx].peers;
-    for (i = 0; i < varray_size(peers); i++) {
-        peer = (struct vpeer*)varray_get(peers, i);
-        if (vtoken_equal(&peer->nodei->id, targetId)) {
-            vnodeInfo_copy(nodei, peer->nodei);
-            if (vtoken_equal(&peer->nodei->ver, &space->myver)) {
-                //minus because uncareness of version as to other nodes.
-                nodei->weight -= 1;
-            }
-            found = 1;
-            break;
-        }
+    {
+        void* argv[] = {
+            space,
+            targetId,
+            nodei,
+            &found
+        };
+        varray_iterate(&space->bucket[idx].peers, _aux_space_find_node_cb, argv);
     }
     return found;
 }
@@ -593,7 +605,6 @@ static
 int _vroute_node_space_find_node_in_neighbors(struct vroute_node_space* space, vnodeId* targetId)
 {
     int i = 0;
-
     vassert(space);
     vassert(targetId);
 
@@ -602,7 +613,7 @@ int _vroute_node_space_find_node_in_neighbors(struct vroute_node_space* space, v
             space,
             targetId
         };
-        varray_iterate(&space->bucket[i].peers, _aux_space_find_node_cb, argv);
+        varray_iterate(&space->bucket[i].peers, _aux_space_find_node_in_neighbors_cb, argv);
     }
     return 0;
 }
@@ -916,9 +927,9 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
 
 struct vroute_node_space_ops route_space_ops = {
     .add_node      = _vroute_node_space_add_node,
-    .get_node      = _vroute_node_space_get_node,
+    .find_node     = _vroute_node_space_find_node,
+    .find_node_in_neighbors = _vroute_node_space_find_node_in_neighbors,
     .get_neighbors = _vroute_node_space_get_neighbors,
-    .find_node     = _vroute_node_space_find_node_in_neighbors,
     .air_service   = _vroute_node_space_air_service,
     .probe_service = _vroute_node_space_probe_service,
     .reflex_addr   = _vroute_node_space_reflex_addr,

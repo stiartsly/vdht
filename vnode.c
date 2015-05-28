@@ -415,7 +415,7 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct vsockaddr_in* a
             break;
         }
     }
-    if (!found) {
+    if ((ret >= 0) && (!found)) {
         srvci = vsrvcInfo_alloc();
         vlogEv((!srvci), elog_vsrvcInfo_alloc);
         ret1E((!srvci), vlock_leave(&node->lock));

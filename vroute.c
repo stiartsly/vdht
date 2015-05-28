@@ -40,7 +40,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
  * that is to say, the service is probably the most responsive to client.
  *
  * @route:
- * @svc_hash: service hash id.
+ * @svc_hash: service hash ID.
  * @ncb: callback to show the number and protocol of service;
  * @icb: callback to show addresses.
  * @cookie: private data from user.
@@ -78,6 +78,7 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
  * the routine to probe 'best' suitable service from neighbor nodes.
  *
  * @route:
+ * @hash: service hash ID.
  * @ncb: callback to show the number of service addresses and protocol used by service
  * @icb: callback to show all addresses of service
  * @cookie: private data for user.
@@ -833,7 +834,7 @@ int _vroute_cb_find_node(struct vroute* route, vnodeConn* conn, void* ctxt)
 
     ret = route->dec_ops->find_node(ctxt, &token, &fromId, &targetId);
     retE((ret < 0));
-    ret = node_space->ops->get_node(node_space, &targetId, nodei);
+    ret = node_space->ops->find_node(node_space, &targetId, nodei);
     retE((ret < 0));
     if (ret == 1) { //means found
         ret = route->dht_ops->find_node_rsp(route, conn, &token, nodei);
@@ -1141,7 +1142,7 @@ int _vroute_cb_find_service(struct vroute* route, vnodeConn* conn, void* ctxt)
     retE((ret < 0));
     ret = srvc_space->ops->get_service(srvc_space, &srvcHash, srvci);
     retE((ret < 0));
-    retS((ret == 0));
+    retS((ret == 0)); //no response if no service was found.
     ret = route->dht_ops->find_service_rsp(route, conn, &token, srvci);
     retE((ret < 0));
     return 0;
@@ -1175,9 +1176,9 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
 
     ret = srvc_space->ops->add_service(srvc_space, srvci);
     retE((ret < 0));
-
-    //try to add info of node hosting that service.
-    ret = node_space->ops->find_node(node_space, &srvci->hostid);
+    //try to add dht node hosting that service into routing table, so
+    //as to cache this useful node
+    ret = node_space->ops->find_node_in_neighbors(node_space, &srvci->hostid);
     retE((ret < 0));
 
     DO_INSPECT(VROUTE_INSP_RCV_FIND_SERVICE_RSP);

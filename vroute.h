@@ -95,9 +95,9 @@ typedef void (*vroute_node_space_inspect_t)(struct vpeer*, void*, vtoken*, uint3
 struct vroute_node_space;
 struct vroute_node_space_ops {
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
-    int  (*get_node)     (struct vroute_node_space*, vnodeId*, vnodeInfo*);
+    int  (*find_node)    (struct vroute_node_space*, vnodeId*, vnodeInfo*);
+    int  (*find_node_in_neighbors)(struct vroute_node_space*, vnodeId*);
     int  (*get_neighbors)(struct vroute_node_space*, vnodeId*, struct varray*, int);
-    int  (*find_node)    (struct vroute_node_space*, vnodeId*);
     int  (*air_service)  (struct vroute_node_space*, vsrvcInfo*);
     int  (*probe_service)(struct vroute_node_space*, vsrvcHash*);
     int  (*reflex_addr)  (struct vroute_node_space*, struct sockaddr_in*);
