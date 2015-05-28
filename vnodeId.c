@@ -324,7 +324,7 @@ const char* vsockaddr_in_desc(uint32_t type)
 
     struct vsockaddr_desc* desc = sockaddr_descs;
     for (; desc->desc; desc++) {
-        if (desc->type == type) {
+        if (desc->type == (type & 0x00ff)) {
             return desc->desc;
         }
     }
@@ -535,11 +535,11 @@ void vnodeInfo_dump(vnodeInfo* nodei)
     printf("weight: %d,", nodei->weight);
     printf("addrs:");
     vsockaddr_dump(&nodei->addrs[0].addr);
-    printf(" %s ", vsockaddr_in_desc(nodei->addrs[0].type));
+    printf(" %s", vsockaddr_in_desc(nodei->addrs[0].type));
     for (i = 1; i < nodei->naddrs; i++) {
         printf(", ");
         vsockaddr_dump(&nodei->addrs[i].addr);
-        printf(" %s ", vsockaddr_in_desc(nodei->addrs[i].type));
+        printf(" %s", vsockaddr_in_desc(nodei->addrs[i].type));
     }
     printf("\n");
     return ;
@@ -770,7 +770,7 @@ void vsrvcInfo_dump(vsrvcInfo* srvci)
     for (i = 1; i < srvci->naddrs; i++) {
         printf(", ");
         vsockaddr_dump(&srvci->addrs[i].addr);
-        printf(" %s ", vsockaddr_in_desc(srvci->addrs[i].type));
+        printf(" %s", vsockaddr_in_desc(srvci->addrs[i].type));
     }
     return ;
 }

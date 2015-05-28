@@ -8,7 +8,7 @@
 #include "vnodeId.h"
 
 #define NEED_REFLEX_BIT  ((int)16)
-#define NEED_PROBE_BIT   ((int)16)
+#define NEED_PROBE_BIT   ((int)17)
 
 #define need_reflex_check(mask)   ((mask) & (1 << NEED_REFLEX_BIT))
 #define need_reflex_set(mask)     ((mask) |= (1 << NEED_REFLEX_BIT))
@@ -70,7 +70,9 @@ struct vnode_srvc_ops {
 
 struct vnode {
     int    tick_tmo;
-    time_t ts;
+    time_t tick_ts;
+    int    wb_tmo;
+    time_t wb_ts;
     int    mode;
     struct vlock lock;  // for mode.
 

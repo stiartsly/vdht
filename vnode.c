@@ -181,17 +181,23 @@ int _aux_node_tick_cb(void* cookie)
         _aux_node_get_uaddrs(node);
         _aux_node_get_eaddrs(node);
 
-        node->ts   = now;
+        node->tick_ts = now;
+        node->wb_ts   = now;
         node->mode = VDHT_RUN;
         vlogI("DHT start running");
         break;
     }
     case VDHT_RUN: {
-        if (now - node->ts > node->tick_tmo) {
+        if (now - node->tick_ts > node->tick_tmo) {
             node->route->ops->tick(node->route);
             node->ops->renice(node);
             node->ops->tick(node);
-            node->ts = now;
+            node->tick_ts = now;
+        }
+        //write back database at certain interval.
+        if (now - node->wb_ts > node->wb_tmo) {
+            node->route->ops->store(node->route);
+            node->wb_ts = now;
         }
         break;
     }
@@ -236,6 +242,8 @@ void _vnode_dump(struct vnode* node)
 
     vdump(printf("-> NODE"));
     vlock_enter(&node->lock);
+    vdump(printf("tick timeout:%ds", node->tick_tmo));
+    vdump(printf("writeback timeout: %ds", node->wb_tmo));
     vdump(printf("-> state:%s", node_mode_desc[node->mode]));
     vdump(printf("-> node infos:"));
     vnodeInfo_dump(node->nodei);
@@ -644,6 +652,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     node->ops     = &node_ops;
     node->srvc_ops= &node_srvc_ops;
     node->tick_tmo= cfg->ext_ops->get_host_tick_tmo(cfg);
+    node->wb_tmo  = cfg->ext_ops->get_host_wb_tmo(cfg);
 
     return 0;
 }
