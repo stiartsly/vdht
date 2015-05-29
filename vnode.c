@@ -250,9 +250,9 @@ void _vnode_dump(struct vnode* node)
     if (varray_size(&node->services) > 0) {
         vdump(printf("-> list of services:"));
         for (i = 0; i < varray_size(&node->services); i++) {
-            vsrvcInfo* svc = (vsrvcInfo*)varray_get(&node->services, i);
+            vsrvcInfo* srvci = (vsrvcInfo*)varray_get(&node->services, i);
             printf("{ ");
-            vsrvcInfo_dump(svc);
+            vsrvcInfo_dump(srvci);
             printf(" }\n");
         }
     }
@@ -293,7 +293,6 @@ static
 int _vnode_renice(struct vnode* node)
 {
     struct vnode_nice* node_nice = &node->node_nice;
-    vsrvcInfo* svc = NULL;
     int i = 0;
 
     vassert(node);
@@ -301,8 +300,8 @@ int _vnode_renice(struct vnode* node)
     vlock_enter(&node->lock);
     node->nice = node_nice->ops->get_nice(node_nice);
     for (i = 0; i < varray_size(&node->services); i++) {
-        svc = (vsrvcInfo*)varray_get(&node->services, i);
-        vsrvcInfo_set_nice(svc, node->nice);
+        vsrvcInfo* srvci = (vsrvcInfo*)varray_get(&node->services, i);
+        vsrvcInfo_set_nice(srvci, node->nice);
     }
     vlock_leave(&node->lock);
     return 0;
@@ -421,6 +420,7 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct vsockaddr_in* a
                 ret = -1;
             } else {
                 vsrvcInfo_add_addr(&srvci, &addr->addr, addr->type);
+                varray_set(&node->services, i, srvci);
             }
             break;
         }
