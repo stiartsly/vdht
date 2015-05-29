@@ -277,7 +277,7 @@ int vsys_get_cpu_ratio(int* ratio)
     {
         int busy_amount = busy - prev_busy;
         int idle_amount = idle - prev_idle;
-        *ratio = (int)(busy_amount * 10)/(busy_amount + idle_amount);
+        *ratio = (int)(busy_amount * 10)/(busy_amount + idle_amount + 1);
     }
     prev_busy = busy;
     prev_idle = idle;
