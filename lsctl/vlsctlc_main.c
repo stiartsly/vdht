@@ -28,6 +28,7 @@ struct option long_options[] = {
     {"ping",                no_argument,       0,        't'},
     {"addr",                required_argument, 0,        'm'},
     {"proto",               required_argument, 0,        'l'},
+    {"type",                required_argument, 0,        'y'},
     {"version",             no_argument,       0,        'v'},
     {"help",                no_argument,       0,        'h'},
     {0, 0, 0, 0}
@@ -50,7 +51,7 @@ void show_usage(void)
     printf("  -a, --add-node           --addr=IP:PORT   request to join node\n");
     printf("\n");
     printf(" About service options:\n");
-    printf("  -r, --fake-service-up   --addr=IP:PORT  --proto=tcp[,udp]\n");
+    printf("  -r, --fake-service-up   --addr=IP:PORT  --proto=tcp[,udp], --type=host[,upnp, rflx, relay]\n");
     printf("                                            request to post a fake service\n");
     printf("  -R, --fake-service-down --addr=IP:PORT    request to unpost a fake service\n");
     printf("  -f, --fake-service-find                   request to find fake service in vdhtd\n");
@@ -96,10 +97,11 @@ static char glsctlc_socket[256];
 static char glsctls_socket[256];
 static int  glsctlc_addr_opt  = 0;
 static int  glsctlc_proto_opt = 0;
+static int  glsctlc_type_opt  = 0;
 
 static struct sockaddr_in glsctlc_addr;
-static uint32_t glsctlc_addr_type = VSOCKADDR_LOCAL;
-static int  glsctlc_proto = VPROTO_UDP;
+static int      glsctlc_proto = VPROTO_UDP;
+static uint32_t glsctlc_type  = VSOCKADDR_LOCAL;
 static vsrvcHash glsctlc_hash;
 
 static
@@ -202,11 +204,6 @@ int _aux_parse_sockaddr_param(void)
         return -1;
     }
 
-    if (_aux_sockaddr_is_private(&glsctlc_addr)) {
-        glsctlc_addr_type = VSOCKADDR_LOCAL;
-    }else {
-        glsctlc_addr_type = VSOCKADDR_REFLEXIVE;
-    }
     return 0;
 }
 
@@ -214,7 +211,7 @@ static
 int _aux_parse_proto_param(void)
 {
     if (strlen(optarg) + 1 >= 8) {
-        printf("Invalid IP\n");
+        printf("Invalid protocol\n");
         return -1;
     }
     if (!strcmp(optarg, "udp")) {
@@ -222,6 +219,29 @@ int _aux_parse_proto_param(void)
     } else if (!strcmp(optarg, "tcp")) {
         glsctlc_proto = VPROTO_TCP;
     } else {
+        glsctlc_proto = VPROTO_UNKNOWN;
+        return -1;
+    }
+    return 0;
+}
+
+static
+int _aux_parse_type_param(void)
+{
+    if (strlen(optarg) + 1 >= 8) {
+        printf("Invalid address type\n");
+        return -1;
+    }
+    if (!strcmp(optarg, "host")) {
+        glsctlc_type = VSOCKADDR_LOCAL;
+    }else if (!strcmp(optarg, "upnp")) {
+        glsctlc_type = VSOCKADDR_UPNP;
+    }else if (!strcmp(optarg, "rflx")) {
+        glsctlc_type = VSOCKADDR_REFLEXIVE;
+    }else if (!strcmp(optarg, "relay")) {
+        glsctlc_type = VSOCKADDR_RELAY;
+    } else {
+        glsctlc_type = VSOCKADDR_UNKNOWN;
         return -1;
     }
     return 0;
@@ -281,7 +301,7 @@ int main(int argc, char** argv)
     }
 
     while(c >= 0) {
-        c = getopt_long(argc, argv, "U:S:dDxscarRfptm:l:vh", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "U:S:dDxscarRfptm:l:y:vh", long_options, &opt_idx);
         if (c < 0) {
             break;
         } else if (c == 0) {
@@ -362,6 +382,14 @@ int main(int argc, char** argv)
                 }
                 glsctlc_proto_opt = 1;
                 break;
+            case 'y':
+                ret = _aux_parse_type_param();
+                if (ret < 0) {
+                    printf("Bad address type\n");
+                    exit(-1);
+                }
+                glsctlc_type_opt = 1;
+                break;
             case 'v':
                 if (glsctlc_cmd) {
                     printf("Confused command, only one demand allowed\n");
@@ -435,7 +463,7 @@ int main(int argc, char** argv)
         ret = vdhtc_request_bogus_ping(&glsctlc_addr);
         break;
     case VCMD_POST_SERVICE:
-        ret = vdhtc_post_service_segment(&glsctlc_hash, &glsctlc_addr, glsctlc_addr_type, glsctlc_proto);
+        ret = vdhtc_post_service_segment(&glsctlc_hash, &glsctlc_addr, glsctlc_type, glsctlc_proto);
         break;
     case VCMD_UNPOST_SERVICE:
         ret = vdhtc_unpost_service_segment(&glsctlc_hash, &glsctlc_addr);
