@@ -677,15 +677,29 @@ int vsrvcInfo_add_addr(vsrvcInfo** ppsrvci, struct sockaddr_in* addr, uint32_t t
         srvci->capc += VSRVCINFO_MIN_ADDRS;
     }
 
+    // find whether already containing the address.
     for (i = 0; i < srvci->naddrs; i++) {
         if (vsockaddr_equal(&srvci->addrs[i].addr, addr)) {
+            if (srvci->addrs[i].type != type) {
+                srvci->addrs[i].type = type;
+            }
             found = 1;
             break;
         }
     }
+    // insert the address according to it's type value.
     if (!found) {
-        vsockaddr_copy(&srvci->addrs[srvci->naddrs].addr, addr);
-        srvci->addrs[srvci->naddrs].type = type;
+        for (i = srvci->naddrs; i > 0; i--) {
+            if (srvci->addrs[i-1].type > type) {
+                vsockaddr_copy(&srvci->addrs[i].addr, &srvci->addrs[i-1].addr);
+                srvci->addrs[i].type = srvci->addrs[i-1].type;
+            }else {
+                break;
+            }
+        }
+        vsockaddr_copy(&srvci->addrs[i].addr, addr);
+        srvci->addrs[i].type = type;
+
         srvci->naddrs++;
     }
     return 0;
