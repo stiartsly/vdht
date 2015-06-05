@@ -429,7 +429,8 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr, uint32_t t
     // find whether already containing the address.
     for (i = 0; i < nodei->naddrs; i++) {
         if (vsockaddr_equal(&nodei->addrs[i].addr, addr)) {
-            if (VSOCKADDR_TYPE(nodei->addrs[i].type) != VSOCKADDR_TYPE(type)) {
+            if ((VSOCKADDR_TYPE(type) != VSOCKADDR_UNKNOWN) &&
+                (VSOCKADDR_TYPE(nodei->addrs[i].type) != VSOCKADDR_TYPE(type))) {
                 //todo;
                 nodei->addrs[i].type = type;
             }
