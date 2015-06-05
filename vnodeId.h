@@ -47,6 +47,7 @@ enum {
     VSOCKADDR_UNKNOWN,
     VSOCKADDR_BUTT
 };
+#define VSOCKADDR_TYPE(type) (0x00ff & type)
 
 struct vsockaddr_in {
     struct sockaddr_in addr;

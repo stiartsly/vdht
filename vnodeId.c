@@ -425,15 +425,31 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr, uint32_t t
         nodei = *ppnodei =  new_nodei;
         nodei->capc += VNODEINFO_MIN_ADDRS;
     }
+
+    // find whether already containing the address.
     for (i = 0; i < nodei->naddrs; i++) {
         if (vsockaddr_equal(&nodei->addrs[i].addr, addr)) {
+            if (VSOCKADDR_TYPE(nodei->addrs[i].type) != VSOCKADDR_TYPE(type)) {
+                //todo;
+                nodei->addrs[i].type = type;
+            }
             found = 1;
             break;
         }
     }
+
+    // insert the address according to it's type value.
     if (!found) {
-        vsockaddr_copy(&nodei->addrs[nodei->naddrs].addr, addr);
-        nodei->addrs[nodei->naddrs].type = type;
+        for (i = nodei->naddrs; i > 0; i--) {
+            if (VSOCKADDR_TYPE(nodei->addrs[i-1].type) > VSOCKADDR_TYPE(type)) {
+                vsockaddr_copy(&nodei->addrs[i].addr, &nodei->addrs[i-1].addr);
+                nodei->addrs[i].type = nodei->addrs[i-1].type;
+            }else {
+                break;
+            }
+        }
+        vsockaddr_copy(&nodei->addrs[i].addr, addr);
+        nodei->addrs[i].type = type;
         nodei->naddrs++;
     }
     return (!found);
@@ -535,11 +551,11 @@ void vnodeInfo_dump(vnodeInfo* nodei)
     printf("weight: %d,", nodei->weight);
     printf("addrs:");
     vsockaddr_dump(&nodei->addrs[0].addr);
-    printf(" %s", vsockaddr_in_desc(nodei->addrs[0].type));
+    printf(" %s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[0].type)));
     for (i = 1; i < nodei->naddrs; i++) {
         printf(", ");
         vsockaddr_dump(&nodei->addrs[i].addr);
-        printf(" %s", vsockaddr_in_desc(nodei->addrs[i].type));
+        printf(" %s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[i].type)));
     }
     printf("\n");
     return ;
@@ -681,6 +697,7 @@ int vsrvcInfo_add_addr(vsrvcInfo** ppsrvci, struct sockaddr_in* addr, uint32_t t
     for (i = 0; i < srvci->naddrs; i++) {
         if (vsockaddr_equal(&srvci->addrs[i].addr, addr)) {
             if (srvci->addrs[i].type != type) {
+                //todo;
                 srvci->addrs[i].type = type;
             }
             found = 1;

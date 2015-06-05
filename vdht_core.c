@@ -276,7 +276,7 @@ struct be_node* be_create_vaddr(struct vsockaddr_in* addr)
 
     memset(buf, 0, 64);
     vsockaddr_strlize(&addr->addr, buf, 64);
-    sprintf(buf + strlen(buf), ":%d", (0x00ff & addr->type));
+    sprintf(buf + strlen(buf), ":%d", VSOCKADDR_TYPE(addr->type));
     node = be_create_str(buf);
     retE_p((!node));
     return node;
