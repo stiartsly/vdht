@@ -334,9 +334,9 @@ static
 int _aux_space_load_cb(void* priv, int col, char** value, char** field)
 {
     struct vroute_node_space* node_space = (struct vroute_node_space*)priv;
-    char* sid    = (char*)((void**)value)[1];
-    char* sver   = (char*)((void**)value)[2];
-    char* saddrs = (char*)((void**)value)[3];
+    char* sid    = (char*)((void**)value)[0];
+    char* sver   = (char*)((void**)value)[1];
+    char* saddrs = (char*)((void**)value)[2];
     DECL_VNODE_RELAX(nodei);
     struct vsockaddr_in vaddr;
     char saddr[64];
@@ -367,8 +367,9 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
 static
 int _aux_space_store_cb(void* item, void* cookie)
 {
+    varg_decl(cookie, 0, struct vroute_node_space*, space);
+    varg_decl(cookie, 1, sqlite3*, db);
     struct vpeer* peer = (struct vpeer*)item;
-    sqlite3* db = (sqlite3*)cookie;
     char sql_buf[BUF_SZ];
     char* err = NULL;
     char id[64];
@@ -386,6 +387,10 @@ int _aux_space_store_cb(void* item, void* cookie)
         //skip node with unknown version.
         return 0;
     }
+    if (peer->ntries >= space->max_snd_tms) {
+        return 0;
+    }
+
     {
         memset(id,    0, 64);
         memset(ver,   0, 64);
@@ -408,8 +413,8 @@ int _aux_space_store_cb(void* item, void* cookie)
 
     memset(sql_buf, 0, BUF_SZ);
     off = 0;
-    off += sprintf(sql_buf + off, "insert into '%s' ", VPEER_TB);
-    off += sprintf(sql_buf + off, " ('nodeId', 'ver', 'addrs')");
+    off += sprintf(sql_buf + off, "insert or replace into '%s' ", VPEER_TB);
+    off += sprintf(sql_buf + off, " ('id', 'ver', 'addrs')");
     off += sprintf(sql_buf + off, " values (");
     off += sprintf(sql_buf + off, " '%s',", id   );
     off += sprintf(sql_buf + off, " '%s',", ver  );
@@ -835,8 +840,12 @@ int _vroute_node_space_store(struct vroute_node_space* space)
     retE((ret));
 
     for (i = 0; i < NBUCKETS; i++) {
+        void* argv[] = {
+            space,
+            db
+        };
         peers = &space->bucket[i].peers;
-        varray_iterate(peers, _aux_space_store_cb, db);
+        varray_iterate(peers, _aux_space_store_cb, argv);
     }
     sqlite3_close(db);
     vlogI("writeback route infos");
@@ -961,14 +970,13 @@ int _aux_space_prepare_db(struct vroute_node_space* space)
 
     memset(sql_buf, 0, BUF_SZ);
     ret += sprintf(sql_buf + ret, "CREATE TABLE '%s' (", VPEER_TB);
-    ret += sprintf(sql_buf + ret, "'id' INTEGER PRIOMARY_KEY,");
-    ret += sprintf(sql_buf + ret, "'nodeId' TEXT,");
-    ret += sprintf(sql_buf + ret, "'ver'    TEXT,");
+    ret += sprintf(sql_buf + ret, "'id' char(160) PRIMARY KEY,");
+    ret += sprintf(sql_buf + ret, "'ver'    char(160),");
     ret += sprintf(sql_buf + ret, "'addrs'  TEXT)");
 
     ret = sqlite3_exec(db, sql_buf, NULL, NULL, &err);
     vlogEv((ret), elog_sqlite3_exec);
-    vlogEv((ret && err), "db err:%s\n", err);
+    vlogEv((ret && err), "prepare db err:%s\n", err);
 
     sqlite3_close(db);
     return 0;
