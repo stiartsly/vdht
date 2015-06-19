@@ -331,7 +331,7 @@ int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, stru
 
     ret = lsctl->ops->pack_cmd(lsctl, mbuf, BUF_SZ, rsp_args);
     free(rsp_args);
-    ret1E((ret < 0), free(mbuf));
+    ret1E((ret < 0), vmsg_buf_free(mbuf));
     {
         struct vmsg_usr msg = {
             .addr  = from,
@@ -341,7 +341,7 @@ int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, stru
             .len   = ret
         };
         ret = lsctl->msger.ops->push(&lsctl->msger, &msg);
-        ret1E((ret < 0), free(mbuf));
+        ret1E((ret < 0), vmsg_buf_free(mbuf));
     }
     return tsz;
 }
@@ -367,7 +367,7 @@ void _aux_vlsctl_number_addr_cb2(vsrvcHash* hash, int naddrs, int proto, void* c
 
         ret = lsctl->ops->pack_cmd(lsctl, mbuf, BUF_SZ, rsp_args);
         free(rsp_args);
-        ret1E_v((ret < 0), free(mbuf));
+        ret1E_v((ret < 0), vmsg_buf_free(mbuf));
         {
             struct vmsg_usr msg = {
                 .addr  = &args->from,
@@ -377,7 +377,7 @@ void _aux_vlsctl_number_addr_cb2(vsrvcHash* hash, int naddrs, int proto, void* c
                 .len   = ret
             };
             ret = lsctl->msger.ops->push(&lsctl->msger, &msg);
-            ret1E_v((ret < 0), free(mbuf));
+            ret1E_v((ret < 0), vmsg_buf_free(mbuf));
         }
     }
     return ;
@@ -403,7 +403,7 @@ void _aux_vlsctl_iterate_addr_cb2(vsrvcHash* hash, struct sockaddr_in* addr, uin
 
         ret = lsctl->ops->pack_cmd(lsctl, mbuf, BUF_SZ, rsp_args);
         free(rsp_args);
-        ret1E_v((ret < 0), free(mbuf));
+        ret1E_v((ret < 0), vmsg_buf_free(mbuf));
         {
             struct vmsg_usr msg = {
                 .addr  = &args->from,
@@ -413,7 +413,7 @@ void _aux_vlsctl_iterate_addr_cb2(vsrvcHash* hash, struct sockaddr_in* addr, uin
                 .len   = ret
             };
             ret = lsctl->msger.ops->push(&lsctl->msger, &msg);
-            ret1E_v((ret < 0), free(mbuf));
+            ret1E_v((ret < 0), vmsg_buf_free(mbuf));
         }
     }
     return ;
