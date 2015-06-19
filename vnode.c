@@ -377,7 +377,7 @@ int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct vso
     vassert(eaddr);
 
     vlock_enter(&node->lock);
-    (void)_aux_vnode_probe_nat(node, laddr, eaddr);
+    (void)_aux_vnode_probe_nat(node, laddr, &eaddr->addr);
     for (i = 0; i < nodei->naddrs; i++) {
         if (!need_reflex_check(nodei->addrs[i].type)) {
             continue;
