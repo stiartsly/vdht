@@ -13,7 +13,7 @@
 
 #define VSRVC_MAGIC_LEN ((int)128)
 
-__thread int verrno = 0;
+static __thread int verrno = 0;
 
 #define BUF_SZ ((int)1024)
 enum {
