@@ -69,6 +69,7 @@ struct vnode_srvc_ops {
 };
 
 struct vnode {
+    int    is_symm_nat;
     int    tick_tmo;
     time_t tick_ts;
     int    wb_tmo;

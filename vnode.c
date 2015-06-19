@@ -242,6 +242,11 @@ void _vnode_dump(struct vnode* node)
 
     vdump(printf("-> NODE"));
     vlock_enter(&node->lock);
+    if (node->is_symm_nat) {
+        vdump(printf("symmetric NAT"));
+    }else {
+        vdump(printf("Cone NAT"));
+    }
     vdump(printf("tick timeout:%ds", node->tick_tmo));
     vdump(printf("writeback timeout: %ds", node->wb_tmo));
     vdump(printf("-> state:%s", node_mode_desc[node->mode]));
@@ -326,6 +331,39 @@ void _vnode_tick(struct vnode* node)
     return ;
 }
 
+static
+int _aux_vnode_probe_nat(struct vnode* node, struct sockaddr_in* laddr, struct sockaddr_in* eaddr)
+{
+    struct vnode_nat_probe_data {
+        int dirty_mark;
+        struct sockaddr_in laddr;
+        struct sockaddr_in eaddr;
+    };
+
+    static
+    struct vnode_nat_probe_data data = {
+        .dirty_mark = 0
+    };
+
+    if (!vsockaddr_is_public(eaddr)) {
+       return 0;
+    }
+    if (!data.dirty_mark) {
+        vsockaddr_copy(&data.laddr, laddr);
+        vsockaddr_copy(&data.eaddr, eaddr);
+        data.dirty_mark = 1;
+    } else {
+        if (!vsockaddr_equal(&data.laddr, laddr)) {
+            return 0;
+        }
+        if (!vsockaddr_equal(&data.eaddr, eaddr)) {
+            node->is_symm_nat = 1;
+        } else {
+            node->is_symm_nat = 0;
+        }
+    }
+    return 0;
+}
 /*
  * the routine to update reflexive address.
  * @node
@@ -339,6 +377,7 @@ int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct vso
     vassert(eaddr);
 
     vlock_enter(&node->lock);
+    (void)_aux_vnode_probe_nat(node, laddr, eaddr);
     for (i = 0; i < nodei->naddrs; i++) {
         if (!need_reflex_check(nodei->addrs[i].type)) {
             continue;
@@ -641,6 +680,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     vlock_init(&node->lock);
     node->mode  = VDHT_OFF;
 
+    node->is_symm_nat = 0;
     node->nice = 5;
     varray_init(&node->services, 4);
     vnode_nice_init(&node->node_nice, cfg);

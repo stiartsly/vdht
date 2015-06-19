@@ -217,9 +217,9 @@ int _aux_space_reflex_addr_cb(void* item, void* cookie)
     if (peer->ntries >= space->max_snd_tms) {
         return 0;
     }
-    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
-        return 0;
-    }
+//    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+//        return 0;
+//    }
     if (!vsockaddr_is_public(&peer->conn.remote)) {
         return 0;
     }
