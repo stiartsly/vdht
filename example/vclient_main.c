@@ -21,7 +21,7 @@ static char* gserver_magic = \
      "@example-service@zhilong@kortide-corp@example@765fce110adcb92685cfe4"\
      "a2e990cc02ae361f483a2ad2929498e0e2d06abc46c98a58d36611f9ebe1";
 
-static char  gserver_socket[256];
+static char  gclient_socket[256];
 static char  glsctls_socket[256];
 static int   gclient_port = 0;
 static int   gserver_proto = VPROTO_UDP;
@@ -393,9 +393,9 @@ int main(int argc, char** argv)
     int ret = 0;
     int c = 0;
 
-    memset(gserver_socket, 0, 256);
+    memset(gclient_socket, 0, 256);
     memset(glsctls_socket, 0, 256);
-    strcpy(gserver_socket, "/var/run/vdht/lsctl_server_example");
+    strcpy(gclient_socket, "/var/run/vdht/lsctl_client_example");
     strcpy(glsctls_socket, "/var/run/vdht/lsctl_socket");
 
     if (argc <= 1) {
@@ -424,8 +424,8 @@ int main(int argc, char** argv)
                 printf("Too long for option 'unix-domain-file' \n");
                 exit(-1);
             }
-            memset(gserver_socket, 0, 256);
-            strcpy(gserver_socket, optarg);
+            memset(gclient_socket, 0, 256);
+            strcpy(gclient_socket, optarg);
             break;
         case 'S':
             if (strlen(optarg) + 1 >= 256) {
@@ -489,7 +489,7 @@ int main(int argc, char** argv)
         }
         vexample_dump_addr(&laddr);
 
-        vdhtc_init(gserver_socket, glsctls_socket);
+        vdhtc_init(gclient_socket, glsctls_socket);
         ret = vdhtc_find_service(&srvcHash, vexample_number_addr_cb, vexample_iterate_addr_cb, &to);
         if (ret < 0) {
             printf("post service failed.\n");
