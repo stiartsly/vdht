@@ -284,6 +284,34 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
     return 0;
 }
 
+static
+int _aux_vhost_get_nodeId(struct vconfig* cfg, vnodeId* myid)
+{
+    const char* id_file = cfg->ext_ops->get_host_ID_file(cfg);
+    char buf[64];
+    int ret = 0;
+    int fd  = 0;
+
+    fd = open(id_file, O_RDONLY);
+    if (fd > 0) {
+        memset(buf, 0, 64);
+        ret = read(fd, buf, 64);
+        close(fd);
+        vlogEv((ret < 0), elog_read);
+        vtoken_unstrlize(buf, myid);
+        return 0;
+    }
+    vtoken_make(myid);
+    vtoken_strlize(myid, buf, 64);
+
+    fd = open(id_file, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
+    vlogEv((fd < 0), elog_open);
+    retE((fd < 0));
+    write(fd, buf, strlen(buf));
+    close(fd);
+    return 0;
+}
+
 int vhost_init(struct vhost* host, struct vconfig* cfg, struct vlsctl* lsctl)
 {
     int ret = 0;
@@ -299,7 +327,9 @@ int vhost_init(struct vhost* host, struct vconfig* cfg, struct vlsctl* lsctl)
     host->ops      = &host_ops;
 
     vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &host->zaddr);
-    vtoken_make(&host->myid);
+    ret = _aux_vhost_get_nodeId(cfg, &host->myid);
+    retE((ret < 0));
+
 
     ret += vticker_init(&host->ticker);
     ret += vwaiter_init(&host->waiter);
