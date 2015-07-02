@@ -54,7 +54,7 @@ struct vconfig_ext_ops {
     int (*get_route_max_snd_tms)   (struct vconfig*);
     int (*get_route_max_rcv_tmo)   (struct vconfig*);
 
-    int (*get_dht_port)            (struct vconfig*);
+    int (*get_dht_address)         (struct vconfig*, struct sockaddr_in*);
 };
 
 struct vconfig {

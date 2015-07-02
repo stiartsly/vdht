@@ -1144,40 +1144,37 @@ error_exit:
 }
 
 static
-int _aux_get_addr_port(struct vconfig* cfg, const char* key, int* port)
+int _vcfg_get_dht_address(struct vconfig* cfg, struct sockaddr_in* addr)
 {
     struct varray* tuple = NULL;
     struct vcfg_item* item = NULL;
+    char ip[32];
+    int port = 0;
+    int ret  = 0;
 
     vassert(cfg);
-    vassert(key);
-    vassert(port);
+    vassert(addr);
 
-    tuple = cfg->ops->get_tuple_val(cfg, key);
+    tuple = cfg->ops->get_tuple_val(cfg, "dht.address");
     retE((!tuple));
+    item = (struct vcfg_item*)varray_get(tuple, 0);
+    retE((!item));
+    retE((item->type != CFG_STR));
+
+    memset(ip, 0, 32);
+    strcpy(ip, item->val.s);
 
     item = (struct vcfg_item*)varray_get(tuple, 1);
     retE((!item));
     retE((item->type != CFG_STR));
+
     errno = 0;
-    *port = strtol(item->val.s, NULL, 10);
+    port = strtol(item->val.s, NULL, 10);
     retE((errno));
 
+    ret = vsockaddr_convert(ip, port, addr);
+    retE((ret < 0));
     return 0;
-}
-
-static
-int _vcfg_get_dht_port(struct vconfig* cfg)
-{
-    int port = 0;
-    int ret = 0;
-    vassert(cfg);
-
-    ret = _aux_get_addr_port(cfg, "dht.address", &port);
-    if (ret < 0) {
-        port = (12300);
-    }
-    return port;
 }
 
 static
@@ -1196,7 +1193,8 @@ struct vconfig_ext_ops cfg_ext_ops = {
     .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
     .get_route_max_snd_tms  = _vcfg_get_route_max_snd_tms,
     .get_route_max_rcv_tmo  = _vcfg_get_route_max_rcv_tmo,
-    .get_dht_port           = _vcfg_get_dht_port
+
+    .get_dht_address        = _vcfg_get_dht_address,
 };
 
 int vconfig_init(struct vconfig* cfg)

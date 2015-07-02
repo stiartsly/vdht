@@ -609,48 +609,64 @@ struct vnode_srvc_ops node_srvc_ops = {
 };
 
 static
-int _aux_node_get_nodeinfo(vnodeInfo* nodei, vnodeId* myid, struct vconfig* cfg)
+void _aux_node_add_addr_cb(struct sockaddr_in* addr, void* cookie)
 {
-    struct vsockaddr_in vaddr;
+    vnodeInfo* nodei = (vnodeInfo*)cookie;
+    uint32_t   type  = 0;
+
+    vassert(addr);
+    vassert(nodei);
+
+    if (vsockaddr_is_private(addr)) {
+        type = VSOCKADDR_LOCAL;
+        need_reflex_set(type);
+        need_probe_set (type);
+    } else {
+        type = VSOCKADDR_REFLEXIVE;
+    }
+    vnodeInfo_add_addr(&nodei, addr, type);
+    return ;
+}
+
+static
+int _aux_node_get_nodeinfo(vnodeInfo* nodei, vnodeId* myid, struct vconfig* cfg, void (*cb)(struct sockaddr_in*, void*))
+{
+    struct sockaddr_in addr;
     vnodeVer ver;
     char ip[64] = {0};
-    int port = cfg->ext_ops->get_dht_port(cfg);
-    int ret  = 0;
+    uint16_t port = 0;
+    int num = 0;
+    int ret = 0;
 
     vassert(nodei);
-    vassert(myid);
     vassert(cfg);
+    vassert(cb);
 
     vnodeVer_unstrlize(vhost_get_version(), &ver);
     vnodeInfo_relax_init(nodei, myid, &ver, 0);
 
+    ret = cfg->ext_ops->get_dht_address(cfg, &addr);
+    retE((ret < 0));
+    if ((uint32_t)addr.sin_addr.s_addr) {
+        cb(&addr, nodei);
+        return 0;
+    }
+    port = ntohs(addr.sin_port);
     ret = vhostaddr_get_first(ip, 64);
     retE((ret < 0));
-    vsockaddr_convert(ip, port, &vaddr.addr);
-    if (vsockaddr_is_private(&vaddr.addr)) {
-        vaddr.type = VSOCKADDR_LOCAL;
-        need_reflex_set(vaddr.type);
-        need_probe_set(vaddr.type);
-    } else {
-        vaddr.type = VSOCKADDR_REFLEXIVE;
-    }
-    vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
+    vsockaddr_convert(ip, port, &addr);
+    cb(&addr, nodei);
+    num++;
 
-    while (nodei->naddrs < 3) {
+    while(num < 3) {
         memset(ip, 0, 64);
         ret = vhostaddr_get_next(ip, 64);
         if (ret <= 0) {
             break;
         }
-        vsockaddr_convert(ip, port, &vaddr.addr);
-        if (vsockaddr_is_private(&vaddr.addr)) {
-            vaddr.type = VSOCKADDR_LOCAL;
-            need_reflex_set(vaddr.type);
-            need_probe_set(vaddr.type);
-        }else {
-            vaddr.type = VSOCKADDR_REFLEXIVE;
-        }
-        vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
+        vsockaddr_convert(ip, port, &addr);
+        cb(&addr, nodei);
+        num++;
     }
     return 0;
 }
@@ -674,7 +690,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     memset(node->nodei, 0, sizeof(vnodeInfo_relax));
     node->nodei->capc = VNODEINFO_MAX_ADDRS;
 
-    ret = _aux_node_get_nodeinfo(node->nodei, myid, cfg);
+    ret = _aux_node_get_nodeinfo(node->nodei, myid, cfg, _aux_node_add_addr_cb);
     retE((ret < 0));
 
     vlock_init(&node->lock);

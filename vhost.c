@@ -326,10 +326,10 @@ int vhost_init(struct vhost* host, struct vconfig* cfg, struct vlsctl* lsctl)
     host->lsctl    = lsctl;
     host->ops      = &host_ops;
 
-    vsockaddr_convert2(INADDR_ANY, cfg->ext_ops->get_dht_port(cfg), &host->zaddr);
+    ret = cfg->ext_ops->get_dht_address(cfg, &host->zaddr);
+    retE((ret < 0));
     ret = _aux_vhost_get_nodeId(cfg, &host->myid);
     retE((ret < 0));
-
 
     ret += vticker_init(&host->ticker);
     ret += vwaiter_init(&host->waiter);
