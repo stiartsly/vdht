@@ -358,8 +358,6 @@ int _aux_vnode_probe_nat(struct vnode* node, struct sockaddr_in* laddr, struct s
         }
         if (!vsockaddr_equal(&data.eaddr, eaddr)) {
             node->is_symm_nat = 1;
-        } else {
-            node->is_symm_nat = 0;
         }
     }
     return 0;
