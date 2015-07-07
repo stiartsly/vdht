@@ -772,11 +772,12 @@ int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret = route->dec_ops->ping(ctxt, &token, &fromId);
     retE((ret < 0));
 
-    vnodeInfo_relax_init(nodei, &fromId, vnodeVer_unknown(), 0);
-    vnodeInfo_add_addr(&nodei, &conn->remote, VSOCKADDR_UNKNOWN);
-    ret = node_space->ops->add_node(node_space, nodei, 1);
-    retE((ret < 0));
-
+    if (vsockaddr_is_public(&conn->remote)) {
+        vnodeInfo_relax_init(nodei, &fromId, vnodeVer_unknown(), 0);
+        vnodeInfo_add_addr(&nodei, &conn->remote, VSOCKADDR_REFLEXIVE);
+        ret = node_space->ops->add_node(node_space, nodei, 1);
+        retE((ret < 0));
+    }
     DO_INSPECT(VROUTE_INSP_RCV_PING);
     ret = route->dht_ops->ping_rsp(route, conn, &token, route->node->nodei);
     retE((ret < 0));
@@ -802,7 +803,9 @@ int _vroute_cb_ping_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     retE((ret < 0));
     DO_CHECK_TOKEN();
 
-    vnodeInfo_add_addr(&nodei, &conn->remote, VSOCKADDR_UNKNOWN);
+    if (vsockaddr_is_public(&conn->remote)) {
+        vnodeInfo_add_addr(&nodei, &conn->remote, VSOCKADDR_REFLEXIVE);
+    }
     ret = node_space->ops->add_node(node_space, nodei, 1);
     retE((ret < 0));
 
