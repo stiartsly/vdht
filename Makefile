@@ -22,9 +22,9 @@ libvdht_objs  :=  vlog.o \
 	          vroute_srvc.o  \
                   vroute_srvc_probe.o 
 
-libvdht       := libvdht.a
+libvdht       := libvdht.so
 libutils      := libutils.a
-libvdhtapi    := libvdhtapi.a
+libvdhtapi    := libvdhtapi.so
 
 bin_vdht_objs := vmain.o
 bin_vdht_libs := $(libvdht) $(libutils)
@@ -43,7 +43,7 @@ apps          := $(bin_vdhtd) $(bin_lsctlc) $(bin_server) $(bin_client)
 all: $(libs) $(apps)
 
 $(libvdht): $(libvdht_objs) $(libutils)
-	$(AR) -r $@ $(libvdht_objs) $(addprefix $(ROOT_PATH)/utils/, $(libutils))
+	$(CC) -fPIC -shared -o $@ $(libvdht_objs) $(addprefix $(ROOT_PATH)/utils/, $(libutils)) $(LDFLAGS)
 	$(RM) -f $(libvdht_objs)
 
 $(libutils):
@@ -53,7 +53,7 @@ $(libvdhtapi):
 	$(MK) --directory=lsctl $@
 
 $(bin_vdhtd): $(bin_vdht_objs) $(libvdht)
-	$(CC) -o $@ $^ $(addprefix $(ROOT_PATH)/utils/, $(libutils)) $(LDFLAGS)
+	$(CC) -o $@ $^ $(LDFLAGS) -L. -lvdht
 	$(RM) -f $(bin_vdht_objs)
 
 $(bin_lsctlc): $(libvdhtapi)
@@ -64,6 +64,10 @@ $(bin_server) $(bin_client): $(libvdhtapi)
 
 $(bin_hashgen): 
 	$(MK) --directory=hashgen $@
+
+install:
+	$(CP) -p $(libvdht) /usr/local/lib
+	$(MK) --directory=lsctl $@
 clean:
 	$(MK) --directory=lsctl clean
 	$(MK) --directory=utils clean

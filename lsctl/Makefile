@@ -5,7 +5,7 @@ include ../common.mk
 
 libvdhtapi_incs := . ..
 libvdhtapi_objs := vhashgen.o vlsctlc.o  vdhtapi.o 
-libvdhtapi      := libvdhtapi.a
+libvdhtapi      := libvdhtapi.so
 
 bin_lsctlc_objs := vlsctlc_main.o
 bin_lsctlc_libs := $(libvdhtapi)
@@ -19,12 +19,15 @@ apps := $(bin_lsctlc)
 all: $(apps) $(libs)
 
 $(bin_lsctlc): $(bin_lsctlc_objs) $(bin_lsctlc_libs)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(CC) -o $@ $< $(LDFLAGS) -L. -lvdhtapi
 	$(RM) -f $<
 
 $(libvdhtapi): $(libvdhtapi_objs)
-	$(AR) -r $@ $^
+	$(CC) -fPIC -shared -o $@ $^ $(LDFLAGS)
 	$(RM) -f $^
+
+install:
+	$(CP) -p $(libvdhtapi) /usr/local/lib
 
 clean:
 	$(RM) -f $(objs)

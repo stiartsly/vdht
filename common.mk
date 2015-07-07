@@ -23,8 +23,8 @@ LDFLAGS := -lpthread -lsqlite3 -lrt $(addprefix -L, $(library_dirs)) -lminiupnpc
 $(libraries): $(objects)
 	$(AR) -r $@ @^
 
-#(%.o): %.c 
-#	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $*.o
+%.o: %.c 
+	$(CC) -fPIC -shared $(CFLAGS) $(CPPFLAGS) -c $< -o $*.o
 #	$(AR) -r $@ $*.o
 #	$(RM) $*.o
 
