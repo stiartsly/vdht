@@ -118,6 +118,11 @@ void _aux_node_get_eaddrs(struct vnode* node)
     int i = 0;
     vassert(node);
 
+    if (node->reflx_tms >= 3) {
+        return ;
+    }
+    node->reflx_tms++;
+
     for (i = 0; i < nodei->naddrs; i++) {
         if (!need_reflex_check(nodei->addrs[i].type)) {
             continue;
@@ -695,6 +700,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     node->mode  = VDHT_OFF;
 
     node->is_symm_nat = 0;
+    node->reflx_tms   = 0;
     node->nice = 5;
     varray_init(&node->services, 4);
     vnode_nice_init(&node->node_nice, cfg);

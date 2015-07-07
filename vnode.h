@@ -70,10 +70,14 @@ struct vnode_srvc_ops {
 
 struct vnode {
     int    is_symm_nat;
+    int    reflx_tms;   // times to get reflexive address
+
     int    tick_tmo;
     time_t tick_ts;
-    int    wb_tmo;
+
+    int    wb_tmo;      //writeback to database;
     time_t wb_ts;
+
     int    mode;
     struct vlock lock;  // for mode.
 
