@@ -453,6 +453,29 @@ int _aux_space_weight_cmp_cb(void* item, void* new, void* cookie)
     return vnodeMetric_cmp(&tm, &pm);
 }
 
+static
+int _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
+{
+    struct varray* peers = NULL;
+    struct vpeer*  peer  = NULL;
+    int idx = 0;
+    int i = 0;
+    vassert(space);
+    vassert(id);
+
+    idx = vnodeId_bucket(&space->myid, id);
+    peers = &space->bucket[idx].peers;
+    for (i = 0; i < varray_size(peers); i++) {
+        peer = (struct vpeer*)varray_get(peers, i);
+        if (vtoken_equal(&peer->nodei->id, id)) {
+            peer->rcv_ts = time(NULL);
+            peer->ntries = 0;
+            break;
+        }
+    }
+    return 0;
+}
+
 /*
  * the routine to add a node to routing table.
  * @route: routing table.
@@ -935,6 +958,7 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
 }
 
 struct vroute_node_space_ops route_space_ops = {
+    .kick_node     = _vroute_node_space_kick_node,
     .add_node      = _vroute_node_space_add_node,
     .find_node     = _vroute_node_space_find_node,
     .find_node_in_neighbors = _vroute_node_space_find_node_in_neighbors,

@@ -886,6 +886,8 @@ int _vroute_cb_find_node_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 
     ret = node_space->ops->add_node(node_space, nodei, 0);
     retE((ret < 0));
+    ret = node_space->ops->kick_node(node_space, &fromId);
+    retE((ret < 0));
 
     DO_INSPECT(VROUTE_INSP_RCV_FIND_NODE_RSP);
     return 0;
@@ -913,6 +915,8 @@ int _vroute_cb_find_closest_nodes(struct vroute* route, vnodeConn* conn, void* c
     vassert(ctxt);
 
     ret = route->dec_ops->find_closest_nodes(ctxt, &token, &fromId, &targetId);
+    retE((ret < 0));
+    ret = node_space->ops->kick_node(node_space, &fromId);
     retE((ret < 0));
 
     varray_init(&closest, MAX_CAPC);
@@ -960,6 +964,12 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, voi
         varray_deinit(&closest);
         return -1;
     }
+    ret = node_space->ops->kick_node(node_space, &fromId);
+    if (ret < 0) {
+        varray_zero(&closest, _aux_vnodeInfo_free, NULL);
+        varray_deinit(&closest);
+        return -1;
+    }
 
     for (i = 0; i < varray_size(&closest); i++) {
         node_space->ops->add_node(node_space, (vnodeInfo*)varray_get(&closest, i), 0);
@@ -980,6 +990,7 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, voi
 static
 int _vroute_cb_reflex(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
+    struct vroute_node_space* node_space = &route->node_space;
     struct vsockaddr_in reflexive_addr;
     vnodeId fromId;
     vtoken  token;
@@ -990,6 +1001,8 @@ int _vroute_cb_reflex(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(ctxt);
 
     ret = route->dec_ops->reflex(ctxt, &token, &fromId);
+    retE((ret < 0));
+    ret = node_space->ops->kick_node(node_space, &fromId);
     retE((ret < 0));
 
     vsockaddr_copy(&reflexive_addr.addr, &conn->remote);
@@ -1013,6 +1026,7 @@ int _vroute_cb_reflex(struct vroute* route, vnodeConn* conn, void* ctxt)
 static
 int _vroute_cb_reflex_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
+    struct vroute_node_space* node_space = &route->node_space;
     struct vnode* node = route->node;
     struct vsockaddr_in reflexive_addr;
     vnodeId fromId;
@@ -1026,6 +1040,9 @@ int _vroute_cb_reflex_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret = route->dec_ops->reflex_rsp(ctxt, &token, &fromId, &reflexive_addr);
     retE((ret < 0));
     DO_CHECK_TOKEN();
+
+    ret = node_space->ops->kick_node(node_space, &fromId);
+    retE((ret < 0));
 
     ret = node->ops->reflex_addr(node, &conn->local, &reflexive_addr);
     retE((ret < 0));
@@ -1043,6 +1060,7 @@ int _vroute_cb_reflex_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
 static
 int _vroute_cb_probe(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
+    struct vroute_node_space* node_space = &route->node_space;
     vnodeId targetId;
     vnodeId fromId;
     vtoken  token;
@@ -1055,6 +1073,9 @@ int _vroute_cb_probe(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret = route->dec_ops->probe(ctxt, &token, &fromId, &targetId);
     retE((ret < 0));
     retE((!vtoken_equal(&targetId, &route->myid)));
+
+    ret = node_space->ops->kick_node(node_space, &fromId);
+    retE((ret < 0));
 
     ret = route->dht_ops->probe_rsp(route, conn, &token);
     retE((ret < 0));
@@ -1083,6 +1104,9 @@ int _vroute_cb_probe_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     retE((ret < 0));
     DO_CHECK_TOKEN();
 
+    ret = node_space->ops->kick_node(node_space, &fromId);
+    retE((ret < 0));
+
     ret = node_space->ops->adjust_connectivity(node_space, &fromId, conn);
     retE((ret < 0));
 
@@ -1101,6 +1125,7 @@ static
 int _vroute_cb_post_service(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
+    struct vroute_node_space* node_space = &route->node_space;
     DECL_VSRVC_RELAX(srvci);
     vnodeId fromId;
     vtoken  token;
@@ -1111,6 +1136,9 @@ int _vroute_cb_post_service(struct vroute* route, vnodeConn* conn, void* ctxt)
     vassert(ctxt);
 
     ret = route->dec_ops->post_service(ctxt, &token, &fromId, srvci);
+    retE((ret < 0));
+
+    ret = node_space->ops->kick_node(node_space, &fromId);
     retE((ret < 0));
 
     ret = srvc_space->ops->add_service(srvc_space, srvci);
@@ -1131,6 +1159,7 @@ static
 int _vroute_cb_find_service(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_srvc_space* srvc_space = &route->srvc_space;
+    struct vroute_node_space* node_space = &route->node_space;
     DECL_VSRVC_RELAX(srvci);
     vsrvcHash srvcHash;
     vnodeId fromId;
@@ -1143,6 +1172,9 @@ int _vroute_cb_find_service(struct vroute* route, vnodeConn* conn, void* ctxt)
 
     ret = route->dec_ops->find_service(ctxt, &token, &fromId, &srvcHash);
     retE((ret < 0));
+    ret = node_space->ops->kick_node(node_space, &fromId);
+    retE((ret < 0));
+
     ret = srvc_space->ops->get_service(srvc_space, &srvcHash, srvci);
     retE((ret < 0));
     retS((ret == 0)); //no response if no service was found.
@@ -1176,6 +1208,8 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     ret = route->dec_ops->find_service_rsp(ctxt, &token, &fromId, srvci);
     retE((ret < 0));
     DO_CHECK_TOKEN();
+    ret = node_space->ops->kick_node(node_space, &fromId);
+    retE((ret < 0));
 
     ret = srvc_space->ops->add_service(srvc_space, srvci);
     retE((ret < 0));
