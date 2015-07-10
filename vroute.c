@@ -64,7 +64,7 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
     retE((ret < 0));
 
     if (!ret) { // means no services found, but need to tell client.
-        ncb(&srvci->hash, 0, VPROTO_UNKNOWN, cookie);
+        ncb(hash, 0, VPROTO_UNKNOWN, cookie);
         return 0;
     }
     ncb(&srvci->hash, srvci->naddrs, vsrvcInfo_proto(srvci), cookie);
@@ -803,10 +803,7 @@ int _vroute_cb_ping_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     retE((ret < 0));
     DO_CHECK_TOKEN();
 
-    if (vsockaddr_is_public(&conn->remote)) {
-        vnodeInfo_add_addr(&nodei, &conn->remote, VSOCKADDR_REFLEXIVE);
-    }
-    ret = node_space->ops->add_node(node_space, nodei, 1);
+    ret = node_space->ops->add_node(node_space, nodei, 2);
     retE((ret < 0));
 
     DO_INSPECT(VROUTE_INSP_RCV_PING_RSP);

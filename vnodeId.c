@@ -414,6 +414,10 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr, uint32_t t
 
     retE((nodei->naddrs >= VNODEINFO_MAX_ADDRS));
 
+    /*
+     * if the number of addresses is about to exceed capacitiy, then realloc
+     * 'nodei' to ship more addresses.
+     */
     if (nodei->naddrs >= nodei->capc) {
         vnodeInfo* new_nodei = NULL;
         int extra_sz = sizeof(struct vsockaddr_in) * nodei->capc;
@@ -426,13 +430,15 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr, uint32_t t
         nodei->capc += VNODEINFO_MIN_ADDRS;
     }
 
-    // find whether already containing the address.
     for (i = 0; i < nodei->naddrs; i++) {
+        if (!vsockaddr_equal(&nodei->addrs[i].addr, addr)) {
+            continue;
+        }
         if (vsockaddr_equal(&nodei->addrs[i].addr, addr)) {
             if ((VSOCKADDR_TYPE(type) != VSOCKADDR_UNKNOWN) &&
                 (VSOCKADDR_TYPE(nodei->addrs[i].type) != VSOCKADDR_TYPE(type))) {
                 //todo;
-                nodei->addrs[i].type = type;
+                nodei->addrs[i].type = VSOCKADDR_TYPE(type);
             }
             found = 1;
             break;
@@ -450,7 +456,7 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr, uint32_t t
             }
         }
         vsockaddr_copy(&nodei->addrs[i].addr, addr);
-        nodei->addrs[i].type = type;
+        nodei->addrs[i].type = VSOCKADDR_TYPE(type);
         nodei->naddrs++;
     }
     return (!found);
@@ -473,60 +479,74 @@ int vnodeInfo_has_addr(vnodeInfo* nodei, struct sockaddr_in* addr)
     return found;
 }
 
-int vnodeInfo_copy(vnodeInfo* dest, vnodeInfo* src)
+int vnodeInfo_copy(vnodeInfo** ppdest, vnodeInfo* src)
 {
+    vnodeInfo* dest = *ppdest;
+    int updated = 0;
     int ret = 0;
     int i = 0;
 
     vassert(dest);
     vassert(src);
 
-    vtoken_copy(&dest->id,  &src->id);
+    vtoken_copy(&dest->id,  &src->id );
     vtoken_copy(&dest->ver, &src->ver);
     dest->weight = src->weight;
     dest->naddrs = 0;
 
-    memset(dest->addrs, 0, sizeof(struct vsockaddr_in)*dest->capc);
+    memset(dest->addrs, 0, sizeof(struct vsockaddr_in)* dest->capc);
     for (i = 0; i < src->naddrs; i++) {
-        ret = vnodeInfo_add_addr(&dest, &src->addrs[i].addr, src->addrs[i].type);
+        ret = vnodeInfo_add_addr(ppdest, &src->addrs[i].addr, src->addrs[i].type);
         retE((ret < 0));
+        updated++;
     }
-    return 0;
+    return (!!updated);
 }
 
-int vnodeInfo_update(vnodeInfo* dest, vnodeInfo* src)
+int vnodeInfo_merge(vnodeInfo** ppdest, vnodeInfo* src)
 {
-    int updt = 0;
+    vnodeInfo* dest = *ppdest;
+    int updated = 0;
     int ret = 0;
-    int i = 0;
+    int i   = 0;
 
     vassert(dest);
     vassert(src);
-    vassert(vtoken_equal(&dest->id, &src->id));
 
-    if (vtoken_equal(&src->ver, vnodeVer_unknown())) {
-        // only interested in addresses
+    if (!vtoken_equal(&dest->id, &src->id)) {
+        return 0;
+    }
+    if (vnodeInfo_is_fake(src)) {
+        /*
+         * if source is DHT nodei with unknown version ( normally due to
+         * receiving 'ping' query from a DHT node), then only the address
+         * is interested to 'dest' DHT nodei;
+         */
         for (i = 0; i < src->naddrs; i++) {
-            ret = vnodeInfo_has_addr(dest, &src->addrs[i].addr);
-            if (ret > 0) {
+            if (vnodeInfo_has_addr(dest, &src->addrs[i].addr) > 0) {
                 continue;
             }
-            ret = vnodeInfo_add_addr(&dest, &src->addrs[i].addr, src->addrs[i].type);
+            ret = vnodeInfo_add_addr(ppdest, &src->addrs[i].addr, src->addrs[i].type);
             retE((ret < 0));
-            updt += 1;
+            updated++;
         }
-        return (!!updt);
+        return (!!updated);
     }
-
-    // if have different number of addresses, then update it and
-    // set updated flags;
+    /*
+     * if 'src' DHT nodei has diffrent number of addresses from 'dest' DHT
+     * nodei, then it means that DHT node to 'dest' might be updated for
+     * some reasons, and 'dest' nodei need to be updated accordingly.
+     */
     if (dest->naddrs != src->naddrs) {
-        ret = vnodeInfo_copy(dest, src);
+        ret = vnodeInfo_copy(ppdest, src);
         retE((ret < 0));
         return 1;
     }
 
-    // if have same number of addresses, then compare each address.
+    /*
+     * if 'src' DHT nodei has same number of addresses with 'dest' DHT nodei,
+     * just compare each address and update it.
+     */
     vtoken_copy(&dest->ver, &src->ver);
     dest->weight = src->weight;
     for (i = 0; i < src->naddrs; i++) {
@@ -534,10 +554,22 @@ int vnodeInfo_update(vnodeInfo* dest, vnodeInfo* src)
             continue;
         }
         vsockaddr_copy(&dest->addrs[i].addr, &src->addrs[i].addr);
-        dest->addrs[i].type = dest->addrs[i].type;
-        updt++;
+        dest->addrs[i].type = VSOCKADDR_TYPE(dest->addrs[i].type);
+        updated++;
     }
-    return (!!updt);
+    return (!!updated);
+}
+
+struct sockaddr_in* vnodeInfo_worst_addr(vnodeInfo* nodei)
+{
+    vassert(nodei);
+    return &nodei->addrs[nodei->naddrs-1].addr;
+}
+
+int vnodeInfo_is_fake(vnodeInfo* nodei)
+{
+    vassert(nodei);
+    return (vtoken_equal(&nodei->ver, vnodeVer_unknown()));
 }
 
 void vnodeInfo_dump(vnodeInfo* nodei)

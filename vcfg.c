@@ -1094,20 +1094,7 @@ int _vcfg_get_route_bucket_sz(struct vconfig* cfg)
 }
 
 static
-int _vcfg_get_route_max_snd_tms(struct vconfig* cfg)
-{
-    int tms = 0;
-    vassert(cfg);
-
-    tms = cfg->ops->get_int_val(cfg, "route.max_send_times");
-    if (tms < 0) {
-        tms = 5;
-    }
-    return tms;
-}
-
-static
-int _vcfg_get_route_max_rcv_tmo(struct vconfig* cfg)
+int _vcfg_get_route_max_next_tmo(struct vconfig* cfg)
 {
     const char* val = NULL;
     int tms = 0;
@@ -1115,7 +1102,7 @@ int _vcfg_get_route_max_rcv_tmo(struct vconfig* cfg)
 
     vassert(cfg);
 
-    val = cfg->ops->get_str_val(cfg, "route.max_rcv_period");
+    val = cfg->ops->get_str_val(cfg, "route.max_next_tmo");
     if (!val) {
         goto error_exit;
     }
@@ -1191,8 +1178,7 @@ struct vconfig_ext_ops cfg_ext_ops = {
 
     .get_route_db_file      = _vcfg_get_route_db_file,
     .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
-    .get_route_max_snd_tms  = _vcfg_get_route_max_snd_tms,
-    .get_route_max_rcv_tmo  = _vcfg_get_route_max_rcv_tmo,
+    .get_route_max_next_tmo = _vcfg_get_route_max_next_tmo,
 
     .get_dht_address        = _vcfg_get_dht_address,
 };

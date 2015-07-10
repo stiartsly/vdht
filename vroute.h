@@ -83,12 +83,12 @@ void vroute_conn_space_deinit(struct vroute_conn_space*);
  * for node space
  */
 struct vpeer {
-    vnodeConn  conn;
+    vnodeConn conn;
     vnodeInfo* nodei;
-    time_t snd_ts;
-    time_t rcv_ts;
-    int ntries;
-    int nprobes;
+    time_t  tick_ts;
+    int32_t next_tmo; //next timeout expired.
+    int ntry_pings;
+    int ntry_probes;
 };
 
 typedef void (*vroute_node_space_inspect_t)(struct vpeer*, void*, vtoken*, uint32_t);
@@ -120,9 +120,11 @@ struct vroute_node_space {
     struct sockaddr_in zaddr;
     char db[BUF_SZ];
     int  bucket_sz;
-    int  max_snd_tms;
-    int  max_rcv_tmo;
+
+    int  init_next_tmo;
+    int  max_next_tmo;
     int  max_probe_tms;
+    int  max_ping_tms;
 
     struct vroute* route;
     struct vroute_node_space_bucket {

@@ -2,6 +2,7 @@
 #include "vroute.h"
 
 #define VPEER_TB ((const char*)"dht_peer")
+#define vminimum(x, y) (x >= y ? y : x)
 /*
  * for vpeer
  */
@@ -38,34 +39,77 @@ void vpeer_free(struct vpeer* peer)
 }
 
 static
-int vpeer_init(struct vpeer* peer, struct sockaddr_in* local, vnodeInfo* nodei, time_t rcv_ts, int direct)
+int vpeer_init(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo* nodei)
 {
     vassert(peer);
+    vassert(space);
     vassert(nodei);
 
-    vnodeConn_set(&peer->conn, local, &nodei->addrs[nodei->naddrs-1].addr);
-    vnodeInfo_copy(peer->nodei, nodei);
-    peer->rcv_ts = direct ? rcv_ts : 0;
-    peer->ntries = direct ? 0 : peer->ntries;
-    peer->nprobes = 0;
+    vnodeInfo_copy(&peer->nodei, nodei);
+    vnodeConn_set (&peer->conn, &space->zaddr, vnodeInfo_worst_addr(peer->nodei));
+
+    peer->tick_ts     = time(NULL);
+    peer->next_tmo    = space->init_next_tmo;
+    peer->ntry_pings  = 0;
+    peer->ntry_probes = 0;
     return 0;
 }
 
 static
-int vpeer_update(struct vpeer* peer, vnodeInfo* nodei, time_t rcv_ts, int direct)
+int vpeer_update(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo* nodei, int flag)
 {
     int ret = 0;
     vassert(peer);
+    vassert(space);
     vassert(nodei);
 
-    if (direct) {
-        peer->rcv_ts = rcv_ts;
+    switch(flag) {
+    case 2:
+        /*
+         * If received a DHT ping response from bad node, then that bad node
+         * turned to be good node with initial 'next_tmo';
+         * If received a DHT ping response from good node, then 'next_tmo' of
+         * good node can be prolonged with a small step.
+         *
+         */
+        if (peer->ntry_pings > 2) { //means bad node
+            peer->next_tmo   = space->init_next_tmo;
+        } else {
+            peer->next_tmo++;
+            peer->next_tmo = vminimum(peer->next_tmo, space->max_next_tmo >> 1);
+        }
+        peer->ntry_pings = 0;
+        peer->tick_ts = time(NULL);
+        break;
+    case 1:
+        /*
+         * If received a DHT ping query from bad node, then regress 'next_tmo'
+         * back to initial value, so as to send ping as soon as possible.
+         * If received a DHT ping query from good node, do nothing but update
+         * 'tick_ts'.
+         */
+        if (peer->ntry_pings > 1) {
+            peer->next_tmo = space->init_next_tmo;
+        }
+        peer->tick_ts = time(NULL);
+        break;
+    case 0:
+        /* updated not because of the DHT node itself. So, no sure for this
+         * DHT node is bad or good for now.
+         */
+        //do nothing;
+        break;
+    default:
+        vassert(0);
+        break;
     }
-    ret = vnodeInfo_update(peer->nodei, nodei);
-    retE((ret < 0));
 
-    peer->nprobes = (ret > 0) ? 0 : peer->nprobes;
-    peer->ntries  = direct ? 0 : peer->ntries;
+    ret = vnodeInfo_merge(&peer->nodei, nodei);
+    retE((ret < 0));
+    if (ret > 0) {
+        vnodeConn_set(&peer->conn, &space->zaddr, vnodeInfo_worst_addr(peer->nodei));
+        peer->ntry_probes = 0;
+    }
     return ret;
 }
 
@@ -75,10 +119,12 @@ void vpeer_dump(struct vpeer* peer)
     vassert(peer);
 
     vnodeInfo_dump(peer->nodei);
-    printf("timestamp[snd]: %s",  peer->snd_ts ? ctime(&peer->snd_ts): "not yet ");
-    printf("timestamp[rcv]: %s",  ctime(&peer->rcv_ts));
-    printf("tried send times:%d ", peer->ntries);
-    printf("probed times:%d", peer->nprobes);
+    printf("local:");    vsockaddr_dump(&peer->conn.local);
+    printf(" remote: "); vsockaddr_dump(&peer->conn.remote); printf("\n");
+    printf("tick ts: %s", ctime(&peer->tick_ts));
+    printf("next_tmo:%d\n", peer->next_tmo);
+    printf("tried ping  times:%d\n", peer->ntry_pings);
+    printf("tried probe times:%d\n", peer->ntry_probes);
     return ;
 }
 
@@ -87,45 +133,28 @@ int _aux_space_add_node_cb(void* item, void* cookie)
 {
     struct vpeer* peer = (struct vpeer*)item;
     varg_decl(cookie, 0, vnodeInfo*, nodei);
-    varg_decl(cookie, 1, int*,       min_weight);
-    varg_decl(cookie, 2, int*,       max_period);
-    varg_decl(cookie, 3, time_t*,    now);
-    varg_decl(cookie, 4, int*,       found);
-    varg_decl(cookie, 5, struct vpeer**, to);
+    varg_decl(cookie, 1, int*,       min_wgt);
+    varg_decl(cookie, 2, int*,       max_try);
+    varg_decl(cookie, 3, int*,       found);
+    varg_decl(cookie, 4, struct vpeer**, want);
 
     if (vtoken_equal(&peer->nodei->id, &nodei->id)) {
-        *to = peer;
+        *want  = peer;
         *found = 1;
         return 1;
     }
-    if ((*now - peer->rcv_ts) > *max_period) {
-        *to = peer;
-        *max_period = *now - peer->rcv_ts;
+
+    if (*max_try < peer->ntry_pings) {
+        *want = peer;
+        *max_try = peer->ntry_pings;
+        return 0;
     }
-    if (peer->nodei->weight < *min_weight) {
-        *to = peer;
-        *min_weight = peer->nodei->weight;
+    if (*min_wgt > peer->nodei->weight) {
+        *want = peer;
+        *min_wgt = peer->nodei->weight;
+        return 0;
     }
     return 0;
-}
-
-static
-int _aux_space_find_node_cb(void* item, void* cookie)
-{
-    varg_decl(cookie, 0, struct vroute_node_space*, space);
-    varg_decl(cookie, 1, vnodeId*, targetId);
-    varg_decl(cookie, 2, vnodeInfo*, nodei);
-    varg_decl(cookie, 3, int*, found);
-    struct vpeer* peer = (struct vpeer*)item;
-
-    if (vtoken_equal(&peer->nodei->id, targetId)) {
-        vnodeInfo_copy(nodei, peer->nodei);
-        if (vtoken_equal(&peer->nodei->ver, &space->myver)) {
-            nodei->weight -= 1;
-        }
-        *found = 1;
-    }
-    return *found;
 }
 
 static
@@ -141,10 +170,11 @@ int _aux_space_find_node_in_neighbors_cb(void* item, void* cookie)
     vassert(targetId);
     vassert(peer);
 
-    if (peer->ntries >= space->max_snd_tms) {
+    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+        //means it's a 'worst' bad DHT node (unreachable);
         return 0;
     }
-    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+    if (vnodeInfo_is_fake(peer->nodei)) {
         return 0;
     }
     ret = route->dht_ops->find_node(route, &peer->conn, targetId);
@@ -157,7 +187,7 @@ int _aux_space_air_service_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute_node_space*, space);
     varg_decl(cookie, 1, vsrvcInfo*, srvci);
-    struct vpeer* peer = (struct vpeer*)item;
+    struct vpeer* peer   = (struct vpeer*)item;
     struct vroute* route = space->route;
     int ret = 0;
 
@@ -165,10 +195,12 @@ int _aux_space_air_service_cb(void* item, void* cookie)
     vassert(srvci);
     vassert(peer);
 
-    if (peer->ntries >= space->max_snd_tms) {
-        return 0; //unreachable.
+    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+        //means it's a 'worst' bad DHT node (unreachable);
+        return 0;
     }
-    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+    if (vnodeInfo_is_fake(peer->nodei)) {
+        //Do not air service to fake DHT node.
         return 0;
     }
     ret = route->dht_ops->post_service(route, &peer->conn, srvci);
@@ -189,10 +221,12 @@ int _aux_space_probe_service_cb(void* item, void* cookie)
     vassert(hash);
     vassert(peer);
 
-    if (peer->ntries >= space->max_snd_tms) {
-        return 0; // unreachable.
+    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+        //means it's a 'worst' bad DHT node (unreachable);
+        return 0;
     }
-    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+    if (vnodeInfo_is_fake(peer->nodei)) {
+        //Do not air service to fake DHT node.
         return 0;
     }
     ret = route->dht_ops->find_service(route, &peer->conn, hash);
@@ -214,12 +248,14 @@ int _aux_space_reflex_addr_cb(void* item, void* cookie)
     vassert(addr);
     vassert(peer);
 
-    if (peer->ntries >= space->max_snd_tms) {
+    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+        //means it's a 'worst' bad DHT node (unreachable);
         return 0;
     }
-//    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
-//        return 0;
-//    }
+    //if (vtoken_equal(&space->nodei->ver, vnodeVer_unknown())) {
+        //Do not air service to fake DHT node.
+    //    return 0;
+    //}
     if (!vsockaddr_is_public(&peer->conn.remote)) {
         return 0;
     }
@@ -243,13 +279,16 @@ int _aux_space_probe_connectivity_cb(void* item, void* cookie)
     vassert(space);
     vassert(laddr);
 
-    if (peer->nprobes >= space->max_probe_tms) { //probed enough;
+    if (peer->ntry_probes >= space->max_probe_tms) {
+        //already probed enough times;
         return 0;
     }
-    if (peer->ntries >= space->max_snd_tms) {
+    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+        //means it's a 'worst' bad DHT node (unreachable);
         return 0;
     }
-    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+    if (vnodeInfo_is_fake(peer->nodei)) {
+        //Do not probe connectivity with fake DHT node.
         return 0;
     }
     for (j = 0; j < peer->nodei->naddrs; j++) {
@@ -257,7 +296,7 @@ int _aux_space_probe_connectivity_cb(void* item, void* cookie)
         vnodeConn_set(&conn, laddr, &peer->nodei->addrs[i].addr);
         route->dht_ops->probe(route, &conn, &peer->nodei->id);
     }
-    peer->nprobes++;
+    peer->ntry_probes++;
     return 0;
 }
 
@@ -273,15 +312,28 @@ int _aux_space_tick_cb(void* item, void* cookie)
     vassert(space);
     vassert(now);
 
-    if (peer->ntries >=  space->max_snd_tms) { //unreachable.
+    /*
+     * each peer has it's own 'next_tmo' value, which means the interval
+     * time to send 'ping' query to that node for next time.
+     */
+    if (peer->tick_ts + peer->next_tmo > *now) {
+        return 0;
+    }
+    if ((peer->ntry_pings > space->max_ping_tms) && vnodeInfo_is_fake(peer->nodei)) {
         return 0;
     }
 
-    if ((!peer->snd_ts) ||
-        (*now - peer->rcv_ts > space->max_rcv_tmo)) {
-        route->dht_ops->ping(route, &peer->conn);
-        peer->snd_ts = *now;
-        peer->ntries++;
+    route->dht_ops->ping(route, &peer->conn);
+    peer->ntry_pings++;
+    peer->tick_ts = time(NULL);
+
+    if (peer->ntry_pings > space->max_ping_tms) {
+        /* if no rsp to DHT ping query is received from that bad node for
+         * more than certian times, then increase 'next_tmo', so as to
+         * reduce frequency of sending DHT 'ping' query.
+         */
+        peer->next_tmo += 2;
+        peer->next_tmo = vminimum(peer->next_tmo, space->max_next_tmo);
     }
     return 0;
 }
@@ -357,7 +409,7 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
             vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
             pos = strchr(saddrs, ',');
         }
-        _aux_vsockaddr_unstrlize(saddr, &vaddr);
+        _aux_vsockaddr_unstrlize(saddrs, &vaddr);
         vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
     }
     node_space->ops->add_node(node_space, nodei, 0);
@@ -383,14 +435,14 @@ int _aux_space_store_cb(void* item, void* cookie)
     vassert(peer);
     vassert(db);
 
-    if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
-        //skip node with unknown version.
+    if (vnodeInfo_is_fake(peer->nodei)) {
+        //skip fake DHT node.
         return 0;
     }
-    if (peer->ntries >= space->max_snd_tms) {
+    if (peer->ntry_pings > 0 && peer->next_tmo >= space->max_next_tmo){
+        //skip 'worst' bad DHT node.
         return 0;
     }
-
     {
         memset(id,    0, 64);
         memset(ver,   0, 64);
@@ -430,26 +482,22 @@ int _aux_space_store_cb(void* item, void* cookie)
 static
 int _aux_space_weight_cmp_cb(void* item, void* new, void* cookie)
 {
-    struct vpeer* peer = (struct vpeer*)item;
-    struct vpeer* tgt  = (struct vpeer*)new;
-    vnodeId* targetId  = (vnodeId*)cookie;
+    struct vpeer* peer   = (struct vpeer*)item;
+    struct vpeer* target = (struct vpeer*)new;
+    vnodeId* targetId = (vnodeId*)cookie;
     vnodeMetric pm, tm;
 
-    if (tgt->ntries > 0) {
-        // try to not use node that may be unreachable.
+    if (target->ntry_pings > peer->ntry_pings) {
         return -1;
     }
-    if (!vtoken_equal(&tgt->nodei->ver, &peer->nodei->ver)) {
-        // if mismatch for version, try not use the node.
+    if (!vtoken_equal(&target->nodei->ver, &peer->nodei->ver)) {
         return -1;
     }
-    if (tgt->nodei->weight > peer->nodei->weight) {
-        // prefer to use node with hight weight
+    if (target->nodei->weight > peer->nodei->weight) {
         return 1;
     }
-
     vnodeId_dist(&peer->nodei->id, targetId, &pm);
-    vnodeId_dist(&tgt->nodei->id,  targetId, &tm);
+    vnodeId_dist(&target->nodei->id,  targetId, &tm);
     return vnodeMetric_cmp(&tm, &pm);
 }
 
@@ -457,7 +505,6 @@ static
 int _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
 {
     struct varray* peers = NULL;
-    struct vpeer*  peer  = NULL;
     int idx = 0;
     int i = 0;
     vassert(space);
@@ -466,75 +513,83 @@ int _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
     idx = vnodeId_bucket(&space->myid, id);
     peers = &space->bucket[idx].peers;
     for (i = 0; i < varray_size(peers); i++) {
-        peer = (struct vpeer*)varray_get(peers, i);
-        if (vtoken_equal(&peer->nodei->id, id)) {
-            peer->rcv_ts = time(NULL);
-            peer->ntries = 0;
-            break;
+        struct vpeer* peer = (struct vpeer*)varray_get(peers, i);
+        if (!vtoken_equal(&peer->nodei->id, id)) {
+            continue;
         }
+        /*
+         * All dht messages from 'peer' are considered as ping-like messages.
+         * So, when message is received from that 'peer', 'rcv_ts' to that
+         * 'peer' will be updated.
+         */
+        peer->tick_ts = time(NULL);
+        break;
     }
     return 0;
 }
 
 /*
- * the routine to add a node to routing table.
+ * add a DHT node to node routing space.
+ *
  * @route: routing table.
- * @node:  node address to add to routing table.
- * @flags: properties that node has.
+ * @nodei: nodeinfo to add;
+ * @flag:  flag to indicate 3 following situation:
+ *          0: occured when 'nodei' is not from it's DHT node, such as by 'find_
+ *             node' or 'find_closest_nodes_rsp' message.
+ *          1: occured when received 'ping' query;
+ *          2: occured when received a response to ping query.
  */
 static
-int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* nodei, int direct)
+int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* nodei, int flag)
 {
     struct varray* peers = NULL;
-    struct vpeer*  to    = NULL;
-    time_t now = time(NULL);
-    int min_weight = 0;
-    int max_period = 0;
+    struct vpeer*  want  = NULL;
+    int updated = 0;
+    int min_wgt = 0;
+    int max_try = 0;
     int found = 0;
-    int updt  = 0;
     int idx = 0;
     int ret = 0;
 
     vassert(space);
     vassert(nodei);
-    retS((vtoken_equal(&space->myid, &nodei->id)));
-
+    if (vtoken_equal(&space->myid, &nodei->id)) {
+        return 0;
+    }
     if (vtoken_equal(&space->myver, &nodei->ver)) {
         nodei->weight++;
     }
-
-    min_weight = nodei->weight;
+    min_wgt = nodei->weight;
     idx = vnodeId_bucket(&space->myid, &nodei->id);
     peers = &space->bucket[idx].peers;
     {
         void* argv[] = {
             nodei,
-            &min_weight,
-            &max_period,
-            &now,
+            &min_wgt,
+            &max_try,
             &found,
-            &to
+            &want,
         };
         varray_iterate(peers, _aux_space_add_node_cb, argv);
         if (found) { //found
-            ret = vpeer_update(to, nodei, now, direct);
-            updt = (ret > 0);
-        } else if (to && (varray_size(peers) >= space->bucket_sz)) { //replace worst one.
-            ret = vpeer_init(to, &space->zaddr, nodei, now, direct);
-            updt = (ret >= 0);
+            ret = vpeer_update(want, space, nodei, flag);
+            updated = (ret > 0);
+        } else if (want && varray_size(peers) >= space->bucket_sz) {
+            //replace worst 'bad' nodei;
+            ret = vpeer_update(want, space, nodei, flag);
+            updated = (ret > 0);
         } else if (varray_size(peers) < space->bucket_sz) {
-            // insert new one.
-            to = vpeer_alloc();
-            vlogEv((!to), elog_vpeer_alloc);
-            retE((!to));
-            vpeer_init(to, &space->zaddr, nodei, now, direct);
-            varray_add_tail(peers, to);
-            updt = 1;
+            want = vpeer_alloc();
+            vlogEv((!want), elog_vpeer_alloc);
+            retE((!want));
+            vpeer_init(want, space, nodei);
+            varray_add_tail(peers, want);
+            updated = 1;
         } else {
             //bucket is full, discard new
         }
-        if (updt) {
-            space->bucket[idx].ts = now;
+        if (updated) {
+            space->bucket[idx].ts = time(NULL);
         }
     }
     return 0;
@@ -550,22 +605,28 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* node
 static
 int _vroute_node_space_find_node(struct vroute_node_space* space, vnodeId* targetId, vnodeInfo* nodei)
 {
+    struct varray* peers = NULL;
     int found = 0;
     int idx = 0;
+    int i   = 0;
 
     vassert(space);
     vassert(targetId);
     vassert(nodei);
 
     idx = vnodeId_bucket(&space->myid, targetId);
-    {
-        void* argv[] = {
-            space,
-            targetId,
-            nodei,
-            &found
-        };
-        varray_iterate(&space->bucket[idx].peers, _aux_space_find_node_cb, argv);
+    peers = &space->bucket[idx].peers;
+    for (i = 0; i < varray_size(peers); i++) {
+        struct vpeer* peer = (struct vpeer*)varray_get(peers, i);
+        if (!vtoken_equal(&peer->nodei->id, targetId)) {
+            continue;
+        }
+        vnodeInfo_copy(&nodei, peer->nodei);
+        if (vtoken_equal(&peer->nodei->ver, &space->myver)) {
+            nodei->weight--;
+        }
+        found = 1;
+        break;
     }
     return found;
 }
@@ -594,10 +655,10 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
             if (vtoken_equal(&peer->nodei->id, targetId)) {
                 continue;
             }
-            if (vtoken_equal(&peer->nodei->ver, vnodeVer_unknown())) {
+            if (vnodeInfo_is_fake(peer->nodei)) {
                 continue;
             }
-            if (peer->ntries >= space->max_snd_tms) {
+            if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
                 continue;
             }
             vsorted_array_add(&sarray, peer);
@@ -614,7 +675,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
         if ((!nodei)) {
             break;
         }
-        vnodeInfo_copy(nodei, item->nodei);
+        vnodeInfo_copy(&nodei, item->nodei);
         if (vtoken_equal(&nodei->ver, &space->myver)) {
             nodei->weight--;
         }
@@ -803,14 +864,19 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
         if (varray_size(peers) <= 0) {
             continue;
         }
-        if ((now - space->bucket[i].ts) <= space->max_rcv_tmo * 5) {
+        if (space->bucket[i].ts + space->max_next_tmo > now) {
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
-        if (peer->ntries >= space->max_snd_tms) {
+        if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
             continue;
         }
+        if (vnodeInfo_is_fake(peer->nodei)) {
+            continue;
+        }
+
         route->dht_ops->find_closest_nodes(route, &peer->conn, &space->myid);
+        space->bucket[i].ts = time(NULL);
     }
     return 0;
 }
@@ -941,7 +1007,10 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
             peer = (struct vpeer*)varray_get(peers, j);
-            if (peer->ntries >= space->max_snd_tms) {
+            if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+                continue;
+            }
+            if ((peer->ntry_pings > 0) && vnodeInfo_is_fake(peer->nodei)) {
                 continue;
             }
             if (!titled) {
@@ -1019,9 +1088,10 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     ret = cfg->ext_ops->get_dht_address(cfg, &space->zaddr);
     retE((ret < 0));
 
-    space->bucket_sz   = cfg->ext_ops->get_route_bucket_sz(cfg);
-    space->max_snd_tms = cfg->ext_ops->get_route_max_snd_tms(cfg);
-    space->max_rcv_tmo = cfg->ext_ops->get_route_max_rcv_tmo(cfg);
+    space->bucket_sz     = cfg->ext_ops->get_route_bucket_sz(cfg);
+    space->init_next_tmo = 2;
+    space->max_next_tmo  = cfg->ext_ops->get_route_max_next_tmo(cfg);
+    space->max_ping_tms  = 3;
     space->max_probe_tms = 3;
 
     ret = _aux_space_prepare_db(space);

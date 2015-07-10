@@ -88,12 +88,12 @@ void vnodeInfo_free(vnodeInfo*);
 int  vnodeInfo_init(vnodeInfo*, vnodeId*, vnodeVer*, int);
 
 int  vnodeInfo_add_addr (vnodeInfo**, struct sockaddr_in*, uint32_t);
-int  vnodeInfo_has_addr (vnodeInfo*, struct sockaddr_in*);
-int  vnodeInfo_cat_addr (vnodeInfo*, vnodeInfo*);
-int  vnodeInfo_update   (vnodeInfo*, vnodeInfo*);
-int  vnodeInfo_copy     (vnodeInfo*, vnodeInfo*);
+int  vnodeInfo_has_addr (vnodeInfo*,  struct sockaddr_in*);
+int  vnodeInfo_merge    (vnodeInfo**, vnodeInfo*);
+int  vnodeInfo_copy     (vnodeInfo**, vnodeInfo*);
+int  vnodeInfo_is_fake  (vnodeInfo*);
 void vnodeInfo_dump     (vnodeInfo*);
-
+struct sockaddr_in* vnodeInfo_worst_addr(vnodeInfo*);
 
 #define DECL_VNODE_RELAX(nodei) \
     vnodeInfo_relax nodei_relax = { \
