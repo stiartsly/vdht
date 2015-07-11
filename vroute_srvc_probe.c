@@ -132,7 +132,7 @@ void _vroute_srvc_probe_space_timed_reap(struct vroute_srvc_probe_space* space)
 
     for (i = 0; i < varray_size(&space->items);) {
         item = (struct vsrvc_probe*)varray_get(&space->items, i);
-        if ((now - item->ts) > space->max_tmo) {
+        if ((now - item->ts) > space->overdue_tmo) {
             varray_del(&space->items, i);
             vsrvc_probe_free(item);
         } else {
@@ -187,7 +187,7 @@ int vroute_srvc_probe_space_init(struct vroute_srvc_probe_space* space)
 {
     vassert(space);
 
-    space->max_tmo = 5; //max timeout 5s.
+    space->overdue_tmo = 5; //max timeout 5s.
     varray_init(&space->items, 4);
     space->ops = &route_srvc_probe_space_ops;
     return 0;

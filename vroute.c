@@ -22,7 +22,11 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
     vassert(route);
     vassert(addr);
 
-    vtoken_make(&id); //make up a fake ID.
+    /*
+     * make up a fake DHT nodei, which will lead to interconnect with
+     * real DHT node with same address.
+     */
+    vtoken_make(&id);
     vnodeInfo_relax_init(nodei, &id, vnodeVer_unknown(), 0);
     vnodeInfo_add_addr(&nodei, addr, VSOCKADDR_UNKNOWN);
 
@@ -63,7 +67,7 @@ int _vroute_find_service(struct vroute* route, vsrvcHash* hash, vsrvcInfo_number
     vlock_leave(&route->lock);
     retE((ret < 0));
 
-    if (!ret) { // means no services found, but need to tell client.
+    if (!ret) { // means no services found, but need to tell client anyway.
         ncb(hash, 0, VPROTO_UNKNOWN, cookie);
         return 0;
     }
@@ -272,7 +276,7 @@ int _vroute_tick(struct vroute* route)
 
     vlock_enter(&route->lock);
     node_space->ops->tick(node_space);
-    recr_space->ops->timed_reap(recr_space);// reap all timeout records.
+    recr_space->ops->timed_reap(recr_space);
     srvc_probe_space->ops->timed_reap(srvc_probe_space);
     vlock_leave(&route->lock);
     return 0;

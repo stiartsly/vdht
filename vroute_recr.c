@@ -48,8 +48,8 @@ void vrecord_dump(struct vrecord* record)
 }
 
 /*
- * the routine to make a record after sending a dht query msg.
- * in case to check the rightness of response message.
+ * the routine to make a record temporarily after sending a DHT query, in
+ * case to check validity of response messages.
  *
  * @space:
  * @token:
@@ -73,11 +73,11 @@ int _vroute_recr_space_make(struct vroute_recr_space* space, vtoken* token)
 }
 
 /*
- * the routine to check the dht message( always response message) with given
- * token is in the messages record that sent before.
+ * the routine to check DHT response message valid or not. If the transaction
+ * ID is found in space, then response message is valid.
  *
  * @space:
- * @token:
+ * @token: transaction ID
  */
 static
 int _vroute_recr_space_check(struct vroute_recr_space* space, vtoken* token)
@@ -117,7 +117,7 @@ void _vroute_recr_space_timed_reap(struct vroute_recr_space* space)
 
     for (i = 0; i < varray_size(&space->records);) {
         record = (struct vrecord*)varray_get(&space->records, i);
-        if ((now - record->snd_ts) > space->max_recr_period) {
+        if ((now - record->snd_ts) > space->overdue_tmo) {
             varray_del(&space->records, i);
             vrecord_free(record);
         } else {
@@ -176,7 +176,7 @@ int vroute_recr_space_init(struct vroute_recr_space* space)
 {
     vassert(space);
 
-    space->max_recr_period = 5; //5s;
+    space->overdue_tmo = 5; //5 seconds
     varray_init(&space->records, 8);
 
     space->ops = &route_record_space_ops;
