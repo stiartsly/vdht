@@ -71,7 +71,7 @@ struct vpeer {
 typedef void (*vroute_node_space_inspect_t)(struct vpeer*, void*, vtoken*, uint32_t);
 struct vroute_node_space;
 struct vroute_node_space_ops {
-    int  (*kick_node)    (struct vroute_node_space*, vnodeId*);
+    void (*kick_node)    (struct vroute_node_space*, vnodeId*);
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
     int  (*find_node)    (struct vroute_node_space*, vnodeId*, vnodeInfo*);
     int  (*find_node_in_neighbors)(struct vroute_node_space*, vnodeId*);

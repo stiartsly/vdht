@@ -502,7 +502,7 @@ int _aux_space_weight_cmp_cb(void* item, void* new, void* cookie)
 }
 
 static
-int _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
+void _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
 {
     struct varray* peers = NULL;
     int idx = 0;
@@ -525,7 +525,7 @@ int _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
         peer->tick_ts = time(NULL);
         break;
     }
-    return 0;
+    return ;
 }
 
 /*
