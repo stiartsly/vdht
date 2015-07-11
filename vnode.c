@@ -135,6 +135,7 @@ void _aux_node_get_eaddrs(struct vnode* node)
 static
 void _aux_node_probe_connectivity(struct vnode* node)
 {
+    struct vroute* route = node->route;
     vnodeInfo* nodei = node->nodei;
     int i = 0;
     vassert(node);
@@ -143,7 +144,7 @@ void _aux_node_probe_connectivity(struct vnode* node)
         if (!need_probe_check(nodei->addrs[i].type)) {
             continue;
         }
-        node->route->ops->probe_connectivity(node->route, &nodei->addrs[i].addr);
+        route->ops->probe_connectivity(route, &nodei->addrs[i].addr);
     }
     return;
 }
@@ -623,10 +624,10 @@ void _aux_node_add_addr_cb(struct sockaddr_in* addr, void* cookie)
     if (vsockaddr_is_private(addr)) {
         type = VSOCKADDR_LOCAL;
         need_reflex_set(type);
-        need_probe_set (type);
     } else {
         type = VSOCKADDR_REFLEXIVE;
     }
+    need_probe_set (type);
     vnodeInfo_add_addr(&nodei, addr, type);
     return ;
 }

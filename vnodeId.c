@@ -438,7 +438,7 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr, uint32_t t
             if ((VSOCKADDR_TYPE(type) != VSOCKADDR_UNKNOWN) &&
                 (VSOCKADDR_TYPE(nodei->addrs[i].type) != VSOCKADDR_TYPE(type))) {
                 //todo;
-                nodei->addrs[i].type = VSOCKADDR_TYPE(type);
+                nodei->addrs[i].type = type;
             }
             found = 1;
             break;
@@ -456,7 +456,7 @@ int vnodeInfo_add_addr(vnodeInfo** ppnodei, struct sockaddr_in* addr, uint32_t t
             }
         }
         vsockaddr_copy(&nodei->addrs[i].addr, addr);
-        nodei->addrs[i].type = VSOCKADDR_TYPE(type);
+        nodei->addrs[i].type = type;
         nodei->naddrs++;
     }
     return (!found);
