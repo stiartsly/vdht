@@ -31,7 +31,7 @@ int _vroute_join_node(struct vroute* route, struct sockaddr_in* addr)
     vnodeInfo_add_addr(&nodei, addr, VSOCKADDR_UNKNOWN);
 
     vlock_enter(&route->lock);
-    ret = node_space->ops->add_node(node_space, nodei, 0);
+    ret = node_space->ops->add_node(node_space, nodei, VADD_BY_OTHER);
     vlock_leave(&route->lock);
     retE((ret < 0));
     return 0;
@@ -785,7 +785,7 @@ int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
     if (vsockaddr_is_public(&conn->remote)) {
         vnodeInfo_relax_init(nodei, &fromId, vnodeVer_unknown(), 0);
         vnodeInfo_add_addr(&nodei, &conn->remote, VSOCKADDR_REFLEXIVE);
-        ret = node_space->ops->add_node(node_space, nodei, 1);
+        ret = node_space->ops->add_node(node_space, nodei, VADD_BY_PING);
         retE((ret < 0));
     }
     DO_INSPECT(VROUTE_INSP_RCV_PING);
@@ -813,7 +813,7 @@ int _vroute_cb_ping_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     retE((ret < 0));
     DO_CHECK_TOKEN();
 
-    ret = node_space->ops->add_node(node_space, nodei, 2);
+    ret = node_space->ops->add_node(node_space, nodei, VADD_BY_PING_RSP);
     retE((ret < 0));
 
     DO_INSPECT(VROUTE_INSP_RCV_PING_RSP);
@@ -894,7 +894,7 @@ int _vroute_cb_find_node_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     DO_CHECK_TOKEN();
     DO_KICK_NODEI();
 
-    ret = node_space->ops->add_node(node_space, nodei, 0);
+    ret = node_space->ops->add_node(node_space, nodei, VADD_BY_OTHER);
     retE((ret < 0));
 
     DO_INSPECT(VROUTE_INSP_RCV_FIND_NODE_RSP);
@@ -974,7 +974,7 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, voi
     DO_KICK_NODEI();
 
     for (i = 0; i < varray_size(&closest); i++) {
-        node_space->ops->add_node(node_space, (vnodeInfo*)varray_get(&closest, i), 0);
+        node_space->ops->add_node(node_space, (vnodeInfo*)varray_get(&closest, i), VADD_BY_OTHER);
     }
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
     varray_deinit(&closest);

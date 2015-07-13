@@ -68,6 +68,13 @@ struct vpeer {
     int ntry_probes;
 };
 
+enum {
+    VADD_BY_OTHER,
+    VADD_BY_PING,
+    VADD_BY_PING_RSP,
+    VADD_BUUT
+};
+
 typedef void (*vroute_node_space_inspect_t)(struct vpeer*, void*, vtoken*, uint32_t);
 struct vroute_node_space;
 struct vroute_node_space_ops {

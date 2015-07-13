@@ -64,7 +64,7 @@ int vpeer_update(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo*
     vassert(nodei);
 
     switch(flag) {
-    case 2:
+    case VADD_BY_PING_RSP:
         /*
          * If received a DHT ping response from bad node, then that bad node
          * turned to be good node with initial 'next_tmo';
@@ -81,7 +81,7 @@ int vpeer_update(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo*
         peer->ntry_pings = 0;
         peer->tick_ts = time(NULL);
         break;
-    case 1:
+    case VADD_BY_PING:
         /*
          * If received a DHT ping query from bad node, then regress 'next_tmo'
          * back to initial value, so as to send ping as soon as possible.
@@ -93,7 +93,7 @@ int vpeer_update(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo*
         }
         peer->tick_ts = time(NULL);
         break;
-    case 0:
+    case VADD_BY_OTHER:
         /* updated not because of the DHT node itself. So, no sure for this
          * DHT node is bad or good for now.
          */
@@ -412,7 +412,7 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
         _aux_vsockaddr_unstrlize(saddrs, &vaddr);
         vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
     }
-    node_space->ops->add_node(node_space, nodei, 0);
+    node_space->ops->add_node(node_space, nodei, VADD_BY_OTHER);
     return 0;
 }
 
