@@ -1046,23 +1046,28 @@ struct vroute_node_space_ops route_space_ops = {
 };
 
 static
-int _aux_space_prepare_db(struct vroute_node_space* space)
+int _aux_space_prepare_peer_tb(struct vroute_node_space* space)
 {
     char sql_buf[BUF_SZ];
     sqlite3* db = NULL;
-    struct stat stat_buf;
     char* err = NULL;
     int ret = 0;
-
-    ret = stat(space->db, &stat_buf);
-    retS((ret >= 0));
 
     ret = sqlite3_open(space->db, &db);
     vlogEv((ret), elog_sqlite3_open);
     retE((ret));
 
     memset(sql_buf, 0, BUF_SZ);
-    ret += sprintf(sql_buf + ret, "CREATE TABLE '%s' (", VPEER_TB);
+    sprintf(sql_buf, "select * from '%s'", VPEER_TB);
+    ret = sqlite3_exec(db, sql_buf, NULL, NULL, &err);
+    if (!ret) {
+        // table is already exist.
+        sqlite3_close(db);
+        return 0;
+    }
+
+    memset(sql_buf, 0, BUF_SZ);
+    ret  = sprintf(sql_buf, "CREATE TABLE '%s' (", VPEER_TB);
     ret += sprintf(sql_buf + ret, "'id' char(160) PRIMARY KEY,");
     ret += sprintf(sql_buf + ret, "'ver'    char(160),");
     ret += sprintf(sql_buf + ret, "'addrs'  TEXT)");
@@ -1084,7 +1089,7 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     vassert(cfg);
     vassert(myid);
 
-    strncpy(space->db, cfg->ext_ops->get_route_db_file(cfg), BUF_SZ);
+    strncpy(space->db, cfg->ext_ops->get_host_db_file(cfg), BUF_SZ);
     ret = cfg->ext_ops->get_dht_address(cfg, &space->zaddr);
     retE((ret < 0));
 
@@ -1094,7 +1099,7 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     space->max_ping_tms  = 3;
     space->max_probe_tms = 3;
 
-    ret = _aux_space_prepare_db(space);
+    ret = _aux_space_prepare_peer_tb(space);
     retE((ret < 0));
 
     for (i = 0; i < NBUCKETS; i++) {

@@ -1055,27 +1055,14 @@ error_exit:
 }
 
 static
-const char* _vcfg_get_host_ID_file(struct vconfig* cfg)
+const char* _vcfg_get_host_db_file(struct vconfig* cfg)
 {
     const char* file = NULL;
     vassert(cfg);
 
-    file = cfg->ops->get_str_val(cfg, "global.id_file");
+    file = cfg->ops->get_str_val(cfg, "global.db_file");
     if (!file) {
-        file = "ID.txt";
-    }
-    return file;
-}
-
-static
-const char* _vcfg_get_route_db_file(struct vconfig* cfg)
-{
-    const char* file = NULL;
-    vassert(cfg);
-
-    file = cfg->ops->get_str_val(cfg, "route.db_file");
-    if (!file) {
-        file = "route.db";
+        file = "vdht.db";
     }
     return file;
 }
@@ -1174,9 +1161,8 @@ struct vconfig_ext_ops cfg_ext_ops = {
     .get_boot_nodes         = _vcfg_load_boot_nodes,
     .get_host_tick_tmo      = _vcfg_get_host_tick_tmo,
     .get_host_wb_tmo        = _vcfg_get_host_wb_tmo,
-    .get_host_ID_file       = _vcfg_get_host_ID_file,
+    .get_host_db_file       = _vcfg_get_host_db_file,
 
-    .get_route_db_file      = _vcfg_get_route_db_file,
     .get_route_bucket_sz    = _vcfg_get_route_bucket_sz,
     .get_route_max_next_tmo = _vcfg_get_route_max_next_tmo,
 

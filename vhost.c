@@ -285,30 +285,58 @@ int _aux_vhost_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
 }
 
 static
+int _aux_vhost_get_nodeId_cb(void* priv, int col, char** value, char** field)
+{
+    char* sid = (char*)((void**)value)[0];
+    vnodeId* myid = (vnodeId*)priv;
+    vassert(myid);
+
+    vtoken_unstrlize(sid, myid);
+    return 0;
+}
+
+static
 int _aux_vhost_get_nodeId(struct vconfig* cfg, vnodeId* myid)
 {
-    const char* id_file = cfg->ext_ops->get_host_ID_file(cfg);
-    char buf[64];
+#define VNODEID_TB  ((const char*)"dht_public_id")
+    sqlite3* db = NULL;
+    char* err = NULL;
+    char buf[BUF_SZ];
+    char sid[64];
     int ret = 0;
-    int fd  = 0;
 
-    fd = open(id_file, O_RDONLY);
-    if (fd > 0) {
-        memset(buf, 0, 64);
-        ret = read(fd, buf, 64);
-        close(fd);
-        vlogEv((ret < 0), elog_read);
-        vtoken_unstrlize(buf, myid);
+    strncpy(buf, cfg->ext_ops->get_host_db_file(cfg), BUF_SZ);
+    ret = sqlite3_open(buf, &db);
+    vlogEv((ret), elog_sqlite3_open);
+    retE((ret));
+
+    memset(buf, 0, BUF_SZ);
+    sprintf(buf, "select * from '%s'", VNODEID_TB);
+    ret = sqlite3_exec(db, buf, _aux_vhost_get_nodeId_cb, myid, &err);
+    if (!ret) {
+        sqlite3_close(db);
         return 0;
     }
-    vtoken_make(myid);
-    vtoken_strlize(myid, buf, 64);
 
-    fd = open(id_file, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
-    vlogEv((fd < 0), elog_open);
-    retE((fd < 0));
-    write(fd, buf, strlen(buf));
-    close(fd);
+    memset(buf, 0, BUF_SZ);
+    sprintf(buf, "CREATE TABLE '%s' (id char(160))", VNODEID_TB);
+    ret = sqlite3_exec(db, buf, 0, 0, &err);
+    vlogEv((ret), elog_sqlite3_exec);
+    vlogEv((ret && err), "create db err:%s\n", err);
+    retE(ret);
+
+    vtoken_make(myid);
+    memset(sid, 0, 64);
+    vtoken_strlize(myid, sid, 64);
+
+    memset(buf, 0, BUF_SZ);
+    sprintf(buf, "insert into '%s' (id) values ('%s')", VNODEID_TB, sid);
+    ret = sqlite3_exec(db, buf, 0, 0, &err);
+    vlogEv((ret), elog_sqlite3_exec);
+    vlogEv((ret && err), "insert elem err:%s.\n", err);
+    retE((ret));
+
+    sqlite3_close(db);
     return 0;
 }
 
