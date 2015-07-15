@@ -20,9 +20,31 @@ char* node_mode_desc[] = {
     NULL
 };
 
+#define NEED_PORTMAP (16)  // for upnp address.
+#define NEED_REFLEX  (17)  // for reflexive address.
+#define NEED_PROBE   (18)  // for connectivity probe.
+
+#define need_portmap(mask)  ((mask) &   (1 << NEED_PORTMAP))
+#define clear_portmap(mask) ((mask) &= ~(1 << NEED_PORTMAP))
+#define set_portmap(mask)   ((mask) |=  (1 << NEED_PORTMAP))
+
+#define need_reflex(mask)   ((mask) &   (1 << NEED_REFLEX ))
+#define clear_reflex(mask)  ((mask) &= ~(1 << NEED_REFLEX ))
+#define set_reflex(mask)    ((mask) |=  (1 << NEED_REFLEX ))
+
+#define need_probe(mask)    ((mask) &   (1 << NEED_PROBE  ))
+#define clear_probe(mask)   ((mask) &= ~(1 << NEED_PROBE  ))
+#define set_probe(mask)     ((mask) |=  (1 << NEED_PROBE  ))
+
+
 /*
- * start current dht node.
- * @node:
+ * Before DHT running, we need prepare following things:
+ *  1). Acquired host addresses (in @vnode_init);
+ *  2). Set up upnp client if possbile;
+ *  3). Acquired upnp addresses if possible;
+ *  4). Acquired reflexive address if possible;
+ *
+ * @node: handle to node module.
  */
 static
 int _vnode_start(struct vnode* node)
@@ -81,6 +103,11 @@ int _vnode_wait_for_stop(struct vnode* node)
     return 0;
 }
 
+/*
+ * the routine to acquire upnp addresses. If upnpc doesn't work, then
+ * skip it.
+ * @node: handle to node module.
+ */
 static
 int _aux_node_get_uaddrs(struct vnode* node)
 {
@@ -94,13 +121,15 @@ int _aux_node_get_uaddrs(struct vnode* node)
     retS(!upnpc->ops->workable(upnpc));
 
     for (i = 0; i < nodei->naddrs; i++) {
-        if (!need_reflex_check(nodei->addrs[i].type)) {
+        if (!need_portmap(nodei->addrs[i].type)) {
             continue;
         }
         ret = upnpc->ops->map(upnpc, &nodei->addrs[i].addr, UPNP_PROTO_UDP, &uaddr.addr);
+        clear_portmap(nodei->addrs[i].type);
         if (ret < 0) {
             continue;
         }
+
         if (vsockaddr_is_private(&uaddr.addr)) {
             uaddr.type = VSOCKADDR_UPNP;
         }else {
@@ -111,20 +140,33 @@ int _aux_node_get_uaddrs(struct vnode* node)
     return 0;
 }
 
+/*
+ * the routine to acquire reflexive addresses.
+ * @node:
+ */
 static
 void _aux_node_get_eaddrs(struct vnode* node)
 {
+    static time_t reflex_ts = 0;
+    static int    nreflexs  = 0;
     vnodeInfo* nodei = node->nodei;
+    time_t now = time(NULL);
     int i = 0;
     vassert(node);
 
-    if (node->reflx_tms >= 3) {
+    /*
+     * Reflex address's rule:
+     * 1). only 3 times of chance to reflex addresses;
+     * 2). the periord between reflexes should more than 5 seconds;
+     */
+    if ((nreflexs >= 3) || (now - reflex_ts < 5)) {
         return ;
     }
-    node->reflx_tms++;
+    nreflexs++;
+    reflex_ts = time(NULL);
 
     for (i = 0; i < nodei->naddrs; i++) {
-        if (!need_reflex_check(nodei->addrs[i].type)) {
+        if (!need_reflex(nodei->addrs[i].type)) {
             continue;
         }
         node->route->ops->reflex(node->route, &nodei->addrs[i].addr);
@@ -132,19 +174,22 @@ void _aux_node_get_eaddrs(struct vnode* node)
     return;
 }
 
+/*
+ * the routine to probe connectivity with each of DHT neighbor nodes.
+ * @node:
+ */
 static
 void _aux_node_probe_connectivity(struct vnode* node)
 {
-    struct vroute* route = node->route;
     vnodeInfo* nodei = node->nodei;
     int i = 0;
     vassert(node);
 
     for (i = 0; i < nodei->naddrs; i++) {
-        if (!need_probe_check(nodei->addrs[i].type)) {
+        if (!need_probe(nodei->addrs[i].type)) {
             continue;
         }
-        route->ops->probe_connectivity(route, &nodei->addrs[i]);
+        node->route->ops->probe_connectivity(node->route, &nodei->addrs[i]);
     }
     return;
 }
@@ -383,14 +428,14 @@ int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct vso
     vlock_enter(&node->lock);
     (void)_aux_vnode_probe_nat(node, laddr, &eaddr->addr);
     for (i = 0; i < nodei->naddrs; i++) {
-        if (!need_reflex_check(nodei->addrs[i].type)) {
+        if (!need_reflex(nodei->addrs[i].type)) {
             continue;
         }
         if (!vsockaddr_equal(laddr, &nodei->addrs[i].addr)) {
             continue;
         }
         vnodeInfo_add_addr(&nodei, &eaddr->addr, eaddr->type);
-        need_reflex_clear(nodei->addrs[i].type);
+        clear_reflex(nodei->addrs[i].type);
         break;
     }
     vlock_leave(&node->lock);
@@ -398,7 +443,7 @@ int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct vso
 }
 
 /*
- * the routine to check whether node contains the addr given by @addr
+ * the routine to check whether node contains the address.
  * @node:
  * @addr:
  */
@@ -433,13 +478,14 @@ struct vnode_ops node_ops = {
 
 
 /*
- * the routine to post a service info (only contain meta info) as local
- * service, and this service will be broadcasted to all nodes in routing table.
+ * the routine to post a service entry, which is in scope of DHT's PC/deivce.
+ * Simply, the posted service entry is just cached in @vnode module.
+ * and later will be periodically broadcast to all neighbor DHT nodes.
  *
  * @node:
- * @hash
- * @addr:  address of service to provide.
- *
+ * @hash:  service hash ID.
+ * @addr:  entry address of serivce.
+ * @proto: protocol to service, only support "TCP" or "UDP";
  */
 static
 int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct vsockaddr_in* addr, int proto)
@@ -483,12 +529,13 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct vsockaddr_in* a
 }
 
 /*
- * the routine to unpost a posted service info;
+ * the routine to unpost an address of service entry.
+ * Simply, just clear the service entry if found. Therefore, this service entry
+ * will not be broadcast at next later times; *
  *
  * @node:
- * @hash: hash of service.
- * @addr: address of service to provide.
- *
+ * @hash: service hash ID;
+ * @addr: address entry of that service.
  */
 static
 int _vnode_srvc_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* addr)
@@ -519,6 +566,11 @@ int _vnode_srvc_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* 
     return 0;
 }
 
+/*
+ * the routine to unpost a whole service entry.
+ * @node:
+ * @hash: service hash ID.
+ */
 static
 int _vnode_srvc_unpost_ext(struct vnode* node, vsrvcHash* hash)
 {
@@ -546,6 +598,19 @@ int _vnode_srvc_unpost_ext(struct vnode* node, vsrvcHash* hash)
     return 0;
 }
 
+/*
+ * the routine to find a service entry by given hash ID.
+ * Notice: we only find service entries in
+ *  1). PC/device-scope of current DHT node(cached in @vnode module);
+ *  2). service route space of current DHT node.
+ * and return the result immediately in synchronization.
+ *
+ * @node:
+ * @hash: service hash ID.
+ * @ncb: callback to show number of address entries or no service entry found.
+ * @icb: callback to show each of address entries;
+ * @cookie: user data;
+ */
 static
 int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
@@ -587,6 +652,18 @@ int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_
     return 0;
 }
 
+/*
+ * the routine to probe a service entry by given hash ID.
+ * Notice: we only probe service entries in
+ *  2). service route space of neighbor DHT nodes.
+ * and result result in asynchrnonization by invoking callbacks.
+ *
+ * @node:
+ * @hash: service hash ID.
+ * @ncb: callback to show number of address entries or no service entry found.
+ * @icb: callback to show each of address entries;
+ * @cookie: user data;
+ */
 static
 int _vnode_srvc_probe(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo_iterate_addr_t icb, void* cookie)
 {
@@ -621,13 +698,19 @@ void _aux_node_add_addr_cb(struct sockaddr_in* addr, void* cookie)
     vassert(addr);
     vassert(nodei);
 
+    /*
+     *  If local host address is private address, then:
+     *   1). need to use upnpc to port mapping.
+     *   2). need to get correspond reflexive address.
+     */
     if (vsockaddr_is_private(addr)) {
         type = VSOCKADDR_LOCAL;
-        need_reflex_set(type);
+        set_portmap(type);
+        set_reflex(type);
     } else {
         type = VSOCKADDR_REFLEXIVE;
     }
-    need_probe_set (type);
+    set_probe(type);
     vnodeInfo_add_addr(&nodei, addr, type);
     return ;
 }
@@ -701,7 +784,6 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     node->mode  = VDHT_OFF;
 
     node->is_symm_nat = 0;
-    node->reflx_tms   = 0;
     node->nice = 5;
     varray_init(&node->services, 4);
     vnode_nice_init(&node->node_nice, cfg);

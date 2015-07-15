@@ -7,17 +7,6 @@
 #include "vupnpc.h"
 #include "vnodeId.h"
 
-#define NEED_REFLEX_BIT  ((int)16)
-#define NEED_PROBE_BIT   ((int)17)
-
-#define need_reflex_check(mask)   ((mask) & (1 << NEED_REFLEX_BIT))
-#define need_reflex_set(mask)     ((mask) |= (1 << NEED_REFLEX_BIT))
-#define need_reflex_clear(mask)   ((mask) &= ~(1 << NEED_REFLEX_BIT))
-
-#define need_probe_check(mask)    ((mask) & (1 << NEED_PROBE_BIT))
-#define need_probe_set(mask)      ((mask) |= (1 << NEED_PROBE_BIT))
-#define need_probe_clear(mask)    ((mask) &= ~(1 << NEED_PROBE_BIT))
-
 struct vnice_res_status {
     int ratio;
     int criteria;
@@ -70,7 +59,6 @@ struct vnode_srvc_ops {
 
 struct vnode {
     int    is_symm_nat;
-    int    reflx_tms;   // times to get reflexive address
 
     int    tick_tmo;
     time_t tick_ts;

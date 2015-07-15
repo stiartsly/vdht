@@ -324,7 +324,7 @@ const char* vsockaddr_in_desc(uint32_t type)
 
     struct vsockaddr_desc* desc = sockaddr_descs;
     for (; desc->desc; desc++) {
-        if (desc->type == (type & 0x00ff)) {
+        if (VSOCKADDR_TYPE(type) == desc->type) {
             return desc->desc;
         }
     }
