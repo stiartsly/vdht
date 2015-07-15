@@ -449,6 +449,7 @@ int _vlsctl_exec_cmd_probe_service(struct vlsctl* lsctl, void* buf, int len, str
     args = &rsp_args->uargs.probe_service_rsp_args;
     args->total = 0;
     args->index = 0;
+    args->lsctl = lsctl;
     args->pack_cb = lsctl->pack_cmd_ops->probe_service_rsp;
     vtoken_copy(&args->hash, &hash);
     memcpy(&args->from, from, sizeof(*from));
@@ -545,7 +546,7 @@ int _vlsctl_pack_probe_service_rsp(void* buf, int len, void* cookie)
     vassert(len > 0);
     vassert(args);
 
-    set_uint16(buf + tsz, VLSCTL_FIND_SERVICE);
+    set_uint16(buf + tsz, VLSCTL_PROBE_SERVICE);
     tsz += sizeof(uint16_t);
     set_uint16(len_addr = buf + tsz, 0);
     tsz += sizeof(uint16_t);
@@ -557,7 +558,7 @@ int _vlsctl_pack_probe_service_rsp(void* buf, int len, void* cookie)
     bsz += sizeof(int32_t);
     tsz += sizeof(int32_t);
     for (i = 0; i < args->total; i++) {
-        ret = _aux_vlsctl_pack_vaddr(buf + bsz, len - bsz, &args->addrs[i]);
+        ret = _aux_vlsctl_pack_vaddr(buf + tsz, len - tsz, &args->addrs[i]);
         tsz += ret;
         bsz += ret;
     }
