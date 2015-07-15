@@ -15,11 +15,12 @@ struct vpeer* vpeer_alloc(void)
 
     nodei = (vnodeInfo*)vnodeInfo_alloc();
     retE_p((!nodei));
-
+    memset(nodei, 0, sizeof(*nodei));
     peer = (struct vpeer*)vmem_aux_alloc(&peer_cache);
     vlogEv((!peer), elog_vmem_aux_alloc);
     ret1E_p((!peer), vnodeInfo_free(nodei));
     memset(peer, 0, sizeof(*peer));
+
     peer->nodei = nodei;
     return peer;
 }
@@ -91,6 +92,7 @@ int vpeer_update(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo*
             peer->next_tmo = space->init_next_tmo;
         }
         peer->tick_ts = time(NULL);
+        return 0; // do not disturb original one.
         break;
     case VADD_BY_OTHER:
         /* updated not because of the DHT node itself. So, no sure for this
@@ -127,8 +129,11 @@ void vpeer_dump(struct vpeer* peer)
     return ;
 }
 
+/*
+ * to find the 'worst' bad DHT nodei.
+ */
 static
-int _aux_space_add_node_cb(void* item, void* cookie)
+int _aux_space_find_worst_nodei_cb(void* item, void* cookie)
 {
     struct vpeer* peer = (struct vpeer*)item;
     varg_decl(cookie, 0, vnodeInfo*, nodei);
@@ -156,13 +161,16 @@ int _aux_space_add_node_cb(void* item, void* cookie)
     return 0;
 }
 
+/*
+ * auxilary callback to find a DHT nodei in neighbor DHT node.
+ */
 static
 int _aux_space_find_node_in_neighbors_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute_node_space*, space);
     varg_decl(cookie, 1, vnodeId*, targetId);
+    struct vpeer*   peer = (struct vpeer*)item;
     struct vroute* route = space->route;
-    struct vpeer*  peer  = (struct vpeer*)item;
     int ret = 0;
 
     vassert(space);
@@ -181,12 +189,15 @@ int _aux_space_find_node_in_neighbors_cb(void* item, void* cookie)
     return 0;
 }
 
+/*
+ * auxilary callback to broadcast serivce entry to neigbor DHT node.
+ */
 static
 int _aux_space_air_service_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute_node_space*, space);
     varg_decl(cookie, 1, vsrvcInfo*, srvci);
-    struct vpeer* peer   = (struct vpeer*)item;
+    struct vpeer*   peer = (struct vpeer*)item;
     struct vroute* route = space->route;
     int ret = 0;
 
@@ -207,6 +218,9 @@ int _aux_space_air_service_cb(void* item, void* cookie)
     return 0;
 }
 
+/*
+ * auxilary callback to find a service entry in neigbour's DHT node.
+ */
 static
 int _aux_space_probe_service_cb(void* item, void* cookie)
 {
@@ -225,7 +239,7 @@ int _aux_space_probe_service_cb(void* item, void* cookie)
         return 0;
     }
     if (vnodeInfo_is_fake(peer->nodei)) {
-        //Do not air service to fake DHT node.
+        //Do not probe service from fake DHT nodei.
         return 0;
     }
     ret = route->dht_ops->find_service(route, &peer->conn, hash);
@@ -233,6 +247,9 @@ int _aux_space_probe_service_cb(void* item, void* cookie)
     return 0;
 }
 
+/*
+ * auxilary callback to acquire reflexive address of nodei.
+ */
 static
 int _aux_space_reflex_addr_cb(void* item, void* cookie)
 {
@@ -251,8 +268,7 @@ int _aux_space_reflex_addr_cb(void* item, void* cookie)
         //means it's a 'worst' bad DHT node (unreachable);
         return 0;
     }
-    //if (vtoken_equal(&space->nodei->ver, vnodeVer_unknown())) {
-        //Do not air service to fake DHT node.
+    //if (vnodeInfo_is_fake(peer->nodei) {
     //    return 0;
     //}
     if (!vsockaddr_is_public(&peer->conn.raddr)) {
@@ -264,6 +280,9 @@ int _aux_space_reflex_addr_cb(void* item, void* cookie)
     return 0;
 }
 
+/*
+ * auxilary callback to probe connectivity.
+ */
 static
 int _aux_space_probe_connectivity_cb(void* item, void* cookie)
 {
@@ -299,8 +318,11 @@ int _aux_space_probe_connectivity_cb(void* item, void* cookie)
     return 0;
 }
 
+/*
+ * auxilary callback to ping a DHT nodei.
+ */
 static
-int _aux_space_tick_cb(void* item, void* cookie)
+int _aux_space_ping_nodei_cb(void* item, void* cookie)
 {
     struct vpeer*  peer  = (struct vpeer*)item;
     varg_decl(cookie, 0, struct vroute_node_space*, space);
@@ -319,6 +341,8 @@ int _aux_space_tick_cb(void* item, void* cookie)
         return 0;
     }
     if ((peer->ntry_pings > space->max_ping_tms) && vnodeInfo_is_fake(peer->nodei)) {
+        // normally fake DHT nodei leads to acquire real DHT nodei,
+        // and then no useful anymore.
         return 0;
     }
 
@@ -379,10 +403,11 @@ int _aux_vsockaddr_unstrlize(const char* buf, struct vsockaddr_in* addr)
 }
 
 /*
- *
+ * load a database table 'dht_peer' item @peer into a DHT nodei, and then
+ * cache it into node routing space.
  */
 static
-int _aux_space_load_cb(void* priv, int col, char** value, char** field)
+int _aux_space_load_nodei_cb(void* priv, int col, char** value, char** field)
 {
     struct vroute_node_space* node_space = (struct vroute_node_space*)priv;
     char* sid    = (char*)((void**)value)[0];
@@ -394,6 +419,7 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
     vnodeId  id;
     vnodeVer ver;
     char* pos = NULL;
+    int ret = 0;
 
     {
         vtoken_unstrlize(sid, &id);
@@ -411,12 +437,17 @@ int _aux_space_load_cb(void* priv, int col, char** value, char** field)
         _aux_vsockaddr_unstrlize(saddrs, &vaddr);
         vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
     }
-    node_space->ops->add_node(node_space, nodei, VADD_BY_OTHER);
+    ret = node_space->ops->add_node(node_space, nodei, VADD_BY_OTHER);
+    retE((ret < 0));
     return 0;
 }
 
+/*
+ * writeback a DHT nodei in node routing space to database, in case to load
+ * it on next start time.
+ */
 static
-int _aux_space_store_cb(void* item, void* cookie)
+int _aux_space_store_nodei_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute_node_space*, space);
     varg_decl(cookie, 1, sqlite3*, db);
@@ -439,7 +470,7 @@ int _aux_space_store_cb(void* item, void* cookie)
         return 0;
     }
     if (peer->ntry_pings > 0 && peer->next_tmo >= space->max_next_tmo){
-        //skip 'worst' bad DHT node.
+        //skip 'worst' bad DHT nodei (unreachable)
         return 0;
     }
     {
@@ -479,10 +510,10 @@ int _aux_space_store_cb(void* item, void* cookie)
 }
 
 static
-int _aux_space_weight_cmp_cb(void* item, void* new, void* cookie)
+int _aux_space_weight_cmp_cb(void* item, void* neo, void* cookie)
 {
     struct vpeer* peer   = (struct vpeer*)item;
-    struct vpeer* target = (struct vpeer*)new;
+    struct vpeer* target = (struct vpeer*)neo;
     vnodeId* targetId = (vnodeId*)cookie;
     vnodeMetric pm, tm;
 
@@ -500,6 +531,13 @@ int _aux_space_weight_cmp_cb(void* item, void* new, void* cookie)
     return vnodeMetric_cmp(&tm, &pm);
 }
 
+/*
+ * the routine to kick a DHT nodei to avoid being aboslete (or 'worst' bad one).
+ * actually just update it's active timestamp.
+ *
+ * @space: handle to node routing space.
+ * @id: node ID to kick.
+ */
 static
 void _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
 {
@@ -518,7 +556,7 @@ void _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
         }
         /*
          * All dht messages from 'peer' are considered as ping-like messages.
-         * So, when message is received from that 'peer', 'rcv_ts' to that
+         * So, when message is received from that 'peer', 'kick_ts' to that
          * 'peer' will be updated.
          */
         peer->tick_ts = time(NULL);
@@ -533,10 +571,10 @@ void _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
  * @route: routing table.
  * @nodei: nodeinfo to add;
  * @flag:  flag to indicate 3 following situation:
- *          0: occured when 'nodei' is not from it's DHT node, such as by 'find_
- *             node' or 'find_closest_nodes_rsp' message.
+ *          0: occured when 'nodei' is not from it's real self DHT node, by
+ *             indirect ways (all DHT message rather than '@ping' and '@ping_rsp';
  *          1: occured when received 'ping' query;
- *          2: occured when received a response to ping query.
+ *          2: occured when received a 'ping_rsp' message.
  */
 static
 int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* nodei, int flag)
@@ -545,19 +583,31 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* node
     struct vpeer*  want  = NULL;
     int updated = 0;
     int min_wgt = 0;
-    int max_try = 0;
+    int max_try = 3;
     int found = 0;
     int idx = 0;
     int ret = 0;
 
     vassert(space);
     vassert(nodei);
+
+    // skip it when the newly nodei is current DHT nodei itself.
     if (vtoken_equal(&space->myid, &nodei->id)) {
         return 0;
     }
     if (vtoken_equal(&space->myver, &nodei->ver)) {
         nodei->weight++;
     }
+    /* Rules to add a newly nodei:
+     *  1). if nodei is already in node routing space, the update it. or else:
+     *  2). if node routing space is not fully filled, then just add it, or else:
+     *  3). find the 'worst' bad nodei and replace it.
+     *
+     * Rules to find the 'worst' bad nodei:
+     *  1). Firstly find nodei with maximum number of 'try_pings' (at least 3 times);
+     *      or else:
+     *  2). find the nodei with lowest 'weight' value.
+     */
     min_wgt = nodei->weight;
     idx = vnodeId_bucket(&space->myid, &nodei->id);
     peers = &space->bucket[idx].peers;
@@ -569,12 +619,12 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* node
             &found,
             &want,
         };
-        varray_iterate(peers, _aux_space_add_node_cb, argv);
+        varray_iterate(peers, _aux_space_find_worst_nodei_cb, argv);
         if (found) { //found
             ret = vpeer_update(want, space, nodei, flag);
             updated = (ret > 0);
         } else if (want && varray_size(peers) >= space->bucket_sz) {
-            //replace worst 'bad' nodei;
+            //replace the worst 'bad' nodei;
             ret = vpeer_update(want, space, nodei, flag);
             updated = (ret > 0);
         } else if (varray_size(peers) < space->bucket_sz) {
@@ -585,7 +635,8 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* node
             varray_add_tail(peers, want);
             updated = 1;
         } else {
-            //bucket is full, discard new
+            // all 'nodei's are better than newly one. and while the bucket
+            // is fully filled, then just discard newly one.
         }
         if (updated) {
             space->bucket[idx].ts = time(NULL);
@@ -857,7 +908,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
         };
 
         peers = &space->bucket[i].peers;
-        varray_iterate(peers, _aux_space_tick_cb, argv);
+        varray_iterate(peers, _aux_space_ping_nodei_cb, argv);
 
         if (varray_size(peers) <= 0) {
             continue;
@@ -880,10 +931,9 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
 }
 
 /*
- * to load all nodes info from db file to routing table
+ * the routine to read all DHT 'nodei's from database and load them to
+ * node routing space.
  * @route:
- * @file : file name for stored db.
- *
  */
 static
 int _vroute_node_space_load(struct vroute_node_space* space)
@@ -900,7 +950,7 @@ int _vroute_node_space_load(struct vroute_node_space* space)
 
     memset(sql_buf, 0, BUF_SZ);
     sprintf(sql_buf, "select * from '%s'", VPEER_TB);
-    ret = sqlite3_exec(db, sql_buf, _aux_space_load_cb, space, &err);
+    ret = sqlite3_exec(db, sql_buf, _aux_space_load_nodei_cb, space, &err);
     vlogEv((ret && err), "db err:%s\n", err);
     vlogEv((ret), elog_sqlite3_exec);
     sqlite3_close(db);
@@ -909,9 +959,9 @@ int _vroute_node_space_load(struct vroute_node_space* space)
 }
 
 /*
- * to store all nodes info in routing table back to db file.
+ * the routine to write all DHT 'nodei's in node routing space back to
+ * database.
  * @route:
- * @file
  */
 static
 int _vroute_node_space_store(struct vroute_node_space* space)
@@ -932,7 +982,7 @@ int _vroute_node_space_store(struct vroute_node_space* space)
             db
         };
         peers = &space->bucket[i].peers;
-        varray_iterate(peers, _aux_space_store_cb, argv);
+        varray_iterate(peers, _aux_space_store_nodei_cb, argv);
     }
     sqlite3_close(db);
     vlogI("writeback route infos");
@@ -940,7 +990,7 @@ int _vroute_node_space_store(struct vroute_node_space* space)
 }
 
 /*
- * to clear all nodes info in routing table
+ * the routine to clear all DHT 'nodei's in node routing space.
  * @route:
  */
 static
@@ -960,7 +1010,8 @@ void _vroute_node_space_clear(struct vroute_node_space* space)
 }
 
 /*
- * to inspect node routing space. used for testing module.
+ * the routine to inspect details in node routing space. only used for
+ * testing module.
  *
  * @space:
  * @cb: inspect callback
@@ -988,7 +1039,7 @@ void _vroute_node_space_inspect(struct vroute_node_space* space, vroute_node_spa
 }
 
 /*
- * to dump all dht nodes info in routing table
+ * the routine to dump all DHT 'nodei's in node routing space.
  * @route:
  */
 static
@@ -1024,6 +1075,7 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
     return ;
 }
 
+static
 struct vroute_node_space_ops route_space_ops = {
     .kick_node     = _vroute_node_space_kick_node,
     .add_node      = _vroute_node_space_add_node,
