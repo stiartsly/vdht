@@ -46,8 +46,7 @@ int vpeer_init(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo* n
     vassert(nodei);
 
     vnodeInfo_copy(&peer->nodei, nodei);
-    vnodeConn_set (&peer->conn, &space->zaddr, vnodeInfo_worst_addr(peer->nodei));
-
+    vnodeConn_set_raw(&peer->conn, &space->zaddr, vnodeInfo_worst_addr(peer->nodei));
     peer->tick_ts     = time(NULL);
     peer->next_tmo    = space->init_next_tmo;
     peer->ntry_pings  = 0;
@@ -107,7 +106,7 @@ int vpeer_update(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo*
     ret = vnodeInfo_merge(&peer->nodei, nodei);
     retE((ret < 0));
     if (ret > 0) {
-        vnodeConn_set(&peer->conn, &space->zaddr, vnodeInfo_worst_addr(peer->nodei));
+        vnodeConn_set_raw(&peer->conn, &space->zaddr, vnodeInfo_worst_addr(peer->nodei));
         peer->ntry_probes = 0;
     }
     return ret;
@@ -119,8 +118,8 @@ void vpeer_dump(struct vpeer* peer)
     vassert(peer);
 
     vnodeInfo_dump(peer->nodei);
-    printf("local:");    vsockaddr_dump(&peer->conn.local);
-    printf(" remote: "); vsockaddr_dump(&peer->conn.remote); printf("\n");
+    printf("local:");    vsockaddr_dump(&peer->conn.laddr);
+    printf(" remote: "); vsockaddr_dump(&peer->conn.raddr); printf("\n");
     printf("tick ts: %s", ctime(&peer->tick_ts));
     printf("next_tmo:%d\n", peer->next_tmo);
     printf("tried ping  times:%d\n", peer->ntry_pings);
@@ -256,10 +255,10 @@ int _aux_space_reflex_addr_cb(void* item, void* cookie)
         //Do not air service to fake DHT node.
     //    return 0;
     //}
-    if (!vsockaddr_is_public(&peer->conn.remote)) {
+    if (!vsockaddr_is_public(&peer->conn.raddr)) {
         return 0;
     }
-    vnodeConn_set(&conn, addr, &peer->conn.remote);
+    vnodeConn_set_raw(&conn, addr, &peer->conn.raddr);
     ret = route->dht_ops->reflex(route, &conn);
     retE((ret < 0));
     return 0;
@@ -269,7 +268,7 @@ static
 int _aux_space_probe_connectivity_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute_node_space*, space);
-    varg_decl(cookie, 1, struct sockaddr_in*, laddr);
+    varg_decl(cookie, 1, struct vsockaddr_in*, laddr);
     struct vpeer*  peer  = (struct vpeer*)item;
     struct vroute* route = space->route;
     int i = 0;
@@ -293,7 +292,7 @@ int _aux_space_probe_connectivity_cb(void* item, void* cookie)
     }
     for (j = 0; j < peer->nodei->naddrs; j++) {
         vnodeConn conn;
-        vnodeConn_set(&conn, laddr, &peer->nodei->addrs[i].addr);
+        vnodeConn_set(&conn, laddr, &peer->nodei->addrs[i]);
         route->dht_ops->probe(route, &conn, &peer->nodei->id);
     }
     peer->ntry_probes++;
@@ -799,7 +798,6 @@ int _vroute_node_space_adjust_connectivity(struct vroute_node_space* space, vnod
 
     idx = vnodeId_bucket(&space->myid, targetId);
     peers = &space->bucket[idx].peers;
-
     for (i = 0; i < varray_size(peers); i++) {
         peer = (struct vpeer*)varray_get(peers, i);
         if (vtoken_equal(&peer->nodei->id, targetId)) {
@@ -817,7 +815,7 @@ int _vroute_node_space_adjust_connectivity(struct vroute_node_space* space, vnod
  * @laddr: the source address where the probe query is from
  */
 static
-int _vroute_node_space_probe_connectivity(struct vroute_node_space* space, struct sockaddr_in* laddr)
+int _vroute_node_space_probe_connectivity(struct vroute_node_space* space, struct vsockaddr_in* laddr)
 {
     int i = 0;
     vassert(space);
@@ -1011,7 +1009,7 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
                 continue;
             }
             if ((peer->ntry_pings > 0) && vnodeInfo_is_fake(peer->nodei)) {
-                continue;
+               continue;
             }
             if (!titled) {
                 vdump(printf("-> list of peers in node routing space:"));

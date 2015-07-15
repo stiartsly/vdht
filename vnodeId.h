@@ -114,14 +114,15 @@ enum {
 };
 
 struct vnodeConn {
-    int32_t weight;
-    struct sockaddr_in local;
-    struct sockaddr_in remote;
+    int32_t priority;
+    struct sockaddr_in laddr;
+    struct sockaddr_in raddr;
 };
 typedef struct vnodeConn vnodeConn;
 
-void vnodeConn_set   (vnodeConn*, struct sockaddr_in*, struct sockaddr_in*);
-void vnodeConn_adjust(vnodeConn*, vnodeConn*);
+void vnodeConn_set    (vnodeConn*, struct vsockaddr_in*, struct vsockaddr_in*);
+void vnodeConn_set_raw(vnodeConn*, struct sockaddr_in*,  struct sockaddr_in* );
+void vnodeConn_adjust (vnodeConn*, vnodeConn*);
 
 /*
  * for vsrvcId

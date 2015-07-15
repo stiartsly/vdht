@@ -144,7 +144,7 @@ void _aux_node_probe_connectivity(struct vnode* node)
         if (!need_probe_check(nodei->addrs[i].type)) {
             continue;
         }
-        route->ops->probe_connectivity(route, &nodei->addrs[i].addr);
+        route->ops->probe_connectivity(route, &nodei->addrs[i]);
     }
     return;
 }

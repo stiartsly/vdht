@@ -597,36 +597,43 @@ void vnodeInfo_dump(vnodeInfo* nodei)
 /*
  * for vnodeConn
  */
-void vnodeConn_set(vnodeConn* conn, struct sockaddr_in* local, struct sockaddr_in* remote)
+void vnodeConn_set(vnodeConn* conn, struct vsockaddr_in* local, struct vsockaddr_in* remote)
 {
     vassert(conn);
     vassert(local);
     vassert(remote);
 
-    memset(conn, 0, sizeof(*conn));
-    vsockaddr_copy(&conn->local,  local);
-    vsockaddr_copy(&conn->remote, remote);
-
-    if (vsockaddr_is_private(remote)) {
-        conn->weight = VNODECONN_WEIGHT_HIGHT;
-    } else {
-        conn->weight = VNODECONN_WEIGHT_LOW;
-    }
+    vsockaddr_copy(&conn->laddr, &local->addr );
+    vsockaddr_copy(&conn->raddr, &remote->addr);
+    conn->priority  = VSOCKADDR_TYPE(local->type);
+    conn->priority += VSOCKADDR_TYPE(remote->type);
     return;
 }
 
-void vnodeConn_adjust(vnodeConn* old, vnodeConn* new)
+void vnodeConn_set_raw(vnodeConn* conn, struct sockaddr_in* laddr, struct sockaddr_in* raddr)
+{
+    vassert(conn);
+    vassert(laddr);
+    vassert(raddr);
+
+    vsockaddr_copy(&conn->laddr, laddr);
+    vsockaddr_copy(&conn->raddr, raddr);
+    conn->priority  = VSOCKADDR_UNKNOWN;
+    conn->priority += VSOCKADDR_UNKNOWN;
+    return;
+}
+
+void vnodeConn_adjust(vnodeConn* old, vnodeConn* neo)
 {
     vassert(old);
-    vassert(new);
+    vassert(neo);
 
-    if (old->weight >= new->weight) {
+    if (neo->priority > old->priority) {
         return ;
     }
-    old->weight = new->weight;
-    vsockaddr_copy(&old->local,  &new->local);
-    vsockaddr_copy(&old->remote, &new->remote);
-
+    old->priority = neo->priority;
+    vsockaddr_copy(&old->laddr, &neo->laddr);
+    vsockaddr_copy(&old->raddr, &neo->raddr);
     return ;
 }
 

@@ -33,28 +33,33 @@ enum {
 char* vroute_srvc_get_desc(int);
 
 /*
- * for record space
+ * for ticket space
  */
-struct vhost;
-struct vroute;
-struct vroute_recr_space;
-struct vroute_recr_space_ops {
-    int  (*make)         (struct vroute_recr_space*, vtoken*);
-    int  (*check)        (struct vroute_recr_space*, vtoken*);
-    void (*timed_reap)   (struct vroute_recr_space*);
-    void (*clear)        (struct vroute_recr_space*);
-    void (*dump)         (struct vroute_recr_space*);
+enum {
+    VTICKET_TOKEN_CHECK,
+    VTICKET_SRVC_PROBE,
+    VTICKET_CONN_PROBE,
+    VTICKET_BUTT
 };
 
-struct vroute_recr_space {
+struct vroute_tckt_space;
+struct vroute_tckt_space_ops {
+    int  (*add_ticket)   (struct vroute_tckt_space*, int, void**);
+    int  (*check_ticket) (struct vroute_tckt_space*, int, void**);
+    void (*timed_reap)   (struct vroute_tckt_space*);
+    void (*clear)        (struct vroute_tckt_space*);
+    void (*dump)         (struct vroute_tckt_space*);
+};
+
+struct vroute_tckt_space {
     int overdue_tmo;
-    struct varray records; //has all DHT unresponse-yet query records;
+    struct varray tickets;
 
-    struct vroute_recr_space_ops* ops;
+    struct vroute_tckt_space_ops* ops;
 };
 
-int  vroute_recr_space_init  (struct vroute_recr_space*);
-void vroute_recr_space_deinit(struct vroute_recr_space*);
+int  vroute_tckt_space_init  (struct vroute_tckt_space*);
+void vroute_tckt_space_deinit(struct vroute_tckt_space*);
 
 /*
  * for node space
@@ -89,7 +94,7 @@ struct vroute_node_space_ops {
     int  (*adjust_connectivity)
                          (struct vroute_node_space*, vnodeId*, vnodeConn*);
     int  (*probe_connectivity)
-                         (struct vroute_node_space*, struct sockaddr_in*);
+                         (struct vroute_node_space*, struct vsockaddr_in*);
     int  (*tick)         (struct vroute_node_space*);
     int  (*load)         (struct vroute_node_space*);
     int  (*store)        (struct vroute_node_space*);
@@ -98,6 +103,8 @@ struct vroute_node_space_ops {
     void (*dump)         (struct vroute_node_space*);
 };
 
+struct vhost;
+struct vroute;
 struct vroute_node_space {
     vnodeId  myid;
     vnodeVer myver;
@@ -122,7 +129,7 @@ int  vroute_node_space_init  (struct vroute_node_space*, struct vroute*, struct 
 void vroute_node_space_deinit(struct vroute_node_space*);
 
 /*
- *
+ * for service space.
  */
 struct vservice {
     vsrvcInfo* srvci;
@@ -149,27 +156,6 @@ struct vroute_srvc_space {
 
 int  vroute_srvc_space_init  (struct vroute_srvc_space*, struct vconfig*);
 void vroute_srvc_space_deinit(struct vroute_srvc_space*);
-
-/*
- *
- */
-struct vroute_srvc_probe_space;
-struct vroute_srvc_probe_space_ops {
-    int  (*add_cb)       (struct vroute_srvc_probe_space*, vsrvcHash*, vsrvcInfo_number_addr_t, vsrvcInfo_iterate_addr_t, void*);
-    int  (*invoke)       (struct vroute_srvc_probe_space*, vsrvcHash*, vsrvcInfo*);
-    void (*timed_reap)   (struct vroute_srvc_probe_space*);
-    void (*clear)        (struct vroute_srvc_probe_space*);
-    void (*dump)         (struct vroute_srvc_probe_space*);
-};
-
-struct vroute_srvc_probe_space {
-    int overdue_tmo;
-    struct varray items;
-    struct vroute_srvc_probe_space_ops* ops;
-};
-
-int  vroute_srvc_probe_space_init  (struct vroute_srvc_probe_space*);
-void vroute_srvc_probe_space_deinit(struct vroute_srvc_probe_space*);
 
 /*
  * for inspection
@@ -216,7 +202,7 @@ struct vroute_ops {
 
     int  (*air_service)  (struct vroute*, vsrvcInfo*);
     int  (*reflex)       (struct vroute*, struct sockaddr_in*);
-    int  (*probe_connectivity) (struct vroute*, struct sockaddr_in*);
+    int  (*probe_connectivity) (struct vroute*, struct vsockaddr_in*);
     void (*set_inspect_cb)     (struct vroute*, vroute_inspect_t, void*);
     void (*inspect)      (struct vroute*, vtoken*, uint32_t);
     int  (*load)         (struct vroute*);
@@ -252,8 +238,7 @@ struct vroute {
 
     struct vroute_node_space node_space;
     struct vroute_srvc_space srvc_space;
-    struct vroute_recr_space recr_space;
-    struct vroute_srvc_probe_space srvc_probe_space;
+    struct vroute_tckt_space tckt_space;
 
     struct vlock lock;
 

@@ -172,8 +172,7 @@ int _vhost_bogus_query(struct vhost* host, int what, struct sockaddr_in* remote_
     vassert(host);
     vassert(remote_addr);
 
-    vnodeConn_set(&conn, &host->zaddr, remote_addr);
-
+    vnodeConn_set_raw(&conn, &host->zaddr, remote_addr);
     switch(what) {
     case VDHT_PING:
         ret = route->dht_ops->ping(route, &conn);
