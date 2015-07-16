@@ -197,18 +197,20 @@ struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* srvci)
 }
 
 /*
- * @token:
- * @srcId: Id of node sending query.
- * @buf:
- * @len:
- *
- * ping Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
+ * ping Query = {"t":"deafc137",
  *               "y":"q",
  *               "q":"ping",
  *               "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
  *              }
- * encoded = d1:t40:deafc137da918b8cd9b95e72fef379a5b54c3f361:y1:q1:q4:ping1:a
- *           d2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
+ * encoded = d1:t40:deafc1371:y1:q1:q4:ping1:ad2:id40:dbfcc5576ca7f742c80293089
+ *           2de9a1fb521f391ee
+ *
+ * the method to encode DHT @ping query.
+ *
+ * @nonce: DHT message transaction ID.
+ * @srcId: ID of source DHT node.
+ * @buf:   message content.
+ * @sz:    length;
  */
 static
 int _vdht_enc_ping(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
@@ -247,12 +249,7 @@ int _vdht_enc_ping(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
 }
 
 /*
- * @nonce:
- * @srcId:  Id of node replying query.
- * @result: queried result
- * @buf:
- * @len:
- * response = {"t":"06d5613f3f43631c539db6f10fbd04b651a21844",
+ * response = {"t":"06d5613f",
  *             "y":"r",
  *             "r":"ping",
  *             "a": {"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
@@ -263,10 +260,16 @@ int _vdht_enc_ping(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
  *                          }
  *                 }
  *            }
- * encoded = d1:t40:06d5613f3f43631c539db6f10fbd04b651a218441:y1:r1:rd4:noded
- *           2:id40:dbfcc5576ca7f742c802930892de9a1fb521f3911:v9:0.0.0.1.0
- *           2:ml19:192.168.4.125:123001:wi0eeee
+ * encoded = d1:t40:06d5613f1:y1:r1:rd4:noded2:id40:dbfcc5576ca7f742c802930892
+ *           de9a1fb521f3911:v9:0.0.0.1.02:ml19:192.168.4.125:123001:wi0eeee
  *
+ * the method to encode DHT reponse to @ping query.
+ *
+ * @nonce:
+ * @srcId: ID of source DHT node.
+ * @result: queried result (@nodei)
+ * @buf:
+ * @len:
  */
 static
 int _vdht_enc_ping_rsp(vnonce* nonce, vnodeId* srcId, vnodeInfo* result, void* buf, int sz)
@@ -307,21 +310,24 @@ int _vdht_enc_ping_rsp(vnonce* nonce, vnodeId* srcId, vnodeInfo* result, void* b
 }
 
 /*
- * @nonce:
- * @srcId:  Id of node sending query.
- * @target: Id of queried node.
- * @buf:
- * @len:
- *
- * find_node Query = {"t":"9948eb5973da8f3c3c0a",
+ * find_node Query = {"t":"9948eb59",
  *                    "y":"q",
  *                    "q":"find_node",
- *                    "a": {"id":"7ba29c1b9215a2e7621e",
- *                          "target":"7ba29c1b9215a2e7621"
+ *                    "a": {"id"    :"dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *                          "target":"7ba29c1b9215a2e7621f13414fd21c83414eaf45"
  *                         }
  *                   }
- * bencoded =  d1:t20:9948eb5973da8f3c3c0a1:y1:q1:q9:find_node1:ad2:id20:7ba29c
- *             1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
+ * bencoded = d1:t20:9948eb591:y1:q1:q9:find_node1:ad2:id20:dbfcc5576ca7f742c
+ *            802930892de9a1fb521f391e6:target20:7ba29c1b9215a2e7621f13414fd21
+ *            c83414eaf45eee
+ *
+ * the method to encode DHT @find_node query.
+ *
+ * @nonce:
+ * @srcId:
+ * @targetId: ID of DHT node to find.
+ * @buf:
+ * @len:
  */
 static
 int _vdht_enc_find_node(
@@ -368,26 +374,28 @@ int _vdht_enc_find_node(
 }
 
 /*
- * @nonce:
- * @srcId: Id of node replying query
- * @result: queried result.
- * @buf:
- * @sz:
- *
- *  response = {"t":"9948eb5973da8f3c3c0a",
+ *  response = {"t":"9948eb59",
  *              "y":"r",
  *              "r":"find_node",
- *              "a":{"id":"ce3dbcf618862baf69e8",
- *                  "node" :{"id": "7ba29c1b9215a2e7621e",
+ *              "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *                  "node" :{"id": "7ba29c1b9215a2e7621f13414fd21c83414eaf45",
  *                            "m": "192.168.4.46:12300",
  *                            "v": "0.0.0.1.0",
  *                            "f": "0"
  *                          }
  *                 }
  *            }
- * bencoded = d1:t20:9948eb5973da8f3c3c0a1:y1:r1:rd2:id20:ce3dbcf618862baf69e84
- *            :noded2:id20:7ba29c1b9215a2e7621e1:m18:192.168.4.46:123001:v9:0.0
- *            .0.0.01:fi0eeee
+ * bencoded = d1:t20:9948eb591:y1:r1:rd2:id20:dbfcc5576ca7f742c802930892de9a1f
+ *            b521f391:noded2:id20:7ba29c1b9215a2e7621f13414fd21c83414eaf45e1:
+ *            m18:192.168.4.46:123001:v9:0.0.0.0.01:fi0eeee
+ *
+ * the method to encode DHT reponse to @find_node query.
+ *
+ * @nonce:
+ * @srcId:
+ * @result: nodei of DHT node being found.
+ * @buf:
+ * @sz:
  */
 static
 int _vdht_enc_find_node_rsp(
@@ -434,21 +442,25 @@ int _vdht_enc_find_node_rsp(
 }
 
 /*
+ * find_node Query = {"t":"971ee80a",
+ *                    "y":"q",
+ *                    "q":"find_closest_nodes",
+ *                    "a": {"id":"dbfcc5576ca7f742c802930892de9a1fb521f391",
+ *                          "target":"7ba29c1b9215a2e7621f13414fd21c83414eaf45"
+ *                         }
+ *                   }
+ * bencoded = :d1:t20:971ee80a1:y1:q1:q18:find_closest_nodes1:ad2:id20:dbfcc55
+ *            76ca7f742c802930892de9a1fb521f391e6:target20:7ba29c1b9215a2e7621
+ *            f13414fd21c83414eaf45eee
+ *
+ * the method to encode DHT @find_closest_node query.
+ *
  * @nonce:
- * @srcId: Id of node sending query.
- * @target: Id of queried node.
+ * @srcId:
+ * @targetId: ID of DHT node.
  * @buf:
  * @len:
  *
- * find_node Query = {"t":"971ee80a808da2eb7fb2",
- *                    "y":"q",
- *                    "q":"find_closest_nodes",
- *                    "a": {"id":"7ba29c1b9215a2e7621e",
- *                          "target":"7ba29c1b9215a2e7621"
- *                         }
- *                   }
- * bencoded = :d1:t20:971ee80a808da2eb7fb21:y1:q1:q18:find_closest_nodes1:ad2:i
- *            d20:7ba29c1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
 int _vdht_enc_find_closest_nodes(
@@ -495,12 +507,6 @@ int _vdht_enc_find_closest_nodes(
 }
 
 /*
- * @nonce:
- * @srcId: Id of node replying query
- * @result: queried result.
- * @buf:
- * @sz:
- *
  *  response = {"t":"30c6443e29cc307571e3",
  *              "y":"r",
  *              "r":"find_closest_nodes",
@@ -513,6 +519,14 @@ int _vdht_enc_find_closest_nodes(
  *                           ...
  *                 }
  *            }
+ * the method to encode DHT response to @find_closest_nodes query.
+ *
+ * @nonce:
+ * @srcId: Id of node replying query
+ * @result: queried result.
+ * @buf:
+ * @sz:
+ *
  */
 static
 int _vdht_enc_find_closest_nodes_rsp(
@@ -567,17 +581,20 @@ int _vdht_enc_find_closest_nodes_rsp(
 }
 
 /*
- * @nonce:
- * @srcId: Id of node sending query.
- * @buf:
- * @len:
- * reflect Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
+ * reflect Query = {"t":"deafc137",
  *                  "y":"q",
  *                  "q":"reflex",
  *                  "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
  *              }
- * encoded = d1:t40:deafc137da918b8cd9b95e72fef379a5b54c3f361:y1:q1:q4:reflect
- *           1:ad2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
+ * encoded = d1:t40:deafc1371:y1:q1:q4:reflex1:ad2:id40:dbfcc5576ca7f742c80293
+ *           0892de9a1fb521f391ee
+ *
+ * the method to encode DHT @reflex query.
+ *
+ * @nonce:
+ * @srcId: ID of DHT node to get reflexive address.
+ * @buf:
+ * @len:
  */
 static
 int _vdht_enc_reflex(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
@@ -616,19 +633,21 @@ int _vdht_enc_reflex(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
 }
 
 /*
- * @nonce:
- * @srcId: Id of node replying query
- * @result: queried result.
- * @buf:
- * @sz:
- *
- *  response = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
+ *  response = {"t":"deafc137d",
  *              "y":"r",
  *              "r":"reflex",
  *              "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391",
  *                   "me" :"10.34.2.45:12300",
  *                 }
  *            }
+ *
+ * the method to encode DHT response to @reflex query.
+ *
+ * @nonce:
+ * @srcId:
+ * @reflexive_addr: reflexive address.
+ * @buf:
+ * @sz:
  */
 static
 int _vdht_enc_reflex_rsp(
@@ -675,20 +694,22 @@ int _vdht_enc_reflex_rsp(
 
 /*
  *
- * reflect Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
+ * reflect Query = {"t":"deafc137",
  *                  "y":"q",
  *                  "q":"probe",
  *                  "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391",
  *                       "target": }
  *              }
+ * the method to encode DHT @probe query.
+ *
+ * @nonce:
+ * @srcId:
+ * @destId:
+ * @buf:
+ * @sz:
  */
 static
-int _vdht_enc_probe(
-        vnonce* nonce,
-        vnodeId* srcId,
-        vnodeId* destId,
-        void* buf,
-        int sz)
+int _vdht_enc_probe(vnonce* nonce, vnodeId* srcId, vnodeId* destId, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -726,18 +747,20 @@ int _vdht_enc_probe(
 }
 
 /*
- *  response = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
+ *  response = {"t":"deafc137",
  *              "y":"r",
  *              "r":"probe",
  *              "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
  *            }
+ * the method to encode DHT response to @probe query.
+ *
+ * @nonce:
+ * @srcId:
+ * @buf:
+ * @sz:
  */
 static
-int _vdht_enc_probe_rsp(
-        vnonce* nonce,
-        vnodeId* srcId,
-        void* buf,
-        int sz)
+int _vdht_enc_probe_rsp(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -772,13 +795,9 @@ int _vdht_enc_probe_rsp(
 }
 
 /*
- * @nonce:
- * @srcId: Id of node sending query.
- * @target: Id of queried node.
- * @buf:
- * @len:
+
  *
- * Query = {"t":"7cf80a63748208c08ba5b97401d52fb3baf45cbe",",
+ * Query = {"t":"7cf80a63",
  *          "y":"q",
  *          "q":"post_service",
  *          "a": {"id":"b790b74d9726c859c64cd54835d693b6019bcc73",
@@ -788,11 +807,18 @@ int _vdht_enc_probe_rsp(
  *                           }
  *               }
  *         }
- * encoded = d1:t40:7cf80a63748208c08ba5b97401d52fb3baf45cbe1:y1:q1:q12:post_service
- *           1:ad2:id40:b790b74d9726c859c64cd54835d693b6019bcc737:serviced2:id40:
- *           84d26f1cbea5d67d731a67c1b7ec427e40e948f91:ml18:192.168.4.46:1350015:
- *           10.0.0.12:13500e1:ni5eeee
+ * encoded = d1:t40:7cf80a631:y1:q1:q12:post_service1:ad2:id40:b790b74d9726c85
+ *           9c64cd54835d693b6019bcc737:serviced2:id40:84d26f1cbea5d67d731a67c
+ *           1b7ec427e40e948f91:ml18:192.168.4.46:1350015:10.0.0.12:13500e1:ni
+ *           5eeee
  *
+ * the method to encode DHT @post_service indication.
+ *
+ * @nonce:
+ * @srcId:
+ * @srvci:
+ * @buf:
+ * @len:
  */
 static
 int _vdht_enc_post_service(
@@ -837,7 +863,15 @@ int _vdht_enc_post_service(
     retE((ret < 0));
     return ret;
 }
-
+/*
+ * the method to encode DHT @find_service query.
+ *
+ * @nonce:
+ * @srcId:
+ * @srvci:
+ * @buf:
+ * @len:
+ */
 static
 int _vdht_enc_find_service(
         vnonce* nonce,
@@ -881,6 +915,14 @@ int _vdht_enc_find_service(
     return ret;
 }
 
+/*
+ * the method to encode DHT reponse to @find_service query.
+ * @nonce:
+ * @srcId:
+ * @result:
+ * @buf:
+ * @sz:
+ */
 static
 int _vdht_enc_find_service_rsp(
         vnonce* nonce,
@@ -1071,17 +1113,11 @@ int _aux_unpack_dhtId(struct be_node* dict)
 }
 
 /*
- * @ctxt:  decoder context
+ * the method to decode DHT @ping query.
+ * @ctxt:
  * @nonce:
- * @srcId: source nodeId
+ * @srcId:
  *
- * ping Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
- *               "y":"q",
- *               "q":"ping",
- *               "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
- *              }
- * encoded = d1:t40:deafc137da918b8cd9b95e72fef379a5b54c3f361:y1:q1:q4:ping1:a
- *           d2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
  */
 static
 int _vdht_dec_ping(void* ctxt, vnonce* nonce, vnodeId* srcId)
@@ -1102,24 +1138,10 @@ int _vdht_dec_ping(void* ctxt, vnonce* nonce, vnodeId* srcId)
 }
 
 /*
- * @ctxt:  decoder context
+ * the method to decode DHT reponse message to @ping query.
+ * @ctxt:
  * @nonce:
- * @result: node infos of destination node.
- *
- * response = {"t":"06d5613f3f43631c539db6f10fbd04b651a21844",
- *             "y":"r",
- *             "r":"ping",
- *             "a":{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
- *                  "node" :{"id": "dbfcc5576ca7f742c802930892de9a1fb521f391",
- *                            "v": "0.0.0.1.0",
- *                            "ml": "192.168.4.125:12300",
- *                            "w": "0"
- *                          }
- *                 }
- *            }
- * encoded = d1:t40:06d5613f3f43631c539db6f10fbd04b651a218441:y1:r1:rd4:noded
- *           2:id40:dbfcc5576ca7f742c802930892de9a1fb521f3911:v9:0.0.0.1.0
- *           2:ml19:192.168.4.125:123001:wi0eeee
+ * @result:
  */
 static
 int _vdht_dec_ping_rsp(
@@ -1147,20 +1169,11 @@ int _vdht_dec_ping_rsp(
 }
 
 /*
- * @ctxt: decoder context
+ * the method to decode DHT "@find_node" query.
+ * @ctxt:
  * @nonce:
- * @srcId: source nodeId
- * @targetId: target node Id
- *
- * find_node Query = {"t":"9948eb5973da8f3c3c0a",
- *                    "y":"q",
- *                    "q":"find_node",
- *                    "a": {"id":"7ba29c1b9215a2e7621e",
- *                          "target":"7ba29c1b9215a2e7621"
- *                         }
- *                   }
- * bencoded =  d1:t20:9948eb5973da8f3c3c0a1:y1:q1:q9:find_node1:ad2:id20:7ba29c
- *             1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
+ * @srcId:
+ * @targetId: ID of target DHT node.
  */
 static
 int _vdht_dec_find_node(
@@ -1189,25 +1202,11 @@ int _vdht_dec_find_node(
 }
 
 /*
+ * the method to decode response mssage to DHT @find_node query.
  * @ctxt:
  * @nonce:
  * @srcId:
  * @result:
- *
-  *  response = {"t":"9948eb5973da8f3c3c0a",
- *              "y":"r",
- *              "r":"find_node",
- *              "a":{"id":"ce3dbcf618862baf69e8",
- *                  "node" :{"id": "7ba29c1b9215a2e7621e",
- *                            "m": "192.168.4.46:12300",
- *                            "v": "0.0.0.1.0",
- *                            "f": "0"
- *                          }
- *                 }
- *            }
- * bencoded = d1:t20:9948eb5973da8f3c3c0a1:y1:r1:rd2:id20:ce3dbcf618862baf69e84
- *            :noded2:id20:7ba29c1b9215a2e7621e1:m18:192.168.4.46:123001:v9:0.0
- *            .0.0.01:fi0eeee
  */
 static
 int _vdht_dec_find_node_rsp(
@@ -1239,20 +1238,11 @@ int _vdht_dec_find_node_rsp(
 }
 
 /*
+ * the method to decode DHT @find_closest_nodes query.
  * @ctxt:
  * @nonce:
  * @srcId:
  * @closest:
- *
- * find_node Query = {"t":"971ee80a808da2eb7fb2",
- *                    "y":"q",
- *                    "q":"find_closest_nodes",
- *                    "a": {"id":"7ba29c1b9215a2e7621e",
- *                          "target":"7ba29c1b9215a2e7621"
- *                         }
- *                   }
- * bencoded = :d1:t20:971ee80a808da2eb7fb21:y1:q1:q18:find_closest_nodes1:ad2:i
- *            d20:7ba29c1b9215a2e7621e6:target20:7ba29c1b9215a2e7621eee
  */
 static
 int _vdht_dec_find_closest_nodes(
@@ -1281,26 +1271,11 @@ int _vdht_dec_find_closest_nodes(
 }
 
 /*
- * @ctxt:  decoder context
- * @nonce: msg nonce;
- * @srcId: source vnodeId
- * @closest: array of nodes that close to current node.
- *
- * response = {"t":"30c6443e29cc307571e3",
- *              "y":"r",
- *              "r":"find_closest_nodes",
- *              "a":{"id":"ce3dbcf618862baf69e8",
- *                  "nodes" :["id": "5a7f5578eace25999477",
- *                            "m":  "192.168.4.46:12300",
- *                            "v":  "0.0.0.0.01",
- *                            "f": "00000001"
- *                           ],
- *                           ...
- *                 }
- *            }
- * bencoded = d1:t20:30c6443e29cc307571e31:y1:r1:rd2:id20:ce3dbcf618862baf69e8\
- *            5:nodesld2:id20:5a7f5578eace259994771:m18:192.168.4.46:123001:v\
- *            9:0.0.0.0.01:fi1417421748eeeee
+ * the method to decode DHT response message to @find_closest_nodes query.
+ * @ctxt:
+ * @nonce:
+ * @srcId: ID of DHT node sending message.
+ * @closest: array of DHT nodei that close to special DHT node.
  */
 static
 int _vdht_dec_find_closest_nodes_rsp(
@@ -1346,17 +1321,13 @@ int _vdht_dec_find_closest_nodes_rsp(
 }
 
 /*
- * the routine to decode @reflex query.
- * @ctxt:  deocde context.
- * @nonce: transaction nonce
- * @srcId: id of query node.
- * @addr : local address to get it's reflexive address.
+ * the method to decode DHT @reflex query.
+ * @ctxt:
+ * @nonce:
+ * @srcId:
  */
 static
-int _vdht_dec_reflex(
-        void* ctxt,
-        vnonce* nonce,
-        vnodeId* srcId)
+int _vdht_dec_reflex(void* ctxt, vnonce* nonce, vnodeId* srcId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
@@ -1374,10 +1345,10 @@ int _vdht_dec_reflex(
 }
 
 /*
- * the routine to decode response msg to @reflex query.
- * @ctxt:  deocde context.
- * @nonce: transaction nonce
- * @srcId: id of node where response came from.
+ * the method to decode DHT reponse message to @reflex query.
+ * @ctxt:
+ * @nonce:
+ * @srcId: ID of DHT node sending response message.
  * @reflexive_addr: reflexive address to query node.
  */
 static
@@ -1410,18 +1381,14 @@ int _vdht_dec_reflex_rsp(
 }
 
 /*
- * the routine to decode @probe query.
- * @ctxt:  deocde context.
- * @nonce: transaction nonce
- * @srcId: id of query node.
- * @destId: id of destination node.
+ * the method to decode DHT @probe query.
+ * @ctxt:
+ * @nonce:
+ * @srcId:
+ * @destId: ID of DHT node where @probe query was sent to.
  */
 static
-int _vdht_dec_probe(
-        void* ctxt,
-        vnonce* nonce,
-        vnodeId* srcId,
-        vnodeId* destId)
+int _vdht_dec_probe(void* ctxt, vnonce* nonce, vnodeId* srcId, vnodeId* destId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
@@ -1443,16 +1410,13 @@ int _vdht_dec_probe(
 }
 
 /*
- * the routine to decode response msg to @probe query.
- * @ctxt:  deocde context.
- * @nonce: transaction nonce
- * @srcId: id of node where response came from.
+ * the method to decode DHT response message to @probe query.
+ * @ctxt:
+ * @nonce:
+ * @srcId:
  */
 static
-int _vdht_dec_probe_rsp(
-        void* ctxt,
-        vnonce* nonce,
-        vnodeId* srcId)
+int _vdht_dec_probe_rsp(void* ctxt, vnonce* nonce, vnodeId* srcId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
@@ -1469,34 +1433,19 @@ int _vdht_dec_probe_rsp(
     return 0;
 }
 
-/* the routine to decode @post_service indication.
- * @ctxt: decode context
- * @nonce: trans nonce
- * @srcId: Id of source node where the indcation was from.
- * @service:
- *
- * Query = {"t":"b6e0855abbf93b8e6754",",
- *          "y":"q",
- *          "q":"post_service",
- *          "a": {"id":"7ba29c1b9215a2e7621e",
- *                "service" :{"id": "e532d7c80cf02e8652d3"
- *                            "m" : ["192.168.4.46:14444",
- *                                   "27.115.62.114:15300"
- *                                  ]
- *                            "f" : "0"
- *                           }
- *               }
- *         }
- * bencoded = d1:t20:b6e0855abbf93b8e67541:y1:q1:q12:post_service1:ad2:id20:
- *            7ba29c1b9215a2e7621e7:serviced2:id20:e532d7c80cf02e8652d31:m17:
- *            192.168.4.46:144441:fi0eeee
+/*
+ * the method to decode @post_service indication.
+ * @ctxt:
+ * @nonce:
+ * @srcId:
+ * @srvci: service entry to post.
  */
 static
 int _vdht_dec_post_service(
         void* ctxt,
         vnonce* nonce,
         vnodeId* srcId,
-        vsrvcInfo* result)
+        vsrvcInfo* srvci)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
@@ -1505,7 +1454,7 @@ int _vdht_dec_post_service(
     vassert(dict);
     vassert(nonce);
     vassert(srcId);
-    vassert(result);
+    vassert(srvci);
 
     ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
@@ -1514,18 +1463,18 @@ int _vdht_dec_post_service(
     retE((ret < 0));
     ret = be_node_by_2keys(dict, "a", "service", &node);
     retE((ret < 0));
-    ret = _aux_unpack_vsrvcInfo(node, result);
+    ret = _aux_unpack_vsrvcInfo(node, srvci);
     retE((ret < 0));
 
     return 0;
 }
 
 /*
- * the routine to decode @find_service query.
+ * the method to decode DHT @find_service query.
  * @ctxt:
  * @nonce:
  * @srcId:
- * @srvcId:
+ * @srvcHash:
  */
 static
 int _vdht_dec_find_service(
@@ -1554,7 +1503,7 @@ int _vdht_dec_find_service(
 }
 
 /*
- * the routine to decode response msg to @find_servcie query.
+ * the method to decode DHT response to @find_service query.
  * @ctxt:
  * @nonce:
  * @srcId:
@@ -1589,6 +1538,12 @@ int _vdht_dec_find_service_rsp(
     return 0;
 }
 
+/*
+ * the method to begine decode DHT message.
+ * @buf:
+ * @len:
+ * @ctxt: [out].
+ */
 static
 int _vdht_dec_begin(void* buf, int len, void** ctxt)
 {
@@ -1612,6 +1567,10 @@ int _vdht_dec_begin(void* buf, int len, void** ctxt)
     return ret;
 }
 
+/*
+ * the method of close decoder handler.
+ * @ctxt:
+ */
 static
 int _vdht_dec_done(void* ctxt)
 {
