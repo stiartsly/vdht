@@ -1554,7 +1554,7 @@ int _vdht_dec_begin(void* buf, int len, void** ctxt)
     vassert(len);
     vassert(ctxt);
 
-    vlogI("[dht msg]->%s", (char*)buf);
+   // vlogI("[dht msg]->%s", (char*)buf);
     dict = be_decode(buf, len);
     vlogEv((!dict), elog_be_decode);
     retE((!dict));

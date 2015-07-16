@@ -395,7 +395,24 @@ struct vroute_ops route_ops = {
             ret = route->msger->ops->push(route->msger, &msg); \
             ret1E((ret < 0), vdht_buf_free(buf));              \
         } \
-    }while(0)
+    } while(0)
+
+/*
+ * auxilary log utility API
+ */
+static
+void _aux_vlog(const char* msgtype, struct sockaddr_in* addr)
+{
+    char buf[32];
+    vassert(msgtype);
+    vassert(addr);
+
+    memset(buf, 0, 32);
+    vsockaddr_strlize(addr, buf, 32);
+    vlogI("send     @%-20s =>  %s", msgtype, buf);
+    return ;
+}
+
 /*
  * the routine to pack a @ping query and send it.
  * @route:
@@ -419,7 +436,7 @@ int _vroute_dht_ping(struct vroute* route, vnodeConn* conn)
     DO_INSPECT(VROUTE_INSP_SND_PING);
     ADD_CHECK_TOKEN();
 
-    vlogD("send @ping");
+    _aux_vlog("ping", &conn->raddr);
     return 0;
 }
 
@@ -447,7 +464,7 @@ int _vroute_dht_ping_rsp(struct vroute* route, vnodeConn* conn, vnonce* nonce, v
         ret = route->enc_ops->ping_rsp(nonce, &route->myid, nodei, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    vlogD("send @ping_rsp");
+    _aux_vlog("ping_rsp", &conn->raddr);
     return 0;
 }
 
@@ -478,7 +495,7 @@ int _vroute_dht_find_node(struct vroute* route, vnodeConn* conn, vnodeId* target
     DO_INSPECT(VROUTE_INSP_SND_FIND_NODE);
     ADD_CHECK_TOKEN();
 
-    vlogD("send @find_node");
+    _aux_vlog("find_node", &conn->raddr);
     return 0;
 }
 
@@ -504,7 +521,7 @@ int _vroute_dht_find_node_rsp(struct vroute* route, vnodeConn* conn, vnonce* non
         ret = route->enc_ops->find_node_rsp(nonce, &route->myid, nodei, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    vlogD("send @find_node_rsp");
+    _aux_vlog("find_node_rsp", &conn->raddr);
     return 0;
 }
 
@@ -533,7 +550,7 @@ int _vroute_dht_find_closest_nodes(struct vroute* route, vnodeConn* conn, vnodeI
     DO_INSPECT(VROUTE_INSP_SND_FIND_CLOSEST_NODES);
     ADD_CHECK_TOKEN();
 
-    vlogD("send @find_closest_nodes");
+    _aux_vlog("find_closest_nodes", &conn->raddr);
     return 0;
 }
 
@@ -559,7 +576,7 @@ int _vroute_dht_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, vn
         ret = route->enc_ops->find_closest_nodes_rsp(nonce, &route->myid, closest, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    vlogD("send @find_closest_nodes_rsp");
+    _aux_vlog("find_closest_nodes_rsp", &conn->raddr);
     return 0;
 }
 
@@ -585,7 +602,7 @@ int _vroute_dht_reflex(struct vroute* route, vnodeConn* conn)
     DO_INSPECT(VROUTE_INSP_SND_REFLEX);
     ADD_CHECK_TOKEN();
 
-    vlogD("send @reflex");
+    _aux_vlog("reflex", &conn->raddr);
     return 0;
 }
 
@@ -610,7 +627,7 @@ int _vroute_dht_reflex_rsp(struct vroute* route, vnodeConn* conn, vnonce* nonce,
         ret = route->enc_ops->reflex_rsp(nonce, &route->myid, reflexive_addr, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    vlogD("send @reflex_rsp");
+    _aux_vlog("reflex_rsp", &conn->raddr);
     return 0;
 }
 
@@ -635,6 +652,8 @@ int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
         ret = route->enc_ops->probe(&nonce, &route->myid, targetId, buf, vdht_buf_len());
     } END_QUERY(ret);
 
+    _aux_vlog("probe", &conn->raddr);
+
     DO_INSPECT(VROUTE_INSP_SND_PROBE);
     ADD_CHECK_TOKEN();
     {
@@ -647,7 +666,6 @@ int _vroute_dht_probe(struct vroute* route, vnodeConn* conn, vnodeId* targetId)
         };
         tckt_space->ops->add_ticket(tckt_space, VTICKET_CONN_PROBE, argv);
     }
-    vlogD("send @probe");
     return 0;
 }
 
@@ -670,7 +688,7 @@ int _vroute_dht_probe_rsp(struct vroute* route, vnodeConn* conn, vnonce* nonce)
         ret = route->enc_ops->probe_rsp(nonce, &route->myid, buf, vdht_buf_len());
     } END_QUERY(ret);
 
-    vlogD("send @probe_rsp");
+    _aux_vlog("prbe_rsp", &conn->raddr);
     return 0;
 }
 
@@ -696,7 +714,7 @@ int _vroute_dht_post_service(struct vroute* route, vnodeConn* conn, vsrvcInfo* s
         ret = route->enc_ops->post_service(&nonce, &route->myid, srvci, buf, vdht_buf_len());
     }END_QUERY(ret);
 
-    vlogD("send @post_service");
+    _aux_vlog("post_service", &conn->raddr);
     return 0;
 }
 
@@ -725,7 +743,7 @@ int _vroute_dht_find_service(struct vroute* route, vnodeConn* conn, vsrvcHash* h
     DO_INSPECT(VROUTE_INSP_SND_FIND_SERVICE);
     ADD_CHECK_TOKEN();
 
-    vlogD("send @find_service");
+    _aux_vlog("find_service", &conn->raddr);
     return 0;
 }
 
@@ -751,7 +769,7 @@ int _vroute_dht_find_service_rsp(struct vroute* route, vnodeConn* conn, vnonce* 
         ret = route->enc_ops->find_service_rsp(nonce, &route->myid, srvc, buf, vdht_buf_len());
     }END_QUERY(ret);
 
-    vlogD("send @find_service_rsp");
+    _aux_vlog("find_service_rsp", &conn->raddr);
     return 0;
 }
 
@@ -1273,7 +1291,13 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
     ret = route->dec_ops->dec_begin(mu->data, mu->len, &ctxt);
     retE((ret >= VDHT_UNKNOWN));
     retE((ret < 0));
-    vlogD("received @%s", vdht_get_desc(ret));
+
+    {
+        char buf[32];
+        memset(buf, 0, 32);
+        vsockaddr_strlize(to_sockaddr_sin(mu->addr), buf, 32);
+        vlogI("received @%-20s <=  %s", vdht_get_desc(ret), buf);
+    }
 
     vnodeConn_set_raw(&conn, to_sockaddr_sin(mu->spec), to_sockaddr_sin(mu->addr));
     vlock_enter(&route->lock);
