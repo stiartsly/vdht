@@ -9,8 +9,8 @@ struct vticket_item {
         /* used to check wheather DHT response is the valid, which means the
          * response is acked for query sent from my DHT node.
          */
-        struct token_check_info {
-            vtoken token;
+        struct nonce_check_info {
+            vnonce nonce;
         } check;
 
         /*
@@ -27,7 +27,7 @@ struct vticket_item {
          * used to
          */
         struct conn_probe_info {
-            vtoken    token;
+            vnonce    nonce;
             vnodeId   targetId;
             vnodeConn conn;
             void* cookie;
@@ -69,13 +69,24 @@ void vticket_init(struct vticket_item* ticket, int type, void** argv)
 
     switch(type) {
     case VTICKET_TOKEN_CHECK: {
-        struct token_check_info* info = &ticket->info.check;
-        varg_decl(argv, 0, vtoken*, token);
-        vtoken_copy(&info->token, token);
+        struct nonce_check_info* info = &ticket->info.check;
+        /* argv = {
+         *     nonce
+         * }
+         */
+        varg_decl(argv, 0, vnonce*, nonce);
+        vnonce_copy(&info->nonce, nonce);
         break;
     }
     case VTICKET_SRVC_PROBE: {
         struct srvc_probe_info* info = &ticket->info.srvc;
+        /* argv[] = {
+         *     hash,
+         *     ncb,
+         *     icb,
+         *     cookie
+         * }
+         */
         varg_decl(argv, 0, vsrvcHash*, hash);
         varg_decl(argv, 1, vsrvcInfo_number_addr_t,  ncb);
         varg_decl(argv, 2, vsrvcInfo_iterate_addr_t, icb);
@@ -89,12 +100,19 @@ void vticket_init(struct vticket_item* ticket, int type, void** argv)
     }
     case VTICKET_CONN_PROBE: {
         struct conn_probe_info* info = &ticket->info.conn;
-        varg_decl(argv, 0, vtoken*, token);
+        /* argv[] = {
+         *        nonce,
+         *        targetId,
+         *        conn,
+         *        cookie
+         * }
+         */
+        varg_decl(argv, 0, vnonce*, nonce);
         varg_decl(argv, 1, vnodeId*, targetId);
         varg_decl(argv, 2, vnodeConn*, conn);
         varg_decl(argv, 3, void*, cookie);
 
-        vtoken_copy(&info->token, token);
+        vnonce_copy(&info->nonce, nonce);
         vtoken_copy(&info->targetId, targetId);
         memcpy(&info->conn, conn, sizeof(*conn));
         info->cookie = cookie;
@@ -115,6 +133,11 @@ void vticket_dump(struct vticket_item* ticket)
     return ;
 }
 
+/*
+ * punch a ticket according to userdata @argv
+ * @ticket:
+ * @argv: an array of userdata;
+ */
 static
 int vticket_punch(struct vticket_item* ticket, void** argv)
 {
@@ -125,15 +148,25 @@ int vticket_punch(struct vticket_item* ticket, void** argv)
 
     switch(ticket->type) {
     case VTICKET_TOKEN_CHECK: {
-        struct token_check_info* info = &ticket->info.check;
-        varg_decl(argv, 0, vtoken*, token);
-        if (vtoken_equal(&info->token, token)) {
+        struct nonce_check_info* info = &ticket->info.check;
+        /*
+         * argv[] = {
+         *     nonce
+         * }
+         */
+        varg_decl(argv, 0, vnonce*, nonce);
+        if (vnonce_equal(&info->nonce, nonce)) {
             done = 1;
         }
         break;
     }
     case VTICKET_SRVC_PROBE: {
         struct srvc_probe_info* info = &ticket->info.srvc;
+        /*
+         * argv[] = {
+         *     srvci
+         * }
+         */
         varg_decl(argv, 0, vsrvcInfo*, srvci);
         int i = 0;
         if (vtoken_equal(&info->hash, &srvci->hash)) {
@@ -148,9 +181,14 @@ int vticket_punch(struct vticket_item* ticket, void** argv)
     case VTICKET_CONN_PROBE: {
         struct conn_probe_info*   info  = &ticket->info.conn;
         struct vroute_node_space* space = (struct vroute_node_space*)info->cookie;
-        varg_decl(argv, 0, vtoken*, token);
+        /*
+         * argv[] = {
+         *      nonce
+         * }
+         */
+        varg_decl(argv, 0, vnonce*, nonce);
 
-        if (vtoken_equal(&info->token, token)) {
+        if (vnonce_equal(&info->nonce, nonce)) {
             space->ops->adjust_connectivity(space, &info->targetId, &info->conn);
             done = 1;
         }
@@ -167,7 +205,7 @@ int vticket_punch(struct vticket_item* ticket, void** argv)
  * the routine to add a ticket
  * @ticket:
  * @type :  ticket type;
- * @argv :
+ * @argv :  an array of pointers to user data;
  */
 static
 int _vroute_tckt_space_add_ticket(struct vroute_tckt_space* space, int type, void** argv)
@@ -187,7 +225,7 @@ int _vroute_tckt_space_add_ticket(struct vroute_tckt_space* space, int type, voi
 
 /*
  * the routine to check connent(@argv) is valid by iterate all tickets, and
- * if find a correspond ticket, then punch it and clear it.
+ * if find a correspond ticket, then punch and clear it.
  */
 static
 int _vroute_tckt_space_check_ticket(struct vroute_tckt_space* space, int type, void** argv)

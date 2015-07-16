@@ -80,7 +80,7 @@ enum {
     VADD_BUUT
 };
 
-typedef void (*vroute_node_space_inspect_t)(struct vpeer*, void*, vtoken*, uint32_t);
+typedef void (*vroute_node_space_inspect_t)(struct vpeer*, void*, vnonce*, uint32_t);
 struct vroute_node_space;
 struct vroute_node_space_ops {
     void (*kick_node)    (struct vroute_node_space*, vnodeId*);
@@ -99,7 +99,7 @@ struct vroute_node_space_ops {
     int  (*load)         (struct vroute_node_space*);
     int  (*store)        (struct vroute_node_space*);
     void (*clear)        (struct vroute_node_space*);
-    void (*inspect)      (struct vroute_node_space*, vroute_node_space_inspect_t, void*, vtoken*, uint32_t);
+    void (*inspect)      (struct vroute_node_space*, vroute_node_space_inspect_t, void*, vnonce*, uint32_t);
     void (*dump)         (struct vroute_node_space*);
 };
 
@@ -136,13 +136,13 @@ struct vservice {
     time_t rcv_ts;
 };
 
-typedef void (*vroute_srvc_space_inspect_t)(struct vservice*, void*, vtoken*, uint32_t);
+typedef void (*vroute_srvc_space_inspect_t)(struct vservice*, void*, vnonce*, uint32_t);
 struct vroute_srvc_space;
 struct vroute_srvc_space_ops {
     int  (*add_service)  (struct vroute_srvc_space*, vsrvcInfo*);
     int  (*get_service)  (struct vroute_srvc_space*, vsrvcHash*, vsrvcInfo*);
     void (*clear)        (struct vroute_srvc_space*);
-    void (*inspect)      (struct vroute_srvc_space*, vroute_srvc_space_inspect_t, void*, vtoken*, uint32_t);
+    void (*inspect)      (struct vroute_srvc_space*, vroute_srvc_space_inspect_t, void*, vnonce*, uint32_t);
     void (*dump)         (struct vroute_srvc_space*);
 };
 
@@ -190,7 +190,7 @@ enum {
     VROUTE_INSP_RCV_FIND_SERVICE_RSP,
     VROUTE_INSP_BUTT
 };
-typedef void (*vroute_inspect_t)(struct vroute*, void*, vtoken*, uint32_t);
+typedef void (*vroute_inspect_t)(struct vroute*, void*, vnonce*, uint32_t);
 
 /*
  * for routing table.
@@ -204,7 +204,7 @@ struct vroute_ops {
     int  (*reflex)       (struct vroute*, struct sockaddr_in*);
     int  (*probe_connectivity) (struct vroute*, struct vsockaddr_in*);
     void (*set_inspect_cb)     (struct vroute*, vroute_inspect_t, void*);
-    void (*inspect)      (struct vroute*, vtoken*, uint32_t);
+    void (*inspect)      (struct vroute*, vnonce*, uint32_t);
     int  (*load)         (struct vroute*);
     int  (*store)        (struct vroute*);
     int  (*tick)         (struct vroute*);
@@ -214,21 +214,21 @@ struct vroute_ops {
 
 struct vroute_dht_ops {
     int (*ping)          (struct vroute*, vnodeConn*);
-    int (*ping_rsp)      (struct vroute*, vnodeConn*, vtoken*, vnodeInfo*);
+    int (*ping_rsp)      (struct vroute*, vnodeConn*, vnonce*, vnodeInfo*);
     int (*find_node)     (struct vroute*, vnodeConn*, vnodeId*);
-    int (*find_node_rsp) (struct vroute*, vnodeConn*, vtoken*, vnodeInfo*);
+    int (*find_node_rsp) (struct vroute*, vnodeConn*, vnonce*, vnodeInfo*);
     int (*find_closest_nodes)
                          (struct vroute*, vnodeConn*, vnodeId*);
     int (*find_closest_nodes_rsp)
-                         (struct vroute*, vnodeConn*, vtoken*, struct varray*);
+                         (struct vroute*, vnodeConn*, vnonce*, struct varray*);
     int (*reflex)        (struct vroute*, vnodeConn*);
-    int (*reflex_rsp)    (struct vroute*, vnodeConn*, vtoken*, struct vsockaddr_in*);
+    int (*reflex_rsp)    (struct vroute*, vnodeConn*, vnonce*, struct vsockaddr_in*);
     int (*probe)         (struct vroute*, vnodeConn*, vnodeId*);
-    int (*probe_rsp)     (struct vroute*, vnodeConn*, vtoken*);
+    int (*probe_rsp)     (struct vroute*, vnodeConn*, vnonce*);
     int (*post_service)  (struct vroute*, vnodeConn*, vsrvcInfo*);
     int (*find_service)  (struct vroute*, vnodeConn*, vsrvcHash*);
     int (*find_service_rsp)
-                         (struct vroute*, vnodeConn*, vtoken*, vsrvcInfo*);
+                         (struct vroute*, vnodeConn*, vnonce*, vsrvcInfo*);
 };
 
 typedef int (*vroute_dht_cb_t)(struct vroute*, vnodeConn*, void*);

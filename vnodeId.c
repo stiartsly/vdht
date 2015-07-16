@@ -1,8 +1,85 @@
 #include "vglobal.h"
 #include "vnodeId.h"
 
-static uint32_t token_dynamic_magic = 0;
+static uint32_t nonce_dynamic_magic = 0;
+void vnonce_make(vnonce* nonce)
+{
+    uint32_t seed = (uint32_t)time(NULL);
+    vassert(nonce);
 
+    seed += nonce_dynamic_magic;
+    nonce_dynamic_magic = seed;
+    srand(seed);
+
+    *((uint32_t*)nonce->data) = (uint32_t)rand();
+    return ;
+}
+
+int vnonce_equal(vnonce* a, vnonce* b)
+{
+    vassert(a);
+    vassert(b);
+    return (*((uint32_t*)a->data) == *((uint32_t*)b->data));
+}
+
+void vnonce_copy(vnonce* dst, vnonce* src)
+{
+    vassert(dst);
+    vassert(src);
+
+    *((uint32_t*)dst->data) = *((uint32_t*)src->data);
+    return ;
+}
+
+int vnonce_strlize(vnonce* nonce, char* buf, int len)
+{
+    uint8_t data = 0;
+    int ret = 0;
+    int sz  = 0;
+    int i   = 0;
+
+    vassert(nonce);
+    vassert(buf);
+    vassert(len > 0);
+
+    for (; i < VNONCE_LEN; i++) {
+        data = nonce->data[i];
+        ret = snprintf(buf+sz, len-sz, "%x%x", (data >> 4), (data & 0x0f));
+        vlogEv((ret >= len-sz), elog_snprintf);
+        retE((ret >= len-sz));
+        sz += ret;
+    }
+
+    return 0;
+}
+
+int vnonce_unstrlize(const char* id_str, vnonce* nonce)
+{
+    uint32_t low  = 0;
+    uint32_t high = 0;
+    char data[2] = {'\0', '\0'};
+    int ret = 0;
+    int i = 0;
+    vassert(id_str);
+    vassert(nonce);
+
+    for (; i < VNONCE_LEN; i++) {
+        data[0] = *id_str++;
+        ret = sscanf(data, "%x", &high);
+        vlogEv((!ret), elog_sscanf);
+        retE((!ret));
+
+        data[0] = *id_str++;
+        ret = sscanf(data, "%x", &low);
+        vlogEv((!ret), elog_sscanf);
+        retE((!ret));
+
+        nonce->data[i] = ((high << 4) | (0x0f & low));
+    }
+    return 0;
+}
+
+static uint32_t token_dynamic_magic = 0;
 static
 uint32_t get_macaddr_hash(void)
 {

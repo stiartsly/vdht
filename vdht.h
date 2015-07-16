@@ -29,87 +29,87 @@ enum {
  */
 struct vdht_enc_ops {
     int (*ping)(
-            vtoken* token,  // transaction Id.
+            vnonce* nonce,  // transaction Id.
             vnodeId* srcId, // node Id querying
             void* buf,
             int   sz);
 
     int (*ping_rsp)(
-            vtoken* token,  // trans Id.
+            vnonce* nonce,  // trans Id.
             vnodeId* srcId,
             vnodeInfo* result, // query result. nomally info of current dht node
             void* buf,
             int   sz);
 
     int (*find_node)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId, // node Id querying.
             vnodeId* targetId,  // Id of queried target
             void* buf,
             int   sz);
 
     int (*find_node_rsp)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId, // node Id replying query.
             vnodeInfo* result, // query result, normally info the target dht node.
             void* buf,
             int   sz);
 
     int (*find_closest_nodes)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vnodeId* targetId,
             void* buf,
             int   sz);
     int (*find_closest_nodes_rsp)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             struct varray* result,
             void* buf,
             int   sz);
 
     int (*reflex)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             void* buf,
             int   sz);
 
     int (*reflex_rsp)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             struct vsockaddr_in* reflexive_addr,
             void* buf,
             int   sz);
 
     int (*probe)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vnodeId* destId,
             void* buf,
             int   sz);
 
     int (*probe_rsp)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             void* buf,
             int   sz);
 
     int (*post_service)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vsrvcInfo* srvc,
             void* buf,
             int   sz);
 
     int (*find_service)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vsrvcHash* hash,
             void* buf,
             int   sz);
 
     int (*find_service_rsp)(
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vsrvcInfo* srvc,
             void* buf,
@@ -131,75 +131,75 @@ struct vdht_dec_ops {
 
     int (*ping)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId);
 
     int (*ping_rsp)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeInfo* result);
 
     int (*find_node)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vnodeId* targetId); // queried vnode Id.
 
     int (*find_node_rsp)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vnodeInfo* result);
 
     int (*find_closest_nodes)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vnodeId* targetId);
 
     int (*find_closest_nodes_rsp)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             struct varray* result);
 
     int (*reflex)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId);
 
     int (*reflex_rsp)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             struct vsockaddr_in* reflexive_addr);
 
     int (*probe)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vnodeId* destId);
 
     int (*probe_rsp)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId);
 
     int (*post_service) (
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vsrvcInfo* srvci);
 
     int (*find_service)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vsrvcHash* target_hash);
 
     int (*find_service_rsp)(
             void* ctxt,
-            vtoken* token,
+            vnonce* nonce,
             vnodeId* srcId,
             vsrvcInfo* srvci);
 };

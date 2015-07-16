@@ -1020,7 +1020,7 @@ void _vroute_node_space_clear(struct vroute_node_space* space)
  * @insp_id: type ID of inspection;
  */
 static
-void _vroute_node_space_inspect(struct vroute_node_space* space, vroute_node_space_inspect_t cb, void* cookie, vtoken* token, uint32_t insp_id)
+void _vroute_node_space_inspect(struct vroute_node_space* space, vroute_node_space_inspect_t cb, void* cookie, vnonce* nonce, uint32_t insp_id)
 {
     struct varray* peers = NULL;
     int i = 0;
@@ -1032,7 +1032,7 @@ void _vroute_node_space_inspect(struct vroute_node_space* space, vroute_node_spa
     for (i = 0; i < NBUCKETS; i++) {
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
-            cb((struct vpeer*)varray_get(peers, j), cookie, token, insp_id);
+            cb((struct vpeer*)varray_get(peers, j), cookie, nonce, insp_id);
         }
     }
     return ;

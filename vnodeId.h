@@ -3,6 +3,21 @@
 
 #include <netinet/in.h>
 
+// used for message token.
+#define VNONCE_LEN    4
+#define VNONCE_INTLEN 1
+#define VNONCE_BITLEN 32
+
+struct vnonce {
+    uint8_t data[VNONCE_LEN];
+};
+typedef struct vnonce vnonce;
+void vnonce_make   (vnonce*);
+int  vnonce_equal  (vnonce*, vnonce*);
+void vnonce_copy   (vnonce*, vnonce*);
+int  vnonce_strlize(vnonce*, char*, int);
+int  vnonce_unstrlize(const char*, vnonce*);
+
 #define VTOKEN_LEN    20
 #define VTOKEN_INTLEN 5
 #define VTOKEN_BITLEN 160

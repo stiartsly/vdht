@@ -255,6 +255,19 @@ struct be_node* be_create_int(int num)
     return node;
 }
 
+struct be_node* be_create_vnonce(vnonce* nonce)
+{
+    struct be_node* node = NULL;
+    char buf[16];
+    vassert(nonce);
+
+    memset(buf, 0, 16);
+    vnonce_strlize(nonce, buf, 16);
+    node = be_create_str(buf);
+    retE_p((!node));
+    return node;
+}
+
 struct be_node* be_create_vtoken(vtoken* token)
 {
     struct be_node* node = NULL;
@@ -432,6 +445,25 @@ int be_unpack_int(struct be_node* node, int* val)
 
     retE((BE_INT != node->type));
     *val = node->val.i;
+    return 0;
+}
+
+int be_unpack_nonce(struct be_node* node, vnonce* nonce)
+{
+    char* s = NULL;
+    int ret = 0;
+
+    vassert(node);
+    vassert(nonce);
+
+    retE((BE_STR != node->type));
+
+    s = unoff_addr(node->val.s, sizeof(int32_t));
+    ret = get_int32(s);
+    retE((ret != strlen(node->val.s)));
+
+    ret = vnonce_unstrlize(node->val.s, nonce);
+    retE((ret < 0));
     return 0;
 }
 

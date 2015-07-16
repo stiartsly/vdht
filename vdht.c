@@ -211,14 +211,14 @@ struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* srvci)
  *           d2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
  */
 static
-int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
+int _vdht_enc_ping(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
     struct be_node* id   = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(buf);
     vassert(sz > 0);
@@ -226,7 +226,7 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -247,7 +247,7 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
 }
 
 /*
- * @token:
+ * @nonce:
  * @srcId:  Id of node replying query.
  * @result: queried result
  * @buf:
@@ -269,14 +269,14 @@ int _vdht_enc_ping(vtoken* token, vnodeId* srcId, void* buf, int sz)
  *
  */
 static
-int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, void* buf, int sz)
+int _vdht_enc_ping_rsp(vnonce* nonce, vnodeId* srcId, vnodeInfo* result, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
     struct be_node* temp = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(result);
     vassert(buf);
     vassert(sz > 0);
@@ -284,7 +284,7 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, void* b
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -307,7 +307,7 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, void* b
 }
 
 /*
- * @token:
+ * @nonce:
  * @srcId:  Id of node sending query.
  * @target: Id of queried node.
  * @buf:
@@ -325,7 +325,7 @@ int _vdht_enc_ping_rsp(vtoken* token, vnodeId* srcId, vnodeInfo* result, void* b
  */
 static
 int _vdht_enc_find_node(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vnodeId* targetId,
         void* buf,
@@ -336,7 +336,7 @@ int _vdht_enc_find_node(
     struct be_node* tmp  = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(targetId);
     vassert(buf);
@@ -345,7 +345,7 @@ int _vdht_enc_find_node(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -368,7 +368,7 @@ int _vdht_enc_find_node(
 }
 
 /*
- * @token:
+ * @nonce:
  * @srcId: Id of node replying query
  * @result: queried result.
  * @buf:
@@ -391,7 +391,7 @@ int _vdht_enc_find_node(
  */
 static
 int _vdht_enc_find_node_rsp(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vnodeInfo* result,
         void* buf,
@@ -402,7 +402,7 @@ int _vdht_enc_find_node_rsp(
     struct be_node* temp = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(result);
     vassert(buf);
@@ -411,7 +411,7 @@ int _vdht_enc_find_node_rsp(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -434,7 +434,7 @@ int _vdht_enc_find_node_rsp(
 }
 
 /*
- * @token:
+ * @nonce:
  * @srcId: Id of node sending query.
  * @target: Id of queried node.
  * @buf:
@@ -452,7 +452,7 @@ int _vdht_enc_find_node_rsp(
  */
 static
 int _vdht_enc_find_closest_nodes(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vnodeId* targetId,
         void* buf,
@@ -463,7 +463,7 @@ int _vdht_enc_find_closest_nodes(
     struct be_node* tmp  = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(targetId);
     vassert(buf);
@@ -472,7 +472,7 @@ int _vdht_enc_find_closest_nodes(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -495,7 +495,7 @@ int _vdht_enc_find_closest_nodes(
 }
 
 /*
- * @token:
+ * @nonce:
  * @srcId: Id of node replying query
  * @result: queried result.
  * @buf:
@@ -516,7 +516,7 @@ int _vdht_enc_find_closest_nodes(
  */
 static
 int _vdht_enc_find_closest_nodes_rsp(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         struct varray* closest,
         void* buf,
@@ -529,7 +529,7 @@ int _vdht_enc_find_closest_nodes_rsp(
     int ret = 0;
     int i   = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(closest);
     vassert(buf);
@@ -538,7 +538,7 @@ int _vdht_enc_find_closest_nodes_rsp(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -567,7 +567,7 @@ int _vdht_enc_find_closest_nodes_rsp(
 }
 
 /*
- * @token:
+ * @nonce:
  * @srcId: Id of node sending query.
  * @buf:
  * @len:
@@ -580,14 +580,14 @@ int _vdht_enc_find_closest_nodes_rsp(
  *           1:ad2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
  */
 static
-int _vdht_enc_reflex(vtoken* token, vnodeId* srcId, void* buf, int sz)
+int _vdht_enc_reflex(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
     struct be_node* id   = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(buf);
     vassert(sz > 0);
@@ -595,7 +595,7 @@ int _vdht_enc_reflex(vtoken* token, vnodeId* srcId, void* buf, int sz)
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -616,7 +616,7 @@ int _vdht_enc_reflex(vtoken* token, vnodeId* srcId, void* buf, int sz)
 }
 
 /*
- * @token:
+ * @nonce:
  * @srcId: Id of node replying query
  * @result: queried result.
  * @buf:
@@ -632,7 +632,7 @@ int _vdht_enc_reflex(vtoken* token, vnodeId* srcId, void* buf, int sz)
  */
 static
 int _vdht_enc_reflex_rsp(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         struct vsockaddr_in* reflective_addr,
         void* buf,
@@ -643,7 +643,7 @@ int _vdht_enc_reflex_rsp(
     struct be_node* rslt = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(reflective_addr);
     vassert(buf);
@@ -652,7 +652,7 @@ int _vdht_enc_reflex_rsp(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -684,7 +684,7 @@ int _vdht_enc_reflex_rsp(
  */
 static
 int _vdht_enc_probe(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vnodeId* destId,
         void* buf,
@@ -695,7 +695,7 @@ int _vdht_enc_probe(
     struct be_node* temp = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(destId);
     vassert(buf);
@@ -704,7 +704,7 @@ int _vdht_enc_probe(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
     node = be_create_str("q");
     be_add_keypair(dict, "y", node);
@@ -734,7 +734,7 @@ int _vdht_enc_probe(
  */
 static
 int _vdht_enc_probe_rsp(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         void* buf,
         int sz)
@@ -744,7 +744,7 @@ int _vdht_enc_probe_rsp(
     struct be_node* temp = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(buf);
     vassert(sz > 0);
@@ -752,7 +752,7 @@ int _vdht_enc_probe_rsp(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -772,7 +772,7 @@ int _vdht_enc_probe_rsp(
 }
 
 /*
- * @token:
+ * @nonce:
  * @srcId: Id of node sending query.
  * @target: Id of queried node.
  * @buf:
@@ -796,7 +796,7 @@ int _vdht_enc_probe_rsp(
  */
 static
 int _vdht_enc_post_service(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vsrvcInfo* srvci,
         void* buf,
@@ -807,7 +807,7 @@ int _vdht_enc_post_service(
     struct be_node* rslt = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srvci);
     vassert(buf);
     vassert(sz > 0);
@@ -815,7 +815,7 @@ int _vdht_enc_post_service(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -840,7 +840,7 @@ int _vdht_enc_post_service(
 
 static
 int _vdht_enc_find_service(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vsrvcHash* srvcHash,
         void* buf,
@@ -851,7 +851,7 @@ int _vdht_enc_find_service(
     struct be_node* temp = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(srvcHash);
     vassert(buf);
@@ -860,7 +860,7 @@ int _vdht_enc_find_service(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -883,7 +883,7 @@ int _vdht_enc_find_service(
 
 static
 int _vdht_enc_find_service_rsp(
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vsrvcInfo* result,
         void* buf,
@@ -894,7 +894,7 @@ int _vdht_enc_find_service_rsp(
     struct be_node* temp = NULL;
     int ret = 0;
 
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(result);
     vassert(buf);
@@ -903,7 +903,7 @@ int _vdht_enc_find_service_rsp(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vtoken(token);
+    node = be_create_vnonce(nonce);
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -941,18 +941,18 @@ struct vdht_enc_ops dht_enc_ops = {
 };
 
 static
-int _aux_unpack_vtoken(struct be_node* dict, vtoken* token)
+int _aux_unpack_vnonce(struct be_node* dict, vnonce* nonce)
 {
     struct be_node* node = NULL;
     int ret = 0;
     vassert(dict);
-    vassert(token);
+    vassert(nonce);
 
     ret = be_node_by_key(dict, "t", &node);
     retE((ret < 0));
     retE((BE_STR != node->type));
 
-    ret  = be_unpack_token(node, token);
+    ret  = be_unpack_nonce(node, nonce);
     retE((ret < 0));
     return 0;
 }
@@ -1072,7 +1072,7 @@ int _aux_unpack_dhtId(struct be_node* dict)
 
 /*
  * @ctxt:  decoder context
- * @token:
+ * @nonce:
  * @srcId: source nodeId
  *
  * ping Query = {"t":"deafc137da918b8cd9b95e72fef379a5b54c3f36",
@@ -1084,16 +1084,16 @@ int _aux_unpack_dhtId(struct be_node* dict)
  *           d2:id40:dbfcc5576ca7f742c802930892de9a1fb521f391ee
  */
 static
-int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
+int _vdht_dec_ping(void* ctxt, vnonce* nonce, vnodeId* srcId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1103,7 +1103,7 @@ int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
 
 /*
  * @ctxt:  decoder context
- * @token:
+ * @nonce:
  * @result: node infos of destination node.
  *
  * response = {"t":"06d5613f3f43631c539db6f10fbd04b651a21844",
@@ -1124,7 +1124,7 @@ int _vdht_dec_ping(void* ctxt, vtoken* token, vnodeId* srcId)
 static
 int _vdht_dec_ping_rsp(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeInfo* result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
@@ -1132,10 +1132,10 @@ int _vdht_dec_ping_rsp(
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
+    vassert(nonce);
     vassert(result);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = be_node_by_2keys(dict, "a", "node", &node);
@@ -1148,7 +1148,7 @@ int _vdht_dec_ping_rsp(
 
 /*
  * @ctxt: decoder context
- * @token:
+ * @nonce:
  * @srcId: source nodeId
  * @targetId: target node Id
  *
@@ -1165,7 +1165,7 @@ int _vdht_dec_ping_rsp(
 static
 int _vdht_dec_find_node(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vnodeId* targetId)
 {
@@ -1173,11 +1173,11 @@ int _vdht_dec_find_node(
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(targetId);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1190,7 +1190,7 @@ int _vdht_dec_find_node(
 
 /*
  * @ctxt:
- * @token:
+ * @nonce:
  * @srcId:
  * @result:
  *
@@ -1212,7 +1212,7 @@ int _vdht_dec_find_node(
 static
 int _vdht_dec_find_node_rsp(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vnodeInfo* result)
 {
@@ -1221,11 +1221,11 @@ int _vdht_dec_find_node_rsp(
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(result);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1240,7 +1240,7 @@ int _vdht_dec_find_node_rsp(
 
 /*
  * @ctxt:
- * @token:
+ * @nonce:
  * @srcId:
  * @closest:
  *
@@ -1257,7 +1257,7 @@ int _vdht_dec_find_node_rsp(
 static
 int _vdht_dec_find_closest_nodes(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vnodeId* targetId)
 {
@@ -1265,11 +1265,11 @@ int _vdht_dec_find_closest_nodes(
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(targetId);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1282,7 +1282,7 @@ int _vdht_dec_find_closest_nodes(
 
 /*
  * @ctxt:  decoder context
- * @token: msg token;
+ * @nonce: msg nonce;
  * @srcId: source vnodeId
  * @closest: array of nodes that close to current node.
  *
@@ -1305,7 +1305,7 @@ int _vdht_dec_find_closest_nodes(
 static
 int _vdht_dec_find_closest_nodes_rsp(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         struct varray* closest)
 {
@@ -1316,11 +1316,11 @@ int _vdht_dec_find_closest_nodes_rsp(
     int i = 0;
 
     vassert(dict);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(closest);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1348,24 +1348,24 @@ int _vdht_dec_find_closest_nodes_rsp(
 /*
  * the routine to decode @reflex query.
  * @ctxt:  deocde context.
- * @token: transaction token
+ * @nonce: transaction nonce
  * @srcId: id of query node.
  * @addr : local address to get it's reflexive address.
  */
 static
 int _vdht_dec_reflex(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
 
     vassert(ctxt);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1376,14 +1376,14 @@ int _vdht_dec_reflex(
 /*
  * the routine to decode response msg to @reflex query.
  * @ctxt:  deocde context.
- * @token: transaction token
+ * @nonce: transaction nonce
  * @srcId: id of node where response came from.
  * @reflexive_addr: reflexive address to query node.
  */
 static
 int _vdht_dec_reflex_rsp(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         struct vsockaddr_in* reflexive_addr)
 {
@@ -1392,11 +1392,11 @@ int _vdht_dec_reflex_rsp(
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(reflexive_addr);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1412,14 +1412,14 @@ int _vdht_dec_reflex_rsp(
 /*
  * the routine to decode @probe query.
  * @ctxt:  deocde context.
- * @token: transaction token
+ * @nonce: transaction nonce
  * @srcId: id of query node.
  * @destId: id of destination node.
  */
 static
 int _vdht_dec_probe(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vnodeId* destId)
 {
@@ -1427,11 +1427,11 @@ int _vdht_dec_probe(
     int ret = 0;
 
     vassert(ctxt);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(destId);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1445,23 +1445,23 @@ int _vdht_dec_probe(
 /*
  * the routine to decode response msg to @probe query.
  * @ctxt:  deocde context.
- * @token: transaction token
+ * @nonce: transaction nonce
  * @srcId: id of node where response came from.
  */
 static
 int _vdht_dec_probe_rsp(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     int ret = 0;
 
     vassert(ctxt);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1471,7 +1471,7 @@ int _vdht_dec_probe_rsp(
 
 /* the routine to decode @post_service indication.
  * @ctxt: decode context
- * @token: trans token
+ * @nonce: trans nonce
  * @srcId: Id of source node where the indcation was from.
  * @service:
  *
@@ -1494,7 +1494,7 @@ int _vdht_dec_probe_rsp(
 static
 int _vdht_dec_post_service(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vsrvcInfo* result)
 {
@@ -1503,11 +1503,11 @@ int _vdht_dec_post_service(
     int ret = 0;
 
     vassert(dict);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(result);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1523,14 +1523,14 @@ int _vdht_dec_post_service(
 /*
  * the routine to decode @find_service query.
  * @ctxt:
- * @token:
+ * @nonce:
  * @srcId:
  * @srvcId:
  */
 static
 int _vdht_dec_find_service(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vsrvcHash* srvcHash)
 {
@@ -1538,11 +1538,11 @@ int _vdht_dec_find_service(
     int ret = 0;
 
     vassert(ctxt);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(srvcHash);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
@@ -1556,14 +1556,14 @@ int _vdht_dec_find_service(
 /*
  * the routine to decode response msg to @find_servcie query.
  * @ctxt:
- * @token:
+ * @nonce:
  * @srcId:
  * @result:
  */
 static
 int _vdht_dec_find_service_rsp(
         void* ctxt,
-        vtoken* token,
+        vnonce* nonce,
         vnodeId* srcId,
         vsrvcInfo* result)
 {
@@ -1572,11 +1572,11 @@ int _vdht_dec_find_service_rsp(
     int ret = 0;
 
     vassert(ctxt);
-    vassert(token);
+    vassert(nonce);
     vassert(srcId);
     vassert(result);
 
-    ret = _aux_unpack_vtoken(dict, token);
+    ret = _aux_unpack_vnonce(dict, nonce);
     retE((ret < 0));
 
     ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);

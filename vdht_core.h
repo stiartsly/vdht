@@ -38,6 +38,7 @@ struct be_node* be_create_dict(void);
 struct be_node* be_create_list(void);
 struct be_node* be_create_str (char*);
 struct be_node* be_create_int (int);
+struct be_node* be_create_vnonce(vnonce*);
 struct be_node* be_create_vtoken(vtoken*);
 struct be_node* be_create_vaddr(struct vsockaddr_in*);
 struct be_node* be_create_ver (vnodeVer*);
@@ -48,6 +49,7 @@ int be_add_list    (struct be_node*, struct be_node*);
 int be_encode      (struct be_node*, char*, int);
 
 int be_unpack_int  (struct be_node*, int*);
+int be_unpack_nonce(struct be_node*, vnonce*);
 int be_unpack_token(struct be_node*, vtoken*);
 int be_unpack_vaddr(struct be_node*, struct vsockaddr_in*);
 int be_unpack_ver  (struct be_node*, vnodeVer*);
