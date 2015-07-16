@@ -363,6 +363,10 @@ int _vnode_renice(struct vnode* node)
     return 0;
 }
 
+/*
+ * the routine to deal some periodical works;
+ * @node:
+ */
 static
 void _vnode_tick(struct vnode* node)
 {
@@ -382,40 +386,55 @@ void _vnode_tick(struct vnode* node)
     return ;
 }
 
+/*
+ * determine whether DHT node's NAT is symmetric NAT or not.
+ * The way to determine whether DHT node's NAT is symmetric NAT:
+ *    1. send a @reflex DHT query to DHT node-A to get reflexive address;
+ *    2. send a @reflex DHT query to DHT node-B to get reflexive address too;
+ *    3. Compare two reflexive addresses. If same, then NAT is Cone NAT;
+ *       otherwise, NAT is symmetric NAT.
+ *
+ * @node:  handle to @vnode module;
+ * @laddr: local host address;
+ * @eaddr: reflexive address to @laddr;
+ */
 static
-int _aux_vnode_probe_nat(struct vnode* node, struct sockaddr_in* laddr, struct sockaddr_in* eaddr)
+void _aux_node_reflex_NAT(struct vnode* node, struct sockaddr_in* laddr, struct sockaddr_in* eaddr)
 {
     struct vnode_nat_probe_data {
         int dirty_mark;
         struct sockaddr_in laddr;
         struct sockaddr_in eaddr;
     };
-
     static
     struct vnode_nat_probe_data data = {
         .dirty_mark = 0
     };
 
     if (!vsockaddr_is_public(eaddr)) {
-       return 0;
+       return;
     }
     if (!data.dirty_mark) {
         vsockaddr_copy(&data.laddr, laddr);
         vsockaddr_copy(&data.eaddr, eaddr);
         data.dirty_mark = 1;
-    } else {
-        if (!vsockaddr_equal(&data.laddr, laddr)) {
-            return 0;
-        }
-        if (!vsockaddr_equal(&data.eaddr, eaddr)) {
-            node->is_symm_nat = 1;
-        }
+        return;
     }
-    return 0;
+
+    if (!vsockaddr_equal(&data.laddr, laddr)) {
+        return;
+    }
+    if (!vsockaddr_equal(&data.eaddr, eaddr)) {
+        node->is_symm_nat = 1;
+    }
+    return;
 }
 /*
- * the routine to update reflexive address.
+ * the routine to add a reflexive address;
+ *
  * @node
+ * @laddr: local host address;
+ * @eaddr: reflexive address to @laddr;
  */
 static
 int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct vsockaddr_in* eaddr)
@@ -426,7 +445,7 @@ int _vnode_reflex_addr(struct vnode* node, struct sockaddr_in* laddr, struct vso
     vassert(eaddr);
 
     vlock_enter(&node->lock);
-    (void)_aux_vnode_probe_nat(node, laddr, &eaddr->addr);
+    _aux_node_reflex_NAT(node, laddr, &eaddr->addr);
     for (i = 0; i < nodei->naddrs; i++) {
         if (!need_reflex(nodei->addrs[i].type)) {
             continue;
