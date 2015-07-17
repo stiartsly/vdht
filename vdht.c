@@ -139,71 +139,13 @@ void vdht_buf_free(void* buf)
     return ;
 }
 
-static
-struct be_node* _aux_create_vnodeInfo(vnodeInfo* nodei)
-{
-    struct be_node* dict = NULL;
-    struct be_node* node = NULL;
-    struct be_node* addr = NULL;
-    int i = 0;
-    vassert(nodei);
-
-    dict = be_create_dict();
-    retE_p((!dict));
-
-    node = be_create_vtoken(&nodei->id);
-    be_add_keypair(dict, "id", node);
-    node = be_create_ver(&nodei->ver);
-    be_add_keypair(dict, "v", node);
-    node = be_create_int(nodei->weight);
-    be_add_keypair(dict, "w", node);
-
-    node = be_create_list();
-    for (i = 0; i < nodei->naddrs; i++) {
-        addr = be_create_vaddr(&nodei->addrs[i]);
-        be_add_list(node, addr);
-    }
-    be_add_keypair(dict, "m", node);
-    return dict;
-}
-
-static
-struct be_node* _aux_create_vsrvcInfo(vsrvcInfo* srvci)
-{
-    struct be_node* dict = NULL;
-    struct be_node* node = NULL;
-    struct be_node* addr = NULL;
-    int i = 0;
-    vassert(srvci);
-
-    dict = be_create_dict();
-    retE_p((!dict));
-
-    node = be_create_vtoken(&srvci->hash);
-    be_add_keypair(dict, "hash", node);
-    node = be_create_vtoken(&srvci->hostid);
-    be_add_keypair(dict, "id", node);
-    node = be_create_int(srvci->nice);
-    be_add_keypair(dict, "n", node);
-
-    node = be_create_list();
-    for (i = 0; i < srvci->naddrs; i++) {
-        addr = be_create_vaddr(&srvci->addrs[i]);
-        be_add_list(node, addr);
-    }
-    be_add_keypair(dict, "m", node);
-
-    return dict;
-}
-
 /*
- * ping Query = {"t":"deafc137",
+ * ping Query = {"t":"deaf",
  *               "y":"q",
  *               "q":"ping",
- *               "a":{"id":"dbfcc5576ca7f742c802930892de9a1fb521f391"}
+ *               "a":{"id":"dbfcc5576ca7f742c802"}
  *              }
- * encoded = d1:t40:deafc1371:y1:q1:q4:ping1:ad2:id40:dbfcc5576ca7f742c80293089
- *           2de9a1fb521f391ee
+ * encoded = d1:t40:deaf1:y1:q1:q4:ping1:ad2:id40:dbfcc5576ca7f742c802ee
  *
  * the method to encode DHT @ping query.
  *
@@ -228,7 +170,7 @@ int _vdht_enc_ping(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -238,7 +180,7 @@ int _vdht_enc_ping(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
     be_add_keypair(dict, "q", node);
 
     node = be_create_dict();
-    id   = be_create_vtoken(srcId);
+    id   = be_create_buf(srcId, sizeof(vnodeId));
     be_add_keypair(node, "id", id);
     be_add_keypair(dict, "a", node);
 
@@ -276,7 +218,7 @@ int _vdht_enc_ping_rsp(vnonce* nonce, vnodeId* srcId, vnodeInfo* result, void* b
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* temp = NULL;
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(nonce);
@@ -287,7 +229,7 @@ int _vdht_enc_ping_rsp(vnonce* nonce, vnodeId* srcId, vnodeInfo* result, void* b
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -296,12 +238,12 @@ int _vdht_enc_ping_rsp(vnonce* nonce, vnodeId* srcId, vnodeInfo* result, void* b
     node = be_create_str("ping");
     be_add_keypair(dict, "r", node);
 
-    node = be_create_dict();
-    temp = be_create_vtoken(srcId);
-    be_add_keypair(node, "id", temp);
-    temp = _aux_create_vnodeInfo(result);
-    be_add_keypair(node, "node", temp);
-    be_add_keypair(dict, "a", node);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    node = be_create_buf(result, vnodeInfo_size(result));
+    be_add_keypair(tmp, "node", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -330,12 +272,7 @@ int _vdht_enc_ping_rsp(vnonce* nonce, vnodeId* srcId, vnodeInfo* result, void* b
  * @len:
  */
 static
-int _vdht_enc_find_node(
-        vnonce* nonce,
-        vnodeId* srcId,
-        vnodeId* targetId,
-        void* buf,
-        int sz)
+int _vdht_enc_find_node(vnonce* nonce, vnodeId* srcId, vnodeId* targetId, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
@@ -351,7 +288,7 @@ int _vdht_enc_find_node(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -360,12 +297,12 @@ int _vdht_enc_find_node(
     node = be_create_str("find_node");
     be_add_keypair(dict, "q", node);
 
-    node = be_create_dict();
-    tmp  = be_create_vtoken(srcId);
-    be_add_keypair(node, "id", tmp);
-    tmp  = be_create_vtoken(targetId);
-    be_add_keypair(node, "target", tmp);
-    be_add_keypair(dict, "a", node);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    node = be_create_buf(targetId, sizeof(vnodeId));
+    be_add_keypair(tmp, "target", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -398,16 +335,11 @@ int _vdht_enc_find_node(
  * @sz:
  */
 static
-int _vdht_enc_find_node_rsp(
-        vnonce* nonce,
-        vnodeId* srcId,
-        vnodeInfo* result,
-        void* buf,
-        int sz)
+int _vdht_enc_find_node_rsp(vnonce* nonce, vnodeId* srcId, vnodeInfo* result, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* temp = NULL;
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(nonce);
@@ -419,7 +351,7 @@ int _vdht_enc_find_node_rsp(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -428,12 +360,12 @@ int _vdht_enc_find_node_rsp(
     node = be_create_str("find_node");
     be_add_keypair(dict, "r", node);
 
-    node = be_create_dict();
-    temp = be_create_vtoken(srcId);
-    be_add_keypair(node, "id", temp);
-    temp = _aux_create_vnodeInfo(result);
-    be_add_keypair(node, "node", temp);
-    be_add_keypair(dict, "a", node);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    node = be_create_buf(result, vnodeInfo_size(result));
+    be_add_keypair(tmp, "node", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -484,7 +416,7 @@ int _vdht_enc_find_closest_nodes(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -493,12 +425,12 @@ int _vdht_enc_find_closest_nodes(
     node = be_create_str("find_closest_nodes");
     be_add_keypair(dict, "q", node);
 
-    node = be_create_dict();
-    tmp  = be_create_vtoken(srcId);
-    be_add_keypair(node, "id", tmp);
-    tmp  = be_create_vtoken(targetId);
-    be_add_keypair(node, "target", tmp);
-    be_add_keypair(dict, "a", node);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    node = be_create_buf(targetId, sizeof(vnodeId));
+    be_add_keypair(tmp, "target", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -552,7 +484,7 @@ int _vdht_enc_find_closest_nodes_rsp(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -561,14 +493,14 @@ int _vdht_enc_find_closest_nodes_rsp(
     be_add_keypair(dict, "r", node);
 
     rslt = be_create_dict();
-    node = be_create_vtoken(srcId);
+    node = be_create_buf(srcId, sizeof(vnodeId));
     be_add_keypair(rslt, "id", node);
     list = be_create_list();
     for (; i < varray_size(closest); i++) {
-        vnodeInfo* info = NULL;
+        vnodeInfo* nodei = NULL;
 
-        info = (vnodeInfo*)varray_get(closest, i);
-        node = _aux_create_vnodeInfo(info);
+        nodei = (vnodeInfo*)varray_get(closest, i);
+        node = be_create_buf(nodei, vnodeInfo_size(nodei));
         be_add_list(list, node);
     }
     be_add_keypair(rslt, "nodes", list);
@@ -612,7 +544,7 @@ int _vdht_enc_reflex(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -622,7 +554,7 @@ int _vdht_enc_reflex(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
     be_add_keypair(dict, "q", node);
 
     node = be_create_dict();
-    id   = be_create_vtoken(srcId);
+    id   = be_create_buf(srcId, sizeof(vnodeId));
     be_add_keypair(node, "id", id);
     be_add_keypair(dict, "a", node);
 
@@ -659,7 +591,7 @@ int _vdht_enc_reflex_rsp(
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* rslt = NULL;
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(nonce);
@@ -671,7 +603,7 @@ int _vdht_enc_reflex_rsp(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -679,12 +611,12 @@ int _vdht_enc_reflex_rsp(
     node = be_create_str("reflex");
     be_add_keypair(dict, "r", node);
 
-    rslt = be_create_dict();
-    node = be_create_vtoken(srcId);
-    be_add_keypair(rslt, "id", node);
-    node = be_create_vaddr(reflective_addr);
-    be_add_keypair(rslt, "me", node);
-    be_add_keypair(dict, "a", rslt);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    node = be_create_buf(reflective_addr, sizeof(*reflective_addr));
+    be_add_keypair(tmp,  "m", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -713,7 +645,7 @@ int _vdht_enc_probe(vnonce* nonce, vnodeId* srcId, vnodeId* destId, void* buf, i
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* temp = NULL;
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(nonce);
@@ -725,7 +657,7 @@ int _vdht_enc_probe(vnonce* nonce, vnodeId* srcId, vnodeId* destId, void* buf, i
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
     node = be_create_str("q");
     be_add_keypair(dict, "y", node);
@@ -733,12 +665,12 @@ int _vdht_enc_probe(vnonce* nonce, vnodeId* srcId, vnodeId* destId, void* buf, i
     node = be_create_str("probe");
     be_add_keypair(dict, "q", node);
 
-    node = be_create_dict();
-    temp = be_create_vtoken(srcId);
-    be_add_keypair(node, "id", temp);
-    temp = be_create_vtoken(destId);
-    be_add_keypair(node, "target", temp);
-    be_add_keypair(dict, "a", node);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    node = be_create_buf(destId, sizeof(vnodeId));
+    be_add_keypair(tmp, "target", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -764,7 +696,7 @@ int _vdht_enc_probe_rsp(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* temp = NULL;
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(nonce);
@@ -775,7 +707,7 @@ int _vdht_enc_probe_rsp(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -783,10 +715,10 @@ int _vdht_enc_probe_rsp(vnonce* nonce, vnodeId* srcId, void* buf, int sz)
     node = be_create_str("probe");
     be_add_keypair(dict, "r", node);
 
-    node = be_create_dict();
-    temp = be_create_vtoken(srcId);
-    be_add_keypair(node, "id", temp);
-    be_add_keypair(dict, "a", node);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -830,7 +762,7 @@ int _vdht_enc_post_service(
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* rslt = NULL;
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(nonce);
@@ -841,7 +773,7 @@ int _vdht_enc_post_service(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -850,13 +782,12 @@ int _vdht_enc_post_service(
     node = be_create_str("post_service");
     be_add_keypair(dict, "q", node);
 
-    rslt = be_create_dict();
-    node = be_create_vtoken(srcId);
-    be_add_keypair(rslt, "id", node);
-
-    node = _aux_create_vsrvcInfo(srvci);
-    be_add_keypair(rslt, "service", node);
-    be_add_keypair(dict, "a", rslt);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    node = be_create_buf(srvci, vsrvcInfo_size(srvci));
+    be_add_keypair(tmp, "service", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -882,7 +813,7 @@ int _vdht_enc_find_service(
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* temp = NULL;
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(nonce);
@@ -894,7 +825,7 @@ int _vdht_enc_find_service(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("q");
@@ -902,12 +833,12 @@ int _vdht_enc_find_service(
     node = be_create_str("find_service");
     be_add_keypair(dict, "q", node);
 
-    node = be_create_dict();
-    temp = be_create_vtoken(srcId);
-    be_add_keypair(node, "id", temp);
-    temp = be_create_vtoken(srvcHash);
-    be_add_keypair(node, "target", temp);
-    be_add_keypair(dict, "a", node);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    tmp  = be_create_buf(srvcHash, sizeof(vsrvcHash));
+    be_add_keypair(tmp, "target", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -933,7 +864,7 @@ int _vdht_enc_find_service_rsp(
 {
     struct be_node* dict = NULL;
     struct be_node* node = NULL;
-    struct be_node* temp = NULL;
+    struct be_node* tmp  = NULL;
     int ret = 0;
 
     vassert(nonce);
@@ -945,7 +876,7 @@ int _vdht_enc_find_service_rsp(
     dict = be_create_dict();
     retE((!dict));
 
-    node = be_create_vnonce(nonce);
+    node = be_create_buf(nonce, sizeof(vnonce));
     be_add_keypair(dict, "t", node);
 
     node = be_create_str("r");
@@ -953,12 +884,12 @@ int _vdht_enc_find_service_rsp(
     node = be_create_str("find_service");
     be_add_keypair(dict, "r", node);
 
-    node = be_create_dict();
-    temp = be_create_vtoken(srcId);
-    be_add_keypair(node, "id", temp);
-    temp = _aux_create_vsrvcInfo(result);
-    be_add_keypair(node, "service", temp);
-    be_add_keypair(dict, "a", node);
+    tmp  = be_create_dict();
+    node = be_create_buf(srcId, sizeof(vnodeId));
+    be_add_keypair(tmp, "id", node);
+    node = be_create_buf(result, vsrvcInfo_size(result));
+    be_add_keypair(tmp, "service", node);
+    be_add_keypair(dict, "a", tmp);
 
     ret = be_encode(dict, buf, sz);
     be_free(dict);
@@ -983,130 +914,19 @@ struct vdht_enc_ops dht_enc_ops = {
 };
 
 static
-int _aux_unpack_vnonce(struct be_node* dict, vnonce* nonce)
-{
-    struct be_node* node = NULL;
-    int ret = 0;
-    vassert(dict);
-    vassert(nonce);
-
-    ret = be_node_by_key(dict, "t", &node);
-    retE((ret < 0));
-    retE((BE_STR != node->type));
-
-    ret  = be_unpack_nonce(node, nonce);
-    retE((ret < 0));
-    return 0;
-}
-
-
-static
-int _aux_unpack_vnodeId(struct be_node* dict, char* key1, char* key2, vnodeId* id)
-{
-    struct be_node* node = NULL;
-    int ret = 0;
-
-    vassert(dict);
-    vassert(key1);
-    vassert(key2);
-    vassert(id);
-
-    ret = be_node_by_2keys(dict, key1, key2, &node);
-    if ((ret < 0) || (BE_STR != node->type)) {
-        return -1;
-    }
-    ret = be_unpack_token(node, id);
-    retE((ret < 0));
-    return 0;
-}
-
-static
-int _aux_unpack_vnodeInfo(struct be_node* dict, vnodeInfo* nodei)
-{
-    struct be_node* node = NULL;
-    vnodeId  id;
-    vnodeVer ver;
-    int weight = 0;
-    int i = 0;
-
-    vassert(dict);
-    vassert(nodei);
-    retE((BE_DICT != dict->type));
-
-    be_node_by_key(dict, "id", &node);
-    be_unpack_token(node, &id);
-    be_node_by_key(dict, "v", &node);
-    be_unpack_ver(node, &ver);
-    be_node_by_key(dict, "w", &node);
-    be_unpack_int(node, &weight);
-    be_node_by_key(dict, "m", &node);
-    vassert(node->type == BE_LIST);
-
-    vnodeInfo_relax_init(nodei, &id, &ver, weight);
-    for (i = 0; node->val.l[i]; i++) {
-        struct vsockaddr_in vaddr;
-        struct be_node* an = node->val.l[i];
-        be_unpack_vaddr(an, &vaddr);
-        vnodeInfo_add_addr(&nodei, &vaddr.addr, vaddr.type);
-    }
-    return 0;
-}
-
-static
-int _aux_unpack_vsrvcInfo(struct be_node* dict, vsrvcInfo* srvci)
-{
-    struct be_node* node = NULL;
-    vsrvcHash hash;
-    vnodeId id;
-    int nice = 0;
-    int i = 0;
-
-    vassert(dict);
-    vassert(srvci);
-    retE((BE_DICT != dict->type));
-
-    be_node_by_key(dict, "hash", &node);
-    be_unpack_token(node, &hash);
-    be_node_by_key(dict, "id", &node);
-    be_unpack_token(node, &id);
-    be_node_by_key(dict, "n", &node);
-    be_unpack_int(node, &nice);
-    be_node_by_key(dict, "m", &node);
-    vassert(node->type == BE_LIST);
-
-    vsrvcInfo_relax_init((vsrvcInfo_relax*)srvci, &hash, &id, nice);
-    for (i = 0; node->val.l[i]; i++) {
-        struct vsockaddr_in vaddr;
-        struct be_node* addr_node = node->val.l[i];
-        be_unpack_vaddr(addr_node, &vaddr);
-        vsrvcInfo_add_addr(&srvci, &vaddr.addr, vaddr.type);
-    }
-    return 0;
-}
-
-static
 int _aux_unpack_dhtId(struct be_node* dict)
 {
     struct be_node* node = NULL;
-    int ret = 0;
-
     vassert(dict);
     retE((BE_DICT != dict->type));
 
-    ret = be_node_by_key(dict, "y", &node);
-    retE((ret < 0));
-    retE((BE_STR != node->type));
-
+    node = be_find_node(dict, "y");
     if (!strcmp(node->val.s, "q")) {
-        ret = be_node_by_key(dict, "q", &node);
-        retE((ret < 0));
-        retE((BE_STR != node->type));
+        node = be_find_node(dict, "q");
         return vdht_get_queryId(node->val.s);
     }
     if (!strcmp(node->val.s, "r")) {
-        ret = be_node_by_key(dict, "r", &node);
-        retE((ret < 0));
-        retE((BE_STR != node->type));
+        node = be_find_node(dict, "r");
         return vdht_get_rspId(node->val.s);
     }
     return VDHT_UNKNOWN;
@@ -1123,17 +943,17 @@ static
 int _vdht_dec_ping(void* ctxt, vnonce* nonce, vnodeId* srcId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
-    int ret = 0;
+    struct be_node* node = NULL;
 
     vassert(dict);
     vassert(nonce);
     vassert(srcId);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    node = be_find_node(dict, "a");
+    node = be_find_node(node, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
     return 0;
 }
 
@@ -1144,27 +964,20 @@ int _vdht_dec_ping(void* ctxt, vnonce* nonce, vnodeId* srcId)
  * @result:
  */
 static
-int _vdht_dec_ping_rsp(
-        void* ctxt,
-        vnonce* nonce,
-        vnodeInfo* result)
+int _vdht_dec_ping_rsp(void* ctxt, vnonce* nonce, vnodeInfo* result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
-    int ret = 0;
 
     vassert(dict);
     vassert(nonce);
     vassert(result);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = be_node_by_2keys(dict, "a", "node", &node);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeInfo(node, result);
-    retE((ret < 0));
-
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    node = be_find_node(dict, "a");
+    node = be_find_node(node, "node");
+    be_unpack_buf(node, result, sizeof(vnodeInfo_relax));
     return 0;
 }
 
@@ -1176,28 +989,24 @@ int _vdht_dec_ping_rsp(
  * @targetId: ID of target DHT node.
  */
 static
-int _vdht_dec_find_node(
-        void* ctxt,
-        vnonce* nonce,
-        vnodeId* srcId,
-        vnodeId* targetId)
+int _vdht_dec_find_node(void* ctxt, vnonce* nonce, vnodeId* srcId, vnodeId* targetId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
-    int ret = 0;
+    struct be_node* tmp  = NULL;
+    struct be_node* node = NULL;
 
     vassert(dict);
     vassert(nonce);
     vassert(srcId);
     vassert(targetId);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "a", "target", targetId);
-    retE((ret < 0));
-
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    tmp  = be_find_node(dict, "a");
+    node = be_find_node(tmp, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
+    node = be_find_node(tmp, "target");
+    be_unpack_buf(node, targetId, sizeof(vnodeId));
     return 0;
 }
 
@@ -1209,31 +1018,24 @@ int _vdht_dec_find_node(
  * @result:
  */
 static
-int _vdht_dec_find_node_rsp(
-        void* ctxt,
-        vnonce* nonce,
-        vnodeId* srcId,
-        vnodeInfo* result)
+int _vdht_dec_find_node_rsp(void* ctxt, vnonce* nonce, vnodeId* srcId, vnodeInfo* result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
-    int ret = 0;
+    struct be_node* tmp  = NULL;
 
     vassert(dict);
     vassert(nonce);
     vassert(srcId);
     vassert(result);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
-    ret = be_node_by_2keys(dict, "a", "node", &node);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeInfo(node, result);
-    retE((ret < 0));
-
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    tmp  = be_find_node(dict, "a");
+    node = be_find_node(tmp, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
+    node = be_find_node(tmp, "node");
+    be_unpack_buf(node, result, sizeof(vnodeInfo_relax));
     return 0;
 }
 
@@ -1245,28 +1047,24 @@ int _vdht_dec_find_node_rsp(
  * @closest:
  */
 static
-int _vdht_dec_find_closest_nodes(
-        void* ctxt,
-        vnonce* nonce,
-        vnodeId* srcId,
-        vnodeId* targetId)
+int _vdht_dec_find_closest_nodes(void* ctxt, vnonce* nonce, vnodeId* srcId, vnodeId* targetId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
-    int ret = 0;
+    struct be_node* tmp  = NULL;
+    struct be_node* node = NULL;
 
     vassert(dict);
     vassert(nonce);
     vassert(srcId);
     vassert(targetId);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "a", "target", targetId);
-    retE((ret < 0));
-
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    tmp  = be_find_node(dict, "a");
+    node = be_find_node(tmp, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
+    node = be_find_node(tmp, "target");
+    be_unpack_buf(node, targetId, sizeof(vnodeId));
     return 0;
 }
 
@@ -1285,9 +1083,8 @@ int _vdht_dec_find_closest_nodes_rsp(
         struct varray* closest)
 {
     struct be_node* dict = (struct be_node*)ctxt;
-    struct be_node* list = NULL;
     struct be_node* node = NULL;
-    int ret = 0;
+    struct be_node* tmp  = NULL;
     int i = 0;
 
     vassert(dict);
@@ -1295,28 +1092,23 @@ int _vdht_dec_find_closest_nodes_rsp(
     vassert(srcId);
     vassert(closest);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
-    ret = be_node_by_2keys(dict, "a", "nodes", &list);
-    retE((ret < 0));
-    retE((BE_LIST != list->type));
-
-    for (i = 0; list->val.l[i]; i++) {
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    tmp  = be_find_node(dict, "a");
+    node = be_find_node(tmp, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
+    tmp  = be_find_node(tmp, "nodes");
+    for (i = 0; tmp->val.l[i]; i++) {
         vnodeInfo* nodei = NULL;
-        node = list->val.l[i];
-        retE((BE_DICT != node->type));
+        node = tmp->val.l[i];
 
         nodei = vnodeInfo_relax_alloc();
         if (!nodei) {
             break;
         }
-        _aux_unpack_vnodeInfo(node, nodei);
+        be_unpack_buf(node, nodei, sizeof(vnodeInfo_relax));
         varray_add_tail(closest, nodei);
     }
-
     return 0;
 }
 
@@ -1330,17 +1122,17 @@ static
 int _vdht_dec_reflex(void* ctxt, vnonce* nonce, vnodeId* srcId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
-    int ret = 0;
+    struct be_node* node = NULL;
 
     vassert(ctxt);
     vassert(nonce);
     vassert(srcId);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    node = be_find_node(dict, "a");
+    node = be_find_node(node, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
     return 0;
 }
 
@@ -1360,23 +1152,20 @@ int _vdht_dec_reflex_rsp(
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
-    int ret = 0;
+    struct be_node* tmp  = NULL;
 
     vassert(dict);
     vassert(nonce);
     vassert(srcId);
     vassert(reflexive_addr);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
-    ret = be_node_by_2keys(dict, "a", "me", &node);
-    retE((ret < 0));
-    ret = be_unpack_vaddr(node, reflexive_addr);
-    retE((ret < 0));
-
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    tmp  = be_find_node(dict, "a");
+    node = be_find_node(tmp, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
+    node = be_find_node(tmp, "m");
+    be_unpack_buf(node, reflexive_addr, sizeof(*reflexive_addr));
     return 0;
 }
 
@@ -1391,21 +1180,21 @@ static
 int _vdht_dec_probe(void* ctxt, vnonce* nonce, vnodeId* srcId, vnodeId* destId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
-    int ret = 0;
+    struct be_node* node = NULL;
+    struct be_node* tmp  = NULL;
 
     vassert(ctxt);
     vassert(nonce);
     vassert(srcId);
     vassert(destId);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "a", "target", destId);
-    retE((ret < 0));
-
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    tmp  = be_find_node(dict, "a");
+    node = be_find_node(tmp, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
+    node = be_find_node(tmp, "target");
+    be_unpack_buf(node, destId, sizeof(vnodeId));
     return 0;
 }
 
@@ -1419,17 +1208,17 @@ static
 int _vdht_dec_probe_rsp(void* ctxt, vnonce* nonce, vnodeId* srcId)
 {
     struct be_node* dict = (struct be_node*)ctxt;
-    int ret = 0;
+    struct be_node* node = NULL;
 
     vassert(ctxt);
     vassert(nonce);
     vassert(srcId);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    node = be_find_node(dict, "a");
+    node = be_find_node(node, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
     return 0;
 }
 
@@ -1449,23 +1238,20 @@ int _vdht_dec_post_service(
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
-    int ret = 0;
+    struct be_node* tmp  = NULL;
 
     vassert(dict);
     vassert(nonce);
     vassert(srcId);
     vassert(srvci);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
-    ret = be_node_by_2keys(dict, "a", "service", &node);
-    retE((ret < 0));
-    ret = _aux_unpack_vsrvcInfo(node, srvci);
-    retE((ret < 0));
-
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    tmp  = be_find_node(dict, "a");
+    node = be_find_node(tmp, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
+    node = be_find_node(tmp, "service");
+    be_unpack_buf(node, srvci, sizeof(vsrvcInfo_relax));
     return 0;
 }
 
@@ -1484,21 +1270,21 @@ int _vdht_dec_find_service(
         vsrvcHash* srvcHash)
 {
     struct be_node* dict = (struct be_node*)ctxt;
-    int ret = 0;
+    struct be_node* node = NULL;
+    struct be_node* tmp  = NULL;
 
     vassert(ctxt);
     vassert(nonce);
     vassert(srcId);
     vassert(srvcHash);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
-    ret = _aux_unpack_vnodeId(dict, "a", "target", srvcHash);
-    retE((ret < 0));
-
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    tmp  = be_find_node(dict, "a");
+    node = be_find_node(tmp, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
+    node = be_find_node(tmp, "target");
+    be_unpack_buf(node, srvcHash, sizeof(vsrvcHash));
     return 0;
 }
 
@@ -1510,31 +1296,24 @@ int _vdht_dec_find_service(
  * @result:
  */
 static
-int _vdht_dec_find_service_rsp(
-        void* ctxt,
-        vnonce* nonce,
-        vnodeId* srcId,
-        vsrvcInfo* result)
+int _vdht_dec_find_service_rsp(void* ctxt, vnonce* nonce, vnodeId* srcId, vsrvcInfo* result)
 {
     struct be_node* dict = (struct be_node*)ctxt;
     struct be_node* node = NULL;
-    int ret = 0;
+    struct be_node* tmp  = NULL;
 
     vassert(ctxt);
     vassert(nonce);
     vassert(srcId);
     vassert(result);
 
-    ret = _aux_unpack_vnonce(dict, nonce);
-    retE((ret < 0));
-
-    ret = _aux_unpack_vnodeId(dict, "a", "id", srcId);
-    retE((ret < 0));
-    ret = be_node_by_2keys(dict, "a", "service", &node);
-    retE((ret < 0));
-    ret = _aux_unpack_vsrvcInfo(node, result);
-    retE((ret < 0));
-
+    node = be_find_node(dict, "t");
+    be_unpack_buf(node, nonce, sizeof(vnonce));
+    tmp  = be_find_node(dict, "a");
+    node = be_find_node(tmp, "id");
+    be_unpack_buf(node, srcId, sizeof(vnodeId));
+    node = be_find_node(tmp, "service");
+    be_unpack_buf(node, result, sizeof(vsrvcInfo_relax));
     return 0;
 }
 

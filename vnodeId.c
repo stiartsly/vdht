@@ -643,6 +643,20 @@ struct sockaddr_in* vnodeInfo_worst_addr(vnodeInfo* nodei)
     return &nodei->addrs[nodei->naddrs-1].addr;
 }
 
+int vnodeInfo_size(vnodeInfo* nodei)
+{
+    int sz = 0;
+    vassert(nodei);
+
+    sz += sizeof(vnodeId);
+    sz += sizeof(vnodeVer);
+    sz += sizeof(int32_t);
+    sz += sizeof(int16_t) + sizeof(int16_t);
+    sz += nodei->naddrs * sizeof(struct vsockaddr_in);
+
+    return sz;
+}
+
 int vnodeInfo_is_fake(vnodeInfo* nodei)
 {
     vassert(nodei);
@@ -869,6 +883,20 @@ int vsrvcInfo_is_empty(vsrvcInfo* srvci)
     vassert(srvci);
 
     return (!(srvci->naddrs));
+}
+
+int vsrvcInfo_size(vsrvcInfo* srvci)
+{
+    int sz = 0;
+    vassert(srvci);
+
+    sz += sizeof(vsrvcHash);
+    sz += sizeof(vnodeId);
+    sz += sizeof(int32_t);
+    sz += sizeof(int16_t) + sizeof(int16_t);
+    sz += srvci->naddrs * sizeof(struct vsockaddr_in);
+
+    return sz;
 }
 
 int vsrvcInfo_copy(vsrvcInfo* dest, vsrvcInfo* src)

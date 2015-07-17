@@ -78,14 +78,14 @@ char* _be_decode_str(char** data, int* data_len)
         *data += 1;
         *data_len -= 1;
 
-        s = (char*)malloc(sizeof(len) + len + 1);
+        s = (char*)malloc(sizeof(int32_t) + len + 1);
         vlogEv((!s), elog_malloc);
         retE_p((!s));
-        memset(s, 0, sizeof(len) + len + 1);
 
         set_int32(s, len);
         s = offset_addr(s, sizeof(int32_t));
-        strncpy(s, *data, len);
+        memcpy(s, *data, len);
+        s[len] = '\0';
 
         *data += len;
         *data_len -= len;
@@ -237,8 +237,32 @@ struct be_node* be_create_str(char* str)
 
     set_int32(s, len);
     s = offset_addr(s, sizeof(int32_t));
-    strcpy(s, str);
+    memcpy(s, str, len);
+    s[len] = '\0';
 
+    node->val.s = s;
+    return node;
+}
+
+struct be_node* be_create_buf(void* buf, int len)
+{
+    struct be_node* node = NULL;
+    char* s = NULL;
+    vassert(buf);
+    vassert(len > 0);
+
+    node = be_alloc(BE_STR);
+    vlogEv((!node), elog_be_alloc);
+    retE_p((!node));
+
+    s = (char*)malloc(sizeof(int32_t) + len + 1);
+    vlogEv((!s), elog_malloc);
+    ret1E_p((!s), be_free(node));
+
+    set_int32(s, len);
+    s = offset_addr(s, sizeof(int32_t));
+    memcpy(s, buf, len);
+    s[len] = '\0';
     node->val.s = s;
     return node;
 }
@@ -252,59 +276,6 @@ struct be_node* be_create_int(int num)
     retE_p((!node));
 
     node->val.i = num;
-    return node;
-}
-
-struct be_node* be_create_vnonce(vnonce* nonce)
-{
-    struct be_node* node = NULL;
-    char buf[16];
-    vassert(nonce);
-
-    memset(buf, 0, 16);
-    vnonce_strlize(nonce, buf, 16);
-    node = be_create_str(buf);
-    retE_p((!node));
-    return node;
-}
-
-struct be_node* be_create_vtoken(vtoken* token)
-{
-    struct be_node* node = NULL;
-    char buf[64];
-    vassert(token);
-
-    memset(buf, 0, 64);
-    vtoken_strlize(token, buf, 64);
-    node = be_create_str(buf);
-    retE_p((!node));
-    return node;
-}
-
-struct be_node* be_create_vaddr(struct vsockaddr_in* addr)
-{
-    struct be_node* node = NULL;
-    char buf[64];
-    vassert(addr);
-
-    memset(buf, 0, 64);
-    vsockaddr_strlize(&addr->addr, buf, 64);
-    sprintf(buf + strlen(buf), ":%d", VSOCKADDR_TYPE(addr->type));
-    node = be_create_str(buf);
-    retE_p((!node));
-    return node;
-}
-
-struct be_node* be_create_ver(vnodeVer* ver)
-{
-    struct be_node* node = NULL;
-    char buf[64];
-    vassert(ver);
-
-    memset(buf, 0, 64);
-    vnodeVer_strlize(ver, buf, 64);
-    node = be_create_str(buf);
-    retE_p((!node));
     return node;
 }
 
@@ -378,10 +349,8 @@ int be_encode(struct be_node *node, char *buf, int len)
         vlogEv((ret >= len-off), elog_snprintf);
         retE((ret >= len-off));
         off += ret;
-        ret = snprintf(buf+off, len-off, "%s", node->val.s);
-        vlogEv((ret >= len-off), elog_snprintf);
-        retE((ret >= len-off));
-        off += ret;
+        memcpy(buf + off, node->val.s, _len);
+        off += _len;
         break;
     }
     case BE_INT:
@@ -448,156 +417,36 @@ int be_unpack_int(struct be_node* node, int* val)
     return 0;
 }
 
-int be_unpack_nonce(struct be_node* node, vnonce* nonce)
+int be_unpack_buf(struct be_node* node, void* buf, int len)
 {
-    char* s = NULL;
-    int ret = 0;
+    void* s = NULL;
+    int  sz = 0;
 
     vassert(node);
-    vassert(nonce);
-
-    retE((BE_STR != node->type));
-
-    s = unoff_addr(node->val.s, sizeof(int32_t));
-    ret = get_int32(s);
-    retE((ret != strlen(node->val.s)));
-
-    ret = vnonce_unstrlize(node->val.s, nonce);
-    retE((ret < 0));
-    return 0;
-}
-
-int be_unpack_token(struct be_node* node, vtoken* token)
-{
-    char* s = NULL;
-    int ret = 0;
-
-    vassert(node);
-    vassert(token);
-
-    retE((BE_STR != node->type));
-
-    s = unoff_addr(node->val.s, sizeof(int32_t));
-    ret = get_int32(s);
-    retE((ret != strlen(node->val.s)));
-
-    ret = vtoken_unstrlize(node->val.s, token);
-    retE((ret < 0));
-    return 0;
-}
-
-int be_unpack_ver(struct be_node* node, vnodeVer* ver)
-{
-    char* s = NULL;
-    int ret = 0;
-
-    vassert(node);
-    vassert(ver);
-
-    retE((BE_STR != node->type));
-
-    s = unoff_addr(node->val.s, sizeof(int32_t));
-    ret = get_int32(s);
-    retE((ret != strlen(node->val.s)));
-
-    ret = vnodeVer_unstrlize(node->val.s, ver);
-    retE((ret < 0));
-    return 0;
-}
-
-int _aux_vsockaddr_unstrlize(const char* buf, struct vsockaddr_in* addr)
-{
-    char* cur = NULL;
-    char* end = NULL;
-    char ip[64];
-    int  port = 0;
-    int  type = 0;
-    int  ret = 0;
-
     vassert(buf);
-    vassert(addr);
-
-    cur = strchr(buf, ':');
-    retE((!cur));
-
-    memset(ip, 0, 64);
-    strncpy(ip, buf, cur-buf);
-
-    cur += 1;
-    errno = 0;
-    port = strtol(cur, &end, 10);
-    vlogEv((errno), elog_strtol);
-    retE((errno));
-
-    ret = vsockaddr_convert(ip, port, &addr->addr);
-    vlogEv((ret < 0), elog_vsockaddr_convert);
-    retE((ret < 0));
-
-    end = strchr(end, ':');
-    retE((!end));
-    end += 1;
-    errno = 0;
-    type = strtol(end, NULL, 10);
-    vlogEv((errno), elog_strtol);
-    retE((errno));
-
-    addr->type = (uint32_t)type;
-    return 0;
-}
-
-int be_unpack_vaddr(struct be_node* node, struct vsockaddr_in* addr)
-{
-    char* s = NULL;
-    int ret = 0;
-
-    vassert(node);
-    vassert(addr);
+    vassert(len > 0);
 
     retE((BE_STR != node->type));
+    s  = unoff_addr(node->val.s, sizeof(int32_t));
+    sz = get_int32(s);
 
-    s = unoff_addr(node->val.s, sizeof(int32_t));
-    ret = get_int32(s);
-    retE((ret != strlen(node->val.s)));
-
-    ret = _aux_vsockaddr_unstrlize(node->val.s, addr);
-    retE((ret < 0));
+    retE((sz > len));
+    memcpy(buf, node->val.s, sz);
     return 0;
 }
 
-int be_node_by_key(struct be_node* dict, char* key, struct be_node** node)
+struct be_node* be_find_node(struct be_node* dict, char* key)
 {
     int i = 0;
     vassert(dict);
     vassert(key);
-    vassert(node);
 
-    retE((BE_DICT != dict->type));
+    retE_p((BE_DICT != dict->type));
     for(; dict->val.d[i].val; i++) {
         if (!strcmp(key, dict->val.d[i].key)) {
-            *node = dict->val.d[i].val;
-            return 0;
+            return dict->val.d[i].val;
         }
     }
-    return -1;
-}
-
-int be_node_by_2keys(struct be_node* dict, char* key1, char* key2, struct be_node** node)
-{
-    struct be_node* tmp = NULL;
-    int ret = 0;
-    vassert(dict);
-    vassert(key1);
-    vassert(key2);
-    vassert(node);
-
-    ret = be_node_by_key(dict, key1, &tmp);
-    if ((ret < 0) || (BE_DICT != tmp->type)) {
-        return -1;
-    }
-    ret = be_node_by_key(tmp, key2, node);
-    if (ret < 0) {
-        return -1;
-    }
-    return 0;
+    return NULL;
 }
 

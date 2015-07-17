@@ -106,6 +106,7 @@ int  vnodeInfo_add_addr (vnodeInfo**, struct sockaddr_in*, uint32_t);
 int  vnodeInfo_has_addr (vnodeInfo*,  struct sockaddr_in*);
 int  vnodeInfo_merge    (vnodeInfo**, vnodeInfo*);
 int  vnodeInfo_copy     (vnodeInfo**, vnodeInfo*);
+int  vnodeInfo_size     (vnodeInfo*);
 int  vnodeInfo_is_fake  (vnodeInfo*);
 void vnodeInfo_dump     (vnodeInfo*);
 struct sockaddr_in* vnodeInfo_worst_addr(vnodeInfo*);
@@ -211,6 +212,7 @@ int  vsrvcInfo_add_addr(vsrvcInfo**, struct sockaddr_in*, uint32_t);
 void vsrvcInfo_del_addr(vsrvcInfo*,  struct sockaddr_in*);
 int  vsrvcInfo_is_empty(vsrvcInfo*);
 
+int  vsrvcInfo_size(vsrvcInfo*);
 int  vsrvcInfo_copy(vsrvcInfo*, vsrvcInfo*);
 void vsrvcInfo_dump(vsrvcInfo*);
 
