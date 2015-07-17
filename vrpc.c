@@ -540,7 +540,7 @@ int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct vsockaddr
     retE((!sm));
     vlist_init(&sm->list);
 
-    rpc->rcvm = sm;
+    rpc->rcvm = NULL;
     rpc->sndm = NULL;
 
     rpc->stat.nerrs = 0;
@@ -551,6 +551,8 @@ int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct vsockaddr
 
     rpc->impl = rpc->base_ops->open(addr);
     ret1E((!rpc->impl), vmsg_sys_free(sm));
+
+    rpc->rcvm = sm;
     return 0;
 }
 
@@ -560,8 +562,6 @@ int vrpc_init(struct vrpc* rpc, struct vmsger* msger, int mode, struct vsockaddr
 void vrpc_deinit(struct vrpc* rpc)
 {
     vassert(rpc);
-    vassert(rpc->impl);
-
     if (rpc->sndm) {
         vmsg_sys_free(rpc->sndm);
         rpc->sndm = NULL;
@@ -570,7 +570,9 @@ void vrpc_deinit(struct vrpc* rpc)
         vmsg_sys_free(rpc->rcvm);
         rpc->sndm = NULL;
     }
-    rpc->base_ops->close(rpc->impl);
+    if (rpc->impl) {
+        rpc->base_ops->close(rpc->impl);
+    }
     return ;
 }
 

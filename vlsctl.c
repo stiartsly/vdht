@@ -735,8 +735,8 @@ void vlsctl_deinit(struct vlsctl* lsctl)
 {
     vassert(lsctl);
 
-    vmsger_deinit(&lsctl->msger);
     vrpc_deinit(&lsctl->rpc);
+    vmsger_deinit(&lsctl->msger);
     return ;
 }
 
