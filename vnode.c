@@ -654,7 +654,7 @@ int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_
         }
     }
     if (found) {
-        vsrvcInfo_copy(srvci, item);
+        vsrvcInfo_copy(&srvci, item);
     }
     vlock_leave(&node->lock);
 

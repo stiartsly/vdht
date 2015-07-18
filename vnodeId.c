@@ -899,12 +899,13 @@ int vsrvcInfo_size(vsrvcInfo* srvci)
     return sz;
 }
 
-int vsrvcInfo_copy(vsrvcInfo* dest, vsrvcInfo* src)
+int vsrvcInfo_copy(vsrvcInfo** ppdest, vsrvcInfo* src)
 {
+    vsrvcInfo* dest = *ppdest;
     int ret = 0;
     int i = 0;
 
-    vassert(dest);
+    vassert(ppdest);
     vassert(src);
 
     vtoken_copy(&dest->hash,  &src->hash);
@@ -913,7 +914,7 @@ int vsrvcInfo_copy(vsrvcInfo* dest, vsrvcInfo* src)
     dest->naddrs = 0;
 
     for (i = 0; i < src->naddrs; i++) {
-        ret = vsrvcInfo_add_addr(&dest, &src->addrs[i].addr, src->addrs[i].type);
+        ret = vsrvcInfo_add_addr(ppdest, &src->addrs[i].addr, src->addrs[i].type);
         retE((ret < 0));
     }
     return 0;

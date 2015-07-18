@@ -44,7 +44,7 @@ int vservice_init(struct vservice* item, vsrvcInfo* srvci, time_t ts)
     vassert(item);
     vassert(srvci);
 
-    vsrvcInfo_copy(item->srvci, srvci);
+    vsrvcInfo_copy(&item->srvci, srvci);
     item->rcv_ts = ts;
     return 0;
 }
@@ -173,7 +173,7 @@ int _vroute_srvc_space_get_service(struct vroute_srvc_space* space, vsrvcHash* h
 
         varray_iterate(&space->bucket[i].srvcs, _aux_srvc_get_service_cb, argv);
         if (to) {
-            vsrvcInfo_copy(srvci, to->srvci);
+            vsrvcInfo_copy(&srvci, to->srvci);
             found = 1;
         }
     }

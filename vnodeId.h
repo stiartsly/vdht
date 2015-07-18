@@ -213,7 +213,7 @@ void vsrvcInfo_del_addr(vsrvcInfo*,  struct sockaddr_in*);
 int  vsrvcInfo_is_empty(vsrvcInfo*);
 
 int  vsrvcInfo_size(vsrvcInfo*);
-int  vsrvcInfo_copy(vsrvcInfo*, vsrvcInfo*);
+int  vsrvcInfo_copy(vsrvcInfo**, vsrvcInfo*);
 void vsrvcInfo_dump(vsrvcInfo*);
 
 #define DECL_VSRVC_RELAX(srvci) \
