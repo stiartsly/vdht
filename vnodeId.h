@@ -153,26 +153,27 @@ int vsrvcId_bucket(vtoken*);
 #define VSRVCINFO_MIN_ADDRS ((int16_t)2)
 struct vsrvcInfo_relax {
     vsrvcHash hash;
-    vnodeId hostid;
-    int32_t nice;
+    vnodeId   hostid;
+    int16_t   nice; //index of CPU (,memory, network traffic, etc) resource avaiability.
 
+    int16_t proto; //currently only support for UDP and TCP.
     int16_t naddrs;
     int16_t capc;
     struct vsockaddr_in addrs[VSRVCINFO_MAX_ADDRS];
 };
-typedef struct vsrvcInfo_relax vsrvcInfo_relax;
-int vsrvcInfo_relax_init(vsrvcInfo_relax*, vsrvcHash*, vnodeId*, int);
 
 struct vsrvcInfo {
     vsrvcHash hash;
-    vnodeId hostid;
-    int32_t nice;  // high 16 bits for protocol;
-                   // low 16 bits for nice value;
+    vnodeId   hostid;
+    int16_t   nice;
 
+    int16_t proto;
     int16_t naddrs;
     int16_t capc;
     struct vsockaddr_in addrs[VSRVCINFO_MIN_ADDRS];
 };
+typedef struct vsrvcInfo_relax vsrvcInfo_relax;
+typedef struct vsrvcInfo vsrvcInfo;
 
 enum {
     VPROTO_RES0,
@@ -186,27 +187,11 @@ typedef struct vsrvcInfo vsrvcInfo;
 typedef void (*vsrvcInfo_number_addr_t) (vsrvcHash*, int, int, void*);
 typedef void (*vsrvcInfo_iterate_addr_t)(vsrvcHash*, struct sockaddr_in*, uint32_t, int, void*);
 
-static inline
-int32_t vsrvcInfo_proto(vsrvcInfo* srvci) {
-    return (srvci->nice >> 16);
-}
-
-static inline
-int32_t vsrvcInfo_nice(vsrvcInfo* srvci) {
-    return (srvci->nice & 0x0000ffff);
-}
-
-static inline
-void vsrvcInfo_set_nice(vsrvcInfo* srvci, int32_t nice)
-{
-    srvci->nice &= 0xffff0000;
-    srvci->nice |= 0x0000ffff & nice;
-    return ;
-}
+int vsrvcInfo_relax_init(vsrvcInfo*, vsrvcHash*, vnodeId*, int16_t, int16_t);
 
 vsrvcInfo* vsrvcInfo_alloc(void);
 void vsrvcInfo_free(vsrvcInfo*);
-int  vsrvcInfo_init(vsrvcInfo*, vtoken*, vsrvcHash*, int);
+int  vsrvcInfo_init(vsrvcInfo*, vsrvcHash*, vnodeId*, int16_t, int16_t);
 
 int  vsrvcInfo_add_addr(vsrvcInfo**, struct sockaddr_in*, uint32_t);
 void vsrvcInfo_del_addr(vsrvcInfo*,  struct sockaddr_in*);
@@ -221,6 +206,7 @@ void vsrvcInfo_dump(vsrvcInfo*);
         .hash   = {.data = {0}}, \
         .hostid = {.data = {0}}, \
         .nice   = 0, \
+        .proto  = 0, \
         .naddrs = 0, \
         .capc   = VSRVCINFO_MAX_ADDRS \
     }; \

@@ -746,16 +746,16 @@ int vsrvcId_bucket(vtoken* id)
 /*
  * for vsrvcInfo funcs
  */
-int vsrvcInfo_relax_init(vsrvcInfo_relax* srvci, vsrvcHash* hash, vnodeId* hostid, int nice)
+int vsrvcInfo_relax_init(vsrvcInfo* srvci, vsrvcHash* hash, vnodeId* hostId, int16_t nice, int16_t proto)
 {
     vassert(srvci);
     vassert(hash);
-    vassert(hostid);
-    vassert(nice >= 0);
+    vassert(hostId);
 
     vtoken_copy(&srvci->hash,  hash);
-    vtoken_copy(&srvci->hostid,hostid);
-    srvci->nice = nice;
+    vtoken_copy(&srvci->hostid,hostId);
+    srvci->nice  = nice;
+    srvci->proto = proto;
     srvci->naddrs = 0;
     srvci->capc   = VSRVCINFO_MAX_ADDRS;
 
@@ -784,17 +784,17 @@ void vsrvcInfo_free(vsrvcInfo* srvci)
     return ;
 }
 
-int vsrvcInfo_init(vsrvcInfo* srvci, vsrvcHash* hash, vnodeId* hostid, int nice)
+int vsrvcInfo_init(vsrvcInfo* srvci, vsrvcHash* hash, vnodeId* hostId, int16_t nice, int16_t proto)
 {
     vassert(srvci);
     vassert(hash);
-    vassert(hostid);
+    vassert(hostId);
     vassert(nice >= 0);
 
     vtoken_copy(&srvci->hash, hash);
-    vtoken_copy(&srvci->hostid, hostid);
-
-    srvci->nice = nice;
+    vtoken_copy(&srvci->hostid, hostId);
+    srvci->nice  = nice;
+    srvci->proto = proto;
     srvci->naddrs = 0;
     srvci->capc   = VSRVCINFO_MIN_ADDRS;
 
@@ -892,7 +892,7 @@ int vsrvcInfo_size(vsrvcInfo* srvci)
 
     sz += sizeof(vsrvcHash);
     sz += sizeof(vnodeId);
-    sz += sizeof(int32_t);
+    sz += sizeof(int16_t) + sizeof(int16_t);
     sz += sizeof(int16_t) + sizeof(int16_t);
     sz += srvci->naddrs * sizeof(struct vsockaddr_in);
 
@@ -905,12 +905,13 @@ int vsrvcInfo_copy(vsrvcInfo** ppdest, vsrvcInfo* src)
     int ret = 0;
     int i = 0;
 
-    vassert(ppdest);
+    vassert(dest);
     vassert(src);
 
     vtoken_copy(&dest->hash,  &src->hash);
     vtoken_copy(&dest->hostid,&src->hostid);
     dest->nice   = src->nice;
+    dest->proto  = src->proto;
     dest->naddrs = 0;
 
     for (i = 0; i < src->naddrs; i++) {
@@ -926,7 +927,7 @@ void vsrvcInfo_dump(vsrvcInfo* srvci)
     int i = 0;
     vassert(srvci);
 
-    switch(vsrvcInfo_proto(srvci)) {
+    switch(srvci->proto) {
     case VPROTO_UDP:
         sproto = "udp";
         break;
@@ -939,7 +940,7 @@ void vsrvcInfo_dump(vsrvcInfo* srvci)
     }
 
     vtoken_dump(&srvci->hash);
-    printf(", nice: %d", vsrvcInfo_nice(srvci));
+    printf(", nice: %d",  srvci->nice);
     printf(", proto: %s", sproto);
     printf(", addrs: ");
     vsockaddr_dump(&srvci->addrs[0].addr);

@@ -357,7 +357,7 @@ int _vnode_renice(struct vnode* node)
     node->nice = node_nice->ops->get_nice(node_nice);
     for (i = 0; i < varray_size(&node->services); i++) {
         vsrvcInfo* srvci = (vsrvcInfo*)varray_get(&node->services, i);
-        vsrvcInfo_set_nice(srvci, node->nice);
+        srvci->nice = node->nice;
     }
     vlock_leave(&node->lock);
     return 0;
@@ -524,7 +524,7 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct vsockaddr_in* a
         srvci = (vsrvcInfo*)varray_get(&node->services, i);
         if (vtoken_equal(&srvci->hash, hash)) {
             found = 1;
-            if (vsrvcInfo_proto(srvci) != proto) {
+            if (proto != srvci->proto) {
                 ret = -1;
             } else {
                 vsrvcInfo_add_addr(&srvci, &addr->addr, addr->type);
@@ -538,7 +538,7 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct vsockaddr_in* a
         vlogEv((!srvci), elog_vsrvcInfo_alloc);
         ret1E((!srvci), vlock_leave(&node->lock));
 
-        vsrvcInfo_init(srvci, hash, &node->nodei->id, (proto << 16) | node->nice);
+        vsrvcInfo_init(srvci, hash, &node->nodei->id, node->nice, proto);
         vsrvcInfo_add_addr(&srvci, &addr->addr, addr->type);
         varray_add_tail(&node->services, srvci);
         node->nodei->weight++;
@@ -659,7 +659,7 @@ int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_
     vlock_leave(&node->lock);
 
     if (found) {
-        ncb(hash, srvci->naddrs, vsrvcInfo_proto(srvci), cookie);
+        ncb(hash, srvci->naddrs, srvci->proto, cookie);
         for (i = 0; i < srvci->naddrs; i++) {
             icb(hash, &srvci->addrs[i].addr, srvci->addrs[i].type, (i+1) == srvci->naddrs, cookie);
         }
