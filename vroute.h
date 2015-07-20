@@ -114,6 +114,8 @@ struct vroute_node_space {
 
     int  init_next_tmo;
     int  max_next_tmo;
+    int  max_next_tmo_unreachable;
+    int  next_tmo_step;
     int  max_probe_tms;
     int  max_ping_tms;
 

@@ -73,10 +73,10 @@ int vpeer_update(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo*
          *
          */
         if (peer->ntry_pings > 2) { //means bad node
-            peer->next_tmo   = space->init_next_tmo;
+            peer->next_tmo = space->init_next_tmo;
         } else {
-            peer->next_tmo++;
-            peer->next_tmo = vminimum(peer->next_tmo, space->max_next_tmo >> 1);
+            peer->next_tmo += space->next_tmo_step;
+            peer->next_tmo = vminimum(peer->next_tmo, space->max_next_tmo);
         }
         peer->ntry_pings = 0;
         peer->tick_ts = time(NULL);
@@ -177,7 +177,7 @@ int _aux_space_find_node_in_neighbors_cb(void* item, void* cookie)
     vassert(targetId);
     vassert(peer);
 
-    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+    if (peer->next_tmo >= space->max_next_tmo_unreachable) {
         //means it's a 'worst' bad DHT node (unreachable);
         return 0;
     }
@@ -205,7 +205,7 @@ int _aux_space_air_service_cb(void* item, void* cookie)
     vassert(srvci);
     vassert(peer);
 
-    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+    if (peer->next_tmo >= space->max_next_tmo_unreachable) {
         //means it's a 'worst' bad DHT node (unreachable);
         return 0;
     }
@@ -234,7 +234,7 @@ int _aux_space_probe_service_cb(void* item, void* cookie)
     vassert(hash);
     vassert(peer);
 
-    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+    if (peer->next_tmo >= space->max_next_tmo_unreachable) {
         //means it's a 'worst' bad DHT node (unreachable);
         return 0;
     }
@@ -264,7 +264,7 @@ int _aux_space_reflex_addr_cb(void* item, void* cookie)
     vassert(addr);
     vassert(peer);
 
-    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+    if (peer->next_tmo >= space->max_next_tmo_unreachable) {
         //means it's a 'worst' bad DHT node (unreachable);
         return 0;
     }
@@ -301,7 +301,7 @@ int _aux_space_probe_connectivity_cb(void* item, void* cookie)
         //already probed enough times;
         return 0;
     }
-    if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+    if (peer->next_tmo >= space->max_next_tmo_unreachable) {
         //means it's a 'worst' bad DHT node (unreachable);
         return 0;
     }
@@ -355,8 +355,8 @@ int _aux_space_ping_nodei_cb(void* item, void* cookie)
          * more than certian times, then increase 'next_tmo', so as to
          * reduce frequency of sending DHT 'ping' query.
          */
-        peer->next_tmo += 2;
-        peer->next_tmo = vminimum(peer->next_tmo, space->max_next_tmo);
+        peer->next_tmo += space->next_tmo_step;
+        peer->next_tmo = vminimum(peer->next_tmo, space->max_next_tmo_unreachable);
     }
     return 0;
 }
@@ -469,7 +469,7 @@ int _aux_space_store_nodei_cb(void* item, void* cookie)
         //skip fake DHT node.
         return 0;
     }
-    if (peer->ntry_pings > 0 && peer->next_tmo >= space->max_next_tmo){
+    if (peer->next_tmo >= space->max_next_tmo_unreachable) {
         //skip 'worst' bad DHT nodei (unreachable)
         return 0;
     }
@@ -708,7 +708,7 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
             if (vnodeInfo_is_fake(peer->nodei)) {
                 continue;
             }
-            if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+            if (peer->next_tmo >= space->max_next_tmo_unreachable) {
                 continue;
             }
             vsorted_array_add(&sarray, peer);
@@ -917,7 +917,7 @@ int _vroute_node_space_tick(struct vroute_node_space* space)
             continue;
         }
         peer = (struct vpeer*)varray_get_rand(peers);
-        if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+        if (peer->next_tmo >= space->max_next_tmo_unreachable) {
             continue;
         }
         if (vnodeInfo_is_fake(peer->nodei)) {
@@ -1056,7 +1056,7 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
         peers = &space->bucket[i].peers;
         for (j = 0; j < varray_size(peers); j++) {
             peer = (struct vpeer*)varray_get(peers, j);
-            if ((peer->ntry_pings > 0) && (peer->next_tmo >= space->max_next_tmo)) {
+            if (peer->next_tmo >= space->max_next_tmo_unreachable) {
                 continue;
             }
             if ((peer->ntry_pings > 0) && vnodeInfo_is_fake(peer->nodei)) {
@@ -1146,6 +1146,8 @@ int vroute_node_space_init(struct vroute_node_space* space, struct vroute* route
     space->bucket_sz     = cfg->ext_ops->get_route_bucket_sz(cfg);
     space->init_next_tmo = 2;
     space->max_next_tmo  = cfg->ext_ops->get_route_max_next_tmo(cfg);
+    space->next_tmo_step = 5; //step for next timeout.
+    space->max_next_tmo_unreachable = space->max_next_tmo << 2;
     space->max_ping_tms  = 3;
     space->max_probe_tms = 3;
 
