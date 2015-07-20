@@ -201,6 +201,28 @@ int vticket_punch(struct vticket_item* ticket, void** argv)
     return done;
 }
 
+static
+void vticket_timedout_punch(struct vticket_item* ticket)
+{
+    vassert(ticket);
+
+    switch(ticket->type) {
+    case VTICKET_TOKEN_CHECK:
+        break;
+    case VTICKET_SRVC_PROBE: {
+        struct srvc_probe_info* info = &ticket->info.srvc;
+        info->ncb(&info->hash, 0, VPROTO_UNKNOWN, info->cookie);
+        break;
+    }
+    case VTICKET_CONN_PROBE:
+        break;
+    default:
+        vassert(0);
+        break;
+    }
+    return ;
+}
+
 /*
  * the routine to add a ticket
  * @ticket:
@@ -277,6 +299,7 @@ void _vroute_tckt_space_timed_reap(struct vroute_tckt_space* space)
     for (i = 0; i < varray_size(&space->tickets); ) {
         ticket = (struct vticket_item*)varray_get(&space->tickets, i);
         if (now - ticket->ts >= space->overdue_tmo) {
+            vticket_timedout_punch(ticket);
             varray_del(&space->tickets, i);
             vticket_free(ticket);
         } else {
