@@ -196,6 +196,7 @@ int _aux_dhtc_request(void* buf, int len)
 {
     struct sockaddr_un caddr;
     struct sockaddr_un saddr;
+    struct timeval tmo = {3, 0};
     int ret = 0;
     int fd = 0;
 
@@ -204,6 +205,8 @@ int _aux_dhtc_request(void* buf, int len)
         perror("socket:");
         return -1;
     }
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (char*)&tmo, sizeof(tmo));
+
     unlink(glsctlc_socket);
     caddr.sun_family = AF_UNIX;
     strcpy(caddr.sun_path, glsctlc_socket);
@@ -231,6 +234,7 @@ int _aux_dhtc_req_and_rsp(void* snd_buf, int snd_len, void* rcv_buf, int rcv_len
     struct sockaddr_un caddr;
     struct sockaddr_un saddr;
     int saddr_len = sizeof(struct sockaddr_un);
+    struct timeval tmo = {3, 0};
     int ret = 0;
     int fd = 0;
 
@@ -239,6 +243,8 @@ int _aux_dhtc_req_and_rsp(void* snd_buf, int snd_len, void* rcv_buf, int rcv_len
         perror("socket:");
         return -1;
     }
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (char*)&tmo, sizeof(tmo));
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&tmo, sizeof(tmo));
     unlink(glsctlc_socket);
     caddr.sun_family = AF_UNIX;
     strcpy(caddr.sun_path, glsctlc_socket);
