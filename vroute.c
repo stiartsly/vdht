@@ -409,7 +409,7 @@ void _aux_vlog(const char* msgtype, struct sockaddr_in* addr)
 
     memset(buf, 0, 32);
     vsockaddr_strlize(addr, buf, 32);
-    vlogI("send     @%-20s =>  %s", msgtype, buf);
+    vlogI("send     @%-24s =>  %s", msgtype, buf);
     return ;
 }
 
@@ -1296,7 +1296,7 @@ int _aux_route_msg_cb(void* cookie, struct vmsg_usr* mu)
         char buf[32];
         memset(buf, 0, 32);
         vsockaddr_strlize(to_sockaddr_sin(mu->addr), buf, 32);
-        vlogI("received @%-20s <=  %s", vdht_get_desc(ret), buf);
+        vlogI("received @%-24s <=  %s", vdht_get_desc(ret), buf);
     }
 
     vnodeConn_set_raw(&conn, to_sockaddr_sin(mu->spec), to_sockaddr_sin(mu->addr));
