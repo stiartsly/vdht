@@ -836,7 +836,7 @@ int _vdht_enc_find_service(
     tmp  = be_create_dict();
     node = be_create_buf(srcId, sizeof(vnodeId));
     be_add_keypair(tmp, "id", node);
-    tmp  = be_create_buf(srvcHash, sizeof(vsrvcHash));
+    node = be_create_buf(srvcHash, sizeof(vsrvcHash));
     be_add_keypair(tmp, "target", node);
     be_add_keypair(dict, "a", tmp);
 
