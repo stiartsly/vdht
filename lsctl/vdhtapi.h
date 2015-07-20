@@ -239,8 +239,8 @@ int vdhtc_find_service  (vsrvcHash* hash, vsrvcInfo_number_addr_t ncb, vsrvcInfo
  * back), then @ncb callback still be invoked, but only be responsible for informing
  * no services found.
  *
- * NOTICE: unlike to API above, callbacks @ncb and @icb are invoked after API call
- * returned.
+ * NOTICE: Being like to API above, callbacks @ncb and @icb are invoked before
+ * function return.
  *
  * @hash: service hash;
  * @ncb:  callback to show addresses number and protocol to use;

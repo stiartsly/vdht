@@ -658,7 +658,7 @@ int _vlsctl_pack_cmd(struct vlsctl* lsctl, void* buf, int len, void* cookie)
     tsz += ret;
     set_uint16(len_addr, ret);
 
-    vhexbuf_dump(buf, tsz);
+   // vhexbuf_dump(buf, tsz);
     return tsz;
 }
 

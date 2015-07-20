@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include "vlsctlc.h"
 
+#if 0
 static
 void _aux_vhexbuf_dump(uint8_t* hex_buf, int len)
 {
@@ -24,6 +25,7 @@ void _aux_vhexbuf_dump(uint8_t* hex_buf, int len)
     printf("\n");
     return ;
 }
+#endif
 
 static
 int _vlsctlc_bind_cmd_host_up(struct vlsctlc* lsctlc)
@@ -777,8 +779,6 @@ int _vlsctlc_unpack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
     vassert(buf);
     vassert(len > 0);
 
-    _aux_vhexbuf_dump(buf, len);
-
     tsz += sizeof(uint8_t); // skip version;
     lsctlc->type = get_uint8(buf + tsz);
     tsz += sizeof(uint8_t);
@@ -786,6 +786,8 @@ int _vlsctlc_unpack_cmd(struct vlsctlc* lsctlc, void* buf, int len)
     tsz += sizeof(uint16_t);
     magic = get_uint32(buf + tsz);
     tsz += sizeof(uint32_t);
+
+//    _aux_vhexbuf_dump(buf, bsz);
 
     if (magic != VLSCTL_MAGIC) {
         return -1;

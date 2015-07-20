@@ -835,10 +835,10 @@ error_exit:
  * back, then means the service is found.
  *    same as API above, if no service is found (means no neigbor nodes reponse
  * back), then @ncb callback still be invoked, but only be responsible for informing
- * no services found.
+ * no services was found.
  *
- * NOTICE: unlike to API above, callbacks @ncb and @icb are invoked after API call
- * returned.
+ * NOTICE: Being like to API above, callbacks @ncb and @icb are invoked before
+ * function return.
  *
  * @hash: service hash;
  * @ncb:  callback to show addresses number and protocol to use;
