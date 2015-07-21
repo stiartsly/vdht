@@ -990,7 +990,7 @@ int _vcfg_get_host_tick_tmo(struct vconfig* cfg)
     int ret = 0;
 
     vassert(cfg);
-    val = cfg->ops->get_str_val(cfg, "global.tick_timeout");
+    val = cfg->ops->get_str_val(cfg, "host.tick_timeout");
     if (!val) {
         goto error_exit;
     }
@@ -1026,7 +1026,7 @@ int _vcfg_get_host_wb_tmo(struct vconfig* cfg)
     int ret = 0;
 
     vassert(cfg);
-    val = cfg->ops->get_str_val(cfg, "global.writeback_timeout");
+    val = cfg->ops->get_str_val(cfg, "host.writeback_timeout");
     if (!val) {
         goto error_exit;
     }
@@ -1060,7 +1060,7 @@ const char* _vcfg_get_host_db_file(struct vconfig* cfg)
     const char* file = NULL;
     vassert(cfg);
 
-    file = cfg->ops->get_str_val(cfg, "global.db_file");
+    file = cfg->ops->get_str_val(cfg, "host.db_file");
     if (!file) {
         file = "vdht.db";
     }

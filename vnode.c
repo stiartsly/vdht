@@ -239,17 +239,17 @@ int _aux_node_tick_cb(void* cookie)
         break;
     }
     case VDHT_RUN: {
-        if (now - node->tick_ts > node->tick_tmo) {
-            node->route->ops->tick(node->route);
+        if (node->tick_ts + node->tick_tmo < now) {
             node->ops->renice(node);
             node->ops->tick(node);
             node->tick_ts = now;
         }
         //write back database at certain interval.
-        if (now - node->wb_ts > node->wb_tmo) {
+        if (node->wb_ts + node->wb_tmo < now) {
             node->route->ops->store(node->route);
             node->wb_ts = now;
         }
+        node->route->ops->tick(node->route);
         break;
     }
     case VDHT_DOWN: {
@@ -813,7 +813,7 @@ int vnode_init(struct vnode* node, struct vconfig* cfg, struct vhost* host, vnod
     node->route   = &host->route;
     node->ops     = &node_ops;
     node->srvc_ops= &node_srvc_ops;
-    node->tick_tmo= cfg->ext_ops->get_host_tick_tmo(cfg);
+    node->tick_tmo= 30; //30seconds;
     node->wb_tmo  = cfg->ext_ops->get_host_wb_tmo(cfg);
 
     return 0;
