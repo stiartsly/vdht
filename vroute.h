@@ -75,7 +75,6 @@ struct vpeer {
 
 enum {
     VADD_BY_OTHER,
-    VADD_BY_PING,
     VADD_BY_PING_RSP,
     VADD_BUUT
 };
@@ -83,7 +82,7 @@ enum {
 typedef void (*vroute_node_space_inspect_t)(struct vpeer*, void*, vnonce*, uint32_t);
 struct vroute_node_space;
 struct vroute_node_space_ops {
-    void (*kick_node)    (struct vroute_node_space*, vnodeId*);
+    int  (*kick_node)    (struct vroute_node_space*, vnodeId*);
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
     int  (*find_node)    (struct vroute_node_space*, vnodeId*, vnodeInfo*);
     int  (*find_closest_nodes)

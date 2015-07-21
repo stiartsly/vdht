@@ -81,19 +81,6 @@ int vpeer_update(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo*
         peer->ntry_pings = 0;
         peer->tick_ts = time(NULL);
         break;
-    case VADD_BY_PING:
-        /*
-         * If received a DHT ping query from bad node, then regress 'next_tmo'
-         * back to initial value, so as to send ping as soon as possible.
-         * If received a DHT ping query from good node, do nothing but update
-         * 'tick_ts'.
-         */
-        if (peer->ntry_pings > 1) {
-            peer->next_tmo = space->init_next_tmo;
-        }
-        peer->tick_ts = time(NULL);
-        return 0; // do not disturb original one.
-        break;
     case VADD_BY_OTHER:
         /* updated not because of the DHT node itself. So, no sure for this
          * DHT node is bad or good for now.
@@ -539,9 +526,10 @@ int _aux_space_weight_cmp_cb(void* item, void* neo, void* cookie)
  * @id: node ID to kick.
  */
 static
-void _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
+int _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
 {
     struct varray* peers = NULL;
+    int found = 0;
     int idx = 0;
     int i = 0;
     vassert(space);
@@ -556,13 +544,19 @@ void _vroute_node_space_kick_node(struct vroute_node_space* space, vnodeId* id)
         }
         /*
          * All dht messages from 'peer' are considered as ping-like messages.
-         * So, when message is received from that 'peer', 'kick_ts' to that
-         * 'peer' will be updated.
+         * So, when message is received from that DHT node, it's 'tick_ts' will
+         * be updated.
+         * Meanwhile, if it's a bad DHT node, then it's 'next_tmo' need regress
+         * back to initial value, so as to send ping as soon as possible.
          */
         peer->tick_ts = time(NULL);
+        if (peer->ntry_pings > 1) {
+            peer->next_tmo = space->init_next_tmo;
+        }
+        found = 1;
         break;
     }
-    return ;
+    return found;
 }
 
 /*

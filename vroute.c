@@ -820,12 +820,16 @@ int _vroute_cb_ping(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret = route->dec_ops->ping(ctxt, &nonce, &fromId);
     retE((ret < 0));
 
-    if (vsockaddr_is_public(&conn->raddr)) {
+    ret = node_space->ops->kick_node(node_space, &fromId);
+    if (ret == 0) {
+        //means it's a new DHT node.
+        vtoken_make(&fromId);
         vnodeInfo_relax_init(nodei, &fromId, vnodeVer_unknown(), 0);
-        vnodeInfo_add_addr(&nodei, &conn->raddr, VSOCKADDR_REFLEXIVE);
-        ret = node_space->ops->add_node(node_space, nodei, VADD_BY_PING);
+        vnodeInfo_add_addr(&nodei, &conn->raddr, VSOCKADDR_UNKNOWN);
+        ret = node_space->ops->add_node(node_space, nodei, VADD_BY_OTHER);
         retE((ret < 0));
     }
+
     DO_INSPECT(VROUTE_INSP_RCV_PING);
     ret = route->dht_ops->ping_rsp(route, conn, &nonce, route->node->nodei);
     retE((ret < 0));
