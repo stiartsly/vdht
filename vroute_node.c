@@ -165,7 +165,7 @@ int _aux_space_find_worst_nodei_cb(void* item, void* cookie)
  * auxilary callback to find a DHT nodei in neighbor DHT node.
  */
 static
-int _aux_space_find_node_in_neighbors_cb(void* item, void* cookie)
+int _aux_space_probe_node_cb(void* item, void* cookie)
 {
     varg_decl(cookie, 0, struct vroute_node_space*, space);
     varg_decl(cookie, 1, vnodeId*, targetId);
@@ -646,7 +646,7 @@ int _vroute_node_space_add_node(struct vroute_node_space* space, vnodeInfo* node
 }
 
 /*
- * the routine to find a node with given nodeID @targetId in local node routing space.
+ * the routine to get a node with given nodeID @targetId in local node routing space.
  *
  * @route: handle to route table.
  * @targetId: node Id to find
@@ -685,7 +685,7 @@ int _vroute_node_space_find_node(struct vroute_node_space* space, vnodeId* targe
  *
  */
 static
-int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* targetId, struct varray* closest, int num)
+int _vroute_node_space_find_closest_nodes(struct vroute_node_space* space, vnodeId* targetId, struct varray* closest, int num)
 {
     struct vsorted_array sarray;
     int i = 0;
@@ -741,18 +741,35 @@ int _vroute_node_space_get_neighbors(struct vroute_node_space* space, vnodeId* t
  * @targetId:
  */
 static
-int _vroute_node_space_find_node_in_neighbors(struct vroute_node_space* space, vnodeId* targetId)
+int _vroute_node_space_probe_node(struct vroute_node_space* space, vnodeId* targetId)
 {
+    struct varray* peers = NULL;
+    int found = 0;
+    int idx = 0;
     int i = 0;
+
     vassert(space);
     vassert(targetId);
+
+    idx = vnodeId_bucket(&space->myid, targetId);
+    peers = &space->bucket[idx].peers;
+    for (i = 0; i < varray_size(peers); i++) {
+        struct vpeer* peer = (struct vpeer*)varray_get(peers, i);
+        if (vtoken_equal(&peer->nodei->id, targetId)) {
+            found = 1;
+            break;
+        }
+    }
+    if (found) {
+        return 0;
+    }
 
     for (i = 0; i < NBUCKETS; i++) {
         void* argv[] = {
             space,
             targetId
         };
-        varray_iterate(&space->bucket[i].peers, _aux_space_find_node_in_neighbors_cb, argv);
+        varray_iterate(&space->bucket[i].peers, _aux_space_probe_node_cb, argv);
     }
     return 0;
 }
@@ -1080,8 +1097,8 @@ struct vroute_node_space_ops route_space_ops = {
     .kick_node     = _vroute_node_space_kick_node,
     .add_node      = _vroute_node_space_add_node,
     .find_node     = _vroute_node_space_find_node,
-    .find_node_in_neighbors = _vroute_node_space_find_node_in_neighbors,
-    .get_neighbors = _vroute_node_space_get_neighbors,
+    .find_closest_nodes = _vroute_node_space_find_closest_nodes,
+    .probe_node    = _vroute_node_space_probe_node,
     .air_service   = _vroute_node_space_air_service,
     .probe_service = _vroute_node_space_probe_service,
     .reflex_addr   = _vroute_node_space_reflex_addr,

@@ -870,7 +870,6 @@ int _vroute_cb_find_node(struct vroute* route, vnodeConn* conn, void* ctxt)
 {
     struct vroute_node_space* node_space = &route->node_space;
     DECL_VNODE_RELAX(nodei);
-    struct varray closest;
     vnodeId targetId;
     vnodeId fromId;
     vnonce nonce;
@@ -886,23 +885,9 @@ int _vroute_cb_find_node(struct vroute* route, vnodeConn* conn, void* ctxt)
 
     ret = node_space->ops->find_node(node_space, &targetId, nodei);
     retE((ret < 0));
-    if (ret == 1) { //means found
-        ret = route->dht_ops->find_node_rsp(route, conn, &nonce, nodei);
-        retE((ret < 0));
-        return 0;
-    }
+    retS((ret == 0)); // No such DHT nodei in node routing table.
 
-    // otherwise, send @find_closest_nodes_rsp response instead.
-    varray_init(&closest, MAX_CAPC);
-    ret = node_space->ops->get_neighbors(node_space, &targetId, &closest, MAX_CAPC);
-    ret1E((ret < 0), varray_deinit(&closest));
-    if (ret == 0) { //means no closest nodes.
-        varray_deinit(&closest);
-        return 0;
-    }
-    ret = route->dht_ops->find_closest_nodes_rsp(route, conn, &nonce, &closest);
-    varray_zero(&closest, _aux_vnodeInfo_free, NULL);
-    varray_deinit(&closest);
+    ret = route->dht_ops->find_node_rsp(route, conn, &nonce, nodei);
     retE((ret < 0));
     return 0;
 }
@@ -965,7 +950,7 @@ int _vroute_cb_find_closest_nodes(struct vroute* route, vnodeConn* conn, void* c
     DO_KICK_NODEI();
 
     varray_init(&closest, MAX_CAPC);
-    ret = node_space->ops->get_neighbors(node_space, &targetId, &closest, MAX_CAPC);
+    ret = node_space->ops->find_closest_nodes(node_space, &targetId, &closest, MAX_CAPC);
     ret1E((ret < 0), varray_deinit(&closest));
     if (ret == 0) {
         varray_deinit(&closest);
@@ -1246,7 +1231,7 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     retE((ret < 0));
     //try to add dht node hosting that service into routing table, so
     //as to cache this useful node
-    ret = node_space->ops->find_node_in_neighbors(node_space, &srvci->hostid);
+    ret = node_space->ops->probe_node(node_space, &srvci->hostid);
     retE((ret < 0));
 
     DO_INSPECT(VROUTE_INSP_RCV_FIND_SERVICE_RSP);

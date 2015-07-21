@@ -86,8 +86,9 @@ struct vroute_node_space_ops {
     void (*kick_node)    (struct vroute_node_space*, vnodeId*);
     int  (*add_node)     (struct vroute_node_space*, vnodeInfo*, int);
     int  (*find_node)    (struct vroute_node_space*, vnodeId*, vnodeInfo*);
-    int  (*find_node_in_neighbors)(struct vroute_node_space*, vnodeId*);
-    int  (*get_neighbors)(struct vroute_node_space*, vnodeId*, struct varray*, int);
+    int  (*find_closest_nodes)
+                         (struct vroute_node_space*, vnodeId*, struct varray*, int);
+    int  (*probe_node)   (struct vroute_node_space*, vnodeId*);
     int  (*air_service)  (struct vroute_node_space*, vsrvcInfo*);
     int  (*probe_service)(struct vroute_node_space*, vsrvcHash*);
     int  (*reflex_addr)  (struct vroute_node_space*, struct sockaddr_in*);
