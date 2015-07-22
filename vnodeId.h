@@ -3,6 +3,8 @@
 
 #include <netinet/in.h>
 
+typedef int(*vdump_t)(const char*, ...);
+
 // used for message token.
 #define VNONCE_LEN    4
 #define VNONCE_INTLEN 1
@@ -30,7 +32,7 @@ typedef struct vtoken vtoken;
 void vtoken_make   (vtoken*);
 int  vtoken_equal  (vtoken*, vtoken*);
 void vtoken_copy   (vtoken*, vtoken*);
-void vtoken_dump   (vtoken*);
+void vtoken_dump   (vtoken*, vdump_t);
 int  vtoken_strlize(vtoken*, char*, int);
 int  vtoken_unstrlize(const char*, vtoken*);
 
@@ -52,7 +54,7 @@ typedef struct vtoken vnodeVer;
 vnodeVer* vnodeVer_unknown(void);
 int  vnodeVer_strlize  (vnodeVer*, char*, int);
 int  vnodeVer_unstrlize(const char*, vnodeVer*);
-void vnodeVer_dump     (vnodeVer*);
+void vnodeVer_dump     (vnodeVer*, vdump_t );
 
 enum {
     VSOCKADDR_LOCAL,
@@ -108,7 +110,7 @@ int  vnodeInfo_merge    (vnodeInfo**, vnodeInfo*);
 int  vnodeInfo_copy     (vnodeInfo**, vnodeInfo*);
 int  vnodeInfo_size     (vnodeInfo*);
 int  vnodeInfo_is_fake  (vnodeInfo*);
-void vnodeInfo_dump     (vnodeInfo*);
+void vnodeInfo_dump     (vnodeInfo*, vdump_t);
 struct sockaddr_in* vnodeInfo_worst_addr(vnodeInfo*);
 
 #define DECL_VNODE_RELAX(nodei) \
@@ -198,7 +200,7 @@ int  vsrvcInfo_is_empty(vsrvcInfo*);
 
 int  vsrvcInfo_size(vsrvcInfo*);
 int  vsrvcInfo_copy(vsrvcInfo**, vsrvcInfo*);
-void vsrvcInfo_dump(vsrvcInfo*);
+void vsrvcInfo_dump(vsrvcInfo*, vdump_t);
 
 #define DECL_VSRVC_RELAX(srvci) \
     vsrvcInfo_relax srvci_relax = { \

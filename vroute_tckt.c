@@ -126,7 +126,7 @@ void vticket_init(struct vticket_item* ticket, int type, void** argv)
 }
 
 static
-void vticket_dump(struct vticket_item* ticket)
+void vticket_dump(struct vticket_item* ticket, vdump_t dcb)
 {
     vassert(ticket);
     //todo;
@@ -333,7 +333,7 @@ void _vroute_tckt_space_clear(struct vroute_tckt_space* space)
  * @space:
  */
 static
-void _vroute_tckt_space_dump(struct vroute_tckt_space* space)
+void _vroute_tckt_space_dump(struct vroute_tckt_space* space, vdump_t dcb)
 {
     struct vticket_item* ticket = NULL;
     int i = 0;
@@ -341,7 +341,7 @@ void _vroute_tckt_space_dump(struct vroute_tckt_space* space)
 
     for (i = 0; i < varray_size(&space->tickets); i++) {
         ticket = (struct vticket_item*)varray_get(&space->tickets, i);
-        vticket_dump(ticket);
+        vticket_dump(ticket, dcb);
     }
     return ;
 }
@@ -360,7 +360,7 @@ int vroute_tckt_space_init(struct vroute_tckt_space* space)
 {
     vassert(space);
 
-    space->overdue_tmo = 5; //5 seconds
+    space->overdue_tmo = 3; //3seconds;
     varray_init(&space->tickets, 8);
 
     space->ops = &route_ticket_space_ops;

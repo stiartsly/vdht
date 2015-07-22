@@ -24,7 +24,7 @@ int  vsockaddr_strlize   (struct sockaddr_in*, char*, int );
 int  vsockaddr_unstrlize (const char*, struct sockaddr_in*);
 int  vsockaddr_is_public (struct sockaddr_in*);
 int  vsockaddr_is_private(struct sockaddr_in*);
-int  vsockaddr_dump      (struct sockaddr_in*);
+int  vsockaddr_dump      (struct sockaddr_in*, int (*)(const char*, ...));
 
 /*
  * for macaddr

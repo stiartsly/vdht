@@ -302,14 +302,12 @@ void _vnode_dump(struct vnode* node)
     vdump(printf("writeback timeout: %ds", node->wb_tmo));
     vdump(printf("-> state:%s", node_mode_desc[node->mode]));
     vdump(printf("-> node infos:"));
-    vnodeInfo_dump(node->nodei);
+    vnodeInfo_dump(node->nodei, printf);
     if (varray_size(&node->services) > 0) {
         vdump(printf("-> list of services:"));
         for (i = 0; i < varray_size(&node->services); i++) {
             vsrvcInfo* srvci = (vsrvcInfo*)varray_get(&node->services, i);
-            printf("{ ");
-            vsrvcInfo_dump(srvci);
-            printf(" }\n");
+            vsrvcInfo_dump(srvci, printf);
         }
     }
     vlock_leave(&node->lock);

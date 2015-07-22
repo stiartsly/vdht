@@ -102,17 +102,19 @@ int vpeer_update(struct vpeer* peer, struct vroute_node_space* space, vnodeInfo*
 }
 
 static
-void vpeer_dump(struct vpeer* peer)
+void vpeer_dump(struct vpeer* peer, vdump_t dcb)
 {
     vassert(peer);
 
-    vnodeInfo_dump(peer->nodei);
-    printf("local:");    vsockaddr_dump(&peer->conn.laddr);
-    printf(" remote: "); vsockaddr_dump(&peer->conn.raddr); printf("\n");
-    printf("tick ts: %s", ctime(&peer->tick_ts));
-    printf("next_tmo:%d\n", peer->next_tmo);
-    printf("tried ping  times:%d\n", peer->ntry_pings);
-    printf("tried probe times:%d\n", peer->ntry_probes);
+    dcb("{ ");
+    vnodeInfo_dump(peer->nodei, dcb);
+    dcb("local:");    vsockaddr_dump(&peer->conn.laddr, dcb);
+    dcb(" remote: "); vsockaddr_dump(&peer->conn.raddr, dcb); dcb("\n");
+    dcb("tick ts: %s", ctime(&peer->tick_ts));
+    dcb("next_tmo:%d\n", peer->next_tmo);
+    dcb("tried ping  times:%d\n", peer->ntry_pings);
+    dcb("tried probe times:%d", peer->ntry_probes);
+    dcb(" }\n");
     return ;
 }
 
@@ -1054,7 +1056,7 @@ void _vroute_node_space_inspect(struct vroute_node_space* space, vroute_node_spa
  * @route:
  */
 static
-void _vroute_node_space_dump(struct vroute_node_space* space)
+void _vroute_node_space_dump(struct vroute_node_space* space, vdump_t dcb)
 {
     struct varray* peers = NULL;
     struct vpeer*  peer  = NULL;
@@ -1074,13 +1076,11 @@ void _vroute_node_space_dump(struct vroute_node_space* space)
                continue;
             }
             if (!titled) {
-                vdump(printf("-> list of peers in node routing space:"));
+                dcb("-> list of peers in node routing space:\n");
                 titled = 1;
             }
-            printf("{ ");
-            vpeer_dump(peer);
-            printf(" }\n");
-        }
+            vpeer_dump(peer, dcb);
+         }
     }
 
     return ;

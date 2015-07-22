@@ -154,7 +154,6 @@ int _vlsctl_exec_cmd_join_node(struct vlsctl* lsctl, void* buf, int len, struct 
     ret = _aux_lsctl_unpack_addr(buf, len, &addr);
     retE((ret < 0));
     tsz += ret;
-    vsockaddr_dump(&addr);
 
     ret = app->api_ops->join_wellknown_node(app, &addr);
     retE((ret < 0));

@@ -2,7 +2,7 @@
 #include "vglobal.h"
 
 static int daemonize  = 0;
-static int logstdout  = 0;
+static int logstdout_level = VLOG_ERR;
 static int defcfgfile = 1;
 static char cfgfile[1024];
 
@@ -11,12 +11,13 @@ static int show_ver  = 0;
 
 static
 struct option long_options[] = {
-    {"daemon",      no_argument,        &daemonize, 1},
-    {"iteractive",  no_argument,        &daemonize, 0},
-    {"help",        no_argument,        &show_help, 1},
-    {"version",     no_argument,        &show_ver,  1},
-    {"log-out",     no_argument,        &logstdout, 1},
-    {"conf-file",   required_argument,  0,        'f'},
+    {"daemon",           no_argument,        &daemonize, 1},
+    {"iteractive",       no_argument,        &daemonize, 0},
+    {"help",             no_argument,        &show_help, 1},
+    {"version",          no_argument,        &show_ver,  1},
+    {"log-stdout",       no_argument,        0,        's'},
+    {"log-stdout-debug", no_argument,        0,        'S'},
+    {"conf-file",        required_argument,  0,        'f'},
     {0, 0, 0, 0}
 };
 
@@ -25,7 +26,8 @@ void show_usage(void)
     printf("Usage: vdhtd [OPTION...]\n");
     printf("  -D, --daemon                  Become a daemon.\n");
     printf("  -i, --interactive             Run iteractive (not a daemon)\n");
-    printf("  -S, --log-stdout              Log out stdout.\n");
+    printf("  -S, --log-stdout-debug        Log to stdout with debug level.\n");
+    printf("  -s, --log-stdout              Log to stdout.\n");
     printf("  -f  --conf-file=CONFIGFILE    Use alternate configuration file.\n");
     printf("\n");
     printf("Help options\n");
@@ -49,7 +51,7 @@ int main(int argc, char** argv)
     int c = 0;
 
     while(c >= 0) {
-        c = getopt_long(argc, argv, "DiSs:f:hv", long_options, &opt_idx);
+        c = getopt_long(argc, argv, "DiSsf:hv", long_options, &opt_idx);
         if (c < 0) {
             break;
         }
@@ -70,7 +72,10 @@ int main(int argc, char** argv)
             daemonize = 0;
             break;
         case 'S':
-            logstdout = 1;
+            logstdout_level = VLOG_DEBUG;
+            break;
+        case 's':
+            logstdout_level = VLOG_INFO;
             break;
         case 'f':
             defcfgfile = 0;
@@ -127,7 +132,7 @@ int main(int argc, char** argv)
             cfg_file = cfgfile;
         }
 
-        ret = vappmain_init(&app, cfg_file, logstdout);
+        ret = vappmain_init(&app, cfg_file, logstdout_level);
         if (ret < 0) {
             printf("failed to initialize appmain\n");
             exit(-1);

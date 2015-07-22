@@ -48,7 +48,7 @@ struct vroute_tckt_space_ops {
     int  (*check_ticket) (struct vroute_tckt_space*, int, void**);
     void (*timed_reap)   (struct vroute_tckt_space*);
     void (*clear)        (struct vroute_tckt_space*);
-    void (*dump)         (struct vroute_tckt_space*);
+    void (*dump)         (struct vroute_tckt_space*, vdump_t);
 };
 
 struct vroute_tckt_space {
@@ -100,7 +100,7 @@ struct vroute_node_space_ops {
     int  (*store)        (struct vroute_node_space*);
     void (*clear)        (struct vroute_node_space*);
     void (*inspect)      (struct vroute_node_space*, vroute_node_space_inspect_t, void*, vnonce*, uint32_t);
-    void (*dump)         (struct vroute_node_space*);
+    void (*dump)         (struct vroute_node_space*, vdump_t);
 };
 
 struct vhost;
@@ -145,7 +145,7 @@ struct vroute_srvc_space_ops {
     int  (*get_service)  (struct vroute_srvc_space*, vsrvcHash*, vsrvcInfo*);
     void (*clear)        (struct vroute_srvc_space*);
     void (*inspect)      (struct vroute_srvc_space*, vroute_srvc_space_inspect_t, void*, vnonce*, uint32_t);
-    void (*dump)         (struct vroute_srvc_space*);
+    void (*dump)         (struct vroute_srvc_space*, vdump_t);
 };
 
 struct vroute_srvc_space {

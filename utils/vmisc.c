@@ -364,7 +364,7 @@ int vsockaddr_is_private(struct sockaddr_in* addr)
     return yes;
 }
 
-int vsockaddr_dump(struct sockaddr_in* addr)
+int vsockaddr_dump(struct sockaddr_in* addr, int (*dump_cb)(const char*, ...))
 {
     uint16_t port = 0;
     char ip[64];
@@ -375,7 +375,7 @@ int vsockaddr_dump(struct sockaddr_in* addr)
     ret = vsockaddr_unconvert(addr, ip, 64, &port);
     vlogEv((ret < 0), elog_vsockaddr_unconvert);
     retE((ret < 0));
-    printf("%s:%d", ip, port);
+    dump_cb("%s:%d", ip, port);
     return 0;
 }
 

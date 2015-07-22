@@ -326,8 +326,8 @@ void _vroute_dump(struct vroute* route)
 
     vdump(printf("-> ROUTE"));
     vlock_enter(&route->lock);
-    node_space->ops->dump(node_space);
-    srvc_space->ops->dump(srvc_space);
+    node_space->ops->dump(node_space, printf);
+    srvc_space->ops->dump(srvc_space, printf);
     vlock_leave(&route->lock);
     vdump(printf("<- ROUTE"));
     return;
@@ -858,6 +858,7 @@ int _vroute_cb_ping_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     ret = node_space->ops->add_node(node_space, nodei, VADD_BY_PING_RSP);
     retE((ret < 0));
 
+    vnodeInfo_dump(nodei, vlogDp);
     DO_INSPECT(VROUTE_INSP_RCV_PING_RSP);
     return 0;
 }
@@ -921,6 +922,7 @@ int _vroute_cb_find_node_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     DO_CHECK_TOKEN();
     DO_KICK_NODEI();
 
+    vnodeInfo_dump(nodei, vlogDp);
     ret = node_space->ops->add_node(node_space, nodei, VADD_BY_OTHER);
     retE((ret < 0));
 
@@ -1004,6 +1006,7 @@ int _vroute_cb_find_closest_nodes_rsp(struct vroute* route, vnodeConn* conn, voi
     DO_KICK_NODEI();
 
     for (i = 0; i < varray_size(&closest); i++) {
+        vnodeInfo_dump((vnodeInfo*)varray_get(&closest,i), vlogDp);
         node_space->ops->add_node(node_space, (vnodeInfo*)varray_get(&closest, i), VADD_BY_OTHER);
     }
     varray_zero(&closest, _aux_vnodeInfo_free, NULL);
@@ -1071,6 +1074,8 @@ int _vroute_cb_reflex_rsp(struct vroute* route, vnodeConn* conn, void* ctxt)
     DO_CHECK_TOKEN();
     DO_KICK_NODEI();
 
+    vsockaddr_dump(&reflexive_addr.addr, vlogDp);
+    vlogDp("\n");
     ret = node->ops->reflex_addr(node, &conn->laddr, &reflexive_addr);
     retE((ret < 0));
 
@@ -1238,6 +1243,7 @@ int _vroute_cb_find_service_rsp(struct vroute* route, vnodeConn* conn, void* ctx
     ret = node_space->ops->probe_node(node_space, &srvci->hostid);
     retE((ret < 0));
 
+    vsrvcInfo_dump(srvci, vlogDp);
     DO_INSPECT(VROUTE_INSP_RCV_FIND_SERVICE_RSP);
 
     {

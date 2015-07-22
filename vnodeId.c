@@ -199,7 +199,7 @@ int vtoken_unstrlize(const char* id_str, vtoken* token)
     return 0;
 }
 
-void vtoken_dump(vtoken* token)
+void vtoken_dump(vtoken* token, vdump_t dcb)
 {
     uint8_t data = 0;
     char buf[64];
@@ -230,7 +230,7 @@ void vtoken_dump(vtoken* token)
     ret = snprintf(buf+sz, 64-sz, "%x%x", (data >> 4), (data & 0x0f));
     sz += ret;
     i++;
-    printf("%s", buf);
+    dcb("%s", buf);
     return;
 }
 
@@ -370,7 +370,7 @@ int vnodeVer_unstrlize(const char* ver_str, vnodeVer* ver)
     return 0;
 }
 
-void vnodeVer_dump(vnodeVer* ver)
+void vnodeVer_dump(vnodeVer* ver, vdump_t dcb)
 {
     char sver[64];
     vassert(ver);
@@ -378,9 +378,9 @@ void vnodeVer_dump(vnodeVer* ver)
     memset(sver, 0, 64);
     vnodeVer_strlize(ver, sver, 64);
     if (!strcmp("0.0.0.0.0", sver)) {
-        printf("version: unknown");
+        dcb("version: unknown");
     } else {
-        printf("version: %s", sver);
+        dcb("version: %s", sver);
     }
     return;
 }
@@ -663,25 +663,26 @@ int vnodeInfo_is_fake(vnodeInfo* nodei)
     return (vtoken_equal(&nodei->ver, vnodeVer_unknown()));
 }
 
-void vnodeInfo_dump(vnodeInfo* nodei)
+void vnodeInfo_dump(vnodeInfo* nodei, vdump_t dcb)
 {
     int i = 0;
     vassert(nodei);
 
-    vtoken_dump(&nodei->id);
-    printf(", ");
-    vnodeVer_dump(&nodei->ver);
-    printf(", ");
-    printf("weight: %d,", nodei->weight);
-    printf("addrs:");
-    vsockaddr_dump(&nodei->addrs[0].addr);
-    printf(" %s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[0].type)));
+    dcb("[ ");
+    vtoken_dump(&nodei->id, dcb);
+    dcb(", ");
+    vnodeVer_dump(&nodei->ver, dcb);
+    dcb(", ");
+    dcb("weight: %d,", nodei->weight);
+    dcb("addrs:");
+    vsockaddr_dump(&nodei->addrs[0].addr, dcb);
+    dcb(" %s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[0].type)));
     for (i = 1; i < nodei->naddrs; i++) {
-        printf(", ");
-        vsockaddr_dump(&nodei->addrs[i].addr);
-        printf(" %s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[i].type)));
+        dcb(", ");
+        vsockaddr_dump(&nodei->addrs[i].addr, dcb);
+        dcb(" %s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[i].type)));
     }
-    printf("\n");
+    dcb(" ]\n");
     return ;
 }
 
@@ -921,7 +922,7 @@ int vsrvcInfo_copy(vsrvcInfo** ppdest, vsrvcInfo* src)
     return 0;
 }
 
-void vsrvcInfo_dump(vsrvcInfo* srvci)
+void vsrvcInfo_dump(vsrvcInfo* srvci, vdump_t dcb)
 {
     char* sproto = NULL;
     int i = 0;
@@ -939,17 +940,19 @@ void vsrvcInfo_dump(vsrvcInfo* srvci)
         break;
     }
 
-    vtoken_dump(&srvci->hash);
-    printf(", nice: %d",  srvci->nice);
-    printf(", proto: %s", sproto);
-    printf(", addrs: ");
-    vsockaddr_dump(&srvci->addrs[0].addr);
-    printf(" %s", vsockaddr_in_desc(srvci->addrs[0].type));
+    dcb("[ ");
+    vtoken_dump(&srvci->hash, dcb);
+    dcb(", nice: %d",  srvci->nice);
+    dcb(", proto: %s", sproto);
+    dcb(", addrs: ");
+    vsockaddr_dump(&srvci->addrs[0].addr, dcb);
+    dcb(" %s", vsockaddr_in_desc(srvci->addrs[0].type));
     for (i = 1; i < srvci->naddrs; i++) {
-        printf(", ");
-        vsockaddr_dump(&srvci->addrs[i].addr);
-        printf(" %s", vsockaddr_in_desc(srvci->addrs[i].type));
+        dcb(", ");
+        vsockaddr_dump(&srvci->addrs[i].addr, dcb);
+        dcb(" %s", vsockaddr_in_desc(srvci->addrs[i].type));
     }
+    dcb(" ]\n");
     return ;
 }
 

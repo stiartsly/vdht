@@ -1,15 +1,8 @@
 #include "vglobal.h"
 #include "vlog.h"
 
-static int g_need_syslog = 0;
-static int g_need_stdout = 0;
-
-enum {
-    VLOG_ERR    = LOG_ERR,
-    VLOG_INFO   = LOG_INFO,
-    VLOG_DEBUG  = LOG_DEBUG,
-    VLOG_BUTT
-};
+static int g_need_syslog  = 0;
+static int g_stdout_level = VLOG_ERR;
 
 /*
  * the routine to log debug message.
@@ -19,20 +12,23 @@ int vlogD(const char* fmt, ...)
     va_list args;
     vassert(fmt);
 
-    if (g_need_syslog) {
-        va_start(args, fmt);
-        vsyslog(VLOG_DEBUG, fmt, args);
-        va_end(args);
+    if (g_stdout_level < VLOG_DEBUG) {
+        return 0;
     }
-#ifdef _DEBUG
-    if (g_need_stdout) {
+
+    if (1) {
         va_start(args, fmt);
         printf("[D]");
         vprintf(fmt, args);
         printf("\n");
         va_end(args);
     }
-#endif
+    if (g_need_syslog) {
+        va_start(args, fmt);
+        vsyslog(VLOG_DEBUG, fmt, args);
+        va_end(args);
+    }
+
     return 0;
 }
 
@@ -45,23 +41,46 @@ int vlogDv(int cond, const char* fmt, ...)
     va_list(args);
     vassert(fmt);
 
-    if (!cond) {
+    if ((!cond) || (g_stdout_level < VLOG_DEBUG)){
         return 0;
     }
-    if (g_need_syslog) {
-        va_start(args, fmt);
-        vsyslog(VLOG_DEBUG, fmt, args);
-        va_end(args);
-    }
-#ifdef _DEBUG
-    if (g_need_stdout) {
+
+    if (1) {
         va_start(args, fmt);
         printf("[D]");
         vprintf(fmt, args);
         printf("\n");
         va_end(args);
     }
-#endif
+    if (g_need_syslog) {
+        va_start(args, fmt);
+        vsyslog(VLOG_DEBUG, fmt, args);
+        va_end(args);
+    }
+
+    return 0;
+}
+
+int vlogDp(const char* fmt, ...)
+{
+    va_list(args);
+    vassert(fmt);
+
+    if (g_stdout_level < VLOG_DEBUG) {
+        return 0;
+    }
+
+    if (1) {
+        va_start(args, fmt);
+        vprintf(fmt, args);
+        va_end(args);
+    }
+    if (g_need_syslog) {
+        va_start(args, fmt);
+        vsyslog(VLOG_DEBUG, fmt, args);
+        va_end(args);
+    }
+
     return 0;
 }
 
@@ -73,18 +92,23 @@ int vlogI(const char* fmt, ...)
     va_list args;
     vassert(fmt);
 
-    if (g_need_syslog) {
-        va_start(args, fmt);
-        vsyslog(VLOG_INFO, fmt, args);
-        va_end(args);
+    if (g_stdout_level < VLOG_INFO) {
+        return 0;
     }
-    if (g_need_stdout) {
+
+    if (1) {
         va_start(args, fmt);
         printf("[I]");
         vprintf(fmt, args);
         printf("\n");
         va_end(args);
     }
+    if (g_need_syslog) {
+        va_start(args, fmt);
+        vsyslog(VLOG_INFO, fmt, args);
+        va_end(args);
+    }
+
     return 0;
 }
 
@@ -94,25 +118,49 @@ int vlogI(const char* fmt, ...)
  */
 int vlogIv(int cond, const char* fmt, ...)
 {
-    va_list(args);
+    va_list args;
     vassert(fmt);
 
-    if (!cond) {
+    if (!cond || (g_stdout_level < VLOG_INFO)) {
         return 0;
     }
 
-    if (g_need_syslog) {
-        va_start(args,fmt);
-        vsyslog(VLOG_INFO, fmt, args);
-        va_end(args);
-    }
-    if (g_need_stdout) {
+    if (1) {
         va_start(args, fmt);
         printf("[I]");
         vprintf(fmt, args);
         printf("\n");
         va_end(args);
     }
+    if (g_need_syslog ) {
+        va_start(args,fmt);
+        vsyslog(VLOG_INFO, fmt, args);
+        va_end(args);
+    }
+
+    return 0;
+}
+
+int vlogIp(const char* fmt, ...)
+{
+    va_list args;
+    vassert(fmt);
+
+    if (g_stdout_level < VLOG_INFO) {
+        return 0;
+    }
+
+    if (1) {
+        va_start(args, fmt);
+        vprintf(fmt, args);
+        va_end(args);
+    }
+    if (g_need_syslog ) {
+        va_start(args,fmt);
+        vsyslog(VLOG_INFO, fmt, args);
+        va_end(args);
+    }
+
     return 0;
 }
 
@@ -124,11 +172,6 @@ int vlogE(const char* fmt, ...)
     va_list(args);
     vassert(fmt);
 
-    if (g_need_syslog) {
-        va_start(args, fmt);
-        vsyslog(VLOG_ERR, fmt, args);
-        va_end(args);
-    }
     if (1) {
         va_start(args, fmt);
         printf("[E]");
@@ -136,6 +179,12 @@ int vlogE(const char* fmt, ...)
         printf("\n");
         va_end(args);
     }
+    if (g_need_syslog) {
+        va_start(args, fmt);
+        vsyslog(VLOG_ERR, fmt, args);
+        va_end(args);
+    }
+
     return 0;
 }
 
@@ -151,11 +200,7 @@ int vlogEv(int cond, const char* fmt, ...)
     if (!cond) {
         return 0;
     }
-    if (g_need_syslog) {
-        va_start(args, fmt);
-        vsyslog(VLOG_ERR, fmt, args);
-        va_end(args);
-    }
+
     if (1) {
         va_start(args, fmt);
         printf("[E]");
@@ -163,6 +208,12 @@ int vlogEv(int cond, const char* fmt, ...)
         printf("\n");
         va_end(args);
     }
+    if (g_need_syslog) {
+        va_start(args, fmt);
+        vsyslog(VLOG_ERR, fmt, args);
+        va_end(args);
+    }
+
     return 0;
 }
 
@@ -224,9 +275,13 @@ void vlog_close (void)
 /*
  * the routine to enable log stdout.
  */
-void vlog_stdout_enable (void)
+void vlog_stdout_enable (int level)
 {
-    g_need_stdout = 1;
+    if ((level < VLOG_ERR) || (level >= VLOG_BUTT)) {
+        g_stdout_level = VLOG_ERR;
+    } else {
+        g_stdout_level = level;
+    }
     return ;
 }
 
@@ -235,7 +290,7 @@ void vlog_stdout_enable (void)
  */
 void vlog_stdout_disable(void)
 {
-    g_need_stdout = 0;
+    g_stdout_level = VLOG_ERR;
     return ;
 }
 

@@ -50,12 +50,14 @@ int vservice_init(struct vservice* item, vsrvcInfo* srvci, time_t ts)
 }
 
 static
-void vservice_dump(struct vservice* item)
+void vservice_dump(struct vservice* item, vdump_t dcb)
 {
     vassert(item);
 
-    vsrvcInfo_dump(item->srvci);
-    printf("timestamp[rcv]: %s",  ctime(&item->rcv_ts));
+    dcb("{ ");
+    vsrvcInfo_dump(item->srvci, dcb);
+    dcb("timestamp[rcv]: %s",  ctime(&item->rcv_ts));
+    dcb(" }\n");
     return;
 }
 
@@ -229,7 +231,7 @@ void _vroute_srvc_space_inspect(struct vroute_srvc_space* space, vroute_srvc_spa
  * @space:
  */
 static
-void _vroute_srvc_space_dump(struct vroute_srvc_space* space)
+void _vroute_srvc_space_dump(struct vroute_srvc_space* space, vdump_t dcb)
 {
     struct varray* services = NULL;
     int titled = 0;
@@ -242,12 +244,10 @@ void _vroute_srvc_space_dump(struct vroute_srvc_space* space)
         services = &space->bucket[i].srvcs;
         for (j = 0; j < varray_size(services); j++) {
             if (!titled) {
-                vdump(printf("-> list of services in service routing space:"));
+                dcb("-> list of services in service routing space:");
                 titled = 1;
             }
-            printf("{ ");
-            vservice_dump((struct vservice*)varray_get(services, j));
-            printf(" }\n");
+            vservice_dump((struct vservice*)varray_get(services, j), dcb);
         }
     }
     return;

@@ -304,7 +304,7 @@ struct vappmain_api_ops appmain_api_ops = {
     .get_version            = _vappmain_get_version
 };
 
-int vappmain_init(struct vappmain* app, const char* cfg_file, int cons_print)
+int vappmain_init(struct vappmain* app, const char* cfg_file, int cons_print_level)
 {
     int ret = 0;
     vassert(app);
@@ -313,9 +313,10 @@ int vappmain_init(struct vappmain* app, const char* cfg_file, int cons_print)
         vlogE("missing config file.");
         retE((1));
     }
-    if (cons_print) {
-        vlog_stdout_enable();
+    if (cons_print_level > 0) {
+        vlog_stdout_enable(cons_print_level);
     }
+
     vlog_open(1, "vdhtd_brew");
 
     vconfig_init(&app->cfg);
