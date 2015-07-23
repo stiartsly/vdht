@@ -1,6 +1,22 @@
 #include "vglobal.h"
 #include "vnode.h"
 
+#define CPU_CRITERIA      ((int)8)
+#define CPU_FACTOR        ((int)7)
+#define CPU_RATIO         ((int)2)
+#define MEM_CRITERIA      ((int)8)
+#define MEM_FACTOR        ((int)6)
+#define MEM_RATIO         ((int)2)
+#define IO_CRITERIA       ((int)4)
+#define IO_FACTOR         ((int)3)
+#define IO_RATIO          ((int)2)
+#define NET_UP_CRITERIA   ((int)8)
+#define NET_UP_FACTOR     ((int)3)
+#define NET_UP_RATIO      ((int)2)
+#define NET_DOWN_CRITERIA ((int)5)
+#define NET_DOWN_FACTOR   ((int)2)
+#define NET_DOWN_RATIO    ((int)2)
+
 /*
  * the routine to get sampling of cpu/mem/io/net used ratio.
  *
@@ -59,21 +75,21 @@ int vnode_nice_init(struct vnode_nice* node_nice, struct vconfig* cfg)
     vassert(node_nice);
     vassert(cfg);
 
-    node_nice->cpu.criteria = 8;
-    node_nice->cpu.factor   = 7;
-    node_nice->cpu.ratio    = 2;
-    node_nice->mem.criteria = 8;
-    node_nice->mem.factor   = 6;
-    node_nice->mem.ratio    = 2;
-    node_nice->io.criteria  = 4;
-    node_nice->io.factor    = 3;
-    node_nice->io.ratio     = 2;
-    node_nice->net_up.criteria   = 8;
-    node_nice->net_up.factor     = 3;
-    node_nice->net_up.ratio      = 2;
-    node_nice->net_down.criteria = 5;
-    node_nice->net_down.factor   = 2;
-    node_nice->net_down.ratio    = 2;
+    node_nice->cpu.criteria      = CPU_CRITERIA;
+    node_nice->cpu.factor        = CPU_FACTOR;
+    node_nice->cpu.ratio         = CPU_RATIO;
+    node_nice->mem.criteria      = MEM_CRITERIA;
+    node_nice->mem.factor        = MEM_FACTOR;
+    node_nice->mem.ratio         = MEM_RATIO;
+    node_nice->io.criteria       = IO_CRITERIA;
+    node_nice->io.factor         = IO_FACTOR;
+    node_nice->io.ratio          = IO_RATIO;
+    node_nice->net_up.criteria   = NET_UP_CRITERIA;
+    node_nice->net_up.factor     = NET_UP_FACTOR;
+    node_nice->net_up.ratio      = NET_UP_RATIO;
+    node_nice->net_down.criteria = NET_DOWN_CRITERIA;
+    node_nice->net_down.factor   = NET_DOWN_FACTOR;
+    node_nice->net_down.ratio    = NET_DOWN_RATIO;
 
     node_nice->prev_nice_val = 2;
     node_nice->ops = &node_nice_ops;
