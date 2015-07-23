@@ -214,6 +214,7 @@ int _aux_dhtc_request(void* buf, int len)
     if (ret < 0) {
         perror("bind:");
         close(fd);
+        unlink(glsctlc_socket);
         return -1;
     }
     saddr.sun_family = AF_UNIX;
@@ -222,9 +223,11 @@ int _aux_dhtc_request(void* buf, int len)
     if (ret < 0) {
         perror("sendto:");
         close(fd);
+        unlink(glsctlc_socket);
         return -1;
     }
     close(fd);
+    unlink(glsctlc_socket);
     return 0;
 }
 
@@ -252,6 +255,7 @@ int _aux_dhtc_req_and_rsp(void* snd_buf, int snd_len, void* rcv_buf, int rcv_len
     if (ret < 0) {
         perror("bind:");
         close(fd);
+        unlink(glsctlc_socket);
         return -1;
     }
     saddr.sun_family = AF_UNIX;
@@ -260,6 +264,7 @@ int _aux_dhtc_req_and_rsp(void* snd_buf, int snd_len, void* rcv_buf, int rcv_len
     if (ret < 0) {
         perror("sendto:");
         close(fd);
+        unlink(glsctlc_socket);
         return -1;
     }
 
@@ -268,9 +273,11 @@ int _aux_dhtc_req_and_rsp(void* snd_buf, int snd_len, void* rcv_buf, int rcv_len
     if (ret < 0) {
         perror("recvfrom:");
         close(fd);
+        unlink(glsctlc_socket);
         return -1;
     }
     close(fd);
+    unlink(glsctlc_socket);
     return ret;
 }
 

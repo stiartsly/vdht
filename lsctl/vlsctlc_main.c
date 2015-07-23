@@ -230,7 +230,7 @@ int main(int argc, char** argv)
 
     memset(glsctlc_socket, 0, 256);
     memset(glsctls_socket, 0, 256);
-    strcpy(glsctlc_socket, "/var/run/vdht/lsctl_client");
+    sprintf(glsctlc_socket, "/var/run/vdht/lsctl_client_%d", getpid());
     strcpy(glsctls_socket, "/var/run/vdht/lsctl_socket");
 
     if (argc <= 1) {
