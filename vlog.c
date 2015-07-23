@@ -245,7 +245,9 @@ int vlog_open_with_cfg(struct vconfig* cfg)
     vassert(cfg);
 
     syslog = cfg->ext_ops->get_syslog_switch(cfg);
-    ident  = cfg->ext_ops->get_syslog_ident(cfg);
+    if (syslog > 0) {
+        ident  = cfg->ext_ops->get_syslog_ident(cfg);
+    }
     if (syslog) {
          if (g_need_syslog) {
             closelog();
