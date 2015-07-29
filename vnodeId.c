@@ -665,24 +665,31 @@ int vnodeInfo_is_fake(vnodeInfo* nodei)
 
 void vnodeInfo_dump(vnodeInfo* nodei, vdump_t dcb)
 {
+    char buf[BUF_SZ];
+    char str[64];
+    int ret = 0;
     int i = 0;
     vassert(nodei);
 
-    dcb("[ ");
-    vtoken_dump(&nodei->id, dcb);
-    dcb(", ");
-    vnodeVer_dump(&nodei->ver, dcb);
-    dcb(", ");
-    dcb("weight: %d,", nodei->weight);
-    dcb("addrs:");
-    vsockaddr_dump(&nodei->addrs[0].addr, dcb);
-    dcb(" %s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[0].type)));
+    memset(buf, 0, BUF_SZ);
+    ret += sprintf(buf + ret, "[ ");
+    vtoken_strlize(&nodei->id, str, 64);
+    ret += sprintf(buf + ret, "%s, ", str);
+    vnodeVer_strlize(&nodei->ver, str, 64);
+    ret += sprintf(buf + ret, "%s, ", str);
+    ret += sprintf(buf + ret, "weight: %d, ", nodei->weight);
+    ret += sprintf(buf + ret, "addrs: ");
+    vsockaddr_strlize(&nodei->addrs[0].addr, str, 64);
+    ret += sprintf(buf + ret, "%s", str);
+    ret += sprintf(buf + ret, ":%s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[0].type)));
     for (i = 1; i < nodei->naddrs; i++) {
-        dcb(", ");
-        vsockaddr_dump(&nodei->addrs[i].addr, dcb);
-        dcb(" %s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[i].type)));
+        ret += sprintf(buf + ret, ", ");
+        vsockaddr_strlize(&nodei->addrs[i].addr, str, 64);
+        ret += sprintf(buf + ret, "%s", str);
+        ret += sprintf(buf + ret, ":%s", vsockaddr_in_desc(VSOCKADDR_TYPE(nodei->addrs[i].type)));
     }
-    dcb(" ]\n");
+    ret += sprintf(buf + ret, " ]\n");
+    dcb(buf);
     return ;
 }
 
@@ -925,8 +932,13 @@ int vsrvcInfo_copy(vsrvcInfo** ppdest, vsrvcInfo* src)
 void vsrvcInfo_dump(vsrvcInfo* srvci, vdump_t dcb)
 {
     char* sproto = NULL;
-    int i = 0;
+    char buf[BUF_SZ];
+    char str[64];
+    int  ret = 0;
+    int  i = 0;
+
     vassert(srvci);
+    vassert(dcb);
 
     switch(srvci->proto) {
     case VPROTO_UDP:
@@ -940,19 +952,24 @@ void vsrvcInfo_dump(vsrvcInfo* srvci, vdump_t dcb)
         break;
     }
 
-    dcb("[ ");
-    vtoken_dump(&srvci->hash, dcb);
-    dcb(", nice: %d",  srvci->nice);
-    dcb(", proto: %s", sproto);
-    dcb(", addrs: ");
-    vsockaddr_dump(&srvci->addrs[0].addr, dcb);
-    dcb(" %s", vsockaddr_in_desc(srvci->addrs[0].type));
+    memset(buf, 0, BUF_SZ);
+    ret += sprintf(buf + ret, "[ ");
+    vtoken_strlize(&srvci->hash, str, 64);
+    ret += sprintf(buf + ret, "%s, ", str);
+    ret += sprintf(buf + ret, "nice:%s, ", srvci->nice);
+    ret += sprintf(buf + ret, "proto:%s, ", sproto);
+    ret += sprintf(buf + ret, "addrs: ");
+    vsockaddr_strlize(&srvci->addrs[0].addr, str, 64);
+    ret += sprintf(buf + ret, "%s", str);
+    ret += sprintf(buf + ret, ":%s", vsockaddr_in_desc(srvci->addrs[0].type));
     for (i = 1; i < srvci->naddrs; i++) {
-        dcb(", ");
-        vsockaddr_dump(&srvci->addrs[i].addr, dcb);
-        dcb(" %s", vsockaddr_in_desc(srvci->addrs[i].type));
+        ret += sprintf(buf + ret,  ",");
+        vsockaddr_strlize(&srvci->addrs[i].addr, str, 64);
+        ret += sprintf(buf + ret, "%s", str);
+        ret += sprintf(buf + ret, ":%s", vsockaddr_in_desc(srvci->addrs[i].type));
     }
-    dcb(" ]\n");
+    ret += sprintf(buf + ret, " ]\n");
+    dcb(buf);
     return ;
 }
 
