@@ -1,0 +1,28 @@
+Notice:
+     1. At least one boot item should be listed in configure file (defaully @vdht.conf). When 
+  VDHTD daemon begins start, it fetch boot DHT nodes addresses from configure file, and connects
+  to them one by one. 
+
+     2. For boot server item, there can be one or more address tuples, and each of them can have
+  domain address or IP address directly.  
+     for example:
+        boot: [;;
+            address: ( 
+                vdht.elastos.com
+                12300
+                udp
+            )
+            address: ( 
+                112.124.13.224
+                12300
+                udp
+            )
+       ]
+ 
+     when in situation with host domain address, it can be translated to mutliple addresses, which
+   currently can use following commands:
+       sudo echo "112.124.13.224 vdht.elastos.com" >> /etc/hosts
+       sudo echo "112.124.39.230 vdht.elastos.com" >> /etc/hosts
+       
+
+
