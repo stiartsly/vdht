@@ -113,16 +113,18 @@ int vhostaddr_get_next(char* host, int sz)
     return 1;
 }
 
-int vsockaddr_get_by_hostname(const char* ip, const char* port, const char* proto, struct sockaddr_in* addr)
+int vsockaddr_get_by_hostname(const char* ip, const char* port, const char* proto, struct sockaddr_in* addrs, int num)
 {
     int ipproto = 0;
     int scktype = 0;
+    int idx = 0;
     int ret = 0;
 
     vassert(ip);
     vassert(port);
     vassert(proto);
-    vassert(addr);
+    vassert(addrs);
+    vassert(num > 0);
 
     if (!strcmp(proto, "udp") || !strcmp(proto, "UDP")) {
         ipproto = IPPROTO_UDP;
@@ -153,12 +155,14 @@ int vsockaddr_get_by_hostname(const char* ip, const char* port, const char* prot
             if (!aip->ai_addr) {
                 continue;
             }
-            vsockaddr_copy(addr, (struct sockaddr_in*)aip->ai_addr);
-            break;
+            if (idx < num) {
+                vsockaddr_copy(&addrs[idx], (struct sockaddr_in*)aip->ai_addr);
+                idx++;
+            }
         }
         freeaddrinfo(res);
     }
-    return 0;
+    return idx;
 }
 
 int vsockaddr_within_same_network(struct sockaddr_in* a, struct sockaddr_in* b)

@@ -672,8 +672,8 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
 
     ret = read(fd, buf, stat.st_size);
     close(fd);
-    vlogEv((!buf), elog_read);
-    ret1E((!buf), free(buf));
+    vlogEv((ret < 0), elog_read);
+    ret1E((ret < 0), free(buf));
 
     buf[stat.st_size] = '\0';
 
@@ -924,7 +924,7 @@ const char* _vcfg_get_lsctl_socket(struct vconfig* cfg)
 }
 
 static
-int _aux_tuple_addr_2_sin_addr(struct varray* tuple_addr, struct sockaddr_in* sin_addr)
+int _aux_tuple_addr_2_sin_addr(struct varray* tuple_addr, struct sockaddr_in* addrs, int num)
 {
     struct vcfg_item* item = NULL;
     char ip[64] = {'\0'};
@@ -933,7 +933,7 @@ int _aux_tuple_addr_2_sin_addr(struct varray* tuple_addr, struct sockaddr_in* si
     int ret = 0;
 
     vassert(tuple_addr);
-    vassert(sin_addr);
+    vassert(addrs);
 
     item = (struct vcfg_item*)varray_get(tuple_addr, 0);
     retE((!item));
@@ -951,9 +951,9 @@ int _aux_tuple_addr_2_sin_addr(struct varray* tuple_addr, struct sockaddr_in* si
     retE((CFG_STR != item->type));
     proto_str = item->val.s;
 
-    ret = vsockaddr_get_by_hostname(ip, port_str, proto_str, sin_addr);
+    ret = vsockaddr_get_by_hostname(ip, port_str, proto_str, addrs, num);
     retE((ret < 0));
-    return 0;
+    return ret;
 }
 
 static
@@ -962,6 +962,7 @@ int _vcfg_load_boot_nodes(struct vconfig* cfg, vcfg_load_boot_node_t cb, void* c
     struct varray* boot_nodes = NULL;
     int ret = 0;
     int i = 0;
+    int j = 0;
 
     vassert(cfg);
     vassert(cb);
@@ -971,14 +972,14 @@ int _vcfg_load_boot_nodes(struct vconfig* cfg, vcfg_load_boot_node_t cb, void* c
 
     for (i = 0; i < varray_size(boot_nodes); i++) {
         struct varray* tuple_addr = NULL;
-        struct sockaddr_in sin_addr;
+        struct sockaddr_in addrs[5];
         tuple_addr = &((struct vcfg_item*)varray_get(boot_nodes, i))->val.t;
-        ret = _aux_tuple_addr_2_sin_addr(tuple_addr, &sin_addr);
+        ret = _aux_tuple_addr_2_sin_addr(tuple_addr, addrs, 5);
         if (ret < 0) {
             continue;
         }
-        if (cb(&sin_addr, cookie) < 0) {
-            continue;
+        for (j = 0; j < ret; j++) {
+            cb(&addrs[j], cookie);
         }
     }
     return 0;
