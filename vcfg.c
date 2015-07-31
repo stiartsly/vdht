@@ -295,8 +295,8 @@ char* _aux_create_key(char** cur)
 
     key = (char*)malloc(32);
     vlogEv((!key), elog_malloc);
-    memset(key, 0, 32);
     retE_p((!key));
+    memset(key, 0, 32);
 
     while (!strchr(seps, **cur)) {
         switch(**cur) {
