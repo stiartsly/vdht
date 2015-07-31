@@ -658,7 +658,7 @@ int _vcfg_parse(struct vconfig* cfg, const char* filename)
     vassert(filename);
 
     fd = open(filename, O_RDONLY);
-    vlogEv((ret < 0), elog_open);
+    vlogEv((fd < 0), elog_open);
     retE((fd < 0));
 
     memset(&stat, 0, sizeof(stat));
