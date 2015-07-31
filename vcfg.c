@@ -262,9 +262,10 @@ int _aux_eat_delimiter(char** cur)
     char seps1[] = "abcdefghijklmnopqrstuvwxyz";
     char seps2[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     char seps3[] = "0123456789";
-    char seps4[] = "({[/";
+    char seps4[] = ".({[/";
 
     vassert(cur && *cur);
+
     while (!strchr(seps1, **cur) &&
            !strchr(seps2, **cur) &&
            !strchr(seps3, **cur) &&
@@ -606,6 +607,7 @@ int _aux_parse_dict(struct vcfg_item* dict, char** cur)
         case 'a' ... 'z':
         case 'A' ... 'Z':
         case '0' ... '9':
+        case '.':
         case '/':
             if (key) {
                 item = vcfg_item_alloc(CFG_STR, dict->depth+1);
