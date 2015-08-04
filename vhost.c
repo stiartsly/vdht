@@ -1,3 +1,4 @@
+#include "sqlite3.h"
 #include "vglobal.h"
 #include "vhost.h"
 
@@ -107,7 +108,6 @@ void _vhost_dump(struct vhost* host)
 static
 int _vhost_exit(struct vhost* host)
 {
-    int exit_code = 0;
     vassert(host);
 
     host->to_quit = 1;

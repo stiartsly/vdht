@@ -1,3 +1,4 @@
+#include "sqlite3.h"
 #include "vglobal.h"
 #include "vroute.h"
 

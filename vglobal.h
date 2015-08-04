@@ -27,7 +27,6 @@
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
 #include <pthread.h>
-#include <sqlite3.h>
 
 #include "utils/vlist.h"
 #include "utils/varray.h"
