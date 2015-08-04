@@ -1,24 +1,25 @@
 ROOT_PATH := .
 include common.mk
 
-libvdht_objs  :=  vlog.o \
-                  vcfg.o  \
-                  vapp.o \
-                  vrpc.o  \
-                  vdht.o  \
-                  vdht_core.o \
-                  vhost.o \
-        	  vnode.o \
-      		  vnode_nice.o \
-	          vmsger.o \
-	          vupnpc.o \
- 	          vlsctl.o  \
-                  vticker.o \
-                  vnodeId.o \
-	          vroute.o  \
-                  vroute_node.o \
-	          vroute_srvc.o \
-                  vroute_tckt.o \
+libvdht_objs  := vlog.o \
+                 vcfg.o  \
+                 vapp.o \
+                 vrpc.o  \
+                 vdht.o  \
+                 vdht_core.o \
+                 vhost.o \
+                 vnode.o \
+                 vnode_nice.o \
+                 vmsger.o \
+                 vupnpc.o \
+                 vlsctl.o  \
+                 vticker.o \
+                 vnodeId.o \
+                 vroute.o  \
+                 vroute_node.o \
+                 vroute_srvc.o \
+                 vroute_tckt.o \
+                 vdhtapp.o \
 
 libvdht       := libvdht.so
 libutils      := libutils.a

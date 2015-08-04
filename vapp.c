@@ -325,7 +325,7 @@ int vappmain_init(struct vappmain* app, const char* cfg_file, int cons_print_lev
         vconfig_deinit(&app->cfg);
         retE((1));
     }
-    ret = vlsctl_init(&app->lsctl, app, &app->cfg);
+    ret = vlsctl_init(&app->lsctl, &app->cfg);
     if (ret < 0) {
         vconfig_deinit(&app->cfg);
         retE((1));

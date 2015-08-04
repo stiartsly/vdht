@@ -1,5 +1,9 @@
 #include <getopt.h>
-#include "vglobal.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include "vdhtapp.h"
 
 static int daemonize  = 0;
 static int logstdout_level = VLOG_ERR;
@@ -125,25 +129,24 @@ int main(int argc, char** argv)
     }
 
     {
-        struct vappmain app;
         if (defcfgfile) {
             cfg_file = "vdht.conf";
         } else {
             cfg_file = cfgfile;
         }
 
-        ret = vappmain_init(&app, cfg_file, logstdout_level);
+        ret = vdhtapp_init(cfg_file, logstdout_level);
         if (ret < 0) {
             printf("failed to initialize appmain\n");
             exit(-1);
         }
-        ret = app.ops->run(&app);
+        ret = vdhtapp_run();
         if (ret < 0) {
             printf("failed to start running appmain\n");
-            vappmain_deinit(&app);
+            vdhtapp_deinit();
             exit(-1);
         }
-        vappmain_deinit(&app);
+        vdhtapp_deinit();
     }
     return 0;
 }

@@ -3,13 +3,6 @@
 
 #include "vcfg.h"
 
-enum {
-    VLOG_ERR    = LOG_ERR,
-    VLOG_INFO   = LOG_INFO,
-    VLOG_DEBUG  = LOG_DEBUG,
-    VLOG_BUTT
-};
-
 int vlogD (const char*, ...);
 int vlogI (const char*, ...);
 int vlogE (const char*, ...);

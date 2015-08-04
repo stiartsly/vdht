@@ -42,6 +42,7 @@
 #include "vapp.h"
 #include "vdht.h"
 #include "vdht_core.h"
+#include "vdhtapp.h"
 #include "vrpc.h"
 #include "vhost.h"
 #include "vnode.h"

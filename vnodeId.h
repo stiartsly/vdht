@@ -56,14 +56,6 @@ int  vnodeVer_strlize  (vnodeVer*, char*, int);
 int  vnodeVer_unstrlize(const char*, vnodeVer*);
 void vnodeVer_dump     (vnodeVer*, vdump_t );
 
-enum {
-    VSOCKADDR_LOCAL,
-    VSOCKADDR_UPNP,
-    VSOCKADDR_REFLEXIVE,
-    VSOCKADDR_RELAY,
-    VSOCKADDR_UNKNOWN,
-    VSOCKADDR_BUTT
-};
 #define VSOCKADDR_TYPE(type) (0x00ff & type)
 
 struct vsockaddr_in {
@@ -143,10 +135,12 @@ void vnodeConn_set_raw(vnodeConn*, struct sockaddr_in*,  struct sockaddr_in* );
 void vnodeConn_adjust (vnodeConn*, vnodeConn*);
 
 /*
- * for vsrvcId
+ * for vsrvcHash
  */
-typedef struct vtoken vsrvcHash;
-int vsrvcId_bucket(vtoken*);
+int  vsrvcId_bucket   (vtoken*);
+int  vsrvcHash_equal  (vsrvcHash*, vsrvcHash*);
+void vsrvcHash_copy   (vsrvcHash*, vsrvcHash*);
+int  vsrvcHash_strlize(vsrvcHash*, char*, int);
 
 /*
  * for vsrvcInfo
@@ -176,17 +170,6 @@ struct vsrvcInfo {
 };
 typedef struct vsrvcInfo_relax vsrvcInfo_relax;
 typedef struct vsrvcInfo vsrvcInfo;
-
-enum {
-    VPROTO_RES0,
-    VPROTO_UDP,
-    VPROTO_TCP,
-    VPROTO_RES1,
-    VPROTO_RES2,
-    VPROTO_UNKNOWN
-};
-typedef void (*vsrvcInfo_number_addr_t) (vsrvcHash*, int, int, void*);
-typedef void (*vsrvcInfo_iterate_addr_t)(vsrvcHash*, struct sockaddr_in*, uint32_t, int, void*);
 
 int vsrvcInfo_relax_init(vsrvcInfo*, vsrvcHash*, vnodeId*, int16_t, int16_t);
 

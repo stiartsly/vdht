@@ -57,14 +57,13 @@ int _aux_lsctl_unpack_vaddr(void* buf, int len, struct vsockaddr_in* addr)
 static
 int _vlsctl_exec_cmd_host_up(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    struct vappmain* app = lsctl->app;
     int ret = 0;
     vassert(lsctl);
     vassert(buf);
     vassert(len >= 0);
     (void)from;
 
-    ret = app->api_ops->start_host(app);
+    ret = vdhtapp_start_host();
     retE((ret < 0));
     return 0;
 }
@@ -75,14 +74,13 @@ int _vlsctl_exec_cmd_host_up(struct vlsctl* lsctl, void* buf, int len, struct vs
 static
 int _vlsctl_exec_cmd_host_down(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    struct vappmain* app = lsctl->app;
     int ret = 0;
     vassert(lsctl);
     vassert(buf);
     vassert(len >= 0);
     (void)from;
 
-    ret = app->api_ops->stop_host(app);
+    ret = vdhtapp_stop_host();
     retE((ret < 0));
     return 0;
 }
@@ -93,13 +91,12 @@ int _vlsctl_exec_cmd_host_down(struct vlsctl* lsctl, void* buf, int len, struct 
 static
 int _vlsctl_exec_cmd_host_exit(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    struct vappmain* app = lsctl->app;
     vassert(lsctl);
     vassert(buf);
     vassert(len >= 0);
     (void)from;
 
-    app->api_ops->make_host_exit(app);
+    vdhtapp_make_host_exit();
     return 0;
 }
 
@@ -109,13 +106,12 @@ int _vlsctl_exec_cmd_host_exit(struct vlsctl* lsctl, void* buf, int len, struct 
 static
 int _vlsctl_exec_cmd_host_dump(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    struct vappmain* app = lsctl->app;
     vassert(lsctl);
     vassert(buf);
     vassert(len >= 0);
     (void)from;
 
-    app->api_ops->dump_host_info(app);
+    vdhtapp_dump_host_infos();
     return 0;
 }
 
@@ -125,13 +121,12 @@ int _vlsctl_exec_cmd_host_dump(struct vlsctl* lsctl, void* buf, int len, struct 
 static
 int _vlsctl_exec_cmd_cfg_dump(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    struct vappmain* app = lsctl->app;
     vassert(lsctl);
     vassert(buf);
     vassert(len >= 0);
     (void)from;
 
-    app->api_ops->dump_cfg_info(app);
+    vdhtapp_dump_cfg();
     return 0;
 }
 
@@ -141,7 +136,6 @@ int _vlsctl_exec_cmd_cfg_dump(struct vlsctl* lsctl, void* buf, int len, struct v
 static
 int _vlsctl_exec_cmd_join_node(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    struct vappmain* app = lsctl->app;
     struct sockaddr_in addr;
     int tsz = 0;
     int ret = 0;
@@ -155,7 +149,7 @@ int _vlsctl_exec_cmd_join_node(struct vlsctl* lsctl, void* buf, int len, struct 
     retE((ret < 0));
     tsz += ret;
 
-    ret = app->api_ops->join_wellknown_node(app, &addr);
+    ret = vdhtapp_join_wellknown_node(&addr);
     retE((ret < 0));
     return tsz;
 }
@@ -166,7 +160,6 @@ int _vlsctl_exec_cmd_join_node(struct vlsctl* lsctl, void* buf, int len, struct 
 static
 int _vlsctl_exec_cmd_bogus_query(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    struct vappmain* app = lsctl->app;
     struct sockaddr_in addr;
     int qId = 0;
     int tsz = 0;
@@ -184,7 +177,7 @@ int _vlsctl_exec_cmd_bogus_query(struct vlsctl* lsctl, void* buf, int len, struc
     retE((ret < 0));
     tsz += ret;
 
-    ret = app->api_ops->bogus_query(app, qId, &addr);
+    ret = vdhtapp_bogus_query(qId, &addr);
     retE((ret < 0));
     vlogI("[vlsctl] send a query (@%s)", vdht_get_desc(qId));
     return tsz;
@@ -196,7 +189,6 @@ int _vlsctl_exec_cmd_bogus_query(struct vlsctl* lsctl, void* buf, int len, struc
 static
 int _vlsctl_exec_cmd_post_service(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    struct vappmain* app = lsctl->app;
     struct vsockaddr_in addr;
     vsrvcHash hash;
     int proto = 0;
@@ -208,8 +200,8 @@ int _vlsctl_exec_cmd_post_service(struct vlsctl* lsctl, void* buf, int len, stru
     vassert(len > 0);
     (void)from;
 
-    memcpy(hash.data, buf + tsz, VTOKEN_LEN);
-    tsz += VTOKEN_LEN;
+    memcpy(hash.data, buf + tsz, VSRVCHASH_LEN);
+    tsz += VSRVCHASH_LEN;
 
     proto = get_uint32(buf + tsz);
     tsz += sizeof(int32_t);
@@ -219,7 +211,7 @@ int _vlsctl_exec_cmd_post_service(struct vlsctl* lsctl, void* buf, int len, stru
         retE((ret < 0));
         tsz += ret;
 
-        ret = app->api_ops->post_service_segment(app, &hash, &addr, proto);
+        ret = vdhtapp_post_service_segment(&hash, &addr.addr, addr.type, proto);
         retE((ret < 0));
     }
     return tsz;
@@ -231,7 +223,6 @@ int _vlsctl_exec_cmd_post_service(struct vlsctl* lsctl, void* buf, int len, stru
 static
 int _vlsctl_exec_cmd_unpost_service(struct vlsctl* lsctl, void* buf, int len, struct vsockaddr* from)
 {
-    struct vappmain* app = lsctl->app;
     struct sockaddr_in addr;
     vsrvcHash hash;
     int tsz = 0;
@@ -242,20 +233,20 @@ int _vlsctl_exec_cmd_unpost_service(struct vlsctl* lsctl, void* buf, int len, st
     vassert(len > 0);
     (void)from;
 
-    memcpy(hash.data, buf + tsz, VTOKEN_LEN);
-    tsz += VTOKEN_LEN;
+    memcpy(hash.data, buf + tsz, VSRVCHASH_LEN);
+    tsz += VSRVCHASH_LEN;
 
     while(len - tsz > 0) {
         ret = _aux_lsctl_unpack_addr(buf + tsz, len - tsz, &addr);
         retE((ret < 0));
         tsz += ret;
 
-        ret = app->api_ops->unpost_service_segment(app, &hash, &addr);
+        ret = vdhtapp_unpost_service_segment(&hash, &addr);
         retE((ret < 0));
     }
-    if (tsz <= VTOKEN_LEN) {
+    if (tsz <= VSRVCHASH_LEN) {
         // if no address follows, it means to unpost whole service.
-        ret = app->api_ops->unpost_service(app, &hash);
+        ret = vdhtapp_unpost_service(&hash);
         retE((ret < 0));
     }
     return tsz;
@@ -296,7 +287,6 @@ int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, stru
 {
     struct vlsctl_rsp_args*   rsp_args = NULL;
     struct find_service_rsp_args* args = NULL;
-    struct vappmain* app = lsctl->app;
     char* mbuf = NULL;
     vsrvcHash hash;
     int tsz = 0;
@@ -307,8 +297,8 @@ int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, stru
     vassert(len > 0);
     vassert(from);
 
-    memcpy(hash.data, buf + tsz, VTOKEN_LEN);
-    tsz += VTOKEN_LEN;
+    memcpy(hash.data, buf + tsz, VSRVCHASH_LEN);
+    tsz += VSRVCHASH_LEN;
 
     rsp_args = (struct vlsctl_rsp_args*)malloc(sizeof(*rsp_args));
     vlogEv((!rsp_args), elog_malloc);
@@ -320,9 +310,9 @@ int _vlsctl_exec_cmd_find_service(struct vlsctl* lsctl, void* buf, int len, stru
     args->total = 0;
     args->index = 0;
     args->pack_cb = lsctl->pack_cmd_ops->find_service_rsp;
-    vtoken_copy(&args->hash, &hash);
+    vsrvcHash_copy(&args->hash, &hash);
 
-    ret = app->api_ops->find_service(app, &hash, _aux_vlsctl_number_addr_cb1, _aux_vlsctl_iterate_addr_cb1, args);
+    ret = vdhtapp_find_service(&hash, _aux_vlsctl_number_addr_cb1, _aux_vlsctl_iterate_addr_cb1, args);
     ret1E((ret < 0), free(rsp_args));
 
     mbuf  = (char*)vmsg_buf_alloc(0);
@@ -426,7 +416,6 @@ int _vlsctl_exec_cmd_probe_service(struct vlsctl* lsctl, void* buf, int len, str
 {
     struct vlsctl_rsp_args*    rsp_args = NULL;
     struct probe_service_rsp_args* args = NULL;
-    struct vappmain* app = lsctl->app;
     vsrvcHash hash;
     int tsz = 0;
     int ret = 0;
@@ -436,8 +425,8 @@ int _vlsctl_exec_cmd_probe_service(struct vlsctl* lsctl, void* buf, int len, str
     vassert(len > 0);
     vassert(from);
 
-    memcpy(hash.data, buf + tsz, VTOKEN_LEN);
-    tsz += VTOKEN_LEN;
+    memcpy(hash.data, buf + tsz, VSRVCHASH_LEN);
+    tsz += VSRVCHASH_LEN;
 
     rsp_args = (struct vlsctl_rsp_args*)malloc(sizeof(*rsp_args));
     vlogEv((!rsp_args), elog_malloc);
@@ -450,10 +439,10 @@ int _vlsctl_exec_cmd_probe_service(struct vlsctl* lsctl, void* buf, int len, str
     args->index = 0;
     args->lsctl = lsctl;
     args->pack_cb = lsctl->pack_cmd_ops->probe_service_rsp;
-    vtoken_copy(&args->hash, &hash);
+    vsrvcHash_copy(&args->hash, &hash);
     memcpy(&args->from, from, sizeof(*from));
 
-    ret = app->api_ops->probe_service(app, &hash, _aux_vlsctl_number_addr_cb2, _aux_vlsctl_iterate_addr_cb2, rsp_args);
+    ret = vdhtapp_probe_service(&hash, _aux_vlsctl_number_addr_cb2, _aux_vlsctl_iterate_addr_cb2, rsp_args);
     ret1E((ret < 0), free(rsp_args));
     return tsz;
 }
@@ -700,19 +689,17 @@ int _aux_lsctl_unpack_msg_cb(void* cookie, struct vmsg_sys* sm, struct vmsg_usr*
     return 0;
 }
 
-int vlsctl_init(struct vlsctl* lsctl, struct vappmain* app, struct vconfig* cfg)
+int vlsctl_init(struct vlsctl* lsctl, struct vconfig* cfg)
 {
     struct sockaddr_un* sun = to_sockaddr_sun(&lsctl->addr);
     int ret = 0;
 
     vassert(lsctl);
-    vassert(app);
     vassert(cfg);
 
     sun->sun_family = AF_UNIX;
     strncpy(sun->sun_path, cfg->ext_ops->get_lsctl_socket(cfg), 105);
 
-    lsctl->app  = app;
     lsctl->ops  = &lsctl_ops;
     lsctl->pack_cmd_ops = &lsctl_pack_cmd_ops;
 

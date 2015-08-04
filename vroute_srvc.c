@@ -72,7 +72,7 @@ int _aux_srvc_add_service_cb(void* item, void* cookie)
     varg_decl(cookie, 4, int*, found);
 
     if (vtoken_equal(&srvc_item->srvci->hostid, &srvci->hostid) &&
-        vtoken_equal(&srvc_item->srvci->hash, &srvci->hash)) {
+        vsrvcHash_equal(&srvc_item->srvci->hash, &srvci->hash)) {
         *to = srvc_item;
         *found = 1;
         return 1;
@@ -92,7 +92,7 @@ int _aux_srvc_get_service_cb(void* item, void* cookie)
     varg_decl(cookie, 1, vsrvcHash*, hash);
     varg_decl(cookie, 2, int*, min_nice);
 
-    if (vtoken_equal(&srvc_item->srvci->hash, hash)) {
+    if (vsrvcHash_equal(&srvc_item->srvci->hash, hash)) {
         if (srvc_item->srvci->nice < *min_nice) {
             *to = srvc_item;
             *min_nice = srvc_item->srvci->nice;

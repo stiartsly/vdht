@@ -103,14 +103,13 @@ struct vlsctl_pack_cmd_ops {
 struct vlsctl {
     struct vrpc      rpc;
     struct vmsger    msger;
-    struct vappmain* app;
 
     struct vsockaddr addr;
     struct vlsctl_ops* ops;
     struct vlsctl_pack_cmd_ops* pack_cmd_ops;
 };
 
-int  vlsctl_init  (struct vlsctl*, struct vappmain*, struct vconfig*);
+int  vlsctl_init  (struct vlsctl*, struct vconfig*);
 void vlsctl_deinit(struct vlsctl*);
 
 #endif

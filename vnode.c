@@ -520,7 +520,7 @@ int _vnode_srvc_post(struct vnode* node, vsrvcHash* hash, struct vsockaddr_in* a
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++){
         srvci = (vsrvcInfo*)varray_get(&node->services, i);
-        if (vtoken_equal(&srvci->hash, hash)) {
+        if (vsrvcHash_equal(&srvci->hash, hash)) {
             found = 1;
             if (proto != srvci->proto) {
                 ret = -1;
@@ -568,7 +568,7 @@ int _vnode_srvc_unpost(struct vnode* node, vsrvcHash* hash, struct sockaddr_in* 
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++) {
         srvci = (vsrvcInfo*)varray_get(&node->services, i);
-        if (vtoken_equal(&srvci->hash, hash)) {
+        if (vsrvcHash_equal(&srvci->hash, hash)) {
             vsrvcInfo_del_addr(srvci, addr);
             found = 1;
             break;
@@ -601,7 +601,7 @@ int _vnode_srvc_unpost_ext(struct vnode* node, vsrvcHash* hash)
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++) {
         srvci = (vsrvcInfo*)varray_get(&node->services, i);
-        if (vtoken_equal(&srvci->hash, hash)) {
+        if (vsrvcHash_equal(&srvci->hash, hash)) {
             found = 1;
             break;
         }
@@ -646,7 +646,7 @@ int _vnode_srvc_find(struct vnode* node, vsrvcHash* hash, vsrvcInfo_number_addr_
     vlock_enter(&node->lock);
     for (i = 0; i < varray_size(&node->services); i++) {
         item = (vsrvcInfo*)varray_get(&node->services, i);
-        if (vtoken_equal(&item->hash, hash)) {
+        if (vsrvcHash_equal(&item->hash, hash)) {
             found = 1;
             break;
         }

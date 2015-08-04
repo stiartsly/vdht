@@ -1,6 +1,7 @@
 #ifndef __VRTOUTE_H__
 #define __VRTOUTE_H__
 
+#include "vdhtapp.h"
 #include "vnodeId.h"
 #include "varray.h"
 #include "vhost.h"

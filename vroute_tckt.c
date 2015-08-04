@@ -92,7 +92,7 @@ void vticket_init(struct vticket_item* ticket, int type, void** argv)
         varg_decl(argv, 2, vsrvcInfo_iterate_addr_t, icb);
         varg_decl(argv, 3, void*, cookie);
 
-        vtoken_copy(&info->hash, hash);
+        vsrvcHash_copy(&info->hash, hash);
         info->ncb = ncb;
         info->icb = icb;
         info->cookie = cookie;
@@ -169,7 +169,7 @@ int vticket_punch(struct vticket_item* ticket, void** argv)
          */
         varg_decl(argv, 0, vsrvcInfo*, srvci);
         int i = 0;
-        if (vtoken_equal(&info->hash, &srvci->hash)) {
+        if (vsrvcHash_equal(&info->hash, &srvci->hash)) {
             info->ncb(&srvci->hash, srvci->naddrs, srvci->proto, info->cookie);
             for (i = 0; i < srvci->naddrs; i++) {
                 info->icb(&srvci->hash, &srvci->addrs[i].addr, srvci->addrs[i].type, (i+1)== srvci->naddrs, info->cookie);

@@ -737,7 +737,7 @@ void vnodeConn_adjust(vnodeConn* old, vnodeConn* neo)
 }
 
 /*
- * for vsrvcId
+ * for vsrvcHash
  */
 int vsrvcId_bucket(vtoken* id)
 {
@@ -751,6 +751,53 @@ int vsrvcId_bucket(vtoken* id)
     return (hash % VTOKEN_BITLEN);
 }
 
+int vsrvcHash_equal(vsrvcHash* a, vsrvcHash* b)
+{
+    int i = 0;
+    vassert(a);
+    vassert(b);
+
+    for (; i < VSRVCHASH_LEN; i++) {
+        if (a->data[i] != b->data[i]) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void vsrvcHash_copy(vsrvcHash* dst, vsrvcHash* src)
+{
+    int i = 0;
+    vassert(dst);
+    vassert(src);
+
+    for (; i < VSRVCHASH_LEN; i++) {
+        dst->data[i] = src->data[i];
+    }
+    return ;
+}
+
+int vsrvcHash_strlize(vsrvcHash* hash, char* buf, int len)
+{
+    uint8_t data = 0;
+    int ret = 0;
+    int sz  = 0;
+    int i   = 0;
+
+    vassert(hash);
+    vassert(buf);
+    vassert(len > 0);
+
+    for (; i < VSRVCHASH_LEN; i++) {
+        data = hash->data[i];
+        ret = snprintf(buf+sz, len-sz, "%x%x", (data >> 4), (data & 0x0f));
+        vlogEv((ret >= len-sz), elog_snprintf);
+        retE((ret >= len-sz));
+        sz += ret;
+    }
+    return 0;
+}
+
 /*
  * for vsrvcInfo funcs
  */
@@ -760,7 +807,7 @@ int vsrvcInfo_relax_init(vsrvcInfo* srvci, vsrvcHash* hash, vnodeId* hostId, int
     vassert(hash);
     vassert(hostId);
 
-    vtoken_copy(&srvci->hash,  hash);
+    vsrvcHash_copy(&srvci->hash,  hash);
     vtoken_copy(&srvci->hostid,hostId);
     srvci->nice  = nice;
     srvci->proto = proto;
@@ -799,7 +846,7 @@ int vsrvcInfo_init(vsrvcInfo* srvci, vsrvcHash* hash, vnodeId* hostId, int16_t n
     vassert(hostId);
     vassert(nice >= 0);
 
-    vtoken_copy(&srvci->hash, hash);
+    vsrvcHash_copy(&srvci->hash, hash);
     vtoken_copy(&srvci->hostid, hostId);
     srvci->nice  = nice;
     srvci->proto = proto;
@@ -916,7 +963,7 @@ int vsrvcInfo_copy(vsrvcInfo** ppdest, vsrvcInfo* src)
     vassert(dest);
     vassert(src);
 
-    vtoken_copy(&dest->hash,  &src->hash);
+    vsrvcHash_copy(&dest->hash,  &src->hash);
     vtoken_copy(&dest->hostid,&src->hostid);
     dest->nice   = src->nice;
     dest->proto  = src->proto;
@@ -954,9 +1001,9 @@ void vsrvcInfo_dump(vsrvcInfo* srvci, vdump_t dcb)
 
     memset(buf, 0, BUF_SZ);
     ret += sprintf(buf + ret, "[ ");
-    vtoken_strlize(&srvci->hash, str, 64);
+    vsrvcHash_strlize(&srvci->hash, str, 64);
     ret += sprintf(buf + ret, "%s, ", str);
-    ret += sprintf(buf + ret, "nice:%s, ", srvci->nice);
+    ret += sprintf(buf + ret, "nice:%d, ", srvci->nice);
     ret += sprintf(buf + ret, "proto:%s, ", sproto);
     ret += sprintf(buf + ret, "addrs: ");
     vsockaddr_strlize(&srvci->addrs[0].addr, str, 64);
