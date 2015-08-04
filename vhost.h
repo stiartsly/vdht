@@ -26,7 +26,6 @@ struct vhost {
     vnodeId myid;
     struct sockaddr_in zaddr;
 
-    struct vthread  thread;
     struct vmsger   msger;
     struct vrpc     rpc;
     struct vwaiter  waiter;

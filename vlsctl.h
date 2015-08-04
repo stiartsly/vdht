@@ -4,7 +4,6 @@
 #include "vrpc.h"
 #include "vmsger.h"
 #include "vhost.h"
-#include "vapp.h"
 
 /*
  * lsctl message structure:

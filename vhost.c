@@ -113,7 +113,6 @@ int _vhost_exit(struct vhost* host)
     host->to_quit = 1;
     host->node.ops->stop(&host->node);
     host->node.ops->wait_for_stop(&host->node);
-    vthread_join(&host->thread, &exit_code);
 
     vlogI("host exited");
     return 0;
