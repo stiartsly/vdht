@@ -65,7 +65,11 @@ $(bin_hashgen):
 	$(MK) --directory=hashgen $@
 
 install:
-	$(CP) -p $(libvdht) /usr/local/lib
+	$(CP) -p $(libvdht)    /usr/local/lib
+	$(CP) -p $(bin_vdhtd)  /usr/local/sbin
+	$(CP) -p daemon/vdht   /etc/init.d/vdht 
+	$(CP) -p daemon/vdht.conf /etc/vdht/vdht.conf
+       
 	$(MK) --directory=lsctl $@
 clean:
 	$(MK) --directory=lsctl clean

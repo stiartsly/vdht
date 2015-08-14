@@ -27,6 +27,7 @@ $(libvdhtapi): $(libvdhtapi_objs)
 	$(RM) -f $^
 
 install:
+	$(CP) -p $(bin_lsctlc) /usr/local/bin
 	$(CP) -p $(libvdhtapi) /usr/local/lib
 
 clean:

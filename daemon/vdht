@@ -1,0 +1,43 @@
+#!/bin/sh
+
+RETVAL=0
+SERVICE_NAME="vdhtd"
+RUN_SERVICE="/usr/local/sbin/vdhtd -D -f /etc/vdht/vdht.conf"
+SERVICE_PID=`ps -C vdhtd -o pid=`
+
+start() {
+    echo -n "starting $SERVICE_NAME server: "
+    [ -n "$SERVICE_PID" ] && echo "Already running" || $RUN_SERVICE
+    RETVAL=$? 
+
+    [ $RETVAL -eq 0 ] && echo "OK" || echo "Failed"
+    return $RETVAL
+}
+
+stop() { 
+    echo -n "Shutting down $SERVICE_NAME server: "
+    [ -n "$SERVICE_PID" ] && kill "$SERVICE_PID" || echo "Not running"
+    RETVAL=$?
+
+    [ $RETVAL -eq 0 ] && echo "OK" || echo "Failed"
+    return $RETVAL
+}
+
+case $1 in 
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    retart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 2
+esac
+
+exit $?
+    
