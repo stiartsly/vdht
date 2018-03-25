@@ -42,9 +42,9 @@ $ cd vdht
 $ make
 ```
 
-## How to Be inside
+## How To Be Inside
 
-There are servial shared libraries and executables.
+There are several shared libraries and executables listed below.
 
 ### 1.vdhtd
 
@@ -66,8 +66,7 @@ An shared library provides core vdht features.
 
 An shared library can be integrated to client side to commnicate with vdht deamon.
 
-
-## How to run
+## How To Run
 
 Each exacutables has it's own help information.
 
@@ -79,7 +78,7 @@ Use valid bootnode information in config file to run vdht as daemon service.
 $ ./vdhtd -S
 ```
 
-### 2.vlsctl comand
+### 2.vlsctl command tool
 
 Use vlsctlc command tool to communicate with vdhtd daemon while vdht is running:
 
@@ -89,7 +88,7 @@ $ ./vlsctl -s
 
 ## Thanks
 
-Sinserely thanks to all teams and their projects we relies on directly or indirectly.
+Sincerely thanks to all teams and their projects on which we relies directly or indirectly.
 
 ## License
 
