@@ -6,7 +6,7 @@ Vdht is the simple experimental framework based on DHT protocol.
 
 You can build vdht from source code with following tutorial on Linux, especially on Ubuntu Linux higher than 14.04. Also you are welcome to try building vdht on other platforms.
 
-###1. sqlite3-dev 
+### 1.sqlite3-dev 
 
 Be sure that sqlite3 dev library should be installed. Otherwise, run command:
 
@@ -14,7 +14,7 @@ Be sure that sqlite3 dev library should be installed. Otherwise, run command:
 $ sudo apt-get install sqlite3-dev
 ```
 
-###2. miniupnpc client
+### 2.miniupnpc client
 
 Be sure that miniupnc client library should be installed. Otherwise, go to website 
 
@@ -32,7 +32,7 @@ $ make
 $ sudo make install
 ```
 
-###3. Build from source
+### 3.Build from source
 
 Download the vdht source code with following commands:
 
@@ -46,23 +46,23 @@ $ make
 
 There are servial shared libraries and executables.
 
-###1. vdhtd
+### 1.vdhtd
 
 A simple binary to run as daemon as vdht engine.
 
-###2. vlsctlc
+### 2.vlsctlc
 
 A local service control command tool to communicate with vdhtd daemon.
 
-###3. vserver/vclient
+### 3.vserver/vclient
 
 An example of pairs of service can run as service producer or demander respectively.
 
-###3. libvdht.so
+### 4.libvdht.so
 
 An shared library provides core vdht features.
 
-###4. libvhdapi.so
+### 5.libvhdapi.so
 
 An shared library can be integrated to client side to commnicate with vdht deamon.
 
@@ -71,7 +71,7 @@ An shared library can be integrated to client side to commnicate with vdht deamo
 
 Each exacutables has it's own help information.
 
-###1. vdht daemon
+### 1.vdht daemon
 
 Use valid bootnode information in config file to run vdht as daemon service.
 
@@ -79,7 +79,7 @@ Use valid bootnode information in config file to run vdht as daemon service.
 $ ./vdhtd -S
 ```
 
-###2. vlsctl comand
+### 2.vlsctl comand
 
 Use vlsctlc command tool to communicate with vdhtd daemon while vdht is running:
 
