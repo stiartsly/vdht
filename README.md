@@ -1,5 +1,5 @@
-# Simple Virtual DHT Daemon
-
+Simple Virtual DHT Daemon
+=========================
 Vdht is the simple experimental framework based on DHT protocol.
 
 ## How To Build
@@ -92,5 +92,4 @@ Sincerely thanks to all teams and their projects on which we relies directly or 
 
 ## License
 
-vhdt Project source code files are made available under the MIT License, located in the LICENSE file.
-
+MIT
